@@ -1,0 +1,75 @@
+﻿<UserControl x:Class="GEditor.View.Properties_SceneObject"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:input="clr-namespace:System.Windows.Input;assembly=PresentationCore"
+             xmlns:local="clr-namespace:GEditor.View"
+             mc:Ignorable="d" 
+             d:DesignHeight="658.537" d:DesignWidth="240">
+    <StackPanel>
+        <StackPanel.Resources>
+
+            <Style TargetType="Border" x:Key="RacePitBorderStyle" >
+                <Style.Resources>
+                    <LinearGradientBrush x:Key="BackBrush" StartPoint="0.5,0" EndPoint="0.5,1">
+                        <GradientStop Color="#EF3132" Offset="0.1" />
+                        <GradientStop Color="#D62B2B" Offset="0.9" />
+                    </LinearGradientBrush>
+                </Style.Resources>
+                <!--<Setter Property="Background" Value="{StaticResource BackBrush}"/>-->
+            </Style>
+
+            <DataTemplate x:Key="titleText">
+                <Border Style="{StaticResource RacePitBorderStyle}" Height="24">
+                    <TextBlock Text="{Binding}" 
+                        Margin="4 0"
+                        VerticalAlignment="Center"
+                        Foreground="White"
+                        FontSize="11" 
+                        FontWeight="Normal"
+                        Width="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type Expander}}, Path=ActualWidth}"
+                        TextWrapping="Wrap"/>
+                </Border>
+            </DataTemplate>
+
+            <Style TargetType="{x:Type Expander}">
+                <Setter Property="HeaderTemplate" Value="{StaticResource titleText}"/>
+            </Style>
+
+        </StackPanel.Resources>
+
+        <Expander Name="TransformControl" Header="Transform" IsExpanded="True">
+            <StackPanel>
+                <Label Content="Location" Margin="5,0,0,0"/>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,5,0,0">
+                    <Label Content=" x : "/>
+                    <TextBox Text="{Binding Path=LocX, Mode=TwoWay}" Width="55" PreviewTextInput="TextBox_DigitalOnly" input:InputMethod.IsInputMethodEnabled="False"/>
+                    <Label Content=" y : "/>
+                    <TextBox Text="{Binding Path=LocY, Mode=TwoWay}" Width="55" PreviewTextInput="TextBox_DigitalOnly" input:InputMethod.IsInputMethodEnabled="False"/>
+                    <Label Content=" z : "/>
+                    <TextBox Text="{Binding Path=LocZ, Mode=TwoWay}" Width="55" PreviewTextInput="TextBox_DigitalOnly" input:InputMethod.IsInputMethodEnabled="False"/>
+                </StackPanel>
+                <Label Content="Rotation" Margin="5,0,0,0"/>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,5,0,0">
+                    <Label Content=" x : "/>
+                    <TextBox Text="{Binding Path=RotX, Mode=TwoWay}" Width="55" PreviewTextInput="TextBox_DigitalOnly" input:InputMethod.IsInputMethodEnabled="False"/>
+                    <Label Content=" y : "/>
+                    <TextBox Text="{Binding Path=RotY, Mode=TwoWay}" Width="55" PreviewTextInput="TextBox_DigitalOnly" input:InputMethod.IsInputMethodEnabled="False"/>
+                    <Label Content=" z : "/>
+                    <TextBox Text="{Binding Path=RotZ, Mode=TwoWay}" Width="55" PreviewTextInput="TextBox_DigitalOnly" input:InputMethod.IsInputMethodEnabled="False"/>
+                </StackPanel>
+                <Label Content="Scale" Margin="5,0,0,0"/>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,5,0,0">
+                    <Label Content=" x : "/>
+                    <TextBox Text="{Binding Path=ScaleX, Mode=TwoWay}" Width="55" PreviewTextInput="TextBox_DigitalOnly" input:InputMethod.IsInputMethodEnabled="False"/>
+                    <Label Content=" y : "/>
+                    <TextBox Text="{Binding Path=ScaleY, Mode=TwoWay}" Width="55" PreviewTextInput="TextBox_DigitalOnly" input:InputMethod.IsInputMethodEnabled="False"/>
+                    <Label Content=" z : "/>
+                    <TextBox Text="{Binding Path=ScaleZ, Mode=TwoWay}" Width="55" PreviewTextInput="TextBox_DigitalOnly" input:InputMethod.IsInputMethodEnabled="False"/>
+                </StackPanel>
+            </StackPanel>
+        </Expander>
+
+    </StackPanel>
+</UserControl>

@@ -1,0 +1,176 @@
+﻿<Window x:Class="GEditor.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        
+        xmlns:themes="clr-namespace:WPF.Themes;assembly=WPF.Themes"
+        themes:ThemeManager.Theme="ExpressionDark"
+    
+        xmlns:usercontrols="clr-namespace:GEditor.View"
+        xmlns:Viewport="clr-namespace:GEditor.View"  
+        xmlns:wf="clr-namespace:System.Windows.Forms;assembly=System.Windows.Forms"
+        xmlns:wfi ="clr-namespace:System.Windows.Forms.Integration;assembly=WindowsFormsIntegration"
+        xmlns:local="clr-namespace:GEditor"
+        mc:Ignorable="d"
+        Title="GEditor" Height="886.667" Width="1422" Background="#FF2D2D2D">
+
+    <Window.Resources>
+        <Style x:Key="TreeViewItemExpandedStyle" TargetType="{x:Type TreeViewItem}">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="IsExpanded" Value="True"/>
+            <Setter Property="HorizontalContentAlignment" Value="{Binding HorizontalContentAlignment, RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}}"/>
+            <Setter Property="VerticalContentAlignment" Value="{Binding VerticalContentAlignment, RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}}"/>
+            <Setter Property="Padding" Value="1,0,0,0"/>
+            <Setter Property="Foreground" Value="{DynamicResource {x:Static SystemColors.ControlTextBrushKey}}"/>
+            <!--<Setter Property="FocusVisualStyle" Value="{StaticResource TreeViewItemFocusVisual}"/>-->
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type TreeViewItem}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition MinWidth="19" Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition/>
+                            </Grid.RowDefinitions>
+                            <ToggleButton x:Name="Expander" IsEnabled="False" Visibility="Hidden" ClickMode="Press" IsChecked="{Binding IsExpanded, RelativeSource={RelativeSource TemplatedParent}}"/><!--Style="{StaticResource ExpandCollapseToggleStyle}"-->
+                            <Border x:Name="Bd" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Background="{TemplateBinding Background}" Grid.Column="1" Padding="{TemplateBinding Padding}" SnapsToDevicePixels="true">
+                                <ContentPresenter x:Name="PART_Header" ContentSource="Header" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
+                            </Border>
+                            <ItemsPresenter x:Name="ItemsHost" Grid.ColumnSpan="2" Grid.Column="1" Grid.Row="1"/>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsExpanded" Value="false">
+                                <Setter Property="Visibility" TargetName="ItemsHost" Value="Collapsed"/>
+                            </Trigger>
+                            <Trigger Property="HasItems" Value="false">
+                                <Setter Property="Visibility" TargetName="Expander" Value="Hidden"/>
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="true">
+                                <Setter Property="Background" TargetName="Bd" Value="{DynamicResource {x:Static SystemColors.HighlightBrushKey}}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource {x:Static SystemColors.HighlightTextBrushKey}}"/>
+                            </Trigger>
+                            <MultiTrigger>
+                                <MultiTrigger.Conditions>
+                                    <Condition Property="IsSelected" Value="true"/>
+                                    <Condition Property="IsSelectionActive" Value="false"/>
+                                </MultiTrigger.Conditions>
+                                <Setter Property="Background" TargetName="Bd" Value="{DynamicResource {x:Static SystemColors.ControlBrushKey}}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource {x:Static SystemColors.ControlTextBrushKey}}"/>
+                            </MultiTrigger>
+                            <Trigger Property="IsEnabled" Value="false">
+                                <Setter Property="Foreground" Value="{DynamicResource {x:Static SystemColors.GrayTextBrushKey}}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="VirtualizingStackPanel.IsVirtualizing" Value="true">
+                    <Setter Property="ItemsPanel">
+                        <Setter.Value>
+                            <ItemsPanelTemplate>
+                                <VirtualizingStackPanel/>
+                            </ItemsPanelTemplate>
+                        </Setter.Value>
+                    </Setter>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </Window.Resources>
+    
+    <Grid Background="#FF252525">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="28"/>
+            <RowDefinition Height="300*"/>
+            <RowDefinition Height="240"/>
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="240"/>
+            <ColumnDefinition Width="900*"/>
+            <ColumnDefinition Width="240"/>
+        </Grid.ColumnDefinitions>
+
+        <DockPanel Grid.Column="0" Grid.Row="0" Grid.RowSpan="1" Grid.ColumnSpan="3">
+            <Menu DockPanel.Dock="Top" d:IsHidden="True">
+                <MenuItem Header="File">
+                    <MenuItem Header="New"></MenuItem>
+                    <MenuItem Name="menuOpen" Header="Open"></MenuItem>
+                    <MenuItem Header="Save"></MenuItem>
+                    <MenuItem Header="Close"></MenuItem>
+                </MenuItem>
+                <MenuItem Header="Edit">
+                    <MenuItem Header="Undo"></MenuItem>
+                    <MenuItem Header="Redo"></MenuItem>
+                </MenuItem>
+                <MenuItem Header="Window">
+                    <MenuItem Header="Outliner"></MenuItem>
+                    <MenuItem Header="Properties"></MenuItem>
+                    <MenuItem Header="File Browser"></MenuItem>
+                    <MenuItem Header="Log"></MenuItem>
+                    <MenuItem Header="Settings"></MenuItem>
+                </MenuItem>
+                <MenuItem Header="About">
+                    <MenuItem Header="Gravity Engine"></MenuItem>
+                </MenuItem>
+            </Menu>
+        </DockPanel>
+
+        <Grid Grid.Column="1" Grid.Row="1" Grid.RowSpan="1" Background="#FF323232" Margin="0">
+            <Grid Margin="0,60,0,0" Background="#FF323232">
+                <Grid x:Name="ViewportGrid" Margin="1.5,0.75,1.5,1.5" Background="#FF252525">
+                    <WindowsFormsHost x:Name="viewportHost"/>
+                    <!--<usercontrols:Viewport x:Name="viewport"/>-->
+                </Grid>
+            </Grid>
+            <Grid Height="60" VerticalAlignment="Top" Background="#FF323232">
+                <Grid Margin="1.5,1.5,1.5,0.75" Background="#FF252525">
+                    <Button x:Name="Play" Content="Play" HorizontalAlignment="Left" Margin="10,10,0,0" VerticalAlignment="Top" Width="74" Click="Button_Click" Height="34"/>
+                </Grid>
+            </Grid>
+
+        </Grid>
+        <Grid Grid.Column="2" Grid.Row="1" Margin="0,0,0,0" Grid.RowSpan="3">
+            <Grid Margin="3,0,0.333,0.333">
+
+                <TabControl Margin="0,0,0,0" BorderBrush="{x:Null}" Background="#FF323232" Foreground="Black" Grid.ColumnSpan="1" Padding="1.5">
+                    <TabItem Header="Properties" BorderBrush="{x:Null}" Background="#FF494949" Foreground="Black">
+                        <Grid x:Name="PropertiesPanel" VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
+                        </Grid>
+                        <!--<usercontrols:Properties_SceneObject x:Name="Properties"/>-->
+                    </TabItem>
+                </TabControl>
+            </Grid>
+        </Grid>
+        <Grid Grid.ColumnSpan="1" Grid.Row="1" Margin="0,0,0,0" Grid.RowSpan="1">
+            <Grid Margin="0,0,3,0">
+                <TabControl BorderBrush="{x:Null}" Background="#FF323232" Foreground="Black" Grid.ColumnSpan="1" Grid.RowSpan="1" Padding="1.5">
+                    <TabItem Header="Outliner" BorderBrush="{x:Null}" Background="#FF494949" Foreground="Black">
+                        <Grid x:Name="OutlinerPanel" VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
+                        </Grid>
+                        <!--<usercontrols:Outliner x:Name="Outliner"/>-->
+                    </TabItem>
+                </TabControl>
+            </Grid>
+        </Grid>
+        <Grid Margin="0" Grid.ColumnSpan="2" Grid.Row="3">
+            <Grid Margin="0,3,0,0">
+                <TabControl BorderBrush="{x:Null}" Background="#FF323232" Foreground="Black" Grid.RowSpan="1" Margin="0" Padding="1.5">
+                    <TabItem Header="Browser" BorderBrush="{x:Null}" Background="#FF494949" Foreground="Black" Padding="6,2">
+                        <Grid x:Name="FileBrowserPanel" VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
+                        </Grid>
+                        <!--<usercontrols:FileBrowser x:Name="FileBrowser"/>-->
+                    </TabItem>
+                    <TabItem Header="Log" BorderBrush="{x:Null}" Background="#FF494949" Foreground="Black" Margin="-2,-2,-2,0">
+                        <Grid Background="#FF252525"/>
+                    </TabItem>
+                </TabControl>
+            </Grid>
+        </Grid>
+
+    </Grid>
+</Window>

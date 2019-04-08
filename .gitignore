@@ -1,0 +1,11 @@
+/GEngine/.vs
+/GEngine/Debug/*
+/GEngine/GEditor/bin
+/GEngine/GEditor/obj
+/GEngine/GWinformLib/obj
+/GEngine/ThirdParty
+/GEngine/packages
+!/GEngine/Debug/Textures
+!/GEngine/Debug/Models
+!/GEngine/Debug/Content
+!/GEngine/Debug/WPF.Themes.dll
