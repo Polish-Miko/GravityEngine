@@ -1,18 +1,18 @@
 # Gravity Engine
 
-#### Introduction
+## Introduction
 
 
 This is my personal game engine project that
 uses DirectX 12 exclusively for rendering.
 
 
-#### Showcase
+## Showcase
 
 ![preview_1](https://github.com/MrySwk/GravityEngine/blob/master/screenshot/preview_1.png)
 ![preview_2](https://github.com/MrySwk/GravityEngine/blob/master/screenshot/preview_2.png)
 
-#### Dependencies
+## Dependencies
 
 <br>
 
@@ -29,7 +29,7 @@ to
 
 *Debug\Build*
 
-# todo
+## todo
 - [x] deferred pipeline
 - [x] physically based rendering
 - [ ] partially refactor
