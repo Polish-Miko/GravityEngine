@@ -51,9 +51,6 @@
     <ClInclude Include="Common\Ssao.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Render\GCore.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Common\GLight.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -150,9 +147,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Common\Ssao.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Render\GCore.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Common\GLight.cpp">
