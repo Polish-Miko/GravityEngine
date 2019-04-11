@@ -1,4 +1,4 @@
-/GEngine/.vs
+/GEngine/.vs/GravityEngine/v15/*
 /GEngine/Debug/*
 /GEngine/GEditor/bin
 /GEngine/GEditor/obj
@@ -9,3 +9,4 @@
 !/GEngine/Debug/Models
 !/GEngine/Debug/Content
 !/GEngine/Debug/WPF.Themes.dll
+!/GEngine/.vs/GravityEngine/v15/.suo
