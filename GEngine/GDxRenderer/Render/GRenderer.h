@@ -11,11 +11,30 @@
 #endif
 
 #include "GEngineInclude.h"
+#include "UploadBuffer.h"
+#include "GeometryGenerator.h"
+#include "FrameResource.h"
+#include "ShadowMap.h"
+#include "Ssao.h"
 
 // Link necessary d3d12 libraries.
 #pragma comment(lib,"d3dcompiler.lib")
 #pragma comment(lib, "D3D12.lib")
 #pragma comment(lib, "dxgi.lib")
+
+using Microsoft::WRL::ComPtr;
+using namespace DirectX;
+using namespace DirectX::PackedVector;
+
+enum class RenderLayer : int
+{
+	Opaque = 0,
+	Debug,
+	Sky,
+	Deferred,
+	ScreenQuad,
+	Count
+};
 
 class GRenderer
 {
@@ -51,9 +70,43 @@ protected:
 	//virtual void Draw_Test(const GameTimer& gt) = 0;
 
 	// Convenience overrides for handling mouse input.
-	virtual void OnMouseDown(WPARAM btnState, int x, int y) { }
-	virtual void OnMouseUp(WPARAM btnState, int x, int y) { }
-	virtual void OnMouseMove(WPARAM btnState, int x, int y) { }
+	virtual void OnMouseDown(WPARAM btnState, int x, int y);
+	virtual void OnMouseUp(WPARAM btnState, int x, int y);
+	virtual void OnMouseMove(WPARAM btnState, int x, int y);
+
+	void OnKeyboardInput(const GameTimer& gt);
+	void AnimateMaterials(const GameTimer& gt);
+	void UpdateObjectCBs(const GameTimer& gt);
+	void UpdateMaterialBuffer(const GameTimer& gt);
+	void UpdateShadowTransform(const GameTimer& gt);
+	void UpdateMainPassCB(const GameTimer& gt);
+	void UpdateSkyPassCB(const GameTimer& gt);
+	void UpdateShadowPassCB(const GameTimer& gt);
+	void UpdateSsaoCB(const GameTimer& gt);
+	void UpdateLightCB(const GameTimer& gt);
+
+	void BuildCubemapSampleCameras();
+	void LoadTextures();
+	void BuildRootSignature();
+	void BuildDescriptorHeaps();
+	void BuildShadersAndInputLayout(); 
+	void LoadMeshes();
+	void BuildPSOs();
+	void BuildFrameResources();
+	void BuildMaterials();
+	void BuildSceneObjects();
+
+	void CubemapPreIntegration();
+
+	std::array<const CD3DX12_STATIC_SAMPLER_DESC, 7> GetStaticSamplers();
+
+	CD3DX12_CPU_DESCRIPTOR_HANDLE GetCpuSrv(int index)const;
+	CD3DX12_GPU_DESCRIPTOR_HANDLE GetGpuSrv(int index)const;
+	CD3DX12_CPU_DESCRIPTOR_HANDLE GetDsv(int index)const;
+	CD3DX12_CPU_DESCRIPTOR_HANDLE GetRtv(int index)const;
+
+	void DrawSceneObjects(ID3D12GraphicsCommandList* cmdList, const RenderLayer layer, bool bSetCBV);
+	void DrawSceneObject(ID3D12GraphicsCommandList* cmdList, const GSceneObject* rObject, bool bSetCBV);
 
 protected:
 
@@ -126,5 +179,84 @@ protected:
 	DXGI_FORMAT mDepthStencilFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
 	int mClientWidth = 800;
 	int mClientHeight = 600;
+
+protected:
+	std::vector<std::unique_ptr<FrameResource>> mFrameResources;
+	FrameResource* mCurrFrameResource = nullptr;
+	int mCurrFrameResourceIndex = 0;
+
+	//ComPtr<ID3D12RootSignature> mRootSignature = nullptr;
+	ComPtr<ID3D12RootSignature> mSsaoRootSignature = nullptr;
+
+	ComPtr<ID3D12DescriptorHeap> mSrvDescriptorHeap = nullptr;
+
+	std::unordered_map<std::string, std::shared_ptr<GMesh>> mMeshes;
+	std::unordered_map<std::string, std::shared_ptr<GMaterial>> mMaterials;
+	//std::unordered_map<std::string, std::unique_ptr<Material>> mLegMaterials;
+	std::unordered_map<std::string, std::shared_ptr<GTexture>> mTextures;
+	std::vector<std::shared_ptr<GTexture>> mTextureList;
+	//std::unordered_map<std::string, std::unique_ptr<Texture>> mLegTextures;
+	std::unordered_map<std::string, std::unique_ptr<GRtvHeap>> mRtvHeaps;
+	std::unordered_map<std::string, std::unique_ptr<GCubeRtv>> mCubeRtvs;
+	UINT mPrefilterLevels = 5u;
+	std::unordered_map<std::string, ComPtr<ID3DBlob>> mShaders;
+	std::unordered_map<std::string, ComPtr<ID3D12PipelineState>> mPSOs;
+	std::unordered_map<std::string, ComPtr<ID3D12RootSignature>> mRootSignatures;
+
+	std::vector<D3D12_INPUT_ELEMENT_DESC> mInputLayout;
+
+	// List of all the render items.
+	std::vector<std::shared_ptr<GSceneObject>> mAllRitems;
+
+	// Render items divided by PSO.
+	std::vector<std::shared_ptr<GSceneObject>> mSceneObjectLayer[(int)RenderLayer::Count];
+
+	UINT mSkyTexHeapIndex = 0;
+	UINT mShadowMapHeapIndex = 0;
+	UINT mSsaoHeapIndexStart = 0;
+	UINT mSsaoAmbientMapIndex = 0;
+
+	UINT mNullCubeSrvIndex = 0;
+	UINT mNullTexSrvIndex1 = 0;
+	UINT mNullTexSrvIndex2 = 0;
+
+	UINT mGBufferSrvIndex = 0;
+	UINT mLightPassSrvIndex = 0;
+	UINT mIblIndex = 0;
+
+	CD3DX12_GPU_DESCRIPTOR_HANDLE mNullSrv;
+
+	PassConstants mMainPassCB;  // index 0 of pass cbuffer.
+	PassConstants mShadowPassCB;// index 1 of pass cbuffer.
+	SkyPassConstants mSkyPassCB;
+
+	std::vector<std::unique_ptr<UploadBuffer<SkyPassConstants>>> PreIntegrationPassCbs;
+
+	GCamera mCamera;
+
+	GCamera mCubemapSampleCamera[6];
+
+	std::unique_ptr<ShadowMap> mShadowMap;
+
+	std::unique_ptr<Ssao> mSsao;
+
+	DirectX::BoundingSphere mSceneBounds;
+
+	float mLightNearZ = 0.0f;
+	float mLightFarZ = 0.0f;
+	XMFLOAT3 mLightPosW;
+	XMFLOAT4X4 mLightView = MathHelper::Identity4x4();
+	XMFLOAT4X4 mLightProj = MathHelper::Identity4x4();
+	XMFLOAT4X4 mShadowTransform = MathHelper::Identity4x4();
+
+	float mLightRotationAngle = 0.0f;
+	XMFLOAT3 mBaseLightDirections[3] = {
+		XMFLOAT3(0.57735f, -0.57735f, 0.57735f),
+		XMFLOAT3(-0.57735f, -0.57735f, 0.57735f),
+		XMFLOAT3(0.0f, -0.707f, -0.707f)
+	};
+	XMFLOAT3 mRotatedLightDirections[3];
+
+	POINT mLastMousePos;
 };
 
