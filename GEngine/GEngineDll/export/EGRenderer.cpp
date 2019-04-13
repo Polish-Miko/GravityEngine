@@ -6,13 +6,12 @@
 
 void __stdcall InitD3D(HWND hWnd, double width, double height)
 {
-	
-	GDxRenderer::GetRenderer().Initialize(hWnd, width, height);
+	GCore::GetCore().Initialize(hWnd, width, height);
 }
 
 int __stdcall Run(void)
 {
-	GDxRenderer::GetRenderer().Run();
+	GCore::GetCore().Run();
 	return 0;
 }
 

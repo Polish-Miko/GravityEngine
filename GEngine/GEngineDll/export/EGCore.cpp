@@ -6,7 +6,8 @@
 
 void __stdcall MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
-	GDxRenderer::GetRenderer().MsgProc(hwnd, msg, wParam, lParam);
+	//GDxRenderer::GetRenderer().MsgProc(hwnd, msg, wParam, lParam);
+	GCore::GetCore().MsgProc(hwnd, msg, wParam, lParam);
 }
 
 int __stdcall GetSceneObjectNum(void)

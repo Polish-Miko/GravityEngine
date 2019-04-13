@@ -32,16 +32,70 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE prevInstance,
 
 GCore::GCore()
 {
+	mTimer = std::make_unique<GGiGameTimer>();
+	mRenderer = &GDxRenderer::GetRenderer();
+	mRenderer->SetTimer(mTimer.get());
 }
 
 GCore::~GCore()
 {
+
 }
 
 GCore& GCore::GetCore()
 {
 	static GCore *instance = new GCore();
 	return *instance;
+}
+
+void GCore::Run()
+{
+	try
+	{
+		MSG msg = { 0 };
+
+		mTimer->Reset();
+
+		while (msg.message != WM_QUIT)
+		{
+			// If there are Window messages then process them.
+			if (PeekMessage(&msg, 0, 0, 0, PM_REMOVE))
+			{
+				TranslateMessage(&msg);
+				DispatchMessage(&msg);
+			}
+			// Otherwise, do animation/game stuff.
+			else
+			{
+				mTimer->Tick();
+
+				if (!mAppPaused)
+				{
+					mRenderer->CalculateFrameStats();
+					Update();
+					mRenderer->Draw(mTimer.get());
+				}
+				else
+				{
+					Sleep(100);
+				}
+			}
+		}
+	}
+	catch (DxException& e)
+	{
+		MessageBox(nullptr, e.ToString().c_str(), L"HR Failed", MB_OK);
+	}
+}
+
+void GCore::Initialize(HWND OutputWindow, double width, double height)
+{
+	mRenderer->Initialize(OutputWindow, width, height);
+}
+
+void GCore::Update()
+{
+	mRenderer->Update(mTimer.get());
 }
 
 /*
@@ -102,7 +156,6 @@ bool GCore::Initialize(HWND OutputWindow, double width, double height)
 */
 
 //MsgProc
-/*
 #pragma region MsgProc
 
 void GCore::MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
@@ -116,21 +169,21 @@ void GCore::MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		if (LOWORD(wParam) == WA_INACTIVE)
 		{
 			mAppPaused = true;
-			mTimer.Stop();
+			mTimer->Stop();
 		}
 		else
 		{
 			mAppPaused = false;
-			mTimer.Start();
+			mTimer->Start();
 		}
 		return; 0;
 
 		// WM_SIZE is sent when the user resizes the window.
 	case WM_SIZE:
 		// Save the new client area dimensions.
-		mClientWidth = LOWORD(lParam);
-		mClientHeight = HIWORD(lParam);
-		if (md3dDevice)
+		mRenderer->SetClientWidth(LOWORD(lParam));
+		mRenderer->SetClientHeight(HIWORD(lParam));
+		if (mRenderer->IsRunning())
 		{
 			if (wParam == SIZE_MINIMIZED)
 			{
@@ -143,7 +196,7 @@ void GCore::MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 				mAppPaused = false;
 				mMinimized = false;
 				mMaximized = true;
-				OnResize();
+				mRenderer->OnResize();
 			}
 			else if (wParam == SIZE_RESTORED)
 			{
@@ -153,7 +206,7 @@ void GCore::MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 				{
 					mAppPaused = false;
 					mMinimized = false;
-					OnResize();
+					mRenderer->OnResize();
 				}
 
 				// Restoring from maximized state?
@@ -161,7 +214,7 @@ void GCore::MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 				{
 					mAppPaused = false;
 					mMaximized = false;
-					OnResize();
+					mRenderer->OnResize();
 				}
 				else if (mResizing)
 				{
@@ -176,7 +229,7 @@ void GCore::MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 				}
 				else // API call such as SetWindowPos or mSwapChain->SetFullscreenState.
 				{
-					OnResize();
+					mRenderer->OnResize();
 				}
 			}
 		}
@@ -186,7 +239,7 @@ void GCore::MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	case WM_ENTERSIZEMOVE:
 		mAppPaused = true;
 		mResizing = true;
-		mTimer.Stop();
+		mTimer->Stop();
 		return; 0;
 
 		// WM_EXITSIZEMOVE is sent when the user releases the resize bars.
@@ -194,8 +247,8 @@ void GCore::MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	case WM_EXITSIZEMOVE:
 		mAppPaused = false;
 		mResizing = false;
-		mTimer.Start();
-		OnResize();
+		mTimer->Start();
+		mRenderer->OnResize();
 		return; 0;
 
 		// WM_DESTROY is sent when the window is being destroyed.
@@ -218,30 +271,29 @@ void GCore::MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	case WM_LBUTTONDOWN:
 	case WM_MBUTTONDOWN:
 	case WM_RBUTTONDOWN:
-		OnMouseDown(wParam, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+		mRenderer->OnMouseDown(wParam, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
 		return; 0;
 	case WM_LBUTTONUP:
 	case WM_MBUTTONUP:
 	case WM_RBUTTONUP:
-		OnMouseUp(wParam, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+		mRenderer->OnMouseUp(wParam, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
 		return; 0;
 	case WM_MOUSEMOVE:
-		OnMouseMove(wParam, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+		mRenderer->OnMouseMove(wParam, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
 		return; 0;
 	case WM_KEYUP:
 		if (wParam == VK_ESCAPE)
 		{
 			PostQuitMessage(0);
 		}
-		else if ((int)wParam == VK_F2)
-			Set4xMsaaState(!m4xMsaaState);
+		//else if ((int)wParam == VK_F2)
+			//Set4xMsaaState(!m4xMsaaState);
 
 		return; 0;
 	}
 }
 
 #pragma endregion
-*/
 
 //Update
 /*

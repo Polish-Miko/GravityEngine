@@ -67,6 +67,7 @@ float GDxRenderer::AspectRatio()const
 	return static_cast<float>(mClientWidth) / mClientHeight;
 }
 
+/*
 bool GDxRenderer::Get4xMsaaState()const
 {
 	return m4xMsaaState;
@@ -83,14 +84,16 @@ void GDxRenderer::Set4xMsaaState(bool value)
 		OnResize();
 	}
 }
+*/
 
+/*
 int GDxRenderer::Run()
 {
 	try
 	{
 		MSG msg = { 0 };
 
-		mTimer.Reset();
+		pTimer->Reset();
 
 		while (msg.message != WM_QUIT)
 		{
@@ -103,13 +106,13 @@ int GDxRenderer::Run()
 			// Otherwise, do animation/game stuff.
 			else
 			{
-				mTimer.Tick();
+				pTimer->Tick();
 
 				if (!mAppPaused)
 				{
 					CalculateFrameStats();
-					Update(mTimer);
-					Draw(mTimer);
+					Update(pTimer);
+					Draw(pTimer);
 				}
 				else
 				{
@@ -124,32 +127,10 @@ int GDxRenderer::Run()
 		return 0;
 	}
 
-	//Update(mTimer);
-	//Draw(mTimer);
-
-	/*
-	while (true)
-	{
-		mTimer.Tick();
-
-
-		if (!mAppPaused)
-		{
-			//CalculateFrameStats();
-			Update(mTimer);
-			Draw(mTimer);
-			Sleep(100);
-		}
-		else
-		{
-			Sleep(100);
-		}
-	}
-	*/
-
 	//return (int)msg.wParam;
 	return 1;
 }
+*/
 
 /*
 void GRenderer::CreateRtvAndDsvDescriptorHeaps()
@@ -175,9 +156,9 @@ void GRenderer::CreateRtvAndDsvDescriptorHeaps()
 
 #pragma region Update
 
-void GDxRenderer::OnKeyboardInput(const GameTimer& gt)
+void GDxRenderer::OnKeyboardInput(const GGiGameTimer* gt)
 {
-	const float dt = gt.DeltaTime();
+	const float dt = gt->DeltaTime();
 
 	if (GetAsyncKeyState('W') & 0x8000)
 		mCamera.Walk(150.0f*dt);
@@ -200,12 +181,12 @@ void GDxRenderer::OnKeyboardInput(const GameTimer& gt)
 	mCamera.UpdateViewMatrix();
 }
 
-void GDxRenderer::AnimateMaterials(const GameTimer& gt)
+void GDxRenderer::AnimateMaterials(const GGiGameTimer* gt)
 {
 
 }
 
-void GDxRenderer::UpdateObjectCBs(const GameTimer& gt)
+void GDxRenderer::UpdateObjectCBs(const GGiGameTimer* gt)
 {
 	auto currObjectCB = mCurrFrameResource->ObjectCB.get();
 	for (auto& e : mAllRitems)
@@ -234,7 +215,7 @@ void GDxRenderer::UpdateObjectCBs(const GameTimer& gt)
 	}
 }
 
-void GDxRenderer::UpdateLightCB(const GameTimer& gt)
+void GDxRenderer::UpdateLightCB(const GGiGameTimer* gt)
 {
 	LightConstants lightCB;
 
@@ -267,7 +248,7 @@ void GDxRenderer::UpdateLightCB(const GameTimer& gt)
 	LightCB->CopyData(0, lightCB);
 }
 
-void GDxRenderer::UpdateMaterialBuffer(const GameTimer& gt)
+void GDxRenderer::UpdateMaterialBuffer(const GGiGameTimer* gt)
 {
 	auto currMaterialBuffer = mCurrFrameResource->MaterialBuffer.get();
 	for (auto& e : mMaterials)
@@ -321,7 +302,7 @@ void GDxRenderer::UpdateMaterialBuffer(const GameTimer& gt)
 	}
 }
 
-void GDxRenderer::UpdateShadowTransform(const GameTimer& gt)
+void GDxRenderer::UpdateShadowTransform(const GGiGameTimer* gt)
 {
 	// Only the first "main" light casts a shadow.
 	XMVECTOR lightDir = XMLoadFloat3(&mRotatedLightDirections[0]);
@@ -361,7 +342,7 @@ void GDxRenderer::UpdateShadowTransform(const GameTimer& gt)
 	XMStoreFloat4x4(&mShadowTransform, S);
 }
 
-void GDxRenderer::UpdateMainPassCB(const GameTimer& gt)
+void GDxRenderer::UpdateMainPassCB(const GGiGameTimer* gt)
 {
 	XMMATRIX view = mCamera.GetView();
 	XMMATRIX proj = mCamera.GetProj();
@@ -394,8 +375,8 @@ void GDxRenderer::UpdateMainPassCB(const GameTimer& gt)
 	mMainPassCB.InvRenderTargetSize = XMFLOAT2(1.0f / mClientWidth, 1.0f / mClientHeight);
 	mMainPassCB.NearZ = 1.0f;
 	mMainPassCB.FarZ = 1000.0f;
-	mMainPassCB.TotalTime = gt.TotalTime();
-	mMainPassCB.DeltaTime = gt.DeltaTime();
+	mMainPassCB.TotalTime = gt->TotalTime();
+	mMainPassCB.DeltaTime = gt->DeltaTime();
 	mMainPassCB.AmbientLight = { 0.4f, 0.4f, 0.6f, 1.0f };
 	/*
 	mMainPassCB.Lights[0].Direction = mRotatedLightDirections[0];
@@ -410,7 +391,7 @@ void GDxRenderer::UpdateMainPassCB(const GameTimer& gt)
 	currPassCB->CopyData(0, mMainPassCB);
 }
 
-void GDxRenderer::UpdateSkyPassCB(const GameTimer& gt)
+void GDxRenderer::UpdateSkyPassCB(const GGiGameTimer* gt)
 {
 	XMMATRIX view = mCamera.GetView();
 	XMMATRIX proj = mCamera.GetProj();
@@ -1541,8 +1522,8 @@ void GDxRenderer::BuildPSOs()
 	basePsoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 	basePsoDesc.NumRenderTargets = 1;
 	basePsoDesc.RTVFormats[0] = mBackBufferFormat;
-	basePsoDesc.SampleDesc.Count = m4xMsaaState ? 4 : 1;
-	basePsoDesc.SampleDesc.Quality = m4xMsaaState ? (m4xMsaaQuality - 1) : 0;
+	basePsoDesc.SampleDesc.Count = 1;
+	basePsoDesc.SampleDesc.Quality = 0;
 	basePsoDesc.DSVFormat = mDepthStencilFormat;
 
 	//
@@ -2215,8 +2196,8 @@ void GDxRenderer::OnResize()
 	depthStencilDesc.DepthOrArraySize = 1;
 	depthStencilDesc.MipLevels = 1;
 	depthStencilDesc.Format = mDepthStencilFormat;
-	depthStencilDesc.SampleDesc.Count = m4xMsaaState ? 4 : 1;
-	depthStencilDesc.SampleDesc.Quality = m4xMsaaState ? (m4xMsaaQuality - 1) : 0;
+	depthStencilDesc.SampleDesc.Count = 1;
+	depthStencilDesc.SampleDesc.Quality = 0;
 	depthStencilDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
 	depthStencilDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
 
@@ -2354,7 +2335,7 @@ bool GDxRenderer::PreInitialize(HWND OutputWindow, double width, double height)
 	return true;
 }
 
-bool GDxRenderer::Initialize(HWND OutputWindow, double width, double height)
+void GDxRenderer::Initialize(HWND OutputWindow, double width, double height)
 {
 	// Enable run-time memory check for debug builds.
 #if defined(DEBUG) | defined(_DEBUG)
@@ -2364,7 +2345,7 @@ bool GDxRenderer::Initialize(HWND OutputWindow, double width, double height)
 	try
 	{
 		if (!PreInitialize(OutputWindow, width, height))
-			return false;
+			return;
 
 		SetWorkDirectory();
 
@@ -2404,13 +2385,10 @@ bool GDxRenderer::Initialize(HWND OutputWindow, double width, double height)
 		FlushCommandQueue();
 
 		SetSceneObjectsCallback();
-
-		return true;
 	}
 	catch (DxException& e)
 	{
 		MessageBox(nullptr, e.ToString().c_str(), L"HR Failed", MB_OK);
-		return 0;
 	}
 }
 
@@ -2418,6 +2396,7 @@ bool GDxRenderer::Initialize(HWND OutputWindow, double width, double height)
 
 #pragma region MsgProc
 
+/*
 void GDxRenderer::MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
 	switch (msg)
@@ -2429,12 +2408,12 @@ void GDxRenderer::MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		if (LOWORD(wParam) == WA_INACTIVE)
 		{
 			mAppPaused = true;
-			mTimer.Stop();
+			pTimer->Stop();
 		}
 		else
 		{
 			mAppPaused = false;
-			mTimer.Start();
+			pTimer->Start();
 		}
 		return; 0;
 
@@ -2499,7 +2478,7 @@ void GDxRenderer::MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	case WM_ENTERSIZEMOVE:
 		mAppPaused = true;
 		mResizing = true;
-		mTimer.Stop();
+		pTimer->Stop();
 		return; 0;
 
 		// WM_EXITSIZEMOVE is sent when the user releases the resize bars.
@@ -2507,7 +2486,7 @@ void GDxRenderer::MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	case WM_EXITSIZEMOVE:
 		mAppPaused = false;
 		mResizing = false;
-		mTimer.Start();
+		pTimer->Start();
 		OnResize();
 		return; 0;
 
@@ -2552,12 +2531,13 @@ void GDxRenderer::MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		return; 0;
 	}
 }
+*/
 
 #pragma endregion
 
 #pragma region Update
 
-void GDxRenderer::Update(const GameTimer& gt)
+void GDxRenderer::Update(const GGiGameTimer* gt)
 {
 	OnKeyboardInput(gt);
 
@@ -2579,7 +2559,7 @@ void GDxRenderer::Update(const GameTimer& gt)
 	// Animate the lights (and hence shadows).
 	//
 
-	mLightRotationAngle += 0.1f*gt.DeltaTime();
+	mLightRotationAngle += 0.1f * gt->DeltaTime();
 
 	XMMATRIX R = XMMatrixRotationY(mLightRotationAngle);
 	for (int i = 0; i < 3; ++i)
@@ -2604,7 +2584,7 @@ void GDxRenderer::Update(const GameTimer& gt)
 
 #pragma region Draw
 
-void GDxRenderer::Draw(const GameTimer& gt)
+void GDxRenderer::Draw(const GGiGameTimer* gt)
 {
 	auto cmdListAlloc = mCurrFrameResource->CmdListAlloc;
 
@@ -3209,8 +3189,8 @@ bool GDxRenderer::InitDirect3D()
 		&msQualityLevels,
 		sizeof(msQualityLevels)));
 
-	m4xMsaaQuality = msQualityLevels.NumQualityLevels;
-	assert(m4xMsaaQuality > 0 && "Unexpected MSAA quality level.");
+	//m4xMsaaQuality = msQualityLevels.NumQualityLevels;
+	//assert(m4xMsaaQuality > 0 && "Unexpected MSAA quality level.");
 
 #ifdef _DEBUG
 	LogAdapters();
@@ -3267,8 +3247,8 @@ void GDxRenderer::CreateSwapChain()
 	sd.BufferDesc.Format = mBackBufferFormat;
 	sd.BufferDesc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED;
 	sd.BufferDesc.Scaling = DXGI_MODE_SCALING_UNSPECIFIED;
-	sd.SampleDesc.Count = m4xMsaaState ? 4 : 1;
-	sd.SampleDesc.Quality = m4xMsaaState ? (m4xMsaaQuality - 1) : 0;
+	sd.SampleDesc.Count = 1;
+	sd.SampleDesc.Quality = 0;
 	sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
 	sd.BufferCount = SwapChainBufferCount;
 	sd.OutputWindow = mhMainWnd;
@@ -3325,6 +3305,7 @@ D3D12_CPU_DESCRIPTOR_HANDLE GDxRenderer::DepthStencilView()const
 	return mDsvHeap->GetCPUDescriptorHandleForHeapStart();
 }
 
+/*
 void GDxRenderer::CalculateFrameStats()
 {
 	// Code computes the average frames per second, and also the 
@@ -3337,7 +3318,7 @@ void GDxRenderer::CalculateFrameStats()
 	frameCnt++;
 
 	// Compute averages over one second period.
-	if ((mTimer.TotalTime() - timeElapsed) >= 1.0f)
+	if ((pTimer->TotalTime() - timeElapsed) >= 1.0f)
 	{
 		float fps = (float)frameCnt; // fps = frameCnt / 1
 		float mspf = 1000.0f / fps;
@@ -3358,6 +3339,7 @@ void GDxRenderer::CalculateFrameStats()
 		timeElapsed += 1.0f;
 	}
 }
+*/
 
 void GDxRenderer::LogAdapters()
 {
@@ -3433,6 +3415,18 @@ void GDxRenderer::LogOutputDisplayModes(IDXGIOutput* output, DXGI_FORMAT format)
 		::OutputDebugString(text.c_str());
 	}
 }
+
+#pragma region Util
+
+bool GDxRenderer::IsRunning()
+{
+	if (md3dDevice)
+		return true;
+	else
+		return false;
+}
+
+#pragma endregion
 
 #pragma region export
 

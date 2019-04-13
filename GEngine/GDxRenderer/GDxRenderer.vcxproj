@@ -115,7 +115,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_LIB;FBXSDK_SHARED;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)ThirdParty\FBX SDK\2019.2\include\;Common\;Render\;Public\;Private\;$(SolutionDir)GRendererInfra;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)ThirdParty\FBX SDK\2019.2\include\;Common\;Render\;Public\;Private\;$(SolutionDir)GRendererInfra;$(SolutionDir)GGenericInfra;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
@@ -176,7 +176,6 @@
     <ClInclude Include="Common\GDescriptorHeap.h" />
     <ClInclude Include="Common\GMesh.h" />
     <ClInclude Include="Common\MathHelper.h" />
-    <ClInclude Include="Common\GameTimer.h" />
     <ClInclude Include="Common\DDSTextureLoader.h" />
     <ClInclude Include="Common\FrameResource.h" />
     <ClInclude Include="Common\GeometryGenerator.h" />
@@ -215,7 +214,6 @@
     <ClCompile Include="Common\GDescriptorHeap.cpp" />
     <ClCompile Include="Common\GMesh.cpp" />
     <ClCompile Include="Common\MathHelper.cpp" />
-    <ClCompile Include="Common\GameTimer.cpp" />
     <ClCompile Include="Common\DDSTextureLoader.cpp" />
     <ClCompile Include="Common\FrameResource.cpp" />
     <ClCompile Include="Common\GeometryGenerator.cpp" />
@@ -378,6 +376,9 @@
     <None Include="Shaders\Material.hlsli" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\GGenericInfra\GGenericInfra.vcxproj">
+      <Project>{51e7f36e-3235-4ab2-b49f-9d06c02c7b6d}</Project>
+    </ProjectReference>
     <ProjectReference Include="..\GRendererInfra\GRendererInfra.vcxproj">
       <Project>{6f3bdbc6-7fac-4d9f-924b-f5f5cd211b0f}</Project>
     </ProjectReference>

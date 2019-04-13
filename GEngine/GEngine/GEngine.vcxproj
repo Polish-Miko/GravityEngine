@@ -106,7 +106,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;FBXSDK_SHARED;GENGINE_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)GDxRenderer\Public;$(SolutionDir)GDxRenderer\Render;$(SolutionDir)GDxRenderer\Common;$(SolutionDir)GDxRenderer\;$(SolutionDir)ThirdParty\FBX SDK\2019.2\include;Private;Public;$(SolutionDir)GRendererInfra\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)GDxRenderer\Public;$(SolutionDir)GDxRenderer\Render;$(SolutionDir)GDxRenderer\Common;$(SolutionDir)GDxRenderer\;$(SolutionDir)ThirdParty\FBX SDK\2019.2\include;Private;Public;$(SolutionDir)GRendererInfra\;$(SolutionDir)GGenericInfra;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
@@ -173,6 +173,9 @@
   <ItemGroup>
     <ProjectReference Include="..\GDxRenderer\GDxRenderer.vcxproj">
       <Project>{42e936df-58f6-454c-98aa-43348b4a2abf}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\GGenericInfra\GGenericInfra.vcxproj">
+      <Project>{51e7f36e-3235-4ab2-b49f-9d06c02c7b6d}</Project>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

@@ -26,3 +26,4 @@
 //#include "ResourceUploadBatch.h"
 //#include <WICTextureLoader.h>
 #include <fbxsdk.h>
+#include "GGiInclude.h"

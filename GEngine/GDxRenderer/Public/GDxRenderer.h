@@ -40,7 +40,7 @@ enum class RenderLayer : int
 	Count
 };
 
-class GDxRenderer
+class GDxRenderer : public GRiRenderer
 {
 protected:
 
@@ -60,15 +60,23 @@ public:
 	HWND      MainWnd()const;
 	float     AspectRatio()const;
 
-	bool Get4xMsaaState()const;
-	void Set4xMsaaState(bool value);
+	//bool Get4xMsaaState()const;
+	//void Set4xMsaaState(bool value);
 
-	int Run();
-
+	//int Run();
 
 	bool PreInitialize(HWND OutputWindow, double width, double height);
 
-	bool Initialize(HWND OutputWindow, double width, double height);
+	virtual void Initialize(HWND OutputWindow, double width, double height) override;
+
+	virtual bool IsRunning() override;
+
+	virtual void OnResize() override;
+
+	// Convenience overrides for handling mouse input.
+	virtual void OnMouseDown(WPARAM btnState, int x, int y) override;
+	virtual void OnMouseUp(WPARAM btnState, int x, int y) override;
+	virtual void OnMouseMove(WPARAM btnState, int x, int y) override;
 
 	//virtual bool Initialize(HWND OutputWindow, double width, double height);
 
@@ -76,7 +84,7 @@ public:
 
 #pragma region export
 
-	void MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
+	//void MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 	int GetSceneObjectNum();
 
@@ -92,28 +100,22 @@ public:
 
 protected:
 	virtual void CreateRtvAndDsvDescriptorHeaps();
-	virtual void OnResize();
 	//virtual void Update(const GameTimer& gt) = 0;
 	//virtual void Draw(const GameTimer& gt) = 0;
 	//virtual void Draw_Test(const GameTimer& gt) = 0;
-	void Update(const GameTimer& gt);
-	void Draw(const GameTimer& gt);
+	virtual void Update(const GGiGameTimer* gt) override;
+	virtual void Draw(const GGiGameTimer* gt) override;
 
-	// Convenience overrides for handling mouse input.
-	virtual void OnMouseDown(WPARAM btnState, int x, int y);
-	virtual void OnMouseUp(WPARAM btnState, int x, int y);
-	virtual void OnMouseMove(WPARAM btnState, int x, int y);
-
-	void OnKeyboardInput(const GameTimer& gt);
-	void AnimateMaterials(const GameTimer& gt);
-	void UpdateObjectCBs(const GameTimer& gt);
-	void UpdateMaterialBuffer(const GameTimer& gt);
-	void UpdateShadowTransform(const GameTimer& gt);
-	void UpdateMainPassCB(const GameTimer& gt);
-	void UpdateSkyPassCB(const GameTimer& gt);
-	//void UpdateShadowPassCB(const GameTimer& gt);
-	//void UpdateSsaoCB(const GameTimer& gt);
-	void UpdateLightCB(const GameTimer& gt);
+	void OnKeyboardInput(const GGiGameTimer* gt);
+	void AnimateMaterials(const GGiGameTimer* gt);
+	void UpdateObjectCBs(const GGiGameTimer* gt);
+	void UpdateMaterialBuffer(const GGiGameTimer* gt);
+	void UpdateShadowTransform(const GGiGameTimer* gt);
+	void UpdateMainPassCB(const GGiGameTimer* gt);
+	void UpdateSkyPassCB(const GGiGameTimer* gt);
+	//void UpdateShadowPassCB(const GameTimer* gt);
+	//void UpdateSsaoCB(const GameTimer* gt);
+	void UpdateLightCB(const GGiGameTimer* gt);
 
 	void BuildCubemapSampleCameras();
 	//void LoadTextures();
@@ -140,7 +142,7 @@ protected:
 
 protected:
 
-	bool InitMainWindow();
+	//bool InitMainWindow();
 	bool InitDirect3D();
 	void CreateCommandObjects();
 	void CreateSwapChain();
@@ -152,7 +154,7 @@ protected:
 	D3D12_CPU_DESCRIPTOR_HANDLE CurrentBackBufferView()const;
 	D3D12_CPU_DESCRIPTOR_HANDLE DepthStencilView()const;
 
-	void CalculateFrameStats();
+	//void CalculateFrameStats();
 
 	void LogAdapters();
 	void LogAdapterOutputs(IDXGIAdapter* adapter);
@@ -160,6 +162,9 @@ protected:
 
 protected:
 
+	HWND      mhMainWnd = nullptr; // main window handle
+
+	/*
 	//HINSTANCE mhAppInst = nullptr; // application instance handle
 	HWND      mhMainWnd = nullptr; // main window handle
 	bool      mAppPaused = false;  // is the application paused?
@@ -171,9 +176,10 @@ protected:
 	// Set true to use 4X MSAA (?.1.8).  The default is false.
 	bool      m4xMsaaState = false;    // 4X MSAA enabled
 	UINT      m4xMsaaQuality = 0;      // quality level of 4X MSAA
+	*/
 
 	// Used to keep track of the Delta-time and game time (?.4).
-	GameTimer mTimer;
+	//GGiGameTimer* pTimer;
 
 	Microsoft::WRL::ComPtr<IDXGIFactory4> mdxgiFactory;
 	Microsoft::WRL::ComPtr<IDXGISwapChain> mSwapChain;
@@ -206,8 +212,8 @@ protected:
 	D3D_DRIVER_TYPE md3dDriverType = D3D_DRIVER_TYPE_HARDWARE;
 	DXGI_FORMAT mBackBufferFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
 	DXGI_FORMAT mDepthStencilFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
-	int mClientWidth = 800;
-	int mClientHeight = 600;
+	//int mClientWidth = 800;
+	//int mClientHeight = 600;
 
 protected:
 	std::vector<std::unique_ptr<FrameResource>> mFrameResources;

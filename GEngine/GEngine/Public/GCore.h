@@ -25,29 +25,39 @@ public:
 
 	static GCore& GetCore();
 
+	void Run();
+
+	void Initialize(HWND OutputWindow, double width, double height);
+
 	//virtual bool Initialize(HWND OutputWindow, double width, double height)override;
 
-	/*
 #pragma region export
 
-	virtual void MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)override;
+	void MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
-	int GetSceneObjectNum();
+	//int GetSceneObjectNum();
 
-	const char* GetSceneObjectName(int index);
+	//const char* GetSceneObjectName(int index);
 
-	void SetSetSceneObjectsCallback(VoidFuncPointerType pSetSceneObjectsCallback);
+	//void SetSetSceneObjectsCallback(VoidFuncPointerType pSetSceneObjectsCallback);
 
-	void GetSceneObjectTransform(char* objName, float* trans);
+	//void GetSceneObjectTransform(char* objName, float* trans);
 
-	void SetSceneObjectTransform(char* objName, float* trans);
+	//void SetSceneObjectTransform(char* objName, float* trans);
 
 #pragma endregion
-	*/
 
 private:
-	//void Update(const GameTimer& gt);
-	//void Draw(const GameTimer& gt);
+
+	//HINSTANCE mhAppInst = nullptr; // application instance handle
+	bool      mAppPaused = false;  // is the application paused?
+	bool      mMinimized = false;  // is the application minimized?
+	bool      mMaximized = false;  // is the application maximized?
+	bool      mResizing = false;   // are the resize bars being dragged?
+	bool      mFullscreenState = false;// fullscreen enabled
+
+	void Update();
+	//void Draw();
 
 	//void SetWorkDirectory();
 	//void LoadTextures();
@@ -60,7 +70,9 @@ private:
 
 	GCore();
 
-	std::unique_ptr<GRiRenderer> mRenderer;
+	GRiRenderer* mRenderer;
+
+	std::unique_ptr<GGiGameTimer> mTimer;
 
 	//std::wstring WorkDirectory;
 
