@@ -10,6 +10,8 @@
 #include <crtdbg.h>
 #endif
 
+#include "GRiInclude.h"
+//#include "GDxPreInclude.h"
 #include "GEngineInclude.h"
 #include "UploadBuffer.h"
 #include "GeometryGenerator.h"
@@ -26,6 +28,8 @@ using Microsoft::WRL::ComPtr;
 using namespace DirectX;
 using namespace DirectX::PackedVector;
 
+typedef void(__stdcall * VoidFuncPointerType)(void);
+
 enum class RenderLayer : int
 {
 	Opaque = 0,
@@ -36,17 +40,19 @@ enum class RenderLayer : int
 	Count
 };
 
-class GRenderer
+class GDxRenderer
 {
 protected:
 
-	GRenderer(const GRenderer& rhs) = delete;
-	GRenderer& operator=(const GRenderer& rhs) = delete;
-	virtual ~GRenderer();
+	GDxRenderer(const GDxRenderer& rhs) = delete;
+	GDxRenderer& operator=(const GDxRenderer& rhs) = delete;
+	virtual ~GDxRenderer();
 
 public:
 
-	GRenderer();
+	//GRenderer();
+
+	static GDxRenderer& GetRenderer();
 
 	//static GRenderer* GetApp();
 
@@ -59,15 +65,39 @@ public:
 
 	int Run();
 
-	virtual bool Initialize(HWND OutputWindow, double width, double height);
-	virtual void MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
+
+	bool PreInitialize(HWND OutputWindow, double width, double height);
+
+	bool Initialize(HWND OutputWindow, double width, double height);
+
+	//virtual bool Initialize(HWND OutputWindow, double width, double height);
+
+	//virtual void MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
+
+#pragma region export
+
+	void MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
+
+	int GetSceneObjectNum();
+
+	const char* GetSceneObjectName(int index);
+
+	void SetSetSceneObjectsCallback(VoidFuncPointerType pSetSceneObjectsCallback);
+
+	void GetSceneObjectTransform(char* objName, float* trans);
+
+	void SetSceneObjectTransform(char* objName, float* trans);
+
+#pragma endregion
 
 protected:
 	virtual void CreateRtvAndDsvDescriptorHeaps();
 	virtual void OnResize();
-	virtual void Update(const GameTimer& gt) = 0;
-	virtual void Draw(const GameTimer& gt) = 0;
+	//virtual void Update(const GameTimer& gt) = 0;
+	//virtual void Draw(const GameTimer& gt) = 0;
 	//virtual void Draw_Test(const GameTimer& gt) = 0;
+	void Update(const GameTimer& gt);
+	void Draw(const GameTimer& gt);
 
 	// Convenience overrides for handling mouse input.
 	virtual void OnMouseDown(WPARAM btnState, int x, int y);
@@ -114,6 +144,7 @@ protected:
 	bool InitDirect3D();
 	void CreateCommandObjects();
 	void CreateSwapChain();
+	void CreateRendererFactory();
 
 	void FlushCommandQueue();
 
@@ -129,8 +160,6 @@ protected:
 
 protected:
 
-	static GRenderer* mApp;
-
 	//HINSTANCE mhAppInst = nullptr; // application instance handle
 	HWND      mhMainWnd = nullptr; // main window handle
 	bool      mAppPaused = false;  // is the application paused?
@@ -143,7 +172,7 @@ protected:
 	bool      m4xMsaaState = false;    // 4X MSAA enabled
 	UINT      m4xMsaaQuality = 0;      // quality level of 4X MSAA
 
-	// Used to keep track of the “delta-time?and game time (?.4).
+	// Used to keep track of the Delta-time and game time (?.4).
 	GameTimer mTimer;
 
 	Microsoft::WRL::ComPtr<IDXGIFactory4> mdxgiFactory;
@@ -259,5 +288,24 @@ protected:
 	XMFLOAT3 mRotatedLightDirections[3];
 
 	POINT mLastMousePos;
+
+private:
+	
+	GDxRenderer();
+
+	std::unique_ptr<GRiRendererFactory> mFactory;
+
+	void SetWorkDirectory();
+	void LoadTextures();
+	std::wstring WorkDirectory;
+
+#pragma region Export-Related
+
+	VoidFuncPointerType mSetSceneObjectsCallback;
+
+	void SetSceneObjectsCallback();
+
+#pragma endregion
+
 };
 

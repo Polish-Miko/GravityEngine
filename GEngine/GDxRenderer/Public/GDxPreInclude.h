@@ -1,6 +1,7 @@
 #pragma once
 
 #include <windows.h>
+#include <comdef.h>
 #include <wrl.h>
 #include <dxgi1_4.h>
 #include <d3d12.h>
@@ -94,9 +95,22 @@ class DxException
 {
 public:
 	DxException() = default;
-	DxException(HRESULT hr, const std::wstring& functionName, const std::wstring& filename, int lineNumber);
+	DxException(HRESULT hr, const std::wstring& functionName, const std::wstring& filename, int lineNumber) :
+		ErrorCode(hr),
+		FunctionName(functionName),
+		Filename(filename),
+		LineNumber(lineNumber)
+	{
+	}
 
-	std::wstring ToString()const;
+	std::wstring ToString()const
+	{
+		// Get the string description of the error code.
+		_com_error err(ErrorCode);
+		std::wstring msg = err.ErrorMessage();
+
+		return FunctionName + L" failed in " + Filename + L"; line " + std::to_wstring(LineNumber) + L"; error: " + msg;
+	}
 
 	HRESULT ErrorCode = S_OK;
 	std::wstring FunctionName;

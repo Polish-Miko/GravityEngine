@@ -1,7 +1,8 @@
 #pragma once
 
 //#include "d3dx12.h"
-#include "GUtilInclude.h"
+//#include "GUtilInclude.h"
+#include "GDxPreInclude.h"
 
 /*
 class GInputLayout

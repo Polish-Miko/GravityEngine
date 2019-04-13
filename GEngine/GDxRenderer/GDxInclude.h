@@ -1,5 +1,6 @@
 #pragma once
-#include "GDxPreInclude.h"
+#include "Public/GDxPreInclude.h"
 
-#include "GDxTextureLoader.h"
-#include "GDxRendererFactory.h"
+#include "Public/GDxTextureLoader.h"
+#include "Public/GDxRendererFactory.h"
+//#include "Public/GDxRenderer.h"

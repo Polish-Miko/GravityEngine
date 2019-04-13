@@ -1,6 +1,7 @@
 #pragma once
 
-#include "GUtilInclude.h"
+//#include "GUtilInclude.h"
+#include "GDxPreInclude.h"
 
 class GDX12Util
 {

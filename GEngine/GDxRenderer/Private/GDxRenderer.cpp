@@ -1,5 +1,6 @@
 #include "stdafx.h"
-#include "GRenderer.h"
+#include "GDxRenderer.h"
+#include "GDxRendererFactory.h"
 
 #include <WindowsX.h>
 
@@ -17,7 +18,6 @@ MainWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 }
 */
 
-GRenderer* GRenderer::mApp = nullptr;
 
 /*
 GRenderer* GRenderer::GetApp()
@@ -26,15 +26,24 @@ GRenderer* GRenderer::GetApp()
 }
 */
 
-GRenderer::GRenderer()
+GDxRenderer& GDxRenderer::GetRenderer()
 {
-	// Only one D3DApp can be constructed.
-	assert(mApp == nullptr);
-	mApp = this;
+	static GDxRenderer *instance = new GDxRenderer();
+	return *instance;
+}
+
+GDxRenderer::GDxRenderer()
+{
+	// Estimate the scene bounding sphere manually since we know how the scene was constructed.
+	// The grid is the "widest object" with a width of 20 and depth of 30.0f, and centered at
+	// the world space origin.  In general, you need to loop over every world space vertex
+	// position and compute the bounding sphere.
+	mSceneBounds.Center = XMFLOAT3(0.0f, 0.0f, 0.0f);
+	mSceneBounds.Radius = sqrtf(10.0f*10.0f + 15.0f*15.0f);
 }
 
 ///*
-GRenderer::~GRenderer()
+GDxRenderer::~GDxRenderer()
 {
 	if (md3dDevice != nullptr)
 		FlushCommandQueue();
@@ -48,22 +57,22 @@ HINSTANCE GRenderer::AppInst()const
 }
 */
 
-HWND GRenderer::MainWnd()const
+HWND GDxRenderer::MainWnd()const
 {
 	return mhMainWnd;
 }
 
-float GRenderer::AspectRatio()const
+float GDxRenderer::AspectRatio()const
 {
 	return static_cast<float>(mClientWidth) / mClientHeight;
 }
 
-bool GRenderer::Get4xMsaaState()const
+bool GDxRenderer::Get4xMsaaState()const
 {
 	return m4xMsaaState;
 }
 
-void GRenderer::Set4xMsaaState(bool value)
+void GDxRenderer::Set4xMsaaState(bool value)
 {
 	if (m4xMsaaState != value)
 	{
@@ -75,7 +84,7 @@ void GRenderer::Set4xMsaaState(bool value)
 	}
 }
 
-int GRenderer::Run()
+int GDxRenderer::Run()
 {
 	try
 	{
@@ -142,24 +151,6 @@ int GRenderer::Run()
 	return 1;
 }
 
-bool GRenderer::Initialize(HWND OutputWindow, double width, double height)
-{
-	//if (!InitMainWindow())
-		//return false;
-
-	mhMainWnd = OutputWindow;
-	mClientWidth = (int)width;
-	mClientHeight = (int)height;
-
-	if (!InitDirect3D())
-		return false;
-
-	// Do the initial resize code.
-	OnResize();
-
-	return true;
-}
-
 /*
 void GRenderer::CreateRtvAndDsvDescriptorHeaps()
 {
@@ -184,7 +175,7 @@ void GRenderer::CreateRtvAndDsvDescriptorHeaps()
 
 #pragma region Update
 
-void GRenderer::OnKeyboardInput(const GameTimer& gt)
+void GDxRenderer::OnKeyboardInput(const GameTimer& gt)
 {
 	const float dt = gt.DeltaTime();
 
@@ -209,12 +200,12 @@ void GRenderer::OnKeyboardInput(const GameTimer& gt)
 	mCamera.UpdateViewMatrix();
 }
 
-void GRenderer::AnimateMaterials(const GameTimer& gt)
+void GDxRenderer::AnimateMaterials(const GameTimer& gt)
 {
 
 }
 
-void GRenderer::UpdateObjectCBs(const GameTimer& gt)
+void GDxRenderer::UpdateObjectCBs(const GameTimer& gt)
 {
 	auto currObjectCB = mCurrFrameResource->ObjectCB.get();
 	for (auto& e : mAllRitems)
@@ -243,7 +234,7 @@ void GRenderer::UpdateObjectCBs(const GameTimer& gt)
 	}
 }
 
-void GRenderer::UpdateLightCB(const GameTimer& gt)
+void GDxRenderer::UpdateLightCB(const GameTimer& gt)
 {
 	LightConstants lightCB;
 
@@ -276,7 +267,7 @@ void GRenderer::UpdateLightCB(const GameTimer& gt)
 	LightCB->CopyData(0, lightCB);
 }
 
-void GRenderer::UpdateMaterialBuffer(const GameTimer& gt)
+void GDxRenderer::UpdateMaterialBuffer(const GameTimer& gt)
 {
 	auto currMaterialBuffer = mCurrFrameResource->MaterialBuffer.get();
 	for (auto& e : mMaterials)
@@ -330,7 +321,7 @@ void GRenderer::UpdateMaterialBuffer(const GameTimer& gt)
 	}
 }
 
-void GRenderer::UpdateShadowTransform(const GameTimer& gt)
+void GDxRenderer::UpdateShadowTransform(const GameTimer& gt)
 {
 	// Only the first "main" light casts a shadow.
 	XMVECTOR lightDir = XMLoadFloat3(&mRotatedLightDirections[0]);
@@ -370,7 +361,7 @@ void GRenderer::UpdateShadowTransform(const GameTimer& gt)
 	XMStoreFloat4x4(&mShadowTransform, S);
 }
 
-void GRenderer::UpdateMainPassCB(const GameTimer& gt)
+void GDxRenderer::UpdateMainPassCB(const GameTimer& gt)
 {
 	XMMATRIX view = mCamera.GetView();
 	XMMATRIX proj = mCamera.GetProj();
@@ -419,7 +410,7 @@ void GRenderer::UpdateMainPassCB(const GameTimer& gt)
 	currPassCB->CopyData(0, mMainPassCB);
 }
 
-void GRenderer::UpdateSkyPassCB(const GameTimer& gt)
+void GDxRenderer::UpdateSkyPassCB(const GameTimer& gt)
 {
 	XMMATRIX view = mCamera.GetView();
 	XMMATRIX proj = mCamera.GetProj();
@@ -503,7 +494,7 @@ void GRenderer::UpdateSsaoCB(const GameTimer& gt)
 
 #pragma region Init
 
-void GRenderer::BuildCubemapSampleCameras()
+void GDxRenderer::BuildCubemapSampleCameras()
 {
 	XMFLOAT3 center(0.0f, 0.0f, 0.0f);
 	XMFLOAT3 worldUp(0.0f, 1.0f, 0.0f);
@@ -538,7 +529,7 @@ void GRenderer::BuildCubemapSampleCameras()
 }
 
 /*
-void GRenderer::LoadTextures()
+void GDxRenderer::LoadTextures()
 {
 	//
 	// Load non-DDS images.
@@ -692,7 +683,7 @@ void GRenderer::LoadTextures()
 }
 */
 
-void GRenderer::BuildRootSignature()
+void GDxRenderer::BuildRootSignature()
 {
 	// GBuffer root signature
 	{
@@ -974,7 +965,7 @@ void GRenderer::BuildRootSignature()
 	}
 }
 
-std::array<const CD3DX12_STATIC_SAMPLER_DESC, 7> GRenderer::GetStaticSamplers()
+std::array<const CD3DX12_STATIC_SAMPLER_DESC, 7> GDxRenderer::GetStaticSamplers()
 {
 	// Applications usually only need a handful of samplers.  So just define them all up front
 	// and keep them available as part of the root signature.  
@@ -1044,7 +1035,7 @@ std::array<const CD3DX12_STATIC_SAMPLER_DESC, 7> GRenderer::GetStaticSamplers()
 	};
 }
 
-void GRenderer::BuildDescriptorHeaps()
+void GDxRenderer::BuildDescriptorHeaps()
 {
 	//
 	// Create the SRV heap.
@@ -1245,35 +1236,35 @@ void GRenderer::BuildDescriptorHeaps()
 	}
 }
 
-CD3DX12_CPU_DESCRIPTOR_HANDLE GRenderer::GetCpuSrv(int index)const
+CD3DX12_CPU_DESCRIPTOR_HANDLE GDxRenderer::GetCpuSrv(int index)const
 {
 	auto srv = CD3DX12_CPU_DESCRIPTOR_HANDLE(mSrvDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
 	srv.Offset(index, mCbvSrvUavDescriptorSize);
 	return srv;
 }
 
-CD3DX12_GPU_DESCRIPTOR_HANDLE GRenderer::GetGpuSrv(int index)const
+CD3DX12_GPU_DESCRIPTOR_HANDLE GDxRenderer::GetGpuSrv(int index)const
 {
 	auto srv = CD3DX12_GPU_DESCRIPTOR_HANDLE(mSrvDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
 	srv.Offset(index, mCbvSrvUavDescriptorSize);
 	return srv;
 }
 
-CD3DX12_CPU_DESCRIPTOR_HANDLE GRenderer::GetDsv(int index)const
+CD3DX12_CPU_DESCRIPTOR_HANDLE GDxRenderer::GetDsv(int index)const
 {
 	auto dsv = CD3DX12_CPU_DESCRIPTOR_HANDLE(mDsvHeap->GetCPUDescriptorHandleForHeapStart());
 	dsv.Offset(index, mDsvDescriptorSize);
 	return dsv;
 }
 
-CD3DX12_CPU_DESCRIPTOR_HANDLE GRenderer::GetRtv(int index)const
+CD3DX12_CPU_DESCRIPTOR_HANDLE GDxRenderer::GetRtv(int index)const
 {
 	auto rtv = CD3DX12_CPU_DESCRIPTOR_HANDLE(mRtvHeap->GetCPUDescriptorHandleForHeapStart());
 	rtv.Offset(index, mRtvDescriptorSize);
 	return rtv;
 }
 
-void GRenderer::BuildShadersAndInputLayout()
+void GDxRenderer::BuildShadersAndInputLayout()
 {
 	const D3D_SHADER_MACRO alphaTestDefines[] =
 	{
@@ -1290,7 +1281,7 @@ void GRenderer::BuildShadersAndInputLayout()
 	};
 }
 
-void GRenderer::LoadMeshes()
+void GDxRenderer::LoadMeshes()
 {
 	GeometryGenerator geoGen;
 
@@ -1347,7 +1338,7 @@ void GRenderer::LoadMeshes()
 	mMeshes[fireplace->Name] = fireplace;
 }
 
-void GRenderer::BuildPSOs()
+void GDxRenderer::BuildPSOs()
 {
 	//
 	// PSO for GBuffers.
@@ -1676,7 +1667,7 @@ void GRenderer::BuildPSOs()
 
 }
 
-void GRenderer::BuildFrameResources()
+void GDxRenderer::BuildFrameResources()
 {
 	for (int i = 0; i < NUM_FRAME_RESOURCES; ++i)
 	{
@@ -1685,7 +1676,7 @@ void GRenderer::BuildFrameResources()
 	}
 }
 
-void GRenderer::BuildMaterials()
+void GDxRenderer::BuildMaterials()
 {
 	auto defaultMat = std::make_unique<GMaterial>();
 	defaultMat->Name = "default";
@@ -1832,7 +1823,7 @@ void GRenderer::BuildMaterials()
 
 }
 
-void GRenderer::BuildSceneObjects()
+void GDxRenderer::BuildSceneObjects()
 {
 	UINT indexCB = 0;
 
@@ -2005,7 +1996,7 @@ void GRenderer::BuildSceneObjects()
 	indexCB++;
 }
 
-void GRenderer::CubemapPreIntegration()
+void GDxRenderer::CubemapPreIntegration()
 {
 	for (auto i = 0u; i < (6 * mPrefilterLevels); i++)
 	{
@@ -2131,7 +2122,7 @@ void GRenderer::CubemapPreIntegration()
 
 }
 
-void GRenderer::DrawSceneObjects(ID3D12GraphicsCommandList* cmdList, const RenderLayer layer, bool bSetCBV)
+void GDxRenderer::DrawSceneObjects(ID3D12GraphicsCommandList* cmdList, const RenderLayer layer, bool bSetCBV)
 {
 	// For each render item...
 	for (size_t i = 0; i < mSceneObjectLayer[((int)layer)].size(); ++i)
@@ -2141,7 +2132,7 @@ void GRenderer::DrawSceneObjects(ID3D12GraphicsCommandList* cmdList, const Rende
 	}
 }
 
-void GRenderer::DrawSceneObject(ID3D12GraphicsCommandList* cmdList, const GSceneObject* sObject, bool bSetCBV)
+void GDxRenderer::DrawSceneObject(ID3D12GraphicsCommandList* cmdList, const GSceneObject* sObject, bool bSetCBV)
 {
 
 	cmdList->IASetVertexBuffers(0, 1, &sObject->Mesh->mVIBuffer->VertexBufferView());
@@ -2161,7 +2152,7 @@ void GRenderer::DrawSceneObject(ID3D12GraphicsCommandList* cmdList, const GScene
 
 #pragma endregion
 
-void GRenderer::CreateRtvAndDsvDescriptorHeaps()
+void GDxRenderer::CreateRtvAndDsvDescriptorHeaps()
 {
 	// Add +1 for screen normal map, +2 for ambient maps.
 	D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc;
@@ -2182,7 +2173,7 @@ void GRenderer::CreateRtvAndDsvDescriptorHeaps()
 		&dsvHeapDesc, IID_PPV_ARGS(mDsvHeap.GetAddressOf())));
 }
 
-void GRenderer::OnResize()
+void GDxRenderer::OnResize()
 {
 	assert(md3dDevice);
 	assert(mSwapChain);
@@ -2287,7 +2278,7 @@ void GRenderer::OnResize()
 	}
 }
 
-void GRenderer::OnMouseDown(WPARAM btnState, int x, int y)
+void GDxRenderer::OnMouseDown(WPARAM btnState, int x, int y)
 {
 	mLastMousePos.x = x;
 	mLastMousePos.y = y;
@@ -2295,12 +2286,12 @@ void GRenderer::OnMouseDown(WPARAM btnState, int x, int y)
 	SetCapture(mhMainWnd);
 }
 
-void GRenderer::OnMouseUp(WPARAM btnState, int x, int y)
+void GDxRenderer::OnMouseUp(WPARAM btnState, int x, int y)
 {
 	ReleaseCapture();
 }
 
-void GRenderer::OnMouseMove(WPARAM btnState, int x, int y)
+void GDxRenderer::OnMouseMove(WPARAM btnState, int x, int y)
 {
 	if ((btnState & MK_RBUTTON) != 0)
 	{
@@ -2341,16 +2332,99 @@ void GCore::OnResize()
 }
 */
 
-void GRenderer::MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
+#pragma region Initialize
+
+bool GDxRenderer::PreInitialize(HWND OutputWindow, double width, double height)
 {
-	//OnMouseMove(0xFFFF, 1, 1);
-	
-	///*
+	//if (!InitMainWindow())
+		//return false;
+
+	mhMainWnd = OutputWindow;
+	mClientWidth = (int)width;
+	mClientHeight = (int)height;
+
+	if (!InitDirect3D())
+		return false;
+
+	CreateRendererFactory();
+
+	// Do the initial resize code.
+	OnResize();
+
+	return true;
+}
+
+bool GDxRenderer::Initialize(HWND OutputWindow, double width, double height)
+{
+	// Enable run-time memory check for debug builds.
+#if defined(DEBUG) | defined(_DEBUG)
+	_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
+#endif
+
+	try
+	{
+		if (!PreInitialize(OutputWindow, width, height))
+			return false;
+
+		SetWorkDirectory();
+
+		// Reset the command list to prep for initialization commands.
+		ThrowIfFailed(mCommandList->Reset(mDirectCmdListAlloc.Get(), nullptr));
+
+		mCamera.SetPosition(0.0f, 2.0f, -5.0f);
+		/*
+		mShadowMap = std::make_unique<ShadowMap>(md3dDevice.Get(),
+			2048, 2048);
+
+		mSsao = std::make_unique<Ssao>(
+			md3dDevice.Get(),
+			mCommandList.Get(),
+			mClientWidth, mClientHeight);
+		*/
+		BuildCubemapSampleCameras();
+		LoadTextures();
+		BuildDescriptorHeaps();
+		BuildRootSignature();
+		BuildShadersAndInputLayout();
+		LoadMeshes();
+		BuildMaterials();
+		BuildSceneObjects();
+		BuildFrameResources();
+		BuildPSOs();
+
+		CubemapPreIntegration();
+
+		//mSsao->SetPSOs(mPSOs["ssao"].Get(), mPSOs["ssaoBlur"].Get());
+		// Execute the initialization commands.
+		ThrowIfFailed(mCommandList->Close());
+		ID3D12CommandList* cmdsLists[] = { mCommandList.Get() };
+		mCommandQueue->ExecuteCommandLists(_countof(cmdsLists), cmdsLists);
+
+		// Wait until initialization is complete.
+		FlushCommandQueue();
+
+		SetSceneObjectsCallback();
+
+		return true;
+	}
+	catch (DxException& e)
+	{
+		MessageBox(nullptr, e.ToString().c_str(), L"HR Failed", MB_OK);
+		return 0;
+	}
+}
+
+#pragma endregion
+
+#pragma region MsgProc
+
+void GDxRenderer::MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
 	switch (msg)
 	{
-		// WM_ACTIVATE is sent when the window is activated or deactivated.  
-		// We pause the game when the window is deactivated and unpause it 
-		// when it becomes active.  
+		// WM_ACTIVATE is sent when the window is activated or deactivated.
+		// We pause the game when the window is deactivated and unpause it
+		// when it becomes active.
 	case WM_ACTIVATE:
 		if (LOWORD(wParam) == WA_INACTIVE)
 		{
@@ -2364,7 +2438,7 @@ void GRenderer::MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		}
 		return; 0;
 
-		// WM_SIZE is sent when the user resizes the window.  
+		// WM_SIZE is sent when the user resizes the window.
 	case WM_SIZE:
 		// Save the new client area dimensions.
 		mClientWidth = LOWORD(lParam);
@@ -2404,13 +2478,13 @@ void GRenderer::MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 				}
 				else if (mResizing)
 				{
-					// If user is dragging the resize bars, we do not resize 
-					// the buffers here because as the user continuously 
+					// If user is dragging the resize bars, we do not resize
+					// the buffers here because as the user continuously
 					// drags the resize bars, a stream of WM_SIZE messages are
 					// sent to the window, and it would be pointless (and slow)
 					// to resize for each WM_SIZE message received from dragging
-					// the resize bars.  So instead, we reset after the user is 
-					// done resizing the window and releases the resize bars, which 
+					// the resize bars.  So instead, we reset after the user is
+					// done resizing the window and releases the resize bars, which
 					// sends a WM_EXITSIZEMOVE message.
 				}
 				else // API call such as SetWindowPos or mSwapChain->SetFullscreenState.
@@ -2442,8 +2516,8 @@ void GRenderer::MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		PostQuitMessage(0);
 		return; 0;
 
-		// The WM_MENUCHAR message is sent when a menu is active and the user presses 
-		// a key that does not correspond to any mnemonic or accelerator key. 
+		// The WM_MENUCHAR message is sent when a menu is active and the user presses
+		// a key that does not correspond to any mnemonic or accelerator key.
 	case WM_MENUCHAR:
 		// Don't beep when we alt-enter.
 		return; MAKELRESULT(0, MNC_CLOSE);
@@ -2477,10 +2551,566 @@ void GRenderer::MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
 		return; 0;
 	}
-
-	//*/
-	//return DefWindowProc(hwnd, msg, wParam, lParam);
 }
+
+#pragma endregion
+
+#pragma region Update
+
+void GDxRenderer::Update(const GameTimer& gt)
+{
+	OnKeyboardInput(gt);
+
+	// Cycle through the circular frame resource array.
+	mCurrFrameResourceIndex = (mCurrFrameResourceIndex + 1) % NUM_FRAME_RESOURCES;
+	mCurrFrameResource = mFrameResources[mCurrFrameResourceIndex].get();
+
+	// Has the GPU finished processing the commands of the current frame resource?
+	// If not, wait until the GPU has completed commands up to this fence point.
+	if (mCurrFrameResource->Fence != 0 && mFence->GetCompletedValue() < mCurrFrameResource->Fence)
+	{
+		HANDLE eventHandle = CreateEventEx(nullptr, false, false, EVENT_ALL_ACCESS);
+		ThrowIfFailed(mFence->SetEventOnCompletion(mCurrFrameResource->Fence, eventHandle));
+		WaitForSingleObject(eventHandle, INFINITE);
+		CloseHandle(eventHandle);
+	}
+
+	//
+	// Animate the lights (and hence shadows).
+	//
+
+	mLightRotationAngle += 0.1f*gt.DeltaTime();
+
+	XMMATRIX R = XMMatrixRotationY(mLightRotationAngle);
+	for (int i = 0; i < 3; ++i)
+	{
+		XMVECTOR lightDir = XMLoadFloat3(&mBaseLightDirections[i]);
+		lightDir = XMVector3TransformNormal(lightDir, R);
+		XMStoreFloat3(&mRotatedLightDirections[i], lightDir);
+	}
+
+	AnimateMaterials(gt);
+	UpdateObjectCBs(gt);
+	UpdateMaterialBuffer(gt);
+	UpdateShadowTransform(gt);
+	UpdateMainPassCB(gt);
+	UpdateSkyPassCB(gt);
+	//UpdateShadowPassCB(gt);
+	//UpdateSsaoCB(gt);
+	UpdateLightCB(gt);
+}
+
+#pragma endregion
+
+#pragma region Draw
+
+void GDxRenderer::Draw(const GameTimer& gt)
+{
+	auto cmdListAlloc = mCurrFrameResource->CmdListAlloc;
+
+	// Reuse the memory associated with command recording.
+	// We can only reset when the associated command lists have finished execution on the GPU.
+	ThrowIfFailed(cmdListAlloc->Reset());
+
+	// A command list can be reset after it has been added to the command queue via ExecuteCommandList.
+	// Reusing the command list reuses memory.
+	ThrowIfFailed(mCommandList->Reset(cmdListAlloc.Get(), mPSOs["GBuffer"].Get()));
+
+	ID3D12DescriptorHeap* descriptorHeaps[] = { mSrvDescriptorHeap.Get() };
+	mCommandList->SetDescriptorHeaps(_countof(descriptorHeaps), descriptorHeaps);
+
+	mCommandList->SetGraphicsRootSignature(mRootSignatures["Forward"].Get());
+
+	//
+	// Shadow map pass.
+	//
+
+	// Bind all the materials used in this scene.  For structured buffers, we can bypass the heap and 
+	// set as a root descriptor.
+	auto matBuffer = mCurrFrameResource->MaterialBuffer->Resource();
+	mCommandList->SetGraphicsRootShaderResourceView(2, matBuffer->GetGPUVirtualAddress());
+
+	// Bind null SRV for shadow map pass.
+	mCommandList->SetGraphicsRootDescriptorTable(3, mNullSrv);
+
+	// Bind all the textures used in this scene.  Observe
+	// that we only have to specify the first descriptor in the table.  
+	// The root signature knows how many descriptors are expected in the table.
+	mCommandList->SetGraphicsRootDescriptorTable(4, mSrvDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
+
+	//DrawSceneToShadowMap();
+
+	//
+	// Normal/depth pass.
+	//
+
+	//DrawNormalsAndDepth();
+
+	//
+	// Compute SSAO.
+	// 
+
+	//mCommandList->SetGraphicsRootSignature(mSsaoRootSignature.Get());
+	//mSsao->ComputeSsao(mCommandList.Get(), mCurrFrameResource, 3);
+
+	//
+	// Main rendering pass.
+	//
+
+	mCommandList->SetGraphicsRootSignature(mRootSignatures["Forward"].Get());
+
+	// Rebind state whenever graphics root signature changes.
+
+	// Bind all the materials used in this scene.  For structured buffers, we can bypass the heap and 
+	// set as a root descriptor.
+	matBuffer = mCurrFrameResource->MaterialBuffer->Resource();
+	mCommandList->SetGraphicsRootShaderResourceView(2, matBuffer->GetGPUVirtualAddress());
+
+	mCommandList->RSSetViewports(1, &mScreenViewport);
+	mCommandList->RSSetScissorRects(1, &mScissorRect);
+
+	// Indicate a state transition on the resource usage.
+	mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(),
+		D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET));
+
+	// Clear the back buffer.
+	mCommandList->ClearRenderTargetView(CurrentBackBufferView(), Colors::LightSteelBlue, 0, nullptr);
+
+	// WE ALREADY WROTE THE DEPTH INFO TO THE DEPTH BUFFER IN DrawNormalsAndDepth,
+	// SO DO NOT CLEAR DEPTH.
+	mCommandList->ClearDepthStencilView(DepthStencilView(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
+
+	// Specify the buffers we are going to render to.
+	mCommandList->OMSetRenderTargets(1, &CurrentBackBufferView(), true, &DepthStencilView());
+
+	// Bind all the textures used in this scene.  Observe
+	// that we only have to specify the first descriptor in the table.  
+	// The root signature knows how many descriptors are expected in the table.
+	mCommandList->SetGraphicsRootDescriptorTable(4, mSrvDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
+
+	auto passCB = mCurrFrameResource->PassCB->Resource();
+	mCommandList->SetGraphicsRootConstantBufferView(1, passCB->GetGPUVirtualAddress());
+
+	// Bind the sky cube map.  For our demos, we just use one "world" cube map representing the environment
+	// from far away, so all objects will use the same cube map and we only need to set it once per-frame.  
+	// If we wanted to use "local" cube maps, we would have to change them per-object, or dynamically
+	// index into an array of cube maps.
+
+	CD3DX12_GPU_DESCRIPTOR_HANDLE skyTexDescriptor(mSrvDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
+	skyTexDescriptor.Offset(mSkyTexHeapIndex, mCbvSrvUavDescriptorSize);
+	mCommandList->SetGraphicsRootDescriptorTable(3, skyTexDescriptor);
+
+	bool bDeferredRendering = true;
+	if (bDeferredRendering)
+	{
+		// G-Buffer Pass
+		{
+			mCommandList->RSSetViewports(1, &(mRtvHeaps["GBuffer"]->mRtv[0]->mViewport));
+			mCommandList->RSSetScissorRects(1, &(mRtvHeaps["GBuffer"]->mRtv[0]->mScissorRect));
+
+			mCommandList->SetGraphicsRootSignature(mRootSignatures["GBuffer"].Get());
+
+			mCommandList->SetPipelineState(mPSOs["GBuffer"].Get());
+
+			UINT objCBByteSize = GDX12Util::CalcConstantBufferByteSize(sizeof(ObjectConstants));
+			auto objectCB = mCurrFrameResource->ObjectCB->Resource();
+
+			auto passCB = mCurrFrameResource->PassCB->Resource();
+			mCommandList->SetGraphicsRootConstantBufferView(1, passCB->GetGPUVirtualAddress());
+
+			//mCommandList->SetGraphicsRootDescriptorTable(2, mSrvDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
+			mCommandList->SetGraphicsRootDescriptorTable(2, GetGpuSrv(mTextrueHeapIndex));
+
+			matBuffer = mCurrFrameResource->MaterialBuffer->Resource();
+			mCommandList->SetGraphicsRootShaderResourceView(3, matBuffer->GetGPUVirtualAddress());
+
+			mCommandList->OMSetStencilRef(1);
+
+			// Indicate a state transition on the resource usage.
+			for (size_t i = 0; i < mRtvHeaps["GBuffer"]->mRtv.size(); i++)
+			{
+				mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["GBuffer"]->mRtv[i]->mResource.Get(),
+					D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_RENDER_TARGET));
+
+				// Clear the back buffer.
+				DirectX::XMVECTORF32 clearColor = { mRtvHeaps["GBuffer"]->mRtv[i]->mProperties.mClearColor[0],
+				mRtvHeaps["GBuffer"]->mRtv[i]->mProperties.mClearColor[1],
+				mRtvHeaps["GBuffer"]->mRtv[i]->mProperties.mClearColor[2],
+				mRtvHeaps["GBuffer"]->mRtv[i]->mProperties.mClearColor[3]
+				};
+
+				// WE ALREADY WROTE THE DEPTH INFO TO THE DEPTH BUFFER IN DrawNormalsAndDepth,
+				// SO DO NOT CLEAR DEPTH.
+				mCommandList->ClearRenderTargetView(mRtvHeaps["GBuffer"]->mRtvHeap.handleCPU((UINT)i), clearColor, 0, nullptr);
+			}
+
+			// Specify the buffers we are going to render to.
+			//mCommandList->OMSetRenderTargets(mRtvHeaps["GBuffer"]->mRtvHeap.HeapDesc.NumDescriptors, &(mRtvHeaps["GBuffer"]->mRtvHeap.hCPUHeapStart), true, &DepthStencilView());
+			mCommandList->OMSetRenderTargets(mRtvHeaps["GBuffer"]->mRtvHeap.HeapDesc.NumDescriptors, &(mRtvHeaps["GBuffer"]->mRtvHeap.hCPUHeapStart), true, &DepthStencilView());
+
+			// For each render item...
+			DrawSceneObjects(mCommandList.Get(), RenderLayer::Deferred, true);
+
+			for (size_t i = 0; i < mRtvHeaps["GBuffer"]->mRtv.size(); i++)
+			{
+				mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["GBuffer"]->mRtv[i]->mResource.Get(),
+					D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ));
+			}
+		}
+
+		// Direct Light Pass
+		{
+			mCommandList->RSSetViewports(1, &(mRtvHeaps["LightPass"]->mRtv[0]->mViewport));
+			mCommandList->RSSetScissorRects(1, &(mRtvHeaps["LightPass"]->mRtv[0]->mScissorRect));
+
+			mCommandList->SetGraphicsRootSignature(mRootSignatures["LightPass"].Get());
+
+			mCommandList->SetPipelineState(mPSOs["DirectLightPass"].Get());
+
+			auto lightCB = mCurrFrameResource->LightCB->Resource();
+			mCommandList->SetGraphicsRootConstantBufferView(0, lightCB->GetGPUVirtualAddress());
+
+			mCommandList->SetGraphicsRootDescriptorTable(1, mRtvHeaps["GBuffer"]->GetSrvGpuStart());
+
+			mCommandList->SetGraphicsRootDescriptorTable(2, mCubeRtvs["Irradiance"]->GetSrvGpu());
+
+			mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["LightPass"]->mRtv[0]->mResource.Get(),
+				D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_RENDER_TARGET));
+
+			// Clear the back buffer.
+			DirectX::XMVECTORF32 clearColor = { mRtvHeaps["LightPass"]->mRtv[0]->mProperties.mClearColor[0],
+			mRtvHeaps["LightPass"]->mRtv[0]->mProperties.mClearColor[1],
+			mRtvHeaps["LightPass"]->mRtv[0]->mProperties.mClearColor[2],
+			mRtvHeaps["LightPass"]->mRtv[0]->mProperties.mClearColor[3]
+			};
+
+			// WE ALREADY WROTE THE DEPTH INFO TO THE DEPTH BUFFER IN DrawNormalsAndDepth,
+			// SO DO NOT CLEAR DEPTH.
+			mCommandList->ClearRenderTargetView(mRtvHeaps["LightPass"]->mRtvHeap.handleCPU(0), clearColor, 0, nullptr);
+
+			// Specify the buffers we are going to render to.
+			//mCommandList->OMSetRenderTargets(mRtvHeaps["GBuffer"]->mRtvHeap.HeapDesc.NumDescriptors, &(mRtvHeaps["GBuffer"]->mRtvHeap.hCPUHeapStart), true, &DepthStencilView());
+			mCommandList->OMSetRenderTargets(1, &(mRtvHeaps["LightPass"]->mRtvHeap.handleCPU(0)), true, &DepthStencilView());
+
+			// For each render item...
+			DrawSceneObjects(mCommandList.Get(), RenderLayer::ScreenQuad, false);
+
+			mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["LightPass"]->mRtv[0]->mResource.Get(),
+				D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ));
+		}
+
+		// Ambient Light Pass
+		{
+			mCommandList->RSSetViewports(1, &(mRtvHeaps["LightPass"]->mRtv[1]->mViewport));
+			mCommandList->RSSetScissorRects(1, &(mRtvHeaps["LightPass"]->mRtv[1]->mScissorRect));
+
+			mCommandList->SetGraphicsRootSignature(mRootSignatures["LightPass"].Get());
+
+			mCommandList->SetPipelineState(mPSOs["AmbientLightPass"].Get());
+
+			auto lightCB = mCurrFrameResource->LightCB->Resource();
+			mCommandList->SetGraphicsRootConstantBufferView(0, lightCB->GetGPUVirtualAddress());
+
+			mCommandList->SetGraphicsRootDescriptorTable(1, mRtvHeaps["GBuffer"]->GetSrvGpuStart());
+
+			mCommandList->SetGraphicsRootDescriptorTable(2, mCubeRtvs["Irradiance"]->GetSrvGpu());
+
+			mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["LightPass"]->mRtv[1]->mResource.Get(),
+				D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_RENDER_TARGET));
+
+			// Clear the back buffer.
+			DirectX::XMVECTORF32 clearColor = { mRtvHeaps["LightPass"]->mRtv[1]->mProperties.mClearColor[0],
+			mRtvHeaps["LightPass"]->mRtv[1]->mProperties.mClearColor[1],
+			mRtvHeaps["LightPass"]->mRtv[1]->mProperties.mClearColor[2],
+			mRtvHeaps["LightPass"]->mRtv[1]->mProperties.mClearColor[3]
+			};
+
+			// WE ALREADY WROTE THE DEPTH INFO TO THE DEPTH BUFFER IN DrawNormalsAndDepth,
+			// SO DO NOT CLEAR DEPTH.
+			mCommandList->ClearRenderTargetView(mRtvHeaps["LightPass"]->mRtvHeap.handleCPU(1), clearColor, 0, nullptr);
+
+			// Specify the buffers we are going to render to.
+			//mCommandList->OMSetRenderTargets(mRtvHeaps["GBuffer"]->mRtvHeap.HeapDesc.NumDescriptors, &(mRtvHeaps["GBuffer"]->mRtvHeap.hCPUHeapStart), true, &DepthStencilView());
+			mCommandList->OMSetRenderTargets(1, &(mRtvHeaps["LightPass"]->mRtvHeap.handleCPU(1)), true, &DepthStencilView());
+
+			// For each render item...
+			DrawSceneObjects(mCommandList.Get(), RenderLayer::ScreenQuad, false);
+
+			mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["LightPass"]->mRtv[1]->mResource.Get(),
+				D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ));
+		}
+
+		// Debug Pass
+		bool bDrawDebugQuad = true;
+		if (bDrawDebugQuad)
+		{
+			mCommandList->RSSetViewports(1, &mScreenViewport);
+			mCommandList->RSSetScissorRects(1, &mScissorRect);
+
+			mCommandList->SetGraphicsRootSignature(mRootSignatures["GBufferDebug"].Get());
+
+			mCommandList->SetPipelineState(mPSOs["GBufferDebug"].Get());
+
+			UINT objCBByteSize = GDX12Util::CalcConstantBufferByteSize(sizeof(ObjectConstants));
+			auto objectCB = mCurrFrameResource->ObjectCB->Resource();
+
+			mCommandList->SetGraphicsRootDescriptorTable(1, mRtvHeaps["GBuffer"]->GetSrvGpuStart());
+
+			matBuffer = mCurrFrameResource->MaterialBuffer->Resource();
+			mCommandList->SetGraphicsRootShaderResourceView(2, matBuffer->GetGPUVirtualAddress());
+
+			mCommandList->OMSetRenderTargets(1, &CurrentBackBufferView(), true, &DepthStencilView());
+
+			// For each render item...
+			DrawSceneObjects(mCommandList.Get(), RenderLayer::Debug, true);
+		}
+
+		// Post Process Pass
+		{
+			mCommandList->RSSetViewports(1, &mScreenViewport);
+			mCommandList->RSSetScissorRects(1, &mScissorRect);
+
+			mCommandList->SetGraphicsRootSignature(mRootSignatures["PostProcess"].Get());
+
+			mCommandList->SetPipelineState(mPSOs["PostProcess"].Get());
+
+			mCommandList->SetGraphicsRootDescriptorTable(0, mRtvHeaps["LightPass"]->GetSrvGpuStart());
+
+			// Specify the buffers we are going to render to.
+			//mCommandList->OMSetRenderTargets(1, &CurrentBackBufferView(), true, &DepthStencilView());
+			mCommandList->OMSetRenderTargets(1, &CurrentBackBufferView(), true, &DepthStencilView());
+
+			// For each render item...
+			DrawSceneObjects(mCommandList.Get(), RenderLayer::ScreenQuad, false);
+		}
+
+		// Reset root parameters and rencer target.
+		{
+			mCommandList->RSSetViewports(1, &mScreenViewport);
+			mCommandList->RSSetScissorRects(1, &mScissorRect);
+
+			mCommandList->SetGraphicsRootSignature(mRootSignatures["Sky"].Get());
+
+			// Specify the buffers we are going to render to.
+			mCommandList->OMSetRenderTargets(1, &CurrentBackBufferView(), true, &DepthStencilView());
+
+			auto passCB = mCurrFrameResource->SkyCB->Resource();
+			mCommandList->SetGraphicsRootConstantBufferView(1, passCB->GetGPUVirtualAddress());
+
+			///*
+			CD3DX12_GPU_DESCRIPTOR_HANDLE skyTexDescriptor(mSrvDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
+			skyTexDescriptor.Offset(mSkyTexHeapIndex, mCbvSrvUavDescriptorSize);
+			mCommandList->SetGraphicsRootDescriptorTable(2, skyTexDescriptor);
+			//*/
+
+			// Irradiance cubemap debug.
+			//CD3DX12_GPU_DESCRIPTOR_HANDLE skyTexDescriptor(mSrvDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
+			//skyTexDescriptor.Offset(mIblIndex + 1, mCbvSrvUavDescriptorSize);
+			//mCommandList->SetGraphicsRootDescriptorTable(2, GetGpuSrv(mIblIndex + 2));
+
+			mCommandList->OMSetRenderTargets(1, &CurrentBackBufferView(), true, &DepthStencilView());
+		}
+
+	}
+
+	mCommandList->SetPipelineState(mPSOs["Sky"].Get());
+	DrawSceneObjects(mCommandList.Get(), RenderLayer::Sky, true);
+
+	// Indicate a state transition on the resource usage.
+	mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(),
+		D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
+
+	// Done recording commands.
+	ThrowIfFailed(mCommandList->Close());
+
+	// Add the command list to the queue for execution.
+	ID3D12CommandList* cmdsLists[] = { mCommandList.Get() };
+	mCommandQueue->ExecuteCommandLists(_countof(cmdsLists), cmdsLists);
+
+	// Swap the back and front buffers
+	ThrowIfFailed(mSwapChain->Present(0, 0));
+	mCurrBackBuffer = (mCurrBackBuffer + 1) % SwapChainBufferCount;
+
+	// Advance the fence value to mark commands up to this fence point.
+	mCurrFrameResource->Fence = ++mCurrentFence;
+
+	// Add an instruction to the command queue to set a new fence point. 
+	// Because we are on the GPU timeline, the new fence point won't be 
+	// set until the GPU finishes processing all the commands prior to this Signal().
+	mCommandQueue->Signal(mFence.Get(), mCurrentFence);
+}
+
+#pragma endregion
+
+#pragma region Init
+
+void GDxRenderer::LoadTextures()
+{
+	//
+	// Load non-DDS images.
+	//
+	std::vector<std::string> texNames =
+	{
+		"IBL_BRDF_LUT",
+		"default_albedo",
+		"default_normal",
+		"default_OcclussionRoughnessMetallic",
+		"sphere_1_BaseColor",
+		"sphere_1_Normal",
+		"sphere_1_OcclusionRoughnessMetallic",
+		"sphere_2_BaseColor",
+		"sphere_2_Normal",
+		"sphere_2_OcclusionRoughnessMetallic",
+		"Greasy_Pan_Albedo",
+		"Greasy_Pan_Normal",
+		"Greasy_Pan_Orm",
+		"Rusted_Iron_Albedo",
+		"Rusted_Iron_Normal",
+		"Rusted_Iron_Orm",
+		"Cerberus_Albedo",
+		"Cerberus_Normal",
+		"Cerberus_Orm",
+		"Fireplace_Albedo",
+		"Fireplace_Normal",
+		"Fireplace_Orm"
+	};
+
+	std::vector<std::wstring> texFilenames =
+	{
+		L"Textures/IBL_BRDF_LUT.png",
+		L"Textures/default_albedo.png",
+		L"Textures/default_normal.png",
+		L"Textures/default_OcclussionRoughnessMetallic.png",
+		L"Textures/sphere_1_BaseColor.png",
+		L"Textures/sphere_1_Normal.png",
+		L"Textures/sphere_1_OcclusionRoughnessMetallic.png",
+		L"Textures/sphere_2_BaseColor.png",
+		L"Textures/sphere_2_Normal.png",
+		L"Textures/sphere_2_OcclusionRoughnessMetallic.png",
+		L"Textures/Greasy_Pan_Albedo.png",
+		L"Textures/Greasy_Pan_Normal.png",
+		L"Textures/Greasy_Pan_Orm.png",
+		L"Textures/Rusted_Iron_Albedo.png",
+		L"Textures/Rusted_Iron_Normal.png",
+		L"Textures/Rusted_Iron_Orm.png",
+		L"Textures/Cerberus_Albedo.png",
+		L"Textures/Cerberus_Normal.png",
+		L"Textures/Cerberus_Orm.png",
+		L"Textures/Fireplace_Albedo.png",
+		L"Textures/Fireplace_Normal.png",
+		L"Textures/Fireplace_Orm.png"
+	};
+
+	std::vector<bool> texSrgb =
+	{
+		false,
+		true,
+		false,
+		false,
+		true,
+		false,
+		false,
+		true,
+		false,
+		false,
+		true,
+		false,
+		false,
+		true,
+		false,
+		false,
+		true,
+		false,
+		false,
+		true,
+		false,
+		false
+	};
+
+	for (int i = 0; i < (int)texNames.size(); ++i)
+	{
+		auto texMap = std::make_shared<GTexture>();
+		texMap->Name = texNames[i];
+		texMap->Filename = texFilenames[i];
+		texMap->descriptorHeapIndex = i;
+		ResourceUploadBatch resourceUpload(md3dDevice.Get());
+		resourceUpload.Begin();
+		unsigned int srgbFlag;
+		if (texSrgb[i])
+		{
+			srgbFlag = WIC_LOADER_FORCE_SRGB;
+		}
+		else
+		{
+			srgbFlag = WIC_LOADER_IGNORE_SRGB;
+		}
+		//ThrowIfFailed(CreateWICTextureFromFile(md3dDevice.Get(), resourceUpload, texMap->Filename.c_str(), texMap->Resource.ReleaseAndGetAddressOf()));
+		ThrowIfFailed(CreateWICTextureFromFileEx(md3dDevice.Get(), resourceUpload, texMap->Filename.c_str(), 0u, D3D12_RESOURCE_FLAG_NONE, srgbFlag, texMap->Resource.ReleaseAndGetAddressOf()));
+		auto uploadResourcesFinished = resourceUpload.End(mCommandQueue.Get());
+		uploadResourcesFinished.wait();
+
+		//CreateShaderResourceView(md3dDevice.Get(), texMap->Resource.Get(), m_resourceDescriptors->GetCpuHandle(Descriptors::Cat));
+		std::shared_ptr<GTexture> texListPtr(texMap);
+		mTextureList.push_back(texListPtr);
+		mTextures[texMap->Name] = std::move(texMap);
+	}
+
+	//
+	// Load DDS images.
+	//
+	std::vector<std::string> ddsTexNames =
+	{
+		"bricksDiffuseMap",
+		"bricksNormalMap",
+		"tileDiffuseMap",
+		"tileNormalMap",
+		"defaultDiffuseMap",
+		"defaultNormalMap",
+		"skyCubeMap"
+	};
+
+	std::vector<std::wstring> ddsTexFilenames =
+	{
+		L"Textures/bricks2.dds",
+		L"Textures/bricks2_nmap.dds",
+		L"Textures/tile.dds",
+		L"Textures/tile_nmap.dds",
+		L"Textures/white1x1.dds",
+		L"Textures/default_nmap.dds",
+		//L"Textures/sunsetcube1024.dds"
+		L"Textures/Cubemap_LancellottiChapel.dds"
+	};
+
+	for (int i = 0; i < (int)ddsTexNames.size(); ++i)
+	{
+		auto texMap = std::make_shared<GTexture>();
+		texMap->Name = ddsTexNames[i];
+		texMap->Filename = ddsTexFilenames[i];
+		texMap->descriptorHeapIndex = i + (int)texNames.size();
+		ThrowIfFailed(DirectX::CreateDDSTextureFromFile12(md3dDevice.Get(),
+			mCommandList.Get(), texMap->Filename.c_str(),
+			texMap->Resource, texMap->UploadHeap));
+
+		std::shared_ptr<GTexture> texListPtr(texMap);
+		mTextureList.push_back(texListPtr);
+		mTextures[texMap->Name] = std::move(texMap);
+	}
+}
+
+void GDxRenderer::SetWorkDirectory()
+{
+	TCHAR exeFullPath[MAX_PATH];
+	memset(exeFullPath, 0, MAX_PATH);
+
+	GetModuleFileName(NULL, exeFullPath, MAX_PATH);
+	WCHAR *p = wcsrchr(exeFullPath, '\\');
+	*p = 0x00;
+
+	WorkDirectory = std::wstring(exeFullPath);
+}
+
+#pragma endregion
+
 
 /*
 bool GRenderer::InitMainWindow()
@@ -2524,7 +3154,7 @@ bool GRenderer::InitMainWindow()
 }
 */
 
-bool GRenderer::InitDirect3D()
+bool GDxRenderer::InitDirect3D()
 {
 	/*
 #if defined(DEBUG) || defined(_DEBUG) 
@@ -2593,7 +3223,14 @@ bool GRenderer::InitDirect3D()
 	return true;
 }
 
-void GRenderer::CreateCommandObjects()
+void GDxRenderer::CreateRendererFactory()
+{
+	//GDxRendererFactory* fac = new GDxRendererFactory(md3dDevice.Get(), mCommandList.Get(), mCommandQueue.Get());
+	GDxRendererFactory fac(md3dDevice.Get(), mCommandList.Get(), mCommandQueue.Get());
+	mFactory = std::make_unique<GDxRendererFactory>(fac);
+}
+
+void GDxRenderer::CreateCommandObjects()
 {
 	D3D12_COMMAND_QUEUE_DESC queueDesc = {};
 	queueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
@@ -2617,7 +3254,7 @@ void GRenderer::CreateCommandObjects()
 	mCommandList->Close();
 }
 
-void GRenderer::CreateSwapChain()
+void GDxRenderer::CreateSwapChain()
 {
 	// Release the previous swapchain we will be recreating.
 	mSwapChain.Reset();
@@ -2646,7 +3283,7 @@ void GRenderer::CreateSwapChain()
 		mSwapChain.GetAddressOf()));
 }
 
-void GRenderer::FlushCommandQueue()
+void GDxRenderer::FlushCommandQueue()
 {
 	// Advance the fence value to mark commands up to this fence point.
 	mCurrentFence++;
@@ -2670,12 +3307,12 @@ void GRenderer::FlushCommandQueue()
 	}
 }
 
-ID3D12Resource* GRenderer::CurrentBackBuffer()const
+ID3D12Resource* GDxRenderer::CurrentBackBuffer()const
 {
 	return mSwapChainBuffer[mCurrBackBuffer].Get();
 }
 
-D3D12_CPU_DESCRIPTOR_HANDLE GRenderer::CurrentBackBufferView()const
+D3D12_CPU_DESCRIPTOR_HANDLE GDxRenderer::CurrentBackBufferView()const
 {
 	return CD3DX12_CPU_DESCRIPTOR_HANDLE(
 		mRtvHeap->GetCPUDescriptorHandleForHeapStart(),
@@ -2683,12 +3320,12 @@ D3D12_CPU_DESCRIPTOR_HANDLE GRenderer::CurrentBackBufferView()const
 		mRtvDescriptorSize);
 }
 
-D3D12_CPU_DESCRIPTOR_HANDLE GRenderer::DepthStencilView()const
+D3D12_CPU_DESCRIPTOR_HANDLE GDxRenderer::DepthStencilView()const
 {
 	return mDsvHeap->GetCPUDescriptorHandleForHeapStart();
 }
 
-void GRenderer::CalculateFrameStats()
+void GDxRenderer::CalculateFrameStats()
 {
 	// Code computes the average frames per second, and also the 
 	// average time it takes to render one frame.  These stats 
@@ -2722,7 +3359,7 @@ void GRenderer::CalculateFrameStats()
 	}
 }
 
-void GRenderer::LogAdapters()
+void GDxRenderer::LogAdapters()
 {
 	UINT i = 0;
 	IDXGIAdapter* adapter = nullptr;
@@ -2750,7 +3387,7 @@ void GRenderer::LogAdapters()
 	}
 }
 
-void GRenderer::LogAdapterOutputs(IDXGIAdapter* adapter)
+void GDxRenderer::LogAdapterOutputs(IDXGIAdapter* adapter)
 {
 	UINT i = 0;
 	IDXGIOutput* output = nullptr;
@@ -2772,7 +3409,7 @@ void GRenderer::LogAdapterOutputs(IDXGIAdapter* adapter)
 	}
 }
 
-void GRenderer::LogOutputDisplayModes(IDXGIOutput* output, DXGI_FORMAT format)
+void GDxRenderer::LogOutputDisplayModes(IDXGIOutput* output, DXGI_FORMAT format)
 {
 	UINT count = 0;
 	UINT flags = 0;
@@ -2796,3 +3433,69 @@ void GRenderer::LogOutputDisplayModes(IDXGIOutput* output, DXGI_FORMAT format)
 		::OutputDebugString(text.c_str());
 	}
 }
+
+#pragma region export
+
+int GDxRenderer::GetSceneObjectNum()
+{
+	return (int)(mSceneObjectLayer[(int)RenderLayer::Deferred].size());
+}
+
+const char* GDxRenderer::GetSceneObjectName(int index)
+{
+	//char* cstr = new char[256];
+	//strcpy_s(cstr, 256, mSceneObjectLayer[(int)RenderLayer::Deferred][index]->Name.c_str());
+	//return cstr;
+	return mSceneObjectLayer[(int)RenderLayer::Deferred][index]->Name.c_str();
+}
+
+void GDxRenderer::SetSetSceneObjectsCallback(VoidFuncPointerType pSetSceneObjectsCallback)
+{
+	mSetSceneObjectsCallback = pSetSceneObjectsCallback;
+}
+
+void GDxRenderer::SetSceneObjectsCallback()
+{
+	mSetSceneObjectsCallback();
+}
+
+void GDxRenderer::GetSceneObjectTransform(char* objName, float* trans)
+{
+	std::string sObjectName(objName);
+	for (auto sObject : mAllRitems)
+	{
+		if (sObject->Name == sObjectName)
+		{
+			XMFLOAT3 loc = sObject->GetLocation();
+			XMFLOAT3 rot = sObject->GetRotation();
+			XMFLOAT3 scale = sObject->GetScale();
+			trans[0] = loc.x;
+			trans[1] = loc.y;
+			trans[2] = loc.z;
+			trans[3] = rot.x;
+			trans[4] = rot.y;
+			trans[5] = rot.z;
+			trans[6] = scale.x;
+			trans[7] = scale.y;
+			trans[8] = scale.z;
+			return;
+		}
+	}
+}
+
+void GDxRenderer::SetSceneObjectTransform(char* objName, float* trans)
+{
+	std::string sObjectName(objName);
+	for (auto sObject : mAllRitems)
+	{
+		if (sObject->Name == sObjectName)
+		{
+			sObject->SetLocation(trans[0], trans[1], trans[2]);
+			sObject->SetRotation(trans[3], trans[4], trans[5]);
+			sObject->SetScale(trans[6], trans[7], trans[8]);
+			return;
+		}
+	}
+}
+
+#pragma endregion

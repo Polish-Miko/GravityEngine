@@ -32,27 +32,19 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE prevInstance,
 
 GCore::GCore()
 {
-	// Estimate the scene bounding sphere manually since we know how the scene was constructed.
-	// The grid is the "widest object" with a width of 20 and depth of 30.0f, and centered at
-	// the world space origin.  In general, you need to loop over every world space vertex
-	// position and compute the bounding sphere.
-	mSceneBounds.Center = XMFLOAT3(0.0f, 0.0f, 0.0f);
-	mSceneBounds.Radius = sqrtf(10.0f*10.0f + 15.0f*15.0f);
 }
 
 GCore::~GCore()
 {
-	if (md3dDevice != nullptr)
-		FlushCommandQueue();
 }
 
-GCore* GCore::GetRenderer()
+GCore& GCore::GetCore()
 {
-	if (mApp == nullptr)
-		mApp = new GCore();
-	return (GCore*)mApp;
+	static GCore *instance = new GCore();
+	return *instance;
 }
 
+/*
 #pragma region Initialize
 
 bool GCore::Initialize(HWND OutputWindow, double width, double height)
@@ -73,15 +65,6 @@ bool GCore::Initialize(HWND OutputWindow, double width, double height)
 		ThrowIfFailed(mCommandList->Reset(mDirectCmdListAlloc.Get(), nullptr));
 
 		mCamera.SetPosition(0.0f, 2.0f, -5.0f);
-		/*
-		mShadowMap = std::make_unique<ShadowMap>(md3dDevice.Get(),
-			2048, 2048);
-
-		mSsao = std::make_unique<Ssao>(
-			md3dDevice.Get(),
-			mCommandList.Get(),
-			mClientWidth, mClientHeight);
-		*/
 		BuildCubemapSampleCameras();
 		LoadTextures();
 		BuildDescriptorHeaps();
@@ -116,7 +99,10 @@ bool GCore::Initialize(HWND OutputWindow, double width, double height)
 }
 
 #pragma endregion
+*/
 
+//MsgProc
+/*
 #pragma region MsgProc
 
 void GCore::MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
@@ -255,7 +241,10 @@ void GCore::MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 }
 
 #pragma endregion
+*/
 
+//Update
+/*
 #pragma region Update
 
 void GCore::Update(const GameTimer& gt)
@@ -302,7 +291,10 @@ void GCore::Update(const GameTimer& gt)
 }
 
 #pragma endregion
+*/
 
+//Draw
+/*
 #pragma region Draw
 
 void GCore::Draw(const GameTimer& gt)
@@ -598,11 +590,9 @@ void GCore::Draw(const GameTimer& gt)
 			auto passCB = mCurrFrameResource->SkyCB->Resource();
 			mCommandList->SetGraphicsRootConstantBufferView(1, passCB->GetGPUVirtualAddress());
 
-			///*
-			CD3DX12_GPU_DESCRIPTOR_HANDLE skyTexDescriptor(mSrvDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
-			skyTexDescriptor.Offset(mSkyTexHeapIndex, mCbvSrvUavDescriptorSize);
-			mCommandList->SetGraphicsRootDescriptorTable(2, skyTexDescriptor);
-			//*/
+			//CD3DX12_GPU_DESCRIPTOR_HANDLE skyTexDescriptor(mSrvDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
+			//skyTexDescriptor.Offset(mSkyTexHeapIndex, mCbvSrvUavDescriptorSize);
+			//mCommandList->SetGraphicsRootDescriptorTable(2, skyTexDescriptor);
 
 			// Irradiance cubemap debug.
 			//CD3DX12_GPU_DESCRIPTOR_HANDLE skyTexDescriptor(mSrvDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
@@ -642,7 +632,10 @@ void GCore::Draw(const GameTimer& gt)
 }
 
 #pragma endregion
+*/
 
+//Init
+/*
 #pragma region Init
 
 void GCore::LoadTextures()
@@ -811,7 +804,9 @@ void GCore::SetWorkDirectory()
 }
 
 #pragma endregion
+*/
 
+/*
 #pragma region Util
 
 std::vector<std::wstring> GCore::GetAllFilesInFolder(std::wstring relPath, bool bCheckFormat, std::vector<std::wstring> format)
@@ -899,7 +894,10 @@ std::vector<std::wstring> GCore::GetAllFilesUnderFolder(std::wstring relPath, bo
 }
 
 #pragma endregion
+*/
 
+//export
+/*
 #pragma region export
 
 int GCore::GetSceneObjectNum()
@@ -965,3 +963,4 @@ void GCore::SetSceneObjectTransform(char* objName, float* trans)
 }
 
 #pragma endregion
+*/

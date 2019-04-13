@@ -25,7 +25,7 @@ GRtvHeap::GRtvHeap(ID3D12Device* device, UINT ClientWidth, UINT ClientHeight,
 		std::shared_ptr<GRtv> vRtv = std::make_shared<GRtv>(gRtvProperties[i], ClientWidth, ClientHeight);
 		mRtv.push_back(vRtv);
 	}
-	ThrowIfFailed(mRtvHeap.Create(md3dDevice, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, mRtv.size()));
+	ThrowIfFailed(mRtvHeap.Create(md3dDevice, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, (UINT)(mRtv.size())));
 	BuildResources();
 	BuildDescriptors();
 }
@@ -42,8 +42,8 @@ void GRtvHeap::BuildDescriptors()
 	for (size_t i = 0; i < mRtv.size(); i++)
 	{
 		rtvDesc.Format = mRtv[i]->mProperties.mRtvFormat;
-		md3dDevice->CreateRenderTargetView(mRtv[i]->mResource.Get(), &rtvDesc, mRtvHeap.handleCPU(i));
-		mRtv[i]->mRtvCpu = mRtvHeap.handleCPU(i);
+		md3dDevice->CreateRenderTargetView(mRtv[i]->mResource.Get(), &rtvDesc, mRtvHeap.handleCPU((UINT)i));
+		mRtv[i]->mRtvCpu = mRtvHeap.handleCPU((UINT)i);
 	}
 
 	// Create SRVs.

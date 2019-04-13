@@ -6,30 +6,30 @@
 
 void __stdcall MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
-	GCore::GetRenderer()->MsgProc(hwnd, msg, wParam, lParam);
+	GDxRenderer::GetRenderer().MsgProc(hwnd, msg, wParam, lParam);
 }
 
 int __stdcall GetSceneObjectNum(void)
 {
-	return GCore::GetRenderer()->GetSceneObjectNum();
+	return GDxRenderer::GetRenderer().GetSceneObjectNum();
 }
 
 const char* __stdcall GetSceneObjectName(int index)
 {
-	return GCore::GetRenderer()->GetSceneObjectName(index);
+	return GDxRenderer::GetRenderer().GetSceneObjectName(index);
 }
 
 void __stdcall SetSetSceneObjectsCallback(VoidFuncPointerType pSetSceneObjectsCallback)
 {
-	GCore::GetRenderer()->SetSetSceneObjectsCallback(pSetSceneObjectsCallback);
+	GDxRenderer::GetRenderer().SetSetSceneObjectsCallback(pSetSceneObjectsCallback);
 }
 
 void __stdcall GetSceneObjectTransform(char* objName, float* trans)
 {
-	GCore::GetRenderer()->GetSceneObjectTransform(objName, trans);
+	GDxRenderer::GetRenderer().GetSceneObjectTransform(objName, trans);
 }
 
 void __stdcall SetSceneObjectTransform(char* objName, float* trans)
 {
-	GCore::GetRenderer()->SetSceneObjectTransform(objName, trans);
+	GDxRenderer::GetRenderer().SetSceneObjectTransform(objName, trans);
 }

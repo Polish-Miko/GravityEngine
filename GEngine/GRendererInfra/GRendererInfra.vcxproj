@@ -72,8 +72,8 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <OutDir>$(SolutionDir)Debug\Build</OutDir>
-    <IntDir>$(SolutionDir)Debug\Intermediate</IntDir>
+    <OutDir>$(SolutionDir)Debug\Build\</OutDir>
+    <IntDir>$(SolutionDir)Debug\Intermediate\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
@@ -157,6 +157,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="GRiInclude.h" />
+    <ClInclude Include="Public\GRiRenderer.h" />
     <ClInclude Include="Public\GRiRendererFactory.h" />
     <ClInclude Include="Public\GRiTextureLoader.h" />
     <ClInclude Include="Public\GRiPreInclude.h" />
@@ -165,6 +166,7 @@
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Private\GRiRenderer.cpp" />
     <ClCompile Include="Private\GRiRendererFactory.cpp" />
     <ClCompile Include="Private\GRiTextureLoader.cpp" />
     <ClCompile Include="Private\GRiTexture.cpp" />

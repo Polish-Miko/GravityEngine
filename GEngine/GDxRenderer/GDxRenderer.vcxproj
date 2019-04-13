@@ -76,8 +76,9 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <OutDir>$(SolutionDir)Debug\Build</OutDir>
-    <IntDir>$(SolutionDir)Debug\Intermediate\GDX12Renderer</IntDir>
+    <OutDir>$(SolutionDir)Debug\Build\</OutDir>
+    <IntDir>$(SolutionDir)Debug\Intermediate\GDX12Renderer\</IntDir>
+    <IncludePath>$(SolutionDir)GRendererInfra\;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
@@ -114,7 +115,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_LIB;FBXSDK_SHARED;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)ThirdParty\FBX SDK\2019.2\include;Common\;Render\;Public;Private;$(SolutionDir)GRendererInfra\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)ThirdParty\FBX SDK\2019.2\include\;Common\;Render\;Public\;Private\;$(SolutionDir)GRendererInfra;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
@@ -202,13 +203,12 @@
     <ClInclude Include="Public\GDxPreInclude.h" />
     <ClInclude Include="Public\GDxTextureLoader.h" />
     <ClInclude Include="Public\GDxTexture.h" />
-    <ClInclude Include="Render\GRenderer.h" />
+    <ClInclude Include="Public\GDxRenderer.h" />
     <ClInclude Include="Common\ShadowMap.h" />
     <ClInclude Include="Common\Ssao.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="Common\UploadBuffer.h" />
-    <ClInclude Include="Common\GUtilInclude.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Common\GCamera.cpp" />
@@ -240,7 +240,7 @@
     <ClCompile Include="Private\GDxRendererFactory.cpp" />
     <ClCompile Include="Private\GDxTextureLoader.cpp" />
     <ClCompile Include="Private\GDxTexture.cpp" />
-    <ClCompile Include="Render\GRenderer.cpp" />
+    <ClCompile Include="Private\GDxRenderer.cpp" />
     <ClCompile Include="Common\ShadowMap.cpp" />
     <ClCompile Include="Common\Ssao.cpp" />
     <ClCompile Include="stdafx.cpp">
@@ -250,7 +250,6 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="Common\UploadBuffer.cpp" />
-    <ClCompile Include="Common\GUtilInclude.cpp" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shaders\AmbientPassPS.hlsl">
