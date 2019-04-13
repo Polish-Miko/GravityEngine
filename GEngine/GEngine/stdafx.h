@@ -14,4 +14,6 @@
 
 
 // 在此处引用程序需要的其他标头
-#include<stdlib.h>
+#include <stdlib.h>
+#include <io.h>
+#include "GRiInclude.h"

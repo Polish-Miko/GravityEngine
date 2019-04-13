@@ -81,12 +81,12 @@ protected:
 	void UpdateShadowTransform(const GameTimer& gt);
 	void UpdateMainPassCB(const GameTimer& gt);
 	void UpdateSkyPassCB(const GameTimer& gt);
-	void UpdateShadowPassCB(const GameTimer& gt);
-	void UpdateSsaoCB(const GameTimer& gt);
+	//void UpdateShadowPassCB(const GameTimer& gt);
+	//void UpdateSsaoCB(const GameTimer& gt);
 	void UpdateLightCB(const GameTimer& gt);
 
 	void BuildCubemapSampleCameras();
-	void LoadTextures();
+	//void LoadTextures();
 	void BuildRootSignature();
 	void BuildDescriptorHeaps();
 	void BuildShadersAndInputLayout(); 
@@ -211,6 +211,7 @@ protected:
 	// Render items divided by PSO.
 	std::vector<std::shared_ptr<GSceneObject>> mSceneObjectLayer[(int)RenderLayer::Count];
 
+	UINT mTextrueHeapIndex = 0;
 	UINT mSkyTexHeapIndex = 0;
 	UINT mShadowMapHeapIndex = 0;
 	UINT mSsaoHeapIndexStart = 0;

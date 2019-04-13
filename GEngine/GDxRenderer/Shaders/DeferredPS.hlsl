@@ -33,7 +33,7 @@ cbuffer cbPerObject : register(b0)
 	uint gObjPad2;
 };
 
-Texture2D gTextureMaps[27] : register(t0);
+Texture2D gTextureMaps[MAX_TEXTURE_NUM] : register(t0);
 SamplerState Sampler	   : register(s0);
 
 /*

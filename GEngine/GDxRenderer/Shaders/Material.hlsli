@@ -10,6 +10,8 @@
 #define MATERIAL_MAX_SCALAR_NUM 16
 #define MATERIAL_MAX_VECTOR_NUM 16
 
+#define MAX_TEXTURE_NUM 1024
+
 
 struct MaterialData
 {

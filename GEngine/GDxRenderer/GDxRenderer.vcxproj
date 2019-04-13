@@ -114,7 +114,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_LIB;FBXSDK_SHARED;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)ThirdParty\FBX SDK\2019.2\include;Common\;Render\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)ThirdParty\FBX SDK\2019.2\include;Common\;Render\;Public;Private;$(SolutionDir)GRendererInfra\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
@@ -197,6 +197,11 @@
     <ClInclude Include="Common\GStaticVIBuffer.h" />
     <ClInclude Include="Common\GVertexIndexBuffer.h" />
     <ClInclude Include="Common\GVertex.h" />
+    <ClInclude Include="GDxInclude.h" />
+    <ClInclude Include="Public\GDxRendererFactory.h" />
+    <ClInclude Include="Public\GDxPreInclude.h" />
+    <ClInclude Include="Public\GDxTextureLoader.h" />
+    <ClInclude Include="Public\GDxTexture.h" />
     <ClInclude Include="Render\GRenderer.h" />
     <ClInclude Include="Common\ShadowMap.h" />
     <ClInclude Include="Common\Ssao.h" />
@@ -232,6 +237,9 @@
     <ClCompile Include="Common\GStaticVIBuffer.cpp" />
     <ClCompile Include="Common\GVertexIndexBuffer.cpp" />
     <ClCompile Include="Common\GVertex.cpp" />
+    <ClCompile Include="Private\GDxRendererFactory.cpp" />
+    <ClCompile Include="Private\GDxTextureLoader.cpp" />
+    <ClCompile Include="Private\GDxTexture.cpp" />
     <ClCompile Include="Render\GRenderer.cpp" />
     <ClCompile Include="Common\ShadowMap.cpp" />
     <ClCompile Include="Common\Ssao.cpp" />
@@ -369,6 +377,11 @@
     <None Include="packages.config" />
     <None Include="Shaders\Lighting.hlsli" />
     <None Include="Shaders\Material.hlsli" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\GRendererInfra\GRendererInfra.vcxproj">
+      <Project>{6f3bdbc6-7fac-4d9f-924b-f5f5cd211b0f}</Project>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

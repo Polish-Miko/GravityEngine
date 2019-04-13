@@ -20,7 +20,7 @@
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>
-    <ProjectGuid>{6BD40A51-33E2-4661-BBFE-5FDD0930BE1B}</ProjectGuid>
+    <ProjectGuid>{6F3BDBC6-7FAC-4D9F-924B-F5F5CD211B0F}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>GRendererInfra</RootNamespace>
     <WindowsTargetPlatformVersion>10.0.17763.0</WindowsTargetPlatformVersion>
@@ -72,8 +72,8 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <OutDir>$(SolutionDir)Debug\Build\</OutDir>
-    <IntDir>$(SolutionDir)Debug\Intermediate\</IntDir>
+    <OutDir>$(SolutionDir)Debug\Build</OutDir>
+    <IntDir>$(SolutionDir)Debug\Intermediate</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
@@ -92,7 +92,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_LIB;FBXSDK_SHARED;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)ThirdParty\FBX SDK\2019.2\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>Private;Public;$(SolutionDir)ThirdParty\FBX SDK\2019.2\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -157,10 +157,17 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="GRiInclude.h" />
+    <ClInclude Include="Public\GRiRendererFactory.h" />
+    <ClInclude Include="Public\GRiTextureLoader.h" />
+    <ClInclude Include="Public\GRiPreInclude.h" />
+    <ClInclude Include="Public\GRiTexture.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Private\GRiRendererFactory.cpp" />
+    <ClCompile Include="Private\GRiTextureLoader.cpp" />
+    <ClCompile Include="Private\GRiTexture.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>

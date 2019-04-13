@@ -432,6 +432,7 @@ void GRenderer::UpdateSkyPassCB(const GameTimer& gt)
 	currPassCB->CopyData(0, mSkyPassCB);
 }
 
+/*
 void GRenderer::UpdateShadowPassCB(const GameTimer& gt)
 {
 	XMMATRIX view = XMLoadFloat4x4(&mLightView);
@@ -496,6 +497,7 @@ void GRenderer::UpdateSsaoCB(const GameTimer& gt)
 	auto currSsaoCB = mCurrFrameResource->SsaoCB.get();
 	currSsaoCB->CopyData(0, ssaoCB);
 }
+*/
 
 #pragma endregion
 
@@ -534,6 +536,8 @@ void GRenderer::BuildCubemapSampleCameras()
 		mCubemapSampleCamera[i].UpdateViewMatrix();
 	}
 }
+
+/*
 void GRenderer::LoadTextures()
 {
 	//
@@ -686,6 +690,7 @@ void GRenderer::LoadTextures()
 		mTextures[texMap->Name] = std::move(texMap);
 	}
 }
+*/
 
 void GRenderer::BuildRootSignature()
 {
@@ -694,7 +699,7 @@ void GRenderer::BuildRootSignature()
 
 		//G-Buffer inputs
 		CD3DX12_DESCRIPTOR_RANGE range;
-		range.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, (UINT)mTextureList.size(), 0);
+		range.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, /*(UINT)mTextureList.size()*/MAX_TEXTURE_NUM, 0);
 
 		CD3DX12_ROOT_PARAMETER gBufferRootParameters[4];
 		//gBufferRootParameters[0].InitAsDescriptorTable(1, &range[0], D3D12_SHADER_VISIBILITY_VERTEX);
@@ -1045,7 +1050,11 @@ void GRenderer::BuildDescriptorHeaps()
 	// Create the SRV heap.
 	//
 	D3D12_DESCRIPTOR_HEAP_DESC srvHeapDesc = {};
-	srvHeapDesc.NumDescriptors = (UINT)mTextures.size() + mPrefilterLevels + 18;
+	srvHeapDesc.NumDescriptors = /*(UINT)mTextures.size()*/MAX_TEXTURE_NUM
+		+ 1 //sky
+		+ 4 //g-buffer
+		+ 2 //light pass
+		+ (2 + mPrefilterLevels);//IBL
 	srvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 	srvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 	ThrowIfFailed(md3dDevice->CreateDescriptorHeap(&srvHeapDesc, IID_PPV_ARGS(&mSrvDescriptorHeap)));
@@ -1062,17 +1071,6 @@ void GRenderer::BuildDescriptorHeaps()
 	srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
 
 
-	for (UINT i = 0; i < (UINT)mTextureList.size(); ++i)
-	{
-		if (mTextureList[i]->Name == "skyCubeMap")
-			continue;
-		srvDesc.Format = mTextureList[i]->Resource->GetDesc().Format;
-		srvDesc.Texture2D.MipLevels = mTextureList[i]->Resource->GetDesc().MipLevels;
-		md3dDevice->CreateShaderResourceView(mTextureList[i]->Resource.Get(), &srvDesc, hDescriptor);
-
-		// next descriptor
-		hDescriptor.Offset(1, mCbvSrvUavDescriptorSize);
-	}
 
 	//auto skyCubeMap = mTextures["skyCubeMap"]->Resource;
 	D3D12_SHADER_RESOURCE_VIEW_DESC skySrvDesc = {};
@@ -1082,16 +1080,19 @@ void GRenderer::BuildDescriptorHeaps()
 	skySrvDesc.TextureCube.MipLevels = mTextures["skyCubeMap"]->Resource->GetDesc().MipLevels;
 	skySrvDesc.TextureCube.ResourceMinLODClamp = 0.0f;
 	skySrvDesc.Format = mTextures["skyCubeMap"]->Resource->GetDesc().Format;
-	md3dDevice->CreateShaderResourceView(mTextures["skyCubeMap"]->Resource.Get(), &skySrvDesc, hDescriptor);
+	md3dDevice->CreateShaderResourceView(mTextures["skyCubeMap"]->Resource.Get(), &skySrvDesc, GetCpuSrv(0));
 
-	mSkyTexHeapIndex = (UINT)mTextureList.size() - 1;
-	mShadowMapHeapIndex = mSkyTexHeapIndex + 1;
-	mSsaoHeapIndexStart = mShadowMapHeapIndex + 1;
-	mSsaoAmbientMapIndex = mSsaoHeapIndexStart + 3;
-	mNullCubeSrvIndex = mSsaoHeapIndexStart + 5;
-	mNullTexSrvIndex1 = mNullCubeSrvIndex + 1;
-	mNullTexSrvIndex2 = mNullTexSrvIndex1 + 1;
 
+	mSkyTexHeapIndex = 0;
+	//mSkyTexHeapIndex = (UINT)mTextureList.size() - 1;
+	//mShadowMapHeapIndex = mSkyTexHeapIndex + 1;
+	//mSsaoHeapIndexStart = mShadowMapHeapIndex + 1;
+	//mSsaoAmbientMapIndex = mSsaoHeapIndexStart + 3;
+	//mNullCubeSrvIndex = mSsaoHeapIndexStart + 5;
+	//mNullTexSrvIndex1 = mNullCubeSrvIndex + 1;
+	//mNullTexSrvIndex2 = mNullTexSrvIndex1 + 1;
+
+	/*
 	auto nullSrv = GetCpuSrv(mNullCubeSrvIndex);
 	mNullSrv = GetGpuSrv(mNullCubeSrvIndex);
 
@@ -1107,7 +1108,9 @@ void GRenderer::BuildDescriptorHeaps()
 
 	nullSrv.Offset(1, mCbvSrvUavDescriptorSize);
 	md3dDevice->CreateShaderResourceView(nullptr, &srvDesc, nullSrv);
+	*/
 
+	/*
 	mShadowMap->BuildDescriptors(
 		GetCpuSrv(mShadowMapHeapIndex),
 		GetGpuSrv(mShadowMapHeapIndex),
@@ -1120,10 +1123,11 @@ void GRenderer::BuildDescriptorHeaps()
 		GetRtv(SwapChainBufferCount),
 		mCbvSrvUavDescriptorSize,
 		mRtvDescriptorSize);
+	*/
 
 	// Build RTV heap and SRV for GBuffers.
 	{
-		mGBufferSrvIndex = mNullCubeSrvIndex + 1;
+		mGBufferSrvIndex = mSkyTexHeapIndex + 1;
 
 		std::vector<DXGI_FORMAT> rtvFormats =
 		{
@@ -1222,6 +1226,22 @@ void GRenderer::BuildDescriptorHeaps()
 
 		auto gPrefilterCubemap = std::make_unique<GCubeRtv>(md3dDevice.Get(), (UINT)(2048 / pow(2, i)), GetCpuSrv(mIblIndex + 2 + i), GetGpuSrv(mIblIndex + 2 + i), prop);
 		mCubeRtvs["Prefilter_" + std::to_string(i)] = std::move(gPrefilterCubemap);
+	}
+
+	// Build SRV for ordinary textures.
+	{
+		mTextrueHeapIndex = mIblIndex + 2 + mPrefilterLevels;
+		for (UINT i = 0; i < (UINT)mTextureList.size(); ++i)
+		{
+			if (mTextureList[i]->Name == "skyCubeMap")
+				continue;
+			srvDesc.Format = mTextureList[i]->Resource->GetDesc().Format;
+			srvDesc.Texture2D.MipLevels = mTextureList[i]->Resource->GetDesc().MipLevels;
+			md3dDevice->CreateShaderResourceView(mTextureList[i]->Resource.Get(), &srvDesc, GetCpuSrv(mTextrueHeapIndex + i));
+
+			// next descriptor
+			// hDescriptor.Offset(1, mCbvSrvUavDescriptorSize);
+		}
 	}
 }
 
@@ -2248,6 +2268,7 @@ void GRenderer::OnResize()
 
 	mCamera.SetLens(0.25f*MathHelper::Pi, AspectRatio(), 1.0f, 1000.0f);
 
+	/*
 	if (mSsao != nullptr)
 	{
 		mSsao->OnResize(mClientWidth, mClientHeight);
@@ -2255,6 +2276,7 @@ void GRenderer::OnResize()
 		// Resources changed, so need to rebuild descriptors.
 		mSsao->RebuildDescriptors(mDepthStencilBuffer.Get());
 	}
+	*/
 
 	for (auto &rtvHeap : mRtvHeaps)
 	{
