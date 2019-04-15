@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "GDxRenderer.h"
 #include "GDxRendererFactory.h"
+#include "GDxTexture.h"
 
 #include <WindowsX.h>
 
@@ -264,12 +265,15 @@ void GDxRenderer::UpdateMaterialBuffer(const GGiGameTimer* gt)
 			XMMATRIX matTransform = XMLoadFloat4x4(&mat->MatTransform);
 			XMStoreFloat4x4(&matData.MatTransform, XMMatrixTranspose(matTransform));
 
-			if (mat->mTextures.size() > MATERIAL_MAX_TEXTURE_NUM)
+			if (mat->pTextures.size() > MATERIAL_MAX_TEXTURE_NUM)
 				ThrowDxException(L"Material (CBIndex : " + std::to_wstring(mat->MatCBIndex) + L" ) texture number exceeds MATERIAL_MAX_TEXTURE_NUM.");
 			i = 0;
-			for (auto tex : mat->mTextures)
+			for (auto tex : mat->pTextures)
 			{
-				matData.TextureIndex[i] = tex->descriptorHeapIndex;
+				GDxTexture* dxTex = dynamic_cast<GDxTexture*>(tex);
+				if (dxTex == nullptr)
+					ThrowDxException(L"Dynamic cast from GRiTexture to GDxTexture failed.");
+				matData.TextureIndex[i] = dxTex->texIndex;
 				i++;
 			}
 			if (mat->ScalarParams.size() > MATERIAL_MAX_SCALAR_NUM)
@@ -905,7 +909,7 @@ void GDxRenderer::BuildRootSignature()
 		texTable0.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 3, 0, 0);
 
 		CD3DX12_DESCRIPTOR_RANGE texTable1;
-		texTable1.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, (UINT)mTextureList.size(), 3, 0);//10,3,0
+		texTable1.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, (UINT)pTextures.size(), 3, 0);//10,3,0
 
 		// Root parameter can be a table, root descriptor or root constants.
 		CD3DX12_ROOT_PARAMETER slotRootParameter[5];
@@ -1049,10 +1053,13 @@ void GDxRenderer::BuildDescriptorHeaps()
 	skySrvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 	skySrvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBE;
 	skySrvDesc.TextureCube.MostDetailedMip = 0;
-	skySrvDesc.TextureCube.MipLevels = mTextures["skyCubeMap"]->Resource->GetDesc().MipLevels;
+	GDxTexture* tex = dynamic_cast<GDxTexture*>(pTextures[L"skyCubeMap"]);
+	if (tex == nullptr)
+		ThrowDxException(L"Dynamic cast from GRiTexture to GDxTexture failed.");
+	skySrvDesc.TextureCube.MipLevels = tex->Resource->GetDesc().MipLevels;
 	skySrvDesc.TextureCube.ResourceMinLODClamp = 0.0f;
-	skySrvDesc.Format = mTextures["skyCubeMap"]->Resource->GetDesc().Format;
-	md3dDevice->CreateShaderResourceView(mTextures["skyCubeMap"]->Resource.Get(), &skySrvDesc, GetCpuSrv(0));
+	skySrvDesc.Format = tex->Resource->GetDesc().Format;
+	md3dDevice->CreateShaderResourceView(tex->Resource.Get(), &skySrvDesc, GetCpuSrv(0));
 
 
 	mSkyTexHeapIndex = 0;
@@ -1181,9 +1188,14 @@ void GDxRenderer::BuildDescriptorHeaps()
 		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
 		srvDesc.Texture2D.MostDetailedMip = 0;
 		srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
-		srvDesc.Format = mTextures["IBL_BRDF_LUT"]->Resource->GetDesc().Format;
-		srvDesc.Texture2D.MipLevels = mTextures["IBL_BRDF_LUT"]->Resource->GetDesc().MipLevels;
-		md3dDevice->CreateShaderResourceView(mTextures["IBL_BRDF_LUT"]->Resource.Get(), &srvDesc, GetCpuSrv(mIblIndex + 1));
+
+		GDxTexture* tex = dynamic_cast<GDxTexture*>(pTextures[L"Textures\\IBL_BRDF_LUT.png"]);
+		if (tex == nullptr)
+			ThrowDxException(L"Dynamic cast from GRiTexture to GDxTexture failed.");
+
+		srvDesc.Format = tex->Resource->GetDesc().Format;
+		srvDesc.Texture2D.MipLevels = tex->Resource->GetDesc().MipLevels;
+		md3dDevice->CreateShaderResourceView(tex->Resource.Get(), &srvDesc, GetCpuSrv(mIblIndex + 1));
 	}
 
 	// Build cubemap SRV and RTVs for prefilter cubemap pre-integration.
@@ -1203,9 +1215,20 @@ void GDxRenderer::BuildDescriptorHeaps()
 	// Build SRV for ordinary textures.
 	{
 		mTextrueHeapIndex = mIblIndex + 2 + mPrefilterLevels;
-		for (UINT i = 0; i < (UINT)mTextureList.size(); ++i)
+		for (auto tex : pTextures)
 		{
-			if (mTextureList[i]->Name == "skyCubeMap")
+			GDxTexture* dxTex = dynamic_cast<GDxTexture*>(tex.second);
+			if (dxTex == nullptr)
+				ThrowDxException(L"Dynamic cast from GRiTexture to GDxTexture failed.");
+
+			srvDesc.Format = dxTex->Resource->GetDesc().Format;
+			srvDesc.Texture2D.MipLevels = dxTex->Resource->GetDesc().MipLevels;
+			md3dDevice->CreateShaderResourceView(dxTex->Resource.Get(), &srvDesc, GetCpuSrv(mTextrueHeapIndex + dxTex->texIndex));
+		}
+		/*
+		for (UINT i = 0; i < (UINT)pTextures.size(); ++i)
+		{
+			if (pTextures[i]->Name == "skyCubeMap")
 				continue;
 			srvDesc.Format = mTextureList[i]->Resource->GetDesc().Format;
 			srvDesc.Texture2D.MipLevels = mTextureList[i]->Resource->GetDesc().MipLevels;
@@ -1214,6 +1237,7 @@ void GDxRenderer::BuildDescriptorHeaps()
 			// next descriptor
 			// hDescriptor.Offset(1, mCbvSrvUavDescriptorSize);
 		}
+		*/
 	}
 }
 
@@ -1662,9 +1686,9 @@ void GDxRenderer::BuildMaterials()
 	auto defaultMat = std::make_unique<GMaterial>();
 	defaultMat->Name = "default";
 	defaultMat->MatCBIndex = 0;
-	defaultMat->mTextures.push_back(mTextures["sphere_1_BaseColor"]);
-	defaultMat->mTextures.push_back(mTextures["sphere_1_Normal"]);
-	defaultMat->mTextures.push_back(mTextures["sphere_1_OcclusionRoughnessMetallic"]);
+	defaultMat->pTextures.push_back(pTextures[L"Content\\Textures\\sphere_1_BaseColor.png"]);
+	defaultMat->pTextures.push_back(pTextures[L"Content\\Textures\\sphere_1_Normal.png"]);
+	defaultMat->pTextures.push_back(pTextures[L"Content\\Textures\\sphere_1_OcclusionRoughnessMetallic.png"]);
 	mMaterials["default"] = std::move(defaultMat);
 
 	auto debug_albedo = std::make_unique<GMaterial>();
@@ -1705,24 +1729,25 @@ void GDxRenderer::BuildMaterials()
 	auto sphere_1 = std::make_unique<GMaterial>();
 	sphere_1->Name = "sphere_1";
 	sphere_1->MatCBIndex = 6;
-	sphere_1->mTextures.push_back(mTextures["sphere_1_BaseColor"]);
-	sphere_1->mTextures.push_back(mTextures["sphere_1_Normal"]);
-	sphere_1->mTextures.push_back(mTextures["sphere_1_OcclusionRoughnessMetallic"]);
+	sphere_1->pTextures.push_back(pTextures[L"Content\\Textures\\sphere_1_BaseColor.png"]);
+	sphere_1->pTextures.push_back(pTextures[L"Content\\Textures\\sphere_1_Normal.png"]);
+	sphere_1->pTextures.push_back(pTextures[L"Content\\Textures\\sphere_1_OcclusionRoughnessMetallic.png"]);
 	mMaterials["sphere_1"] = std::move(sphere_1);
 
 	auto sphere_2 = std::make_unique<GMaterial>();
 	sphere_2->Name = "sphere_2";
 	sphere_2->MatCBIndex = 7;
-	sphere_2->mTextures.push_back(mTextures["sphere_2_BaseColor"]);
-	sphere_2->mTextures.push_back(mTextures["sphere_2_Normal"]);
-	sphere_2->mTextures.push_back(mTextures["sphere_2_OcclusionRoughnessMetallic"]);
+	sphere_2->pTextures.push_back(pTextures[L"Content\\Textures\\sphere_2_BaseColor.png"]);
+	sphere_2->pTextures.push_back(pTextures[L"Content\\Textures\\sphere_2_Normal.png"]);
+	sphere_2->pTextures.push_back(pTextures[L"Content\\Textures\\sphere_2_OcclusionRoughnessMetallic.png"]);
 	mMaterials["sphere_2"] = std::move(sphere_2);
 
+	/*
 	auto bricks = std::make_unique<GMaterial>();
 	bricks->Name = "bricks";
 	bricks->MatCBIndex = 8;
-	bricks->mTextures.push_back(mTextures["bricksDiffuseMap"]);//Diffuse
-	bricks->mTextures.push_back(mTextures["bricksNormalMap"]);//Normal
+	bricks->pTextures.push_back(pTextures[L"Content\\Textures\\bricks2.dds"]);//Diffuse
+	bricks->pTextures.push_back(pTextures[L"Content\\Textures\\bricks2_nmap.dds"]);//Normal
 	bricks->VectorParams.push_back(XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f));//DiffuseAlbedo
 	bricks->VectorParams.push_back(XMFLOAT4(0.1f, 0.1f, 0.1f, 0.f));//FresnelR0
 	bricks->ScalarParams.push_back(0.3f);//Roughness
@@ -1757,14 +1782,15 @@ void GDxRenderer::BuildMaterials()
 	skull->VectorParams.push_back(XMFLOAT4(0.6f, 0.6f, 0.6f, 0.f));//FresnelR0
 	skull->ScalarParams.push_back(0.2f);//Roughness
 	mMaterials["skull"] = std::move(skull);
+	*/
 
 	auto sky = std::make_unique<GMaterial>();
 	sky->Name = "sky";
 	sky->MatCBIndex = 12;
 	//sky->DiffuseSrvHeapIndex = 6;
 	//sky->NormalSrvHeapIndex = 7;
-	sky->mTextures.push_back(mTextures["defaultDiffuseMap"]);//Diffuse
-	sky->mTextures.push_back(mTextures["defaultNormalMap"]);//Normal
+	sky->pTextures.push_back(pTextures[L"Content\\Textures\\sphere_1_BaseColor.png"]);//Diffuse
+	sky->pTextures.push_back(pTextures[L"Content\\Textures\\sphere_1_BaseColor.png"]);//Normal
 	sky->VectorParams.push_back(XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f));//DiffuseAlbedo
 	sky->VectorParams.push_back(XMFLOAT4(0.1f, 0.1f, 0.1f, 0.f));//FresnelR0
 	sky->ScalarParams.push_back(1.0f);//Roughness
@@ -1773,33 +1799,33 @@ void GDxRenderer::BuildMaterials()
 	auto greasyPanMat = std::make_unique<GMaterial>();
 	greasyPanMat->Name = "GreasyPan";
 	greasyPanMat->MatCBIndex = 13;
-	greasyPanMat->mTextures.push_back(mTextures["Greasy_Pan_Albedo"]);
-	greasyPanMat->mTextures.push_back(mTextures["Greasy_Pan_Normal"]);
-	greasyPanMat->mTextures.push_back(mTextures["Greasy_Pan_Orm"]);
+	greasyPanMat->pTextures.push_back(pTextures[L"Content\\Textures\\Greasy_Pan_Albedo.png"]);
+	greasyPanMat->pTextures.push_back(pTextures[L"Content\\Textures\\Greasy_Pan_Normal.png"]);
+	greasyPanMat->pTextures.push_back(pTextures[L"Content\\Textures\\Greasy_Pan_Orm.png"]);
 	mMaterials["GreasyPan"] = std::move(greasyPanMat);
 
 	auto rustedIronMat = std::make_unique<GMaterial>();
 	rustedIronMat->Name = "RustedIron";
 	rustedIronMat->MatCBIndex = 14;
-	rustedIronMat->mTextures.push_back(mTextures["Rusted_Iron_Albedo"]);
-	rustedIronMat->mTextures.push_back(mTextures["Rusted_Iron_Normal"]);
-	rustedIronMat->mTextures.push_back(mTextures["Rusted_Iron_Orm"]);
+	rustedIronMat->pTextures.push_back(pTextures[L"Content\\Textures\\Rusted_Iron_Albedo.png"]);
+	rustedIronMat->pTextures.push_back(pTextures[L"Content\\Textures\\Rusted_Iron_Normal.png"]);
+	rustedIronMat->pTextures.push_back(pTextures[L"Content\\Textures\\Rusted_Iron_Orm.png"]);
 	mMaterials["RustedIron"] = std::move(rustedIronMat);
 
 	auto cerberusMat = std::make_unique<GMaterial>();
 	cerberusMat->Name = "Cerberus";
 	cerberusMat->MatCBIndex = 15;
-	cerberusMat->mTextures.push_back(mTextures["Cerberus_Albedo"]);
-	cerberusMat->mTextures.push_back(mTextures["Cerberus_Normal"]);
-	cerberusMat->mTextures.push_back(mTextures["Cerberus_Orm"]);
+	cerberusMat->pTextures.push_back(pTextures[L"Content\\Textures\\Cerberus_Albedo.png"]);
+	cerberusMat->pTextures.push_back(pTextures[L"Content\\Textures\\Cerberus_Normal.png"]);
+	cerberusMat->pTextures.push_back(pTextures[L"Content\\Textures\\Cerberus_Orm.png"]);
 	mMaterials["Cerberus"] = std::move(cerberusMat);
 
 	auto fireplaceMat = std::make_unique<GMaterial>();
 	fireplaceMat->Name = "Fireplace";
 	fireplaceMat->MatCBIndex = 16;
-	fireplaceMat->mTextures.push_back(mTextures["Fireplace_Albedo"]);
-	fireplaceMat->mTextures.push_back(mTextures["Fireplace_Normal"]);
-	fireplaceMat->mTextures.push_back(mTextures["Fireplace_Orm"]);
+	fireplaceMat->pTextures.push_back(pTextures[L"Content\\Textures\\Fireplace_Albedo.png"]);
+	fireplaceMat->pTextures.push_back(pTextures[L"Content\\Textures\\Fireplace_Normal.png"]);
+	fireplaceMat->pTextures.push_back(pTextures[L"Content\\Textures\\Fireplace_Orm.png"]);
 	mMaterials["Fireplace"] = std::move(fireplaceMat);
 
 }
@@ -2315,81 +2341,62 @@ void GCore::OnResize()
 
 #pragma region Initialize
 
-bool GDxRenderer::PreInitialize(HWND OutputWindow, double width, double height)
+void GDxRenderer::PreInitialize(HWND OutputWindow, double width, double height)
 {
-	//if (!InitMainWindow())
-		//return false;
-
 	mhMainWnd = OutputWindow;
 	mClientWidth = (int)width;
 	mClientHeight = (int)height;
 
 	if (!InitDirect3D())
-		return false;
+		return;
 
 	CreateRendererFactory();
 
 	// Do the initial resize code.
 	OnResize();
 
-	return true;
+	ThrowIfFailed(mCommandList->Reset(mDirectCmdListAlloc.Get(), nullptr));
 }
 
 void GDxRenderer::Initialize(HWND OutputWindow, double width, double height)
 {
-	// Enable run-time memory check for debug builds.
-#if defined(DEBUG) | defined(_DEBUG)
-	_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
-#endif
+	//PreInitialize(OutputWindow, width, height);
 
-	try
-	{
-		if (!PreInitialize(OutputWindow, width, height))
-			return;
+	// Reset the command list to prep for initialization commands.
 
-		SetWorkDirectory();
+	mCamera.SetPosition(0.0f, 2.0f, -5.0f);
+	/*
+	mShadowMap = std::make_unique<ShadowMap>(md3dDevice.Get(),
+		2048, 2048);
 
-		// Reset the command list to prep for initialization commands.
-		ThrowIfFailed(mCommandList->Reset(mDirectCmdListAlloc.Get(), nullptr));
+	mSsao = std::make_unique<Ssao>(
+		md3dDevice.Get(),
+		mCommandList.Get(),
+		mClientWidth, mClientHeight);
+	*/
+	BuildCubemapSampleCameras();
+	//LoadTextures();
+	BuildDescriptorHeaps();
+	BuildRootSignature();
+	BuildShadersAndInputLayout();
+	LoadMeshes();
+	BuildMaterials();
+	BuildSceneObjects();
+	BuildFrameResources();
+	BuildPSOs();
 
-		mCamera.SetPosition(0.0f, 2.0f, -5.0f);
-		/*
-		mShadowMap = std::make_unique<ShadowMap>(md3dDevice.Get(),
-			2048, 2048);
+	CubemapPreIntegration();
 
-		mSsao = std::make_unique<Ssao>(
-			md3dDevice.Get(),
-			mCommandList.Get(),
-			mClientWidth, mClientHeight);
-		*/
-		BuildCubemapSampleCameras();
-		LoadTextures();
-		BuildDescriptorHeaps();
-		BuildRootSignature();
-		BuildShadersAndInputLayout();
-		LoadMeshes();
-		BuildMaterials();
-		BuildSceneObjects();
-		BuildFrameResources();
-		BuildPSOs();
+	//mSsao->SetPSOs(mPSOs["ssao"].Get(), mPSOs["ssaoBlur"].Get());
+	// Execute the initialization commands.
+	ThrowIfFailed(mCommandList->Close());
+	ID3D12CommandList* cmdsLists[] = { mCommandList.Get() };
+	mCommandQueue->ExecuteCommandLists(_countof(cmdsLists), cmdsLists);
 
-		CubemapPreIntegration();
+	// Wait until initialization is complete.
+	FlushCommandQueue();
 
-		//mSsao->SetPSOs(mPSOs["ssao"].Get(), mPSOs["ssaoBlur"].Get());
-		// Execute the initialization commands.
-		ThrowIfFailed(mCommandList->Close());
-		ID3D12CommandList* cmdsLists[] = { mCommandList.Get() };
-		mCommandQueue->ExecuteCommandLists(_countof(cmdsLists), cmdsLists);
-
-		// Wait until initialization is complete.
-		FlushCommandQueue();
-
-		SetSceneObjectsCallback();
-	}
-	catch (DxException& e)
-	{
-		MessageBox(nullptr, e.ToString().c_str(), L"HR Failed", MB_OK);
-	}
+	SetSceneObjectsCallback();
 }
 
 #pragma endregion
@@ -2922,6 +2929,7 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 
 #pragma endregion
 
+/*
 #pragma region Init
 
 void GDxRenderer::LoadTextures()
@@ -3077,19 +3085,8 @@ void GDxRenderer::LoadTextures()
 	}
 }
 
-void GDxRenderer::SetWorkDirectory()
-{
-	TCHAR exeFullPath[MAX_PATH];
-	memset(exeFullPath, 0, MAX_PATH);
-
-	GetModuleFileName(NULL, exeFullPath, MAX_PATH);
-	WCHAR *p = wcsrchr(exeFullPath, '\\');
-	*p = 0x00;
-
-	WorkDirectory = std::wstring(exeFullPath);
-}
-
 #pragma endregion
+*/
 
 
 /*

@@ -3,7 +3,9 @@
 
 class GRiTexture
 {
+
 public:
+
 	GRiTexture();
 	~GRiTexture();
 
@@ -12,5 +14,6 @@ public:
 
 	bool bSrgb;
 
+	virtual void AllowDynamicCast() = 0;
 };
 

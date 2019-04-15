@@ -197,6 +197,8 @@
     <ClInclude Include="Common\GStaticVIBuffer.h" />
     <ClInclude Include="Common\GVertexIndexBuffer.h" />
     <ClInclude Include="Common\GVertex.h" />
+    <ClInclude Include="Public\GDxFloat4.h" />
+    <ClInclude Include="Public\GDxFloat4x4.h" />
     <ClInclude Include="GDxInclude.h" />
     <ClInclude Include="Public\GDxRendererFactory.h" />
     <ClInclude Include="Public\GDxPreInclude.h" />
@@ -235,6 +237,8 @@
     <ClCompile Include="Common\GStaticVIBuffer.cpp" />
     <ClCompile Include="Common\GVertexIndexBuffer.cpp" />
     <ClCompile Include="Common\GVertex.cpp" />
+    <ClCompile Include="Private\GDxFloat4.cpp" />
+    <ClCompile Include="Private\GDxFloat4x4.cpp" />
     <ClCompile Include="Private\GDxRendererFactory.cpp" />
     <ClCompile Include="Private\GDxTextureLoader.cpp" />
     <ClCompile Include="Private\GDxTexture.cpp" />

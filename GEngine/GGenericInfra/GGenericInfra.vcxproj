@@ -150,6 +150,8 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="Public\GGiFloat4.h" />
+    <ClInclude Include="Public\GGiFloat4x4.h" />
     <ClInclude Include="Public\GGiGameTimer.h" />
     <ClInclude Include="GGiInclude.h" />
     <ClInclude Include="Public\GGiPreInclude.h" />
@@ -157,6 +159,8 @@
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Private\GGiFloat4.cpp" />
+    <ClCompile Include="Private\GGiFloat4x4.cpp" />
     <ClCompile Include="Private\GGiGameTimer.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>

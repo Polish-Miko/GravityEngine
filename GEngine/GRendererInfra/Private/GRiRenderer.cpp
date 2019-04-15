@@ -54,6 +54,11 @@ void GRiRenderer::CalculateFrameStats()
 	}
 }
 
+GRiRendererFactory* GRiRenderer::GetFactory()
+{
+	return mFactory.get();
+}
+
 /*
 void GRiRenderer::Set4xMsaaState(bool state)
 {

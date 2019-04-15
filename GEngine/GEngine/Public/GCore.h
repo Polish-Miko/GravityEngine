@@ -56,23 +56,34 @@ private:
 	bool      mResizing = false;   // are the resize bars being dragged?
 	bool      mFullscreenState = false;// fullscreen enabled
 
-	void Update();
+	std::wstring WorkDirectory;
+
+	GRiRenderer* mRenderer;
+
+	GRiRendererFactory* pRendererFactory;
+
+	std::unique_ptr<GGiGameTimer> mTimer;
+
+	std::unordered_map<std::wstring, std::unique_ptr<GRiTexture>> mTextures;
+
 	//void Draw();
 
 	//void SetWorkDirectory();
-	//void LoadTextures();
-
-	//Util
-	//std::vector<std::wstring> GetAllFilesInFolder(std::wstring path, bool bCheckFormat, std::vector<std::wstring> format);
-	//std::vector<std::wstring> GetAllFilesUnderFolder(std::wstring path, bool bCheckFormat, std::vector<std::wstring> format);
 
 private:
 
 	GCore();
 
-	GRiRenderer* mRenderer;
+	void Update();
 
-	std::unique_ptr<GGiGameTimer> mTimer;
+	void LoadTextures();
+	void LoadSkyTexture(std::wstring path);
+
+	void SetWorkDirectory();
+
+	//Util
+	std::vector<std::wstring> GetAllFilesInFolder(std::wstring path, bool bCheckFormat, std::vector<std::wstring> format);
+	std::vector<std::wstring> GetAllFilesUnderFolder(std::wstring path, bool bCheckFormat, std::vector<std::wstring> format);
 
 	//std::wstring WorkDirectory;
 

@@ -2,33 +2,8 @@
 #include "stdafx.h"
 #include "GCore.h"
 #include <WindowsX.h>
-
 #include <io.h>
 
-/*
-int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE prevInstance,
-	PSTR cmdLine, int showCmd)
-{
-	// Enable run-time memory check for debug builds.
-#if defined(DEBUG) | defined(_DEBUG)
-	_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
-#endif
-
-	try
-	{
-		SsaoApp theApp(hInstance);
-		if (!theApp.Initialize())
-			return 0;
-
-		return theApp.Run();
-	}
-	catch (DxException& e)
-	{
-		MessageBox(nullptr, e.ToString().c_str(), L"HR Failed", MB_OK);
-		return 0;
-	}
-}
-*/
 
 GCore::GCore()
 {
@@ -50,6 +25,11 @@ GCore& GCore::GetCore()
 
 void GCore::Run()
 {
+	// Enable run-time memory check for debug builds.
+#if defined(DEBUG) | defined(_DEBUG)
+	_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
+#endif
+
 	try
 	{
 		MSG msg = { 0 };
@@ -90,7 +70,27 @@ void GCore::Run()
 
 void GCore::Initialize(HWND OutputWindow, double width, double height)
 {
-	mRenderer->Initialize(OutputWindow, width, height);
+	// Enable run-time memory check for debug builds.
+#if defined(DEBUG) | defined(_DEBUG)
+	_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
+#endif
+
+	try
+	{
+
+		mRenderer->PreInitialize(OutputWindow, width, height);
+
+		pRendererFactory = mRenderer->GetFactory();
+		SetWorkDirectory();
+		LoadTextures();
+
+		mRenderer->Initialize(OutputWindow, width, height);
+
+	}
+	catch (DxException& e)
+	{
+		MessageBox(nullptr, e.ToString().c_str(), L"HR Failed", MB_OK);
+	}
 }
 
 void GCore::Update()
@@ -345,353 +345,29 @@ void GCore::Update(const GameTimer& gt)
 #pragma endregion
 */
 
-//Draw
-/*
-#pragma region Draw
-
-void GCore::Draw(const GameTimer& gt)
-{
-	auto cmdListAlloc = mCurrFrameResource->CmdListAlloc;
-
-	// Reuse the memory associated with command recording.
-	// We can only reset when the associated command lists have finished execution on the GPU.
-	ThrowIfFailed(cmdListAlloc->Reset());
-
-	// A command list can be reset after it has been added to the command queue via ExecuteCommandList.
-	// Reusing the command list reuses memory.
-	ThrowIfFailed(mCommandList->Reset(cmdListAlloc.Get(), mPSOs["GBuffer"].Get()));
-
-	ID3D12DescriptorHeap* descriptorHeaps[] = { mSrvDescriptorHeap.Get() };
-	mCommandList->SetDescriptorHeaps(_countof(descriptorHeaps), descriptorHeaps);
-
-	mCommandList->SetGraphicsRootSignature(mRootSignatures["Forward"].Get());
-
-	//
-	// Shadow map pass.
-	//
-
-	// Bind all the materials used in this scene.  For structured buffers, we can bypass the heap and 
-	// set as a root descriptor.
-	auto matBuffer = mCurrFrameResource->MaterialBuffer->Resource();
-	mCommandList->SetGraphicsRootShaderResourceView(2, matBuffer->GetGPUVirtualAddress());
-
-	// Bind null SRV for shadow map pass.
-	mCommandList->SetGraphicsRootDescriptorTable(3, mNullSrv);
-
-	// Bind all the textures used in this scene.  Observe
-	// that we only have to specify the first descriptor in the table.  
-	// The root signature knows how many descriptors are expected in the table.
-	mCommandList->SetGraphicsRootDescriptorTable(4, mSrvDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
-
-	//DrawSceneToShadowMap();
-
-	//
-	// Normal/depth pass.
-	//
-
-	//DrawNormalsAndDepth();
-
-	//
-	// Compute SSAO.
-	// 
-
-	//mCommandList->SetGraphicsRootSignature(mSsaoRootSignature.Get());
-	//mSsao->ComputeSsao(mCommandList.Get(), mCurrFrameResource, 3);
-
-	//
-	// Main rendering pass.
-	//
-
-	mCommandList->SetGraphicsRootSignature(mRootSignatures["Forward"].Get());
-
-	// Rebind state whenever graphics root signature changes.
-
-	// Bind all the materials used in this scene.  For structured buffers, we can bypass the heap and 
-	// set as a root descriptor.
-	matBuffer = mCurrFrameResource->MaterialBuffer->Resource();
-	mCommandList->SetGraphicsRootShaderResourceView(2, matBuffer->GetGPUVirtualAddress());
-
-	mCommandList->RSSetViewports(1, &mScreenViewport);
-	mCommandList->RSSetScissorRects(1, &mScissorRect);
-
-	// Indicate a state transition on the resource usage.
-	mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(),
-		D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET));
-
-	// Clear the back buffer.
-	mCommandList->ClearRenderTargetView(CurrentBackBufferView(), Colors::LightSteelBlue, 0, nullptr);
-
-	// WE ALREADY WROTE THE DEPTH INFO TO THE DEPTH BUFFER IN DrawNormalsAndDepth,
-	// SO DO NOT CLEAR DEPTH.
-	mCommandList->ClearDepthStencilView(DepthStencilView(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
-
-	// Specify the buffers we are going to render to.
-	mCommandList->OMSetRenderTargets(1, &CurrentBackBufferView(), true, &DepthStencilView());
-
-	// Bind all the textures used in this scene.  Observe
-	// that we only have to specify the first descriptor in the table.  
-	// The root signature knows how many descriptors are expected in the table.
-	mCommandList->SetGraphicsRootDescriptorTable(4, mSrvDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
-
-	auto passCB = mCurrFrameResource->PassCB->Resource();
-	mCommandList->SetGraphicsRootConstantBufferView(1, passCB->GetGPUVirtualAddress());
-
-	// Bind the sky cube map.  For our demos, we just use one "world" cube map representing the environment
-	// from far away, so all objects will use the same cube map and we only need to set it once per-frame.  
-	// If we wanted to use "local" cube maps, we would have to change them per-object, or dynamically
-	// index into an array of cube maps.
-
-	CD3DX12_GPU_DESCRIPTOR_HANDLE skyTexDescriptor(mSrvDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
-	skyTexDescriptor.Offset(mSkyTexHeapIndex, mCbvSrvUavDescriptorSize);
-	mCommandList->SetGraphicsRootDescriptorTable(3, skyTexDescriptor);
-
-	bool bDeferredRendering = true;
-	if (bDeferredRendering)
-	{
-		// G-Buffer Pass
-		{
-			mCommandList->RSSetViewports(1, &(mRtvHeaps["GBuffer"]->mRtv[0]->mViewport));
-			mCommandList->RSSetScissorRects(1, &(mRtvHeaps["GBuffer"]->mRtv[0]->mScissorRect));
-
-			mCommandList->SetGraphicsRootSignature(mRootSignatures["GBuffer"].Get());
-
-			mCommandList->SetPipelineState(mPSOs["GBuffer"].Get());
-
-			UINT objCBByteSize = GDX12Util::CalcConstantBufferByteSize(sizeof(ObjectConstants));
-			auto objectCB = mCurrFrameResource->ObjectCB->Resource();
-
-			auto passCB = mCurrFrameResource->PassCB->Resource();
-			mCommandList->SetGraphicsRootConstantBufferView(1, passCB->GetGPUVirtualAddress());
-
-			//mCommandList->SetGraphicsRootDescriptorTable(2, mSrvDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
-			mCommandList->SetGraphicsRootDescriptorTable(2, GetGpuSrv(mTextrueHeapIndex));
-
-			matBuffer = mCurrFrameResource->MaterialBuffer->Resource();
-			mCommandList->SetGraphicsRootShaderResourceView(3, matBuffer->GetGPUVirtualAddress());
-
-			mCommandList->OMSetStencilRef(1);
-
-			// Indicate a state transition on the resource usage.
-			for (size_t i = 0; i < mRtvHeaps["GBuffer"]->mRtv.size(); i++)
-			{
-				mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["GBuffer"]->mRtv[i]->mResource.Get(),
-					D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_RENDER_TARGET));
-
-				// Clear the back buffer.
-				DirectX::XMVECTORF32 clearColor = { mRtvHeaps["GBuffer"]->mRtv[i]->mProperties.mClearColor[0],
-				mRtvHeaps["GBuffer"]->mRtv[i]->mProperties.mClearColor[1],
-				mRtvHeaps["GBuffer"]->mRtv[i]->mProperties.mClearColor[2],
-				mRtvHeaps["GBuffer"]->mRtv[i]->mProperties.mClearColor[3]
-				};
-
-				// WE ALREADY WROTE THE DEPTH INFO TO THE DEPTH BUFFER IN DrawNormalsAndDepth,
-				// SO DO NOT CLEAR DEPTH.
-				mCommandList->ClearRenderTargetView(mRtvHeaps["GBuffer"]->mRtvHeap.handleCPU((UINT)i), clearColor, 0, nullptr);
-			}
-
-			// Specify the buffers we are going to render to.
-			//mCommandList->OMSetRenderTargets(mRtvHeaps["GBuffer"]->mRtvHeap.HeapDesc.NumDescriptors, &(mRtvHeaps["GBuffer"]->mRtvHeap.hCPUHeapStart), true, &DepthStencilView());
-			mCommandList->OMSetRenderTargets(mRtvHeaps["GBuffer"]->mRtvHeap.HeapDesc.NumDescriptors, &(mRtvHeaps["GBuffer"]->mRtvHeap.hCPUHeapStart), true, &DepthStencilView());
-
-			// For each render item...
-			DrawSceneObjects(mCommandList.Get(), RenderLayer::Deferred, true);
-
-			for (size_t i = 0; i < mRtvHeaps["GBuffer"]->mRtv.size(); i++)
-			{
-				mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["GBuffer"]->mRtv[i]->mResource.Get(),
-					D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ));
-			}
-		}
-
-		// Direct Light Pass
-		{
-			mCommandList->RSSetViewports(1, &(mRtvHeaps["LightPass"]->mRtv[0]->mViewport));
-			mCommandList->RSSetScissorRects(1, &(mRtvHeaps["LightPass"]->mRtv[0]->mScissorRect));
-
-			mCommandList->SetGraphicsRootSignature(mRootSignatures["LightPass"].Get());
-
-			mCommandList->SetPipelineState(mPSOs["DirectLightPass"].Get());
-
-			auto lightCB = mCurrFrameResource->LightCB->Resource();
-			mCommandList->SetGraphicsRootConstantBufferView(0, lightCB->GetGPUVirtualAddress());
-
-			mCommandList->SetGraphicsRootDescriptorTable(1, mRtvHeaps["GBuffer"]->GetSrvGpuStart());
-
-			mCommandList->SetGraphicsRootDescriptorTable(2, mCubeRtvs["Irradiance"]->GetSrvGpu());
-
-			mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["LightPass"]->mRtv[0]->mResource.Get(),
-				D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_RENDER_TARGET));
-
-			// Clear the back buffer.
-			DirectX::XMVECTORF32 clearColor = { mRtvHeaps["LightPass"]->mRtv[0]->mProperties.mClearColor[0],
-			mRtvHeaps["LightPass"]->mRtv[0]->mProperties.mClearColor[1],
-			mRtvHeaps["LightPass"]->mRtv[0]->mProperties.mClearColor[2],
-			mRtvHeaps["LightPass"]->mRtv[0]->mProperties.mClearColor[3]
-			};
-
-			// WE ALREADY WROTE THE DEPTH INFO TO THE DEPTH BUFFER IN DrawNormalsAndDepth,
-			// SO DO NOT CLEAR DEPTH.
-			mCommandList->ClearRenderTargetView(mRtvHeaps["LightPass"]->mRtvHeap.handleCPU(0), clearColor, 0, nullptr);
-
-			// Specify the buffers we are going to render to.
-			//mCommandList->OMSetRenderTargets(mRtvHeaps["GBuffer"]->mRtvHeap.HeapDesc.NumDescriptors, &(mRtvHeaps["GBuffer"]->mRtvHeap.hCPUHeapStart), true, &DepthStencilView());
-			mCommandList->OMSetRenderTargets(1, &(mRtvHeaps["LightPass"]->mRtvHeap.handleCPU(0)), true, &DepthStencilView());
-
-			// For each render item...
-			DrawSceneObjects(mCommandList.Get(), RenderLayer::ScreenQuad, false);
-
-			mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["LightPass"]->mRtv[0]->mResource.Get(),
-				D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ));
-		}
-
-		// Ambient Light Pass
-		{
-			mCommandList->RSSetViewports(1, &(mRtvHeaps["LightPass"]->mRtv[1]->mViewport));
-			mCommandList->RSSetScissorRects(1, &(mRtvHeaps["LightPass"]->mRtv[1]->mScissorRect));
-
-			mCommandList->SetGraphicsRootSignature(mRootSignatures["LightPass"].Get());
-
-			mCommandList->SetPipelineState(mPSOs["AmbientLightPass"].Get());
-
-			auto lightCB = mCurrFrameResource->LightCB->Resource();
-			mCommandList->SetGraphicsRootConstantBufferView(0, lightCB->GetGPUVirtualAddress());
-
-			mCommandList->SetGraphicsRootDescriptorTable(1, mRtvHeaps["GBuffer"]->GetSrvGpuStart());
-
-			mCommandList->SetGraphicsRootDescriptorTable(2, mCubeRtvs["Irradiance"]->GetSrvGpu());
-
-			mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["LightPass"]->mRtv[1]->mResource.Get(),
-				D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_RENDER_TARGET));
-
-			// Clear the back buffer.
-			DirectX::XMVECTORF32 clearColor = { mRtvHeaps["LightPass"]->mRtv[1]->mProperties.mClearColor[0],
-			mRtvHeaps["LightPass"]->mRtv[1]->mProperties.mClearColor[1],
-			mRtvHeaps["LightPass"]->mRtv[1]->mProperties.mClearColor[2],
-			mRtvHeaps["LightPass"]->mRtv[1]->mProperties.mClearColor[3]
-			};
-
-			// WE ALREADY WROTE THE DEPTH INFO TO THE DEPTH BUFFER IN DrawNormalsAndDepth,
-			// SO DO NOT CLEAR DEPTH.
-			mCommandList->ClearRenderTargetView(mRtvHeaps["LightPass"]->mRtvHeap.handleCPU(1), clearColor, 0, nullptr);
-
-			// Specify the buffers we are going to render to.
-			//mCommandList->OMSetRenderTargets(mRtvHeaps["GBuffer"]->mRtvHeap.HeapDesc.NumDescriptors, &(mRtvHeaps["GBuffer"]->mRtvHeap.hCPUHeapStart), true, &DepthStencilView());
-			mCommandList->OMSetRenderTargets(1, &(mRtvHeaps["LightPass"]->mRtvHeap.handleCPU(1)), true, &DepthStencilView());
-
-			// For each render item...
-			DrawSceneObjects(mCommandList.Get(), RenderLayer::ScreenQuad, false);
-
-			mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["LightPass"]->mRtv[1]->mResource.Get(),
-				D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ));
-		}
-
-		// Debug Pass
-		bool bDrawDebugQuad = true;
-		if (bDrawDebugQuad)
-		{
-			mCommandList->RSSetViewports(1, &mScreenViewport);
-			mCommandList->RSSetScissorRects(1, &mScissorRect);
-
-			mCommandList->SetGraphicsRootSignature(mRootSignatures["GBufferDebug"].Get());
-
-			mCommandList->SetPipelineState(mPSOs["GBufferDebug"].Get());
-
-			UINT objCBByteSize = GDX12Util::CalcConstantBufferByteSize(sizeof(ObjectConstants));
-			auto objectCB = mCurrFrameResource->ObjectCB->Resource();
-
-			mCommandList->SetGraphicsRootDescriptorTable(1, mRtvHeaps["GBuffer"]->GetSrvGpuStart());
-
-			matBuffer = mCurrFrameResource->MaterialBuffer->Resource();
-			mCommandList->SetGraphicsRootShaderResourceView(2, matBuffer->GetGPUVirtualAddress());
-
-			mCommandList->OMSetRenderTargets(1, &CurrentBackBufferView(), true, &DepthStencilView());
-
-			// For each render item...
-			DrawSceneObjects(mCommandList.Get(), RenderLayer::Debug, true);
-		}
-
-		// Post Process Pass
-		{
-			mCommandList->RSSetViewports(1, &mScreenViewport);
-			mCommandList->RSSetScissorRects(1, &mScissorRect);
-
-			mCommandList->SetGraphicsRootSignature(mRootSignatures["PostProcess"].Get());
-
-			mCommandList->SetPipelineState(mPSOs["PostProcess"].Get());
-
-			mCommandList->SetGraphicsRootDescriptorTable(0, mRtvHeaps["LightPass"]->GetSrvGpuStart());
-
-			// Specify the buffers we are going to render to.
-			//mCommandList->OMSetRenderTargets(1, &CurrentBackBufferView(), true, &DepthStencilView());
-			mCommandList->OMSetRenderTargets(1, &CurrentBackBufferView(), true, &DepthStencilView());
-
-			// For each render item...
-			DrawSceneObjects(mCommandList.Get(), RenderLayer::ScreenQuad, false);
-		}
-
-		// Reset root parameters and rencer target.
-		{
-			mCommandList->RSSetViewports(1, &mScreenViewport);
-			mCommandList->RSSetScissorRects(1, &mScissorRect);
-
-			mCommandList->SetGraphicsRootSignature(mRootSignatures["Sky"].Get());
-
-			// Specify the buffers we are going to render to.
-			mCommandList->OMSetRenderTargets(1, &CurrentBackBufferView(), true, &DepthStencilView());
-
-			auto passCB = mCurrFrameResource->SkyCB->Resource();
-			mCommandList->SetGraphicsRootConstantBufferView(1, passCB->GetGPUVirtualAddress());
-
-			//CD3DX12_GPU_DESCRIPTOR_HANDLE skyTexDescriptor(mSrvDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
-			//skyTexDescriptor.Offset(mSkyTexHeapIndex, mCbvSrvUavDescriptorSize);
-			//mCommandList->SetGraphicsRootDescriptorTable(2, skyTexDescriptor);
-
-			// Irradiance cubemap debug.
-			//CD3DX12_GPU_DESCRIPTOR_HANDLE skyTexDescriptor(mSrvDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
-			//skyTexDescriptor.Offset(mIblIndex + 1, mCbvSrvUavDescriptorSize);
-			//mCommandList->SetGraphicsRootDescriptorTable(2, GetGpuSrv(mIblIndex + 2));
-
-			mCommandList->OMSetRenderTargets(1, &CurrentBackBufferView(), true, &DepthStencilView());
-		}
-
-	}
-
-	mCommandList->SetPipelineState(mPSOs["Sky"].Get());
-	DrawSceneObjects(mCommandList.Get(), RenderLayer::Sky, true);
-
-	// Indicate a state transition on the resource usage.
-	mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(),
-		D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
-
-	// Done recording commands.
-	ThrowIfFailed(mCommandList->Close());
-
-	// Add the command list to the queue for execution.
-	ID3D12CommandList* cmdsLists[] = { mCommandList.Get() };
-	mCommandQueue->ExecuteCommandLists(_countof(cmdsLists), cmdsLists);
-
-	// Swap the back and front buffers
-	ThrowIfFailed(mSwapChain->Present(0, 0));
-	mCurrBackBuffer = (mCurrBackBuffer + 1) % SwapChainBufferCount;
-
-	// Advance the fence value to mark commands up to this fence point.
-	mCurrFrameResource->Fence = ++mCurrentFence;
-
-	// Add an instruction to the command queue to set a new fence point. 
-	// Because we are on the GPU timeline, the new fence point won't be 
-	// set until the GPU finishes processing all the commands prior to this Signal().
-	mCommandQueue->Signal(mFence.Get(), mCurrentFence);
-}
-
-#pragma endregion
-*/
-
-//Init
-/*
 #pragma region Init
 
 void GCore::LoadTextures()
 {
+	std::vector<std::wstring> format;
+	format.emplace_back(L"dds");
+	format.emplace_back(L"png");
+	std::vector<std::wstring> files = std::move(GetAllFilesInFolder(L"Content", true, format));
+	std::unique_ptr<GRiTextureLoader> textureLoader(pRendererFactory->CreateTextureLoader());
+
+	for (auto file : files)
+	{
+		GRiTexture* tex = textureLoader->LoadTexture(WorkDirectory, file, mTextures.size());
+		std::wstring texName = tex->UniqueFileName;
+		//mTextures[texName] = std::make_unique<GRiTexture>(tex);
+		std::unique_ptr<GRiTexture> temp(tex);
+		mTextures[texName] = std::move(temp);
+		mRenderer->pTextures[texName] = mTextures[texName].get();
+	}
+
+	LoadSkyTexture(L"Content\\Textures\\Cubemap_LancellottiChapel.dds");
+
+	/*
 	//
 	// Load non-DDS images.
 	//
@@ -841,6 +517,19 @@ void GCore::LoadTextures()
 		mTextureList.push_back(texListPtr);
 		mTextures[texMap->Name] = std::move(texMap);
 	}
+	*/
+}
+
+void GCore::LoadSkyTexture(std::wstring path)
+{
+	std::unique_ptr<GRiTextureLoader> textureLoader(pRendererFactory->CreateTextureLoader());
+
+	GRiTexture* tex = textureLoader->LoadTexture(WorkDirectory, path, mTextures.size());
+	std::wstring texName = L"skyCubeMap";
+	//mTextures[texName].reset(tex);
+	std::unique_ptr<GRiTexture> temp(tex);
+	mTextures[texName] = std::move(temp);
+	mRenderer->pTextures[texName] = mTextures[texName].get();
 }
 
 void GCore::SetWorkDirectory()
@@ -853,22 +542,22 @@ void GCore::SetWorkDirectory()
 	*p = 0x00;
 
 	WorkDirectory = std::wstring(exeFullPath);
+	WorkDirectory += L"\\";
 }
 
 #pragma endregion
-*/
 
-/*
 #pragma region Util
 
 std::vector<std::wstring> GCore::GetAllFilesInFolder(std::wstring relPath, bool bCheckFormat, std::vector<std::wstring> format)
 {
 	std::vector<std::wstring> files;
-	long hFile = 0;
+	intptr_t hFile = 0;
 	struct _wfinddata_t fileinfo;
 	relPath = WorkDirectory + relPath;
 	std::wstring p;
-	if ((hFile = _wfindfirst(p.assign(relPath).append(L"\\*").c_str(), &fileinfo)) != -1)
+	hFile = _wfindfirst(p.assign(relPath).append(L"\\*").c_str(), &fileinfo);
+	if (hFile != -1)
 	{
 		do
 		{
@@ -900,7 +589,7 @@ std::vector<std::wstring> GCore::GetAllFilesInFolder(std::wstring relPath, bool 
 				else
 					files.push_back(p.assign(relPath).append(L"\\").append(fileinfo.name));
 			}
-		} while (_wfindnext(hFile, &fileinfo) == 0);
+ 		} while (_wfindnext(hFile, &fileinfo) == 0);
 
 		_findclose(hFile);
 	}
@@ -946,7 +635,6 @@ std::vector<std::wstring> GCore::GetAllFilesUnderFolder(std::wstring relPath, bo
 }
 
 #pragma endregion
-*/
 
 //export
 /*

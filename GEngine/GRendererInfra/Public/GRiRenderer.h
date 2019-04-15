@@ -1,5 +1,6 @@
 #pragma once
 #include "GRiPreInclude.h"
+#include "GRiRendererFactory.h"
 
 class GRiRenderer
 {
@@ -12,6 +13,7 @@ public:
 	virtual void Update(const GGiGameTimer* gt) = 0;
 	virtual void Draw(const GGiGameTimer* gt) = 0;
 	virtual void Initialize(HWND OutputWindow, double width, double height) = 0;
+	virtual void PreInitialize(HWND OutputWindow, double width, double height) = 0;
 
 	virtual void OnResize() = 0;
 
@@ -26,12 +28,19 @@ public:
 
 	void CalculateFrameStats();
 
+	virtual void CreateRendererFactory() = 0;
+	GRiRendererFactory* GetFactory();
+
+	std::unordered_map<std::wstring, GRiTexture*> pTextures;
+
 protected:
 
 	GGiGameTimer* pTimer;
 
 	int mClientWidth = 800;
 	int mClientHeight = 600;
+
+	std::unique_ptr<GRiRendererFactory> mFactory;
 
 	// Set true to use 4X MSAA.  The default is false.
 	//bool      m4xMsaaState = false;    // 4X MSAA enabled

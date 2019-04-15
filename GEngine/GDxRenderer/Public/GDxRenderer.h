@@ -65,7 +65,7 @@ public:
 
 	//int Run();
 
-	bool PreInitialize(HWND OutputWindow, double width, double height);
+	virtual void PreInitialize(HWND OutputWindow, double width, double height) override;
 
 	virtual void Initialize(HWND OutputWindow, double width, double height) override;
 
@@ -77,6 +77,8 @@ public:
 	virtual void OnMouseDown(WPARAM btnState, int x, int y) override;
 	virtual void OnMouseUp(WPARAM btnState, int x, int y) override;
 	virtual void OnMouseMove(WPARAM btnState, int x, int y) override;
+
+	virtual void CreateRendererFactory() override;
 
 	//virtual bool Initialize(HWND OutputWindow, double width, double height);
 
@@ -146,7 +148,6 @@ protected:
 	bool InitDirect3D();
 	void CreateCommandObjects();
 	void CreateSwapChain();
-	void CreateRendererFactory();
 
 	void FlushCommandQueue();
 
@@ -228,8 +229,8 @@ protected:
 	std::unordered_map<std::string, std::shared_ptr<GMesh>> mMeshes;
 	std::unordered_map<std::string, std::shared_ptr<GMaterial>> mMaterials;
 	//std::unordered_map<std::string, std::unique_ptr<Material>> mLegMaterials;
-	std::unordered_map<std::string, std::shared_ptr<GTexture>> mTextures;
-	std::vector<std::shared_ptr<GTexture>> mTextureList;
+	//std::unordered_map<std::string, std::shared_ptr<GTexture>> mTextures;
+	//std::vector<std::shared_ptr<GTexture>> mTextureList;
 	//std::unordered_map<std::string, std::unique_ptr<Texture>> mLegTextures;
 	std::unordered_map<std::string, std::unique_ptr<GRtvHeap>> mRtvHeaps;
 	std::unordered_map<std::string, std::unique_ptr<GCubeRtv>> mCubeRtvs;
@@ -299,11 +300,7 @@ private:
 	
 	GDxRenderer();
 
-	std::unique_ptr<GRiRendererFactory> mFactory;
-
-	void SetWorkDirectory();
-	void LoadTextures();
-	std::wstring WorkDirectory;
+	//void LoadTextures();
 
 #pragma region Export-Related
 

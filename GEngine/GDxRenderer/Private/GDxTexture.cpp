@@ -10,3 +10,8 @@ GDxTexture::GDxTexture()
 GDxTexture::~GDxTexture()
 {
 }
+
+void GDxTexture::AllowDynamicCast()
+{
+	;
+}
