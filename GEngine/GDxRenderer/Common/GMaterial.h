@@ -5,7 +5,7 @@
 #include "GTexture.h"
 
 //
-// max number must be a multiple of 4, and must be the same with the macro defined in common.hlsl
+// max number must be a multiple of 16, and must be the same with the macro defined in Material.hlsli
 //
 #define MATERIAL_MAX_TEXTURE_NUM 16
 #define MATERIAL_MAX_SCALAR_NUM 16

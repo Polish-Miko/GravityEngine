@@ -98,6 +98,7 @@ struct MaterialData
 	DirectX::XMFLOAT4X4 MatTransform = MathHelper::Identity4x4();
 
 	UINT TextureIndex[MATERIAL_MAX_TEXTURE_NUM];
+	//UINT TextureSrgb[MATERIAL_MAX_TEXTURE_NUM];
 	float ScalarParams[MATERIAL_MAX_SCALAR_NUM];
 	DirectX::XMFLOAT4 VectorParams[MATERIAL_MAX_VECTOR_NUM];
 

@@ -65,15 +65,23 @@ PixelOutput main(VertexOutput input)// : SV_TARGET
 	uint normalMapIndex = matData.TextureIndex[1];
 	uint OrmMapIndex = matData.TextureIndex[2];
 
+	float3 albedoFromTexture = gTextureMaps[diffuseMapIndex].Sample(Sampler, input.uv);
 	float3 normalFromTexture = gTextureMaps[normalMapIndex].Sample(Sampler, input.uv).rgb;
+	float3 ormFromTexture = gTextureMaps[OrmMapIndex].Sample(Sampler, input.uv).rgb;
+	//if (matData.TextureSrgb[0] == 1)
+		//albedoFromTexture = pow(albedoFromTexture, 2.2f);
+	//if (matData.TextureSrgb[1] == 1)
+		//normalFromTexture = pow(normalFromTexture, 2.2f);
+	//if (matData.TextureSrgb[2] == 1)
+		//ormFromTexture = pow(ormFromTexture, 2.2f);
 
 	float3 normal = calculateNormalFromMap(normalFromTexture, normalize(input.normal), input.tangent);
 	PixelOutput output;
-	output.albedo = gTextureMaps[diffuseMapIndex].Sample(Sampler, input.uv);
+	output.albedo = float4(albedoFromTexture, 1.0f);;
 	output.normal = float4(normalize(normal), 1.0f);
 	output.worldPos = float4(input.worldPos, 0.0f);
-	float roughness = gTextureMaps[OrmMapIndex].Sample(Sampler, input.uv).g;
-	float metal = gTextureMaps[OrmMapIndex].Sample(Sampler, input.uv).b;
+	float roughness = ormFromTexture.g;
+	float metal = ormFromTexture.b;
 	//output.roughness = float4(roughness, roughness, roughness, 0);
 	//output.metalness = float4(metal, metal, metal, 0);
 	output.occlusionRoughnessMetallic = float4(0, roughness, metal, 0);

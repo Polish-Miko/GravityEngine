@@ -4,7 +4,7 @@
 
 
 //
-// max number must be a multiple of 4, and must be the same with the macro defined in GMaterial.h
+// max number must be a multiple of 16, and must be the same with the macro defined in GMaterial.h
 //
 #define MATERIAL_MAX_TEXTURE_NUM 16
 #define MATERIAL_MAX_SCALAR_NUM 16
@@ -17,6 +17,7 @@ struct MaterialData
 {
 	float4x4 MatTransform;
 	uint	 TextureIndex[MATERIAL_MAX_TEXTURE_NUM];
+	//uint	 TextureSrgb[MATERIAL_MAX_TEXTURE_NUM];
 	float    ScalarParams[MATERIAL_MAX_SCALAR_NUM];
 	float4	 VectorParams[MATERIAL_MAX_VECTOR_NUM];
 };

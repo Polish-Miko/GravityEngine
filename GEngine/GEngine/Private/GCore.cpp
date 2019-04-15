@@ -554,9 +554,10 @@ std::vector<std::wstring> GCore::GetAllFilesInFolder(std::wstring relPath, bool 
 	std::vector<std::wstring> files;
 	intptr_t hFile = 0;
 	struct _wfinddata_t fileinfo;
-	relPath = WorkDirectory + relPath;
+	std::wstring fullPath = WorkDirectory + relPath;
+	//relPath = WorkDirectory + relPath;
 	std::wstring p;
-	hFile = _wfindfirst(p.assign(relPath).append(L"\\*").c_str(), &fileinfo);
+	hFile = _wfindfirst(p.assign(fullPath).append(L"\\*").c_str(), &fileinfo);
 	if (hFile != -1)
 	{
 		do
@@ -575,9 +576,11 @@ std::vector<std::wstring> GCore::GetAllFilesInFolder(std::wstring relPath, bool 
 				{
 					bool isOfFormat = false;
 					std::wstring sFileName(fileinfo.name);
+					std::wstring lFileName = sFileName;
+					std::transform(lFileName.begin(), lFileName.end(), lFileName.begin(), ::tolower);
 					for (auto f : format)
 					{
-						if (sFileName.find(L"." + f) == (sFileName.length() - f.length() - 1))
+						if (lFileName.find(L"." + f) == (lFileName.length() - f.length() - 1))
 						{
 							isOfFormat = true;
 							break;

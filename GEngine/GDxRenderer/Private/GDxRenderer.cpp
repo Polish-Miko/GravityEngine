@@ -274,6 +274,7 @@ void GDxRenderer::UpdateMaterialBuffer(const GGiGameTimer* gt)
 				if (dxTex == nullptr)
 					ThrowDxException(L"Dynamic cast from GRiTexture to GDxTexture failed.");
 				matData.TextureIndex[i] = dxTex->texIndex;
+				//matData.TextureSrgb[i] = (UINT)dxTex->bSrgb;
 				i++;
 			}
 			if (mat->ScalarParams.size() > MATERIAL_MAX_SCALAR_NUM)
@@ -1189,7 +1190,7 @@ void GDxRenderer::BuildDescriptorHeaps()
 		srvDesc.Texture2D.MostDetailedMip = 0;
 		srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
 
-		GDxTexture* tex = dynamic_cast<GDxTexture*>(pTextures[L"Textures\\IBL_BRDF_LUT.png"]);
+		GDxTexture* tex = dynamic_cast<GDxTexture*>(pTextures[L"Content\\Textures\\IBL_BRDF_LUT.png"]);
 		if (tex == nullptr)
 			ThrowDxException(L"Dynamic cast from GRiTexture to GDxTexture failed.");
 
@@ -1686,6 +1687,7 @@ void GDxRenderer::BuildMaterials()
 	auto defaultMat = std::make_unique<GMaterial>();
 	defaultMat->Name = "default";
 	defaultMat->MatCBIndex = 0;
+	pTextures[L"Content\\Textures\\sphere_1_BaseColor.png"]->bSrgb = true;
 	defaultMat->pTextures.push_back(pTextures[L"Content\\Textures\\sphere_1_BaseColor.png"]);
 	defaultMat->pTextures.push_back(pTextures[L"Content\\Textures\\sphere_1_Normal.png"]);
 	defaultMat->pTextures.push_back(pTextures[L"Content\\Textures\\sphere_1_OcclusionRoughnessMetallic.png"]);
@@ -1729,6 +1731,7 @@ void GDxRenderer::BuildMaterials()
 	auto sphere_1 = std::make_unique<GMaterial>();
 	sphere_1->Name = "sphere_1";
 	sphere_1->MatCBIndex = 6;
+	pTextures[L"Content\\Textures\\sphere_1_BaseColor.png"]->bSrgb = true;
 	sphere_1->pTextures.push_back(pTextures[L"Content\\Textures\\sphere_1_BaseColor.png"]);
 	sphere_1->pTextures.push_back(pTextures[L"Content\\Textures\\sphere_1_Normal.png"]);
 	sphere_1->pTextures.push_back(pTextures[L"Content\\Textures\\sphere_1_OcclusionRoughnessMetallic.png"]);
@@ -1737,6 +1740,7 @@ void GDxRenderer::BuildMaterials()
 	auto sphere_2 = std::make_unique<GMaterial>();
 	sphere_2->Name = "sphere_2";
 	sphere_2->MatCBIndex = 7;
+	pTextures[L"Content\\Textures\\sphere_2_BaseColor.png"]->bSrgb = true;
 	sphere_2->pTextures.push_back(pTextures[L"Content\\Textures\\sphere_2_BaseColor.png"]);
 	sphere_2->pTextures.push_back(pTextures[L"Content\\Textures\\sphere_2_Normal.png"]);
 	sphere_2->pTextures.push_back(pTextures[L"Content\\Textures\\sphere_2_OcclusionRoughnessMetallic.png"]);
@@ -1799,6 +1803,7 @@ void GDxRenderer::BuildMaterials()
 	auto greasyPanMat = std::make_unique<GMaterial>();
 	greasyPanMat->Name = "GreasyPan";
 	greasyPanMat->MatCBIndex = 13;
+	pTextures[L"Content\\Textures\\Greasy_Pan_Albedo.png"]->bSrgb = true;
 	greasyPanMat->pTextures.push_back(pTextures[L"Content\\Textures\\Greasy_Pan_Albedo.png"]);
 	greasyPanMat->pTextures.push_back(pTextures[L"Content\\Textures\\Greasy_Pan_Normal.png"]);
 	greasyPanMat->pTextures.push_back(pTextures[L"Content\\Textures\\Greasy_Pan_Orm.png"]);
@@ -1807,6 +1812,7 @@ void GDxRenderer::BuildMaterials()
 	auto rustedIronMat = std::make_unique<GMaterial>();
 	rustedIronMat->Name = "RustedIron";
 	rustedIronMat->MatCBIndex = 14;
+	pTextures[L"Content\\Textures\\Rusted_Iron_Albedo.png"]->bSrgb = true;
 	rustedIronMat->pTextures.push_back(pTextures[L"Content\\Textures\\Rusted_Iron_Albedo.png"]);
 	rustedIronMat->pTextures.push_back(pTextures[L"Content\\Textures\\Rusted_Iron_Normal.png"]);
 	rustedIronMat->pTextures.push_back(pTextures[L"Content\\Textures\\Rusted_Iron_Orm.png"]);
@@ -1815,6 +1821,7 @@ void GDxRenderer::BuildMaterials()
 	auto cerberusMat = std::make_unique<GMaterial>();
 	cerberusMat->Name = "Cerberus";
 	cerberusMat->MatCBIndex = 15;
+	pTextures[L"Content\\Textures\\Cerberus_Albedo.png"]->bSrgb = true;
 	cerberusMat->pTextures.push_back(pTextures[L"Content\\Textures\\Cerberus_Albedo.png"]);
 	cerberusMat->pTextures.push_back(pTextures[L"Content\\Textures\\Cerberus_Normal.png"]);
 	cerberusMat->pTextures.push_back(pTextures[L"Content\\Textures\\Cerberus_Orm.png"]);
@@ -1823,6 +1830,7 @@ void GDxRenderer::BuildMaterials()
 	auto fireplaceMat = std::make_unique<GMaterial>();
 	fireplaceMat->Name = "Fireplace";
 	fireplaceMat->MatCBIndex = 16;
+	pTextures[L"Content\\Textures\\Fireplace_Albedo.png"]->bSrgb = true;
 	fireplaceMat->pTextures.push_back(pTextures[L"Content\\Textures\\Fireplace_Albedo.png"]);
 	fireplaceMat->pTextures.push_back(pTextures[L"Content\\Textures\\Fireplace_Normal.png"]);
 	fireplaceMat->pTextures.push_back(pTextures[L"Content\\Textures\\Fireplace_Orm.png"]);

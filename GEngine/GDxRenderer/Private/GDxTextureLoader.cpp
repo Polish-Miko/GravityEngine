@@ -15,8 +15,9 @@ GDxTextureLoader::GDxTextureLoader(ID3D12Device* device, ID3D12CommandQueue* cmd
 
 GRiTexture* GDxTextureLoader::LoadTexture(std::wstring workdir, std::wstring path, int texIndex)
 {
-	std::transform(path.begin(), path.end(), path.begin(), ::tolower);
-	std::wstring ext = GetExtension(path);
+	std::wstring lpath = path;
+	std::transform(lpath.begin(), lpath.end(), lpath.begin(), ::tolower);
+	std::wstring ext = GetExtension(lpath);
 	std::wstring name = GetFileName(path);
 	std::wstring filename = workdir + path;
 
