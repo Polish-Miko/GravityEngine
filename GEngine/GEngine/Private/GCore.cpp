@@ -3,6 +3,7 @@
 #include "GCore.h"
 #include <WindowsX.h>
 #include <io.h>
+#include "GDxFloat4x4.h"
 
 
 GCore::GCore()
@@ -83,6 +84,9 @@ void GCore::Initialize(HWND OutputWindow, double width, double height)
 		pRendererFactory = mRenderer->GetFactory();
 		SetWorkDirectory();
 		LoadTextures();
+		mRenderer->SyncTextures(mTextures);
+		LoadMaterials();
+		mRenderer->SyncMaterials(mMaterials);
 
 		mRenderer->Initialize(OutputWindow, width, height);
 
@@ -368,8 +372,6 @@ void GCore::LoadTextures()
 
 	LoadSkyTexture(L"Content\\Textures\\Cubemap_LancellottiChapel.dds");
 
-	mRenderer->SyncTextures(mTextures);
-
 	/*
 	//
 	// Load non-DDS images.
@@ -521,6 +523,134 @@ void GCore::LoadTextures()
 		mTextures[texMap->Name] = std::move(texMap);
 	}
 	*/
+}
+
+void GCore::LoadMaterials()
+{
+	int index = 0;
+
+	auto defaultMat = std::make_unique<GRiMaterial>(*pRendererFactory->CreateMaterial());
+	defaultMat->UniqueName = L"default";
+	defaultMat->Name = L"default";
+	defaultMat->MatIndex = index++;
+	mTextures[L"Content\\Textures\\sphere_1_BaseColor.png"]->bSrgb = true;
+	defaultMat->pTextures.push_back(mTextures[L"Content\\Textures\\sphere_1_BaseColor.png"].get());
+	defaultMat->pTextures.push_back(mTextures[L"Content\\Textures\\sphere_1_Normal.png"].get());
+	defaultMat->pTextures.push_back(mTextures[L"Content\\Textures\\sphere_1_OcclusionRoughnessMetallic.png"].get());
+	mMaterials[L"default"] = std::move(defaultMat);
+
+	auto debug_albedo = std::make_unique<GRiMaterial>(*pRendererFactory->CreateMaterial());
+	debug_albedo->UniqueName = L"debug_albedo";
+	debug_albedo->Name = L"debug_albedo";
+	debug_albedo->MatIndex = index++;
+	debug_albedo->ScalarParams.push_back(0.01f);//Albedo
+	debug_albedo->ScalarParams.push_back(0.01f);//RGB
+	mMaterials[L"debug_albedo"] = std::move(debug_albedo);
+
+	auto debug_normal = std::make_unique<GRiMaterial>(*pRendererFactory->CreateMaterial());
+	debug_normal->UniqueName = L"debug_normal";
+	debug_normal->Name = L"debug_normal";
+	debug_normal->MatIndex = index++;
+	debug_normal->ScalarParams.push_back(1.01f);//Normal
+	debug_normal->ScalarParams.push_back(0.01f);//RGB
+	mMaterials[L"debug_normal"] = std::move(debug_normal);
+
+	auto debug_worldpos = std::make_unique<GRiMaterial>(*pRendererFactory->CreateMaterial());
+	debug_worldpos->UniqueName = L"debug_worldpos";
+	debug_worldpos->Name = L"debug_worldpos";
+	debug_worldpos->MatIndex = index++;
+	debug_worldpos->ScalarParams.push_back(2.01f);//WorldPos
+	debug_worldpos->ScalarParams.push_back(0.01f);//RGB
+	mMaterials[L"debug_worldpos"] = std::move(debug_worldpos);
+
+	auto debug_roughness = std::make_unique<GRiMaterial>(*pRendererFactory->CreateMaterial());
+	debug_roughness->UniqueName = L"debug_roughness";
+	debug_roughness->Name = L"debug_roughness";
+	debug_roughness->MatIndex = index++;
+	debug_roughness->ScalarParams.push_back(3.01f);//OcclusionRoughnessMetallic
+	debug_roughness->ScalarParams.push_back(2.01f);//Green
+	mMaterials[L"debug_roughness"] = std::move(debug_roughness);
+
+	auto debug_metallic = std::make_unique<GRiMaterial>(*pRendererFactory->CreateMaterial());
+	debug_metallic->UniqueName = L"debug_metallic";
+	debug_metallic->Name = L"debug_metallic";
+	debug_metallic->MatIndex = index++;
+	debug_metallic->ScalarParams.push_back(3.01f);//OcclusionRoughnessMetallic
+	debug_metallic->ScalarParams.push_back(3.01f);//Blue
+	mMaterials[L"debug_metallic"] = std::move(debug_metallic);
+
+	auto sphere_1 = std::make_unique<GRiMaterial>(*pRendererFactory->CreateMaterial());
+	sphere_1->UniqueName = L"sphere_1";
+	sphere_1->Name = L"sphere_1";
+	sphere_1->MatIndex = index++;
+	mTextures[L"Content\\Textures\\sphere_1_BaseColor.png"]->bSrgb = true;
+	sphere_1->pTextures.push_back(mTextures[L"Content\\Textures\\sphere_1_BaseColor.png"].get());
+	sphere_1->pTextures.push_back(mTextures[L"Content\\Textures\\sphere_1_Normal.png"].get());
+	sphere_1->pTextures.push_back(mTextures[L"Content\\Textures\\sphere_1_OcclusionRoughnessMetallic.png"].get());
+	mMaterials[L"sphere_1"] = std::move(sphere_1);
+
+	auto sphere_2 = std::make_unique<GRiMaterial>(*pRendererFactory->CreateMaterial());
+	sphere_2->UniqueName = L"sphere_2";
+	sphere_2->Name = L"sphere_2";
+	sphere_2->MatIndex = index++;
+	mTextures[L"Content\\Textures\\sphere_2_BaseColor.png"]->bSrgb = true;
+	sphere_2->pTextures.push_back(mTextures[L"Content\\Textures\\sphere_2_BaseColor.png"].get());
+	sphere_2->pTextures.push_back(mTextures[L"Content\\Textures\\sphere_2_Normal.png"].get());
+	sphere_2->pTextures.push_back(mTextures[L"Content\\Textures\\sphere_2_OcclusionRoughnessMetallic.png"].get());
+	mMaterials[L"sphere_2"] = std::move(sphere_2);
+
+	auto sky = std::make_unique<GRiMaterial>(*pRendererFactory->CreateMaterial());
+	sky->UniqueName = L"sky";
+	sky->Name = L"sky";
+	sky->MatIndex = index++;
+	//sky->DiffuseSrvHeapIndex = 6;
+	//sky->NormalSrvHeapIndex = 7;
+	sky->pTextures.push_back(mTextures[L"Content\\Textures\\sphere_1_BaseColor.png"].get());//Diffuse
+	sky->pTextures.push_back(mTextures[L"Content\\Textures\\sphere_1_BaseColor.png"].get());//Normal
+	//sky->VectorParams.push_back(XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f));//DiffuseAlbedo
+	//sky->VectorParams.push_back(XMFLOAT4(0.1f, 0.1f, 0.1f, 0.f));//FresnelR0
+	//sky->ScalarParams.push_back(1.0f);//Roughness
+	mMaterials[L"sky"] = std::move(sky);
+
+	auto greasyPanMat = std::make_unique<GRiMaterial>(*pRendererFactory->CreateMaterial());
+	greasyPanMat->UniqueName = L"GreasyPan";
+	greasyPanMat->Name = L"GreasyPan";
+	greasyPanMat->MatIndex = index++;
+	mTextures[L"Content\\Textures\\Greasy_Pan_Albedo.png"]->bSrgb = true;
+	greasyPanMat->pTextures.push_back(mTextures[L"Content\\Textures\\Greasy_Pan_Albedo.png"].get());
+	greasyPanMat->pTextures.push_back(mTextures[L"Content\\Textures\\Greasy_Pan_Normal.png"].get());
+	greasyPanMat->pTextures.push_back(mTextures[L"Content\\Textures\\Greasy_Pan_Orm.png"].get());
+	mMaterials[L"GreasyPan"] = std::move(greasyPanMat);
+
+	auto rustedIronMat = std::make_unique<GRiMaterial>(*pRendererFactory->CreateMaterial());
+	rustedIronMat->UniqueName = L"RustedIron";
+	rustedIronMat->Name = L"RustedIron";
+	rustedIronMat->MatIndex = index++;
+	mTextures[L"Content\\Textures\\Rusted_Iron_Albedo.png"]->bSrgb = true;
+	rustedIronMat->pTextures.push_back(mTextures[L"Content\\Textures\\Rusted_Iron_Albedo.png"].get());
+	rustedIronMat->pTextures.push_back(mTextures[L"Content\\Textures\\Rusted_Iron_Normal.png"].get());
+	rustedIronMat->pTextures.push_back(mTextures[L"Content\\Textures\\Rusted_Iron_Orm.png"].get());
+	mMaterials[L"RustedIron"] = std::move(rustedIronMat);
+
+	auto cerberusMat = std::make_unique<GRiMaterial>(*pRendererFactory->CreateMaterial());
+	cerberusMat->UniqueName = L"Cerberus";
+	cerberusMat->Name = L"Cerberus";
+	cerberusMat->MatIndex = index++;
+	mTextures[L"Content\\Textures\\Cerberus_Albedo.png"]->bSrgb = true;
+	cerberusMat->pTextures.push_back(mTextures[L"Content\\Textures\\Cerberus_Albedo.png"].get());
+	cerberusMat->pTextures.push_back(mTextures[L"Content\\Textures\\Cerberus_Normal.png"].get());
+	cerberusMat->pTextures.push_back(mTextures[L"Content\\Textures\\Cerberus_Orm.png"].get());
+	mMaterials[L"Cerberus"] = std::move(cerberusMat);
+
+	auto fireplaceMat = std::make_unique<GRiMaterial>(*pRendererFactory->CreateMaterial());
+	fireplaceMat->UniqueName = L"Fireplace";
+	fireplaceMat->Name = L"Fireplace";
+	fireplaceMat->MatIndex = index++;
+	mTextures[L"Content\\Textures\\Fireplace_Albedo.png"]->bSrgb = true;
+	fireplaceMat->pTextures.push_back(mTextures[L"Content\\Textures\\Fireplace_Albedo.png"].get());
+	fireplaceMat->pTextures.push_back(mTextures[L"Content\\Textures\\Fireplace_Normal.png"].get());
+	fireplaceMat->pTextures.push_back(mTextures[L"Content\\Textures\\Fireplace_Orm.png"].get());
+	mMaterials[L"Fireplace"] = std::move(fireplaceMat);
 }
 
 void GCore::LoadSkyTexture(std::wstring path)

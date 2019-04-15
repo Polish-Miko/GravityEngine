@@ -5,7 +5,7 @@
 
 GDxMaterial::GDxMaterial()
 {
-	MatTransform = &GDxFloat4x4::Identity4x4();
+	MatTransform = GDxFloat4x4::Identity4x4();
 }
 
 

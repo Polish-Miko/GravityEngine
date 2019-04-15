@@ -130,7 +130,7 @@ protected:
 	void LoadMeshes();
 	void BuildPSOs();
 	void BuildFrameResources();
-	void BuildMaterials();
+	//void BuildMaterials();
 	void BuildSceneObjects();
 
 	void CubemapPreIntegration();

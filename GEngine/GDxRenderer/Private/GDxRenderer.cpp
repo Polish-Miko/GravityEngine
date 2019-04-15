@@ -2,6 +2,8 @@
 #include "GDxRenderer.h"
 #include "GDxRendererFactory.h"
 #include "GDxTexture.h"
+#include "GDxFloat4.h"
+#include "GDxFloat4x4.h"
 
 #include <WindowsX.h>
 
@@ -206,7 +208,7 @@ void GDxRenderer::UpdateObjectCBs(const GGiGameTimer* gt)
 			ObjectConstants objConstants;
 			XMStoreFloat4x4(&objConstants.World, XMMatrixTranspose(world));
 			XMStoreFloat4x4(&objConstants.TexTransform, XMMatrixTranspose(texTransform));
-			objConstants.MaterialIndex = e->Mat->MatCBIndex;
+			objConstants.MaterialIndex = e->Mat->MatIndex;
 
 			currObjectCB->CopyData(e->ObjCBIndex, objConstants);
 
@@ -252,21 +254,23 @@ void GDxRenderer::UpdateLightCB(const GGiGameTimer* gt)
 void GDxRenderer::UpdateMaterialBuffer(const GGiGameTimer* gt)
 {
 	auto currMaterialBuffer = mCurrFrameResource->MaterialBuffer.get();
-	for (auto& e : mMaterials)
+	for (auto& e : pMaterials)
 	{
 		// Only update the cbuffer data if the constants have changed.  If the cbuffer
 		// data changes, it needs to be updated for each FrameResource.
-		GMaterial* mat = e.second.get();
+		GRiMaterial* mat = e.second;
 		if (mat->NumFramesDirty > 0)
 		{
-
 			MaterialData matData;
 			int i;
-			XMMATRIX matTransform = XMLoadFloat4x4(&mat->MatTransform);
+			GDxFloat4x4* dxVec = dynamic_cast<GDxFloat4x4*>(mat->MatTransform);
+			if (dxVec == nullptr)
+				ThrowDxException(L"Dynamic cast from GRiFloat4x4 to GDxFloat4x4 failed.");
+			XMMATRIX matTransform = XMLoadFloat4x4(&dxVec->GetValue());
 			XMStoreFloat4x4(&matData.MatTransform, XMMatrixTranspose(matTransform));
 
 			if (mat->pTextures.size() > MATERIAL_MAX_TEXTURE_NUM)
-				ThrowDxException(L"Material (CBIndex : " + std::to_wstring(mat->MatCBIndex) + L" ) texture number exceeds MATERIAL_MAX_TEXTURE_NUM.");
+				ThrowDxException(L"Material (CBIndex : " + std::to_wstring(mat->MatIndex) + L" ) texture number exceeds MATERIAL_MAX_TEXTURE_NUM.");
 			i = 0;
 			for (auto tex : mat->pTextures)
 			{
@@ -278,19 +282,19 @@ void GDxRenderer::UpdateMaterialBuffer(const GGiGameTimer* gt)
 				i++;
 			}
 			if (mat->ScalarParams.size() > MATERIAL_MAX_SCALAR_NUM)
-				ThrowDxException(L"Material (CBIndex : " + std::to_wstring(mat->MatCBIndex) + L" ) scalar number exceeds MATERIAL_MAX_SCALAR_NUM.");
+				ThrowDxException(L"Material (CBIndex : " + std::to_wstring(mat->MatIndex) + L" ) scalar number exceeds MATERIAL_MAX_SCALAR_NUM.");
 			i = 0;
 			for (auto scalar : mat->ScalarParams)
 			{
 				matData.ScalarParams[i] = scalar;
 				i++;
 			}
-			if (mat->ScalarParams.size() > MATERIAL_MAX_VECTOR_NUM)
-				ThrowDxException(L"Material (CBIndex : " + std::to_wstring(mat->MatCBIndex) + L" ) vector number exceeds MATERIAL_MAX_VECTOR_NUM.");
-			i = 0;
-			for (auto vector : mat->VectorParams)
+			if (mat->VectorParams.size() > MATERIAL_MAX_VECTOR_NUM)
+				ThrowDxException(L"Material (CBIndex : " + std::to_wstring(mat->MatIndex) + L" ) vector number exceeds MATERIAL_MAX_VECTOR_NUM.");
+			for (i = 0; i < mat->VectorParams.size(); i++)
 			{
-				matData.VectorParams[i] = vector;
+				GDxFloat4 dxVec = dynamic_cast<GDxFloat4&>(mat->VectorParams[i]);
+				matData.VectorParams[i] = dxVec.GetValue();
 				i++;
 			}
 			//matData.DiffuseMapIndex = mat->DiffuseSrvHeapIndex;
@@ -299,7 +303,7 @@ void GDxRenderer::UpdateMaterialBuffer(const GGiGameTimer* gt)
 			//matData.DiffuseAlbedo = mat->DiffuseAlbedo;
 			//matData.FresnelR0 = mat->FresnelR0;
 
-			currMaterialBuffer->CopyData(mat->MatCBIndex, matData);
+			currMaterialBuffer->CopyData(mat->MatIndex, matData);
 
 			// Next FrameResource need to be updated too.
 			mat->NumFramesDirty--;
@@ -1678,10 +1682,11 @@ void GDxRenderer::BuildFrameResources()
 	for (int i = 0; i < NUM_FRAME_RESOURCES; ++i)
 	{
 		mFrameResources.push_back(std::make_unique<FrameResource>(md3dDevice.Get(),
-			2, (UINT)mAllRitems.size(), (UINT)mMaterials.size()));
+			2, (UINT)mAllRitems.size(), (UINT)pMaterials.size()));
 	}
 }
 
+/*
 void GDxRenderer::BuildMaterials()
 {
 	auto defaultMat = std::make_unique<GMaterial>();
@@ -1746,48 +1751,6 @@ void GDxRenderer::BuildMaterials()
 	sphere_2->pTextures.push_back(pTextures[L"Content\\Textures\\sphere_2_OcclusionRoughnessMetallic.png"]);
 	mMaterials["sphere_2"] = std::move(sphere_2);
 
-	/*
-	auto bricks = std::make_unique<GMaterial>();
-	bricks->Name = "bricks";
-	bricks->MatCBIndex = 8;
-	bricks->pTextures.push_back(pTextures[L"Content\\Textures\\bricks2.dds"]);//Diffuse
-	bricks->pTextures.push_back(pTextures[L"Content\\Textures\\bricks2_nmap.dds"]);//Normal
-	bricks->VectorParams.push_back(XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f));//DiffuseAlbedo
-	bricks->VectorParams.push_back(XMFLOAT4(0.1f, 0.1f, 0.1f, 0.f));//FresnelR0
-	bricks->ScalarParams.push_back(0.3f);//Roughness
-	mMaterials["bricks"] = std::move(bricks);
-
-	auto tile = std::make_unique<GMaterial>();
-	tile->Name = "tile";
-	tile->MatCBIndex = 9;
-	tile->mTextures.push_back(mTextures["tileDiffuseMap"]);//Diffuse
-	tile->mTextures.push_back(mTextures["tileNormalMap"]);//Normal
-	tile->VectorParams.push_back(XMFLOAT4(0.9f, 0.9f, 0.9f, 1.0f));//DiffuseAlbedo
-	tile->VectorParams.push_back(XMFLOAT4(0.2f, 0.2f, 0.2f, 0.f));//FresnelR0
-	tile->ScalarParams.push_back(0.1f);//Roughness
-	mMaterials["tile"] = std::move(tile);
-
-	auto mirror = std::make_unique<GMaterial>();
-	mirror->Name = "mirror";
-	mirror->MatCBIndex = 10;
-	mirror->mTextures.push_back(mTextures["defaultDiffuseMap"]);//Diffuse
-	mirror->mTextures.push_back(mTextures["defaultNormalMap"]);//Normal
-	mirror->VectorParams.push_back(XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f));//DiffuseAlbedo
-	mirror->VectorParams.push_back(XMFLOAT4(0.98f, 0.97f, 0.95f, 0.f));//FresnelR0
-	mirror->ScalarParams.push_back(0.1f);//Roughness
-	mMaterials["mirror"] = std::move(mirror);
-
-	auto skull = std::make_unique<GMaterial>();
-	skull->Name = "skull";
-	skull->MatCBIndex = 11;
-	skull->mTextures.push_back(mTextures["defaultDiffuseMap"]);//Diffuse
-	skull->mTextures.push_back(mTextures["defaultNormalMap"]);//Normal
-	skull->VectorParams.push_back(XMFLOAT4(0.3f, 0.3f, 0.3f, 1.0f));//DiffuseAlbedo
-	skull->VectorParams.push_back(XMFLOAT4(0.6f, 0.6f, 0.6f, 0.f));//FresnelR0
-	skull->ScalarParams.push_back(0.2f);//Roughness
-	mMaterials["skull"] = std::move(skull);
-	*/
-
 	auto sky = std::make_unique<GMaterial>();
 	sky->Name = "sky";
 	sky->MatCBIndex = 12;
@@ -1837,6 +1800,7 @@ void GDxRenderer::BuildMaterials()
 	mMaterials["Fireplace"] = std::move(fireplaceMat);
 
 }
+*/
 
 void GDxRenderer::BuildSceneObjects()
 {
@@ -1849,7 +1813,7 @@ void GDxRenderer::BuildSceneObjects()
 		//XMStoreFloat4x4(&fullScreenQuadRitem->World, XMMatrixScaling(1.0f, 1.0f, 1.0f)*XMMatrixTranslation(0.0f, 0.0f, 0.0f));
 		fullScreenQuadRitem->TexTransform = MathHelper::Identity4x4();
 		fullScreenQuadRitem->ObjCBIndex = indexCB;
-		fullScreenQuadRitem->Mat = mMaterials["default"];
+		fullScreenQuadRitem->Mat = pMaterials[L"default"];
 		fullScreenQuadRitem->Mesh = mMeshes["Quad"];
 		fullScreenQuadRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 		//fullScreenQuadRitem->SubmeshName = "quad";
@@ -1866,7 +1830,7 @@ void GDxRenderer::BuildSceneObjects()
 	skyRitem->SetScale(5000.f, 5000.f, 5000.f);
 	//skyRitem->TexTransform = MathHelper::Identity4x4();
 	skyRitem->ObjCBIndex = indexCB;
-	skyRitem->Mat = mMaterials["sky"];
+	skyRitem->Mat = pMaterials[L"sky"];
 	skyRitem->Mesh = mMeshes["Sphere"];
 	skyRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 	//skyRitem->SubmeshName = "sphere";
@@ -1886,7 +1850,7 @@ void GDxRenderer::BuildSceneObjects()
 		albedoQuadRitem->SetLocation(0.f, 0.f, 0.f);
 		albedoQuadRitem->TexTransform = MathHelper::Identity4x4();
 		albedoQuadRitem->ObjCBIndex = indexCB;
-		albedoQuadRitem->Mat = mMaterials["debug_albedo"];
+		albedoQuadRitem->Mat = pMaterials[L"debug_albedo"];
 		albedoQuadRitem->Mesh = mMeshes["Quad"];
 		albedoQuadRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 		//albedoQuadRitem->SubmeshName = "quad";
@@ -1904,7 +1868,7 @@ void GDxRenderer::BuildSceneObjects()
 		normalQuadRitem->SetLocation(.2f, 0.f, 0.f);
 		normalQuadRitem->TexTransform = MathHelper::Identity4x4();
 		normalQuadRitem->ObjCBIndex = indexCB;
-		normalQuadRitem->Mat = mMaterials["debug_normal"];
+		normalQuadRitem->Mat = pMaterials[L"debug_normal"];
 		normalQuadRitem->Mesh = mMeshes["Quad"];
 		normalQuadRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 		//normalQuadRitem->SubmeshName = "quad";
@@ -1922,7 +1886,7 @@ void GDxRenderer::BuildSceneObjects()
 		worldposQuadRitem->SetLocation(.4f, 0.f, 0.f);
 		worldposQuadRitem->TexTransform = MathHelper::Identity4x4();
 		worldposQuadRitem->ObjCBIndex = indexCB;
-		worldposQuadRitem->Mat = mMaterials["debug_worldpos"];
+		worldposQuadRitem->Mat = pMaterials[L"debug_worldpos"];
 		worldposQuadRitem->Mesh = mMeshes["Quad"];
 		worldposQuadRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 		//worldposQuadRitem->SubmeshName = "quad";
@@ -1940,7 +1904,7 @@ void GDxRenderer::BuildSceneObjects()
 		roughnessQuadRitem->SetLocation(.6f, 0.f, 0.f);
 		roughnessQuadRitem->TexTransform = MathHelper::Identity4x4();
 		roughnessQuadRitem->ObjCBIndex = indexCB;
-		roughnessQuadRitem->Mat = mMaterials["debug_roughness"];
+		roughnessQuadRitem->Mat = pMaterials[L"debug_roughness"];
 		roughnessQuadRitem->Mesh = mMeshes["Quad"];
 		roughnessQuadRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 		//roughnessQuadRitem->SubmeshName = "quad";
@@ -1958,7 +1922,7 @@ void GDxRenderer::BuildSceneObjects()
 		metallicQuadRitem->SetLocation(.8f, 0.f, 0.f);
 		metallicQuadRitem->TexTransform = MathHelper::Identity4x4();
 		metallicQuadRitem->ObjCBIndex = indexCB;
-		metallicQuadRitem->Mat = mMaterials["debug_metallic"];
+		metallicQuadRitem->Mat = pMaterials[L"debug_metallic"];
 		metallicQuadRitem->Mesh = mMeshes["Quad"];
 		metallicQuadRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 		//metallicQuadRitem->SubmeshName = "quad";
@@ -1975,7 +1939,7 @@ void GDxRenderer::BuildSceneObjects()
 	//cerberusRitem->World = MathHelper::Identity4x4();
 	XMStoreFloat4x4(&cerberusRitem->TexTransform, XMMatrixScaling(1.0f, 1.0f, 1.0f));
 	cerberusRitem->ObjCBIndex = indexCB;
-	cerberusRitem->Mat = mMaterials["Cerberus"];
+	cerberusRitem->Mat = pMaterials[L"Cerberus"];
 	cerberusRitem->Mesh = mMeshes["Cerberus"];
 	cerberusRitem->Name = "Cerberus";
 	cerberusRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
@@ -1989,7 +1953,7 @@ void GDxRenderer::BuildSceneObjects()
 	sphereRitem->SetLocation(0.f, -100.f, 0.f);
 	XMStoreFloat4x4(&sphereRitem->TexTransform, XMMatrixScaling(1.0f, 0.5f, 1.0f));
 	sphereRitem->ObjCBIndex = indexCB;
-	sphereRitem->Mat = mMaterials["sphere_2"];
+	sphereRitem->Mat = pMaterials[L"sphere_2"];
 	sphereRitem->Mesh = mMeshes["Sphere"];
 	sphereRitem->Name = "Sphere_1";
 	sphereRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
@@ -2002,7 +1966,7 @@ void GDxRenderer::BuildSceneObjects()
 	sphereRitem2->SetLocation(0.f, -100.f, 0.f);
 	XMStoreFloat4x4(&sphereRitem2->TexTransform, XMMatrixScaling(1.0f, 0.5f, 1.0f));
 	sphereRitem2->ObjCBIndex = indexCB;
-	sphereRitem2->Mat = mMaterials["GreasyPan"];
+	sphereRitem2->Mat = pMaterials[L"GreasyPan"];
 	sphereRitem2->Mesh = mMeshes["Sphere"];
 	sphereRitem2->Name = "Sphere_2";
 	sphereRitem2->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
@@ -2050,7 +2014,7 @@ void GDxRenderer::CubemapPreIntegration()
 		ObjectConstants objConstants;
 		XMStoreFloat4x4(&objConstants.World, XMMatrixTranspose(world));
 		XMStoreFloat4x4(&objConstants.TexTransform, XMMatrixTranspose(texTransform));
-		objConstants.MaterialIndex = e->Mat->MatCBIndex;
+		objConstants.MaterialIndex = e->Mat->MatIndex;
 
 		currObjectCB->CopyData(e->ObjCBIndex, objConstants);
 	}
@@ -2388,7 +2352,7 @@ void GDxRenderer::Initialize(HWND OutputWindow, double width, double height)
 	BuildRootSignature();
 	BuildShadersAndInputLayout();
 	LoadMeshes();
-	BuildMaterials();
+	//BuildMaterials();
 	BuildSceneObjects();
 	BuildFrameResources();
 	BuildPSOs();
@@ -3424,12 +3388,21 @@ void GDxRenderer::LogOutputDisplayModes(IDXGIOutput* output, DXGI_FORMAT format)
 void GDxRenderer::SyncTextures(std::unordered_map<std::wstring, std::unique_ptr<GRiTexture>>& mTextures)
 {
 	pTextures.clear();
-	for(auto )
+	std::unordered_map<std::wstring, std::unique_ptr<GRiTexture>>::iterator i;
+	for (i = mTextures.begin(); i != mTextures.end(); i++)
+	{
+		pTextures[i->first] = i->second.get();
+	}
 }
 
 void GDxRenderer::SyncMaterials(std::unordered_map<std::wstring, std::unique_ptr<GRiMaterial>>& mMaterials)
 {
-	;
+	pMaterials.clear();
+	std::unordered_map<std::wstring, std::unique_ptr<GRiMaterial>>::iterator i;
+	for (i = mMaterials.begin(); i != mMaterials.end(); i++)
+	{
+		pMaterials[i->first] = i->second.get();
+	}
 }
 
 #pragma region Util

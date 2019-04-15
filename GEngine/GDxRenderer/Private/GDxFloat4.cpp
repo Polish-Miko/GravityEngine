@@ -4,7 +4,7 @@
 
 GDxFloat4::GDxFloat4()
 {
-	static DirectX::XMFLOAT4 zero(0.0f, 0.0f, 0.0f, 0.0f);
+	DirectX::XMFLOAT4 zero(0.0f, 0.0f, 0.0f, 0.0f);
 	value = zero;
 }
 
@@ -14,13 +14,13 @@ GDxFloat4::~GDxFloat4()
 }
 
 
-GGiFloat4& GDxFloat4::ZeroVector()
+GGiFloat4* GDxFloat4::ZeroVector()
 {
-	GDxFloat4 ret;
+	GDxFloat4* ret = new GDxFloat4();
 
-	static DirectX::XMFLOAT4 z(0.0f, 0.0f, 0.0f, 0.0f);
+	DirectX::XMFLOAT4 z(0.0f, 0.0f, 0.0f, 0.0f);
 
-	ret.value = z;
+	ret->value = z;
 
 	return ret;
 }
@@ -59,4 +59,14 @@ GGiFloat4& GDxFloat4::operator +(GGiFloat4& vec)
 	DirectX::XMStoreFloat4(&value, sum);
 
 	return *this;
+}
+
+DirectX::XMFLOAT4 GDxFloat4::GetValue()
+{
+	return value;
+}
+
+void GDxFloat4::SetValue(DirectX::XMFLOAT4 v)
+{
+	value = v;
 }

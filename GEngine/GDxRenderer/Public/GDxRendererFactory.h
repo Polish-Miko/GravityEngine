@@ -19,6 +19,10 @@ public:
 
 	virtual GRiMaterial* CreateMaterial() override;
 
+	virtual GGiFloat4* CreateFloat4() override;
+
+	virtual GGiFloat4x4* CreateFloat4x4() override;
+
 private:
 
 	ID3D12Device* pDevice;

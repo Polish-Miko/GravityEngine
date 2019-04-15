@@ -9,9 +9,9 @@ public:
 
 	virtual void AllowDynamicCast(){}
 
-	virtual GGiFloat4x4& operator =(GGiFloat4x4& mat) = 0;
-	virtual GGiFloat4x4& operator *(GGiFloat4x4& mat) = 0;
-	virtual GGiFloat4x4& operator +(GGiFloat4x4& mat) = 0;
+	virtual GGiFloat4x4& operator =(GGiFloat4x4& mat) { return *this; }
+	virtual GGiFloat4x4& operator *(GGiFloat4x4& mat) { return *this; }
+	virtual GGiFloat4x4& operator +(GGiFloat4x4& mat) { return *this; }
 
 };
 

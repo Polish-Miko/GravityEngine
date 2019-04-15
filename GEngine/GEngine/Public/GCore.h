@@ -78,6 +78,7 @@ private:
 	void Update();
 
 	void LoadTextures();
+	void LoadMaterials();
 	void LoadSkyTexture(std::wstring path);
 
 	void SetWorkDirectory();

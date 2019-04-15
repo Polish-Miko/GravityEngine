@@ -17,7 +17,11 @@ public:
 
 	virtual GGiFloat4x4& operator +(GGiFloat4x4& mat) override;
 
-	static GGiFloat4x4& Identity4x4();
+	static GGiFloat4x4* Identity4x4();
+
+	DirectX::XMFLOAT4X4 GetValue();
+
+	void SetValue(DirectX::XMFLOAT4X4 v);
 
 private:
 

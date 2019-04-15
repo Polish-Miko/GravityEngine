@@ -13,7 +13,11 @@ public:
 
 	virtual GGiFloat4& operator +(GGiFloat4& vec) override;
 
-	static GGiFloat4& ZeroVector();
+	static GGiFloat4* ZeroVector();
+
+	DirectX::XMFLOAT4 GetValue();
+
+	void SetValue(DirectX::XMFLOAT4 v);
 
 private:
 
