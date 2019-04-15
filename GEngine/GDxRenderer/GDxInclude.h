@@ -6,3 +6,4 @@
 //#include "Public/GDxRenderer.h"
 #include "Public/GDxFloat4x4.h"
 #include "Public/GDxFloat4.h"
+#include "Public/GDxMaterial.h"

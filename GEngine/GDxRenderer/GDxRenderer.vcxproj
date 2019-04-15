@@ -187,8 +187,6 @@
     <ClInclude Include="Common\GEngineInclude.h" />
     <ClInclude Include="Common\GRtvHeap.h" />
     <ClInclude Include="Common\GRtv.h" />
-    <ClInclude Include="Common\GMaterial.h" />
-    <ClInclude Include="Common\GTexture.h" />
     <ClInclude Include="Common\GDirectionalLight.h" />
     <ClInclude Include="Common\GPointLight.h" />
     <ClInclude Include="Common\GSpotlight.h" />
@@ -197,6 +195,7 @@
     <ClInclude Include="Common\GStaticVIBuffer.h" />
     <ClInclude Include="Common\GVertexIndexBuffer.h" />
     <ClInclude Include="Common\GVertex.h" />
+    <ClInclude Include="Public\GDxMaterial.h" />
     <ClInclude Include="Public\GDxFloat4.h" />
     <ClInclude Include="Public\GDxFloat4x4.h" />
     <ClInclude Include="GDxInclude.h" />
@@ -227,8 +226,6 @@
     <ClCompile Include="Common\GEngineInclude.cpp" />
     <ClCompile Include="Common\GRtvHeap.cpp" />
     <ClCompile Include="Common\GRtv.cpp" />
-    <ClCompile Include="Common\GMaterial.cpp" />
-    <ClCompile Include="Common\GTexture.cpp" />
     <ClCompile Include="Common\GDirectionalLight.cpp" />
     <ClCompile Include="Common\GPointLight.cpp" />
     <ClCompile Include="Common\GSpotlight.cpp" />
@@ -237,6 +234,7 @@
     <ClCompile Include="Common\GStaticVIBuffer.cpp" />
     <ClCompile Include="Common\GVertexIndexBuffer.cpp" />
     <ClCompile Include="Common\GVertex.cpp" />
+    <ClCompile Include="Private\GDxMaterial.cpp" />
     <ClCompile Include="Private\GDxFloat4.cpp" />
     <ClCompile Include="Private\GDxFloat4x4.cpp" />
     <ClCompile Include="Private\GDxRendererFactory.cpp" />

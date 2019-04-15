@@ -31,7 +31,11 @@ public:
 	virtual void CreateRendererFactory() = 0;
 	GRiRendererFactory* GetFactory();
 
+	virtual void SyncTextures(std::unordered_map<std::wstring, std::unique_ptr<GRiTexture>>& mTextures) = 0;
+	virtual void SyncMaterials(std::unordered_map<std::wstring, std::unique_ptr<GRiMaterial>>& mMaterials) = 0;
+
 	std::unordered_map<std::wstring, GRiTexture*> pTextures;
+	std::unordered_map<std::wstring, GRiMaterial*> pMaterials;
 
 protected:
 

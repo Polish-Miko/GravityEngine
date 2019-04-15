@@ -17,6 +17,8 @@ public:
 
 	virtual GRiTextureLoader* CreateTextureLoader() override;
 
+	virtual GRiMaterial* CreateMaterial() override;
+
 private:
 
 	ID3D12Device* pDevice;

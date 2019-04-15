@@ -3421,6 +3421,17 @@ void GDxRenderer::LogOutputDisplayModes(IDXGIOutput* output, DXGI_FORMAT format)
 	}
 }
 
+void GDxRenderer::SyncTextures(std::unordered_map<std::wstring, std::unique_ptr<GRiTexture>>& mTextures)
+{
+	pTextures.clear();
+	for(auto )
+}
+
+void GDxRenderer::SyncMaterials(std::unordered_map<std::wstring, std::unique_ptr<GRiMaterial>>& mMaterials)
+{
+	;
+}
+
 #pragma region Util
 
 bool GDxRenderer::IsRunning()

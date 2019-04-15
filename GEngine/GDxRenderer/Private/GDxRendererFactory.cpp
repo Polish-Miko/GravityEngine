@@ -29,3 +29,9 @@ GRiTextureLoader* GDxRendererFactory::CreateTextureLoader()
 	GRiTextureLoader* ret = new GDxTextureLoader(pDevice, pCommandQueue);
 	return ret;
 }
+
+GRiMaterial* GDxRendererFactory::CreateMaterial()
+{
+	GRiMaterial* ret = new GRiMaterial();
+	return ret;
+}

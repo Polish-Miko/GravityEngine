@@ -50,7 +50,7 @@ public:
 	// Index into GPU constant buffer corresponding to the ObjectCB for this render item.
 	UINT ObjCBIndex = -1;
 
-	std::shared_ptr<GMaterial> Mat = nullptr;
+	GRiMaterial* Mat = nullptr;
 	//Material* LegMat = nullptr;
 
 	std::shared_ptr<GMesh> Mesh;
@@ -61,8 +61,10 @@ public:
 	D3D12_PRIMITIVE_TOPOLOGY PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 
 private:
+
 	XMFLOAT3 Location = XMFLOAT3(0.0f, 0.0f, 0.0f);
 	XMFLOAT3 Rotation = XMFLOAT3(0.0f, 0.0f, 0.0f);
 	XMFLOAT3 Scale = XMFLOAT3(1.0f, 1.0f, 1.0f);
+
 };
 

@@ -353,6 +353,7 @@ void GCore::LoadTextures()
 	format.emplace_back(L"dds");
 	format.emplace_back(L"png");
 	std::vector<std::wstring> files = std::move(GetAllFilesInFolder(L"Content", true, format));
+	
 	std::unique_ptr<GRiTextureLoader> textureLoader(pRendererFactory->CreateTextureLoader());
 
 	for (auto file : files)
@@ -362,10 +363,12 @@ void GCore::LoadTextures()
 		//mTextures[texName] = std::make_unique<GRiTexture>(tex);
 		std::unique_ptr<GRiTexture> temp(tex);
 		mTextures[texName] = std::move(temp);
-		mRenderer->pTextures[texName] = mTextures[texName].get();
+		//mRenderer->pTextures[texName] = mTextures[texName].get();
 	}
 
 	LoadSkyTexture(L"Content\\Textures\\Cubemap_LancellottiChapel.dds");
+
+	mRenderer->SyncTextures(mTextures);
 
 	/*
 	//
@@ -529,7 +532,7 @@ void GCore::LoadSkyTexture(std::wstring path)
 	//mTextures[texName].reset(tex);
 	std::unique_ptr<GRiTexture> temp(tex);
 	mTextures[texName] = std::move(temp);
-	mRenderer->pTextures[texName] = mTextures[texName].get();
+	//mRenderer->pTextures[texName] = mTextures[texName].get();
 }
 
 void GCore::SetWorkDirectory()
@@ -602,11 +605,12 @@ std::vector<std::wstring> GCore::GetAllFilesInFolder(std::wstring relPath, bool 
 std::vector<std::wstring> GCore::GetAllFilesUnderFolder(std::wstring relPath, bool bCheckFormat, std::vector<std::wstring> format)
 {
 	std::vector<std::wstring> files;
-	long hFile = 0;
+	intptr_t hFile = 0;
 	struct _wfinddata_t fileinfo;
-	relPath = WorkDirectory + relPath;
+	std::wstring fullPath = WorkDirectory + relPath;
+	//relPath = WorkDirectory + relPath;
 	std::wstring p;
-	if ((hFile = _wfindfirst(p.assign(relPath).append(L"\\*").c_str(), &fileinfo)) != -1)
+	if ((hFile = _wfindfirst(p.assign(fullPath).append(L"\\*").c_str(), &fileinfo)) != -1)
 	{
 		do
 		{
@@ -616,9 +620,11 @@ std::vector<std::wstring> GCore::GetAllFilesUnderFolder(std::wstring relPath, bo
 				{
 					bool isOfFormat = false;
 					std::wstring sFileName(fileinfo.name);
+					std::wstring lFileName = sFileName;
+					std::transform(lFileName.begin(), lFileName.end(), lFileName.begin(), ::tolower);
 					for (auto f : format)
 					{
-						if (sFileName.find(L"." + f) == (sFileName.length() - f.length() - 1))
+						if (lFileName.find(L"." + f) == (lFileName.length() - f.length() - 1))
 						{
 							isOfFormat = true;
 							break;

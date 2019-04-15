@@ -80,6 +80,9 @@ public:
 
 	virtual void CreateRendererFactory() override;
 
+	virtual void SyncTextures(std::unordered_map<std::wstring, std::unique_ptr<GRiTexture>>& mTextures) override;
+	virtual void SyncMaterials(std::unordered_map<std::wstring, std::unique_ptr<GRiMaterial>>& mMaterials) override;
+
 	//virtual bool Initialize(HWND OutputWindow, double width, double height);
 
 	//virtual void MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
@@ -227,7 +230,7 @@ protected:
 	ComPtr<ID3D12DescriptorHeap> mSrvDescriptorHeap = nullptr;
 
 	std::unordered_map<std::string, std::shared_ptr<GMesh>> mMeshes;
-	std::unordered_map<std::string, std::shared_ptr<GMaterial>> mMaterials;
+	//std::unordered_map<std::string, std::shared_ptr<GMaterial>> mMaterials;
 	//std::unordered_map<std::string, std::unique_ptr<Material>> mLegMaterials;
 	//std::unordered_map<std::string, std::shared_ptr<GTexture>> mTextures;
 	//std::vector<std::shared_ptr<GTexture>> mTextureList;

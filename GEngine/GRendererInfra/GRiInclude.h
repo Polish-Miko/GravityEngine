@@ -6,5 +6,6 @@
 #include "Public/GRiTextureLoader.h"
 #include "Public/GRiRendererFactory.h"
 #include "Public/GRiRenderer.h"
+#include "Public/GRiMaterial.h"
 
 #define MAX_TEXTURE_NUM 1024

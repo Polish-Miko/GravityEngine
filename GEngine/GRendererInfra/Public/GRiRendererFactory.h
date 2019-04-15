@@ -2,6 +2,7 @@
 #include "GRiPreInclude.h"
 #include "GRiTexture.h"
 #include "GRiTextureLoader.h"
+#include "GRiMaterial.h"
 
 class GRiRendererFactory
 {
@@ -13,6 +14,8 @@ public:
 	virtual GRiTexture* CreateTexture() = 0;
 
 	virtual GRiTextureLoader* CreateTextureLoader() = 0;
+
+	virtual GRiMaterial* CreateMaterial() = 0;
 
 };
 

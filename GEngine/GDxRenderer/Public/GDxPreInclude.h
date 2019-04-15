@@ -30,7 +30,6 @@
 #include "GRiInclude.h"
 #include "GGiInclude.h"
 
-#define NUM_FRAME_RESOURCES 3
 //extern const int gNumFrameResources;
 
 #define MaxLights 16

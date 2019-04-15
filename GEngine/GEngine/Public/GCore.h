@@ -65,6 +65,7 @@ private:
 	std::unique_ptr<GGiGameTimer> mTimer;
 
 	std::unordered_map<std::wstring, std::unique_ptr<GRiTexture>> mTextures;
+	std::unordered_map<std::wstring, std::unique_ptr<GRiMaterial>> mMaterials;
 
 	//void Draw();
 
