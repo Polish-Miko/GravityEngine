@@ -195,6 +195,13 @@
     <ClInclude Include="Common\GStaticVIBuffer.h" />
     <ClInclude Include="Common\GVertexIndexBuffer.h" />
     <ClInclude Include="Common\GVertex.h" />
+    <ClInclude Include="Public\GDxFilmboxManager.h" />
+    <ClInclude Include="Public\GDxGeometryGenerator.h" />
+    <ClInclude Include="Public\GDxMesh.h" />
+    <ClInclude Include="Public\GDxMeshData.h" />
+    <ClInclude Include="Public\GDxSceneObject.h" />
+    <ClInclude Include="Public\GDxSubmesh.h" />
+    <ClInclude Include="Public\GDxVertex.h" />
     <ClInclude Include="Public\GDxMaterial.h" />
     <ClInclude Include="Public\GDxFloat4.h" />
     <ClInclude Include="Public\GDxFloat4x4.h" />
@@ -234,6 +241,13 @@
     <ClCompile Include="Common\GStaticVIBuffer.cpp" />
     <ClCompile Include="Common\GVertexIndexBuffer.cpp" />
     <ClCompile Include="Common\GVertex.cpp" />
+    <ClCompile Include="Private\GDxFilmboxManager.cpp" />
+    <ClCompile Include="Private\GDxGeometryGenerator.cpp" />
+    <ClCompile Include="Private\GDxMesh.cpp" />
+    <ClCompile Include="Private\GDxMeshData.cpp" />
+    <ClCompile Include="Private\GDxSceneObject.cpp" />
+    <ClCompile Include="Private\GDxSubmesh.cpp" />
+    <ClCompile Include="Private\GDxVertex.cpp" />
     <ClCompile Include="Private\GDxMaterial.cpp" />
     <ClCompile Include="Private\GDxFloat4.cpp" />
     <ClCompile Include="Private\GDxFloat4x4.cpp" />

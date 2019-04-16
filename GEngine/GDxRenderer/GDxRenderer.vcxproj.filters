@@ -129,6 +129,27 @@
     <ClInclude Include="Public\GDxMaterial.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Public\GDxFilmboxManager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Public\GDxGeometryGenerator.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Public\GDxMesh.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Public\GDxMeshData.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Public\GDxSceneObject.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Public\GDxSubmesh.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Public\GDxVertex.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -231,6 +252,27 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Private\GDxMaterial.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Private\GDxFilmboxManager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Private\GDxGeometryGenerator.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Private\GDxMesh.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Private\GDxMeshData.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Private\GDxSceneObject.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Private\GDxSubmesh.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Private\GDxVertex.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

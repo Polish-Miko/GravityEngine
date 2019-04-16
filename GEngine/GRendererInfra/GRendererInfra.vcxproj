@@ -156,7 +156,14 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="Public\GRiFilmboxManager.h" />
+    <ClInclude Include="Public\GRiGeometryGenerator.h" />
     <ClInclude Include="GRiInclude.h" />
+    <ClInclude Include="Public\GRiMesh.h" />
+    <ClInclude Include="Public\GRiMeshData.h" />
+    <ClInclude Include="Public\GRiSceneObject.h" />
+    <ClInclude Include="Public\GRiSubmesh.h" />
+    <ClInclude Include="Public\GRiVertex.h" />
     <ClInclude Include="Public\GRiMaterial.h" />
     <ClInclude Include="Public\GRiRenderer.h" />
     <ClInclude Include="Public\GRiRendererFactory.h" />
@@ -167,6 +174,13 @@
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Private\GRiFilmboxManager.cpp" />
+    <ClCompile Include="Private\GRiGeometryGenerator.cpp" />
+    <ClCompile Include="Private\GRiMesh.cpp" />
+    <ClCompile Include="Private\GRiMeshData.cpp" />
+    <ClCompile Include="Private\GRiSceneObject.cpp" />
+    <ClCompile Include="Private\GRiSubmesh.cpp" />
+    <ClCompile Include="Private\GRiVertex.cpp" />
     <ClCompile Include="Private\GRiMaterial.cpp" />
     <ClCompile Include="Private\GRiRenderer.cpp" />
     <ClCompile Include="Private\GRiRendererFactory.cpp" />
