@@ -1944,7 +1944,7 @@ void GDxRenderer::BuildSceneObjects()
 	XMStoreFloat4x4(&cerberusRitem->TexTransform, XMMatrixScaling(1.0f, 1.0f, 1.0f));
 	cerberusRitem->ObjCBIndex = indexCB;
 	cerberusRitem->Mat = pMaterials[L"Cerberus"];
-	cerberusRitem->Mesh = pMeshes[L"Cerberus"];
+	cerberusRitem->Mesh = pMeshes[L"Content\\Models\\Cerberus.fbx"];
 	cerberusRitem->Name = "Cerberus";
 	cerberusRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 	//cerberusRitem->SubmeshName = submesh.first;

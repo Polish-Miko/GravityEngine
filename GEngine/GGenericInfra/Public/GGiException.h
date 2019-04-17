@@ -6,7 +6,7 @@
 
 #define ThrowGGiException(x)											\
 {																		\
-	GGiException::Throw(x, __FILE__, __LINE__);							\
+	throw GGiException(x, __FILE__, __LINE__);							\
 }																		\
 
 class GGiException : public std::exception
@@ -44,12 +44,12 @@ public:
 
 	static inline void Throw(std::wstring description, const std::string& fileName, int lineNumber)
 	{
-		throw new GGiException(description, fileName, lineNumber);
+		throw GGiException(description, fileName, lineNumber);
 	}
 
 	static inline void Throw(std::string description, const std::string& fileName, int lineNumber)
 	{
-		throw new GGiException(description, fileName, lineNumber);
+		throw GGiException(description, fileName, lineNumber);
 	}
 
 	std::wstring GetErrorMessage()

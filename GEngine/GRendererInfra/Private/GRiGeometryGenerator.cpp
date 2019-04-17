@@ -153,11 +153,11 @@ GRiMeshData GRiGeometryGenerator::CreateSphere(float radius, uint32_t sliceCount
 			v.TangentU[2] /= l;
 
 			l = (float)pow(v.Position[0] * v.Position[0] + v.Position[1] * v.Position[1] + v.Position[2] * v.Position[2], 0.5);
-			v.Position[0] /= l;
-			v.Position[1] /= l;
-			v.Position[2] /= l;
+			v.Normal[0] = v.Position[0] / l;
+			v.Normal[1] = v.Position[1] / l;
+			v.Normal[2] = v.Position[2] / l;
 
-			v.UV[0] = theta / 2 * GGiEngineUtil::PI;
+			v.UV[0] = theta / (2 * GGiEngineUtil::PI);
 			v.UV[1] = phi / GGiEngineUtil::PI;
 
 			meshData.Vertices.push_back(v);

@@ -104,7 +104,7 @@ bool GRiFilmboxManager::ImportMesh(FbxNode* pNode, std::vector<GRiMeshData>& out
 
 	FbxAMatrix submeshTrans = pNode->EvaluateGlobalTransform() * GetGeometryTransform(pNode);
 
-	GGiFloat4x4 vertTrans = ToGMatrix(submeshTrans);
+	GGiFloat4x4* vertTrans = ToGMatrix(submeshTrans);
 
 	//mdata.Transform = MathHelper::Identity4x4();
 	// Import the materials.
@@ -168,13 +168,13 @@ bool GRiFilmboxManager::ImportMesh(FbxNode* pNode, std::vector<GRiMeshData>& out
 			FbxVector2 uv = GetVertexElement(pUVs, iPoint, t, v, FbxVector2(0, 0));
 
 			// Transform the vertex.
-			GGiFloat4 vertPos = *pRendererFactory->CreateFloat4(float(position[0]), float(position[1]), float(position[2]), 1.0f);
-			GGiFloat4 finalVertPos = vertPos * vertTrans;
+			GGiFloat4* vertPos = pRendererFactory->CreateFloat4(float(position[0]), float(position[1]), float(position[2]), 1.0f);
+			GGiFloat4* finalVertPos = &((*vertPos) * (*vertTrans));
 
 			GRiVertex vertex;
-			vertex.Position[0] = vertPos.GetX();
-			vertex.Position[1] = vertPos.GetY();
-			vertex.Position[2] = vertPos.GetZ();
+			vertex.Position[0] = finalVertPos->GetX();
+			vertex.Position[1] = finalVertPos->GetY();
+			vertex.Position[2] = finalVertPos->GetZ();
 			vertex.Normal[0] = (float)normal[0];
 			vertex.Normal[1] = (float)normal[1];
 			vertex.Normal[2] = (float)normal[2];
@@ -215,10 +215,8 @@ TValue GRiFilmboxManager::GetVertexElement(TGeometryElement* pElement, int iPoin
 	return pElement->GetDirectArray().GetAt(index);
 }
 
-GGiFloat4x4 GRiFilmboxManager::ToGMatrix(const FbxAMatrix& fbxMat)
+GGiFloat4x4* GRiFilmboxManager::ToGMatrix(const FbxAMatrix& fbxMat)
 {
-	GGiFloat4x4* pRet = pRendererFactory->CreateFloat4x4();
-
 	FbxVector4 t = fbxMat.GetT();
 	FbxVector4 r = fbxMat.GetR();
 	FbxVector4 s = fbxMat.GetS();
@@ -238,9 +236,8 @@ GGiFloat4x4 GRiFilmboxManager::ToGMatrix(const FbxAMatrix& fbxMat)
 	GGiFloat4x4* mTrans = pRendererFactory->CreateFloat4x4();
 
 	*mTrans = (*mS) * (*mR) * (*mT);
-	pRet = mTrans;
 
-	return *pRet;
+	return mTrans;
 }
 
 FbxAMatrix GRiFilmboxManager::GetGeometryTransform(FbxNode* pNode)

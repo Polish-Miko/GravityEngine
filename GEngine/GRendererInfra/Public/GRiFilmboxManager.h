@@ -46,7 +46,7 @@ private:
 
 	template <typename TGeometryElement, typename TValue> TValue GetVertexElement(TGeometryElement* pElement, int iPoint, int iTriangle, int iVertex, TValue defaultValue);
 
-	GGiFloat4x4 ToGMatrix(const FbxAMatrix &fbxMat);
+	GGiFloat4x4* ToGMatrix(const FbxAMatrix &fbxMat);
 
 	FbxAMatrix GetGeometryTransform(FbxNode* pNode);
 };

@@ -120,7 +120,7 @@ MeshData GeometryGenerator::CreateSphere(float radius, uint32 sliceCount, uint32
 	meshData.Vertices.push_back(topGVertex);
 
 	float phiStep = XM_PI / stackCount;
-	float thetaStep = 2.0f*XM_PI / sliceCount;
+	float thetaStep = 2.0f * XM_PI / sliceCount;
 
 	// Compute vertices for each stack ring (do not count the poles as rings).
 	for (uint32 i = 1; i <= stackCount - 1; ++i)
