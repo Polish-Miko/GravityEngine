@@ -53,7 +53,8 @@ public:
 	GRiMaterial* Mat = nullptr;
 	//Material* LegMat = nullptr;
 
-	std::shared_ptr<GMesh> Mesh;
+	//std::shared_ptr<GMesh> Mesh;
+	GRiMesh* Mesh;
 
 	//GSubmesh GetSubmesh();
 

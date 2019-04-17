@@ -59,5 +59,34 @@ public:
 		x[1] /= l;
 		x[2] /= l;
 	}
+
+	static std::wstring GetExtension(std::wstring path)
+	{
+		if ((path.rfind('.') != std::wstring::npos) && (path.rfind('.') != (path.length() - 1)))
+			return path.substr(path.rfind('.') + 1);
+		else
+			return L"";
+	}
+
+	static std::wstring GetFileNameAndExtension(std::wstring path)
+	{
+		if ((path.rfind('\\') != std::wstring::npos) && (path.rfind('\\') != (path.length() - 1)))
+			return path.substr(path.rfind('\\') + 1);
+		else
+			return L"";
+	}
+
+	static std::wstring GetFileName(std::wstring path)
+	{
+		auto slash = path.rfind('\\');
+		auto dot = path.rfind('.');
+		if ((slash != std::wstring::npos) &&
+			(slash != (path.length() - 1)) &&
+			(dot != std::wstring::npos) &&
+			(dot > slash))
+			return path.substr(path.rfind('\\') + 1, dot - slash);
+		else
+			return L"";
+	}
 };
 

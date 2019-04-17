@@ -59,6 +59,12 @@ GRiRendererFactory* GRiRenderer::GetFactory()
 	return mFactory.get();
 }
 
+
+GRiFilmboxManager* GRiRenderer::GetFilmboxManager()
+{
+	return mFilmboxManager.get();
+}
+
 /*
 void GRiRenderer::Set4xMsaaState(bool state)
 {

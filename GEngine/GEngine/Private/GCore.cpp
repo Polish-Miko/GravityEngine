@@ -674,42 +674,56 @@ void GCore::LoadMeshes()
 	std::vector<GRiMeshData> meshData;
 	GRiMeshData boxMeshData = geoGen->CreateBox(1.0f, 1.0f, 1.0f, 3);
 	meshData.push_back(boxMeshData);
-	auto geo = std::make_shared<GMesh>(md3dDevice.Get(), mCommandList.Get(), meshData);
-	geo->Name = "Box";
-	mMeshes[geo->Name] = std::move(geo);
+	auto geo = pRendererFactory->CreateMesh(meshData);
+	geo->UniqueName = L"Box";
+	geo->Name = L"Box";
+	mMeshes[geo->UniqueName] = std::make_unique<GRiMesh>(geo);
 
 	meshData.clear();
-	MeshData gridMeshData = geoGen.CreateGrid(20.0f, 30.0f, 60, 40);
-	gridMeshData.SubmeshName = "Grid";
+	GRiMeshData gridMeshData = geoGen->CreateGrid(20.0f, 30.0f, 60, 40);
 	meshData.push_back(gridMeshData);
-	geo = std::make_shared<GMesh>(md3dDevice.Get(), mCommandList.Get(), meshData);
-	geo->Name = "Grid";
-	mMeshes[geo->Name] = std::move(geo);
+	geo = pRendererFactory->CreateMesh(meshData);
+	geo->UniqueName = L"Grid";
+	geo->Name = L"Grid";
+	mMeshes[geo->UniqueName] = std::make_unique<GRiMesh>(geo);
 
 	meshData.clear();
-	MeshData sphereMeshData = geoGen.CreateSphere(0.5f, 20, 20);
-	sphereMeshData.SubmeshName = "Sphere";
+	GRiMeshData sphereMeshData = geoGen->CreateSphere(0.5f, 20, 20);
 	meshData.push_back(sphereMeshData);
-	geo = std::make_shared<GMesh>(md3dDevice.Get(), mCommandList.Get(), meshData);
-	geo->Name = "Sphere";
-	mMeshes[geo->Name] = std::move(geo);
+	geo = pRendererFactory->CreateMesh(meshData);
+	geo->UniqueName = L"Sphere";
+	geo->Name = L"Sphere";
+	mMeshes[geo->UniqueName] = std::make_unique<GRiMesh>(geo);
 
 	meshData.clear();
-	MeshData cylinderMeshData = geoGen.CreateCylinder(0.5f, 0.3f, 3.0f, 20, 20);
-	cylinderMeshData.SubmeshName = "Cylinder";
+	GRiMeshData cylinderMeshData = geoGen->CreateCylinder(0.5f, 0.3f, 3.0f, 20, 20);
 	meshData.push_back(cylinderMeshData);
-	geo = std::make_shared<GMesh>(md3dDevice.Get(), mCommandList.Get(), meshData);
-	geo->Name = "Cylinder";
-	mMeshes[geo->Name] = std::move(geo);
+	geo = pRendererFactory->CreateMesh(meshData);
+	geo->UniqueName = L"Cylinder";
+	geo->Name = L"Cylinder";
+	mMeshes[geo->UniqueName] = std::make_unique<GRiMesh>(geo);
 
 	meshData.clear();
-	MeshData quadMeshData = geoGen.CreateQuad(0.0f, 1.0f, 1.0f, 1.0f, 0.0f);
-	quadMeshData.SubmeshName = "Quad";
+	GRiMeshData quadMeshData = geoGen->CreateQuad(0.0f, 1.0f, 1.0f, 1.0f, 0.0f);
 	meshData.push_back(quadMeshData);
-	geo = std::make_shared<GMesh>(md3dDevice.Get(), mCommandList.Get(), meshData);
-	geo->Name = "Quad";
-	mMeshes[geo->Name] = std::move(geo);
+	geo = pRendererFactory->CreateMesh(meshData);
+	geo->UniqueName = L"Quad";
+	geo->Name = L"Quad";
+	mMeshes[geo->UniqueName] = std::make_unique<GRiMesh>(geo);
 
+	std::vector<std::wstring> format;
+	format.emplace_back(L"fbx");
+	std::vector<std::wstring> files = std::move(GetAllFilesInFolder(L"Content", true, format));
+	for (auto file : files)
+	{
+		meshData.clear();
+		mRenderer->GetFilmboxManager()->ImportFbxFile_Mesh(WorkDirectory + file, meshData);
+		geo = pRendererFactory->CreateMesh(meshData);
+		geo->UniqueName = file;
+		geo->Name = GGiEngineUtil::GetFileName(file);
+		mMeshes[geo->UniqueName] = std::make_unique<GRiMesh>(geo);
+	}
+	/*
 	GMesh* CerberusMesh = new GMesh();
 	GFilmboxManager::GetManager().ImportFbxFile_Mesh(md3dDevice.Get(), mCommandList.Get(), "Models\\Cerberus.FBX", CerberusMesh);
 	CerberusMesh->Name = "Cerberus";
@@ -721,6 +735,7 @@ void GCore::LoadMeshes()
 	FireplaceMesh->Name = "Fireplace";
 	std::shared_ptr<GMesh> fireplace(FireplaceMesh);
 	mMeshes[fireplace->Name] = fireplace;
+	*/
 }
 
 void GCore::LoadSkyTexture(std::wstring path)

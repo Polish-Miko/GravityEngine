@@ -26,7 +26,7 @@ public:
 
 	GRiFilmboxManager(GRiRendererFactory* rFac);
 
-	bool ImportFbxFile_Mesh(std::wstring* FileName, std::vector<GRiMeshData>& outMeshDataList);
+	bool ImportFbxFile_Mesh(std::wstring FileName, std::vector<GRiMeshData>& outMeshDataList);
 
 private:
 

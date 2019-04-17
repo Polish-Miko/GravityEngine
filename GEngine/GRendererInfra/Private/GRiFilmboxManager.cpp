@@ -15,9 +15,9 @@ GRiFilmboxManager::GRiFilmboxManager(GRiRendererFactory* rFac)
 	mManager->SetIOSettings(mIoSettings.get());
 }
 
-bool GRiFilmboxManager::ImportFbxFile_Mesh(std::wstring* FileName, std::vector<GRiMeshData>& outMeshDataList)
+bool GRiFilmboxManager::ImportFbxFile_Mesh(std::wstring FileName, std::vector<GRiMeshData>& outMeshDataList)
 {
-	const wchar_t *fileName_WC = FileName->c_str();
+	const wchar_t *fileName_WC = FileName.c_str();
 
 	// convert to UTF8
 	char *fileName_UTF8;

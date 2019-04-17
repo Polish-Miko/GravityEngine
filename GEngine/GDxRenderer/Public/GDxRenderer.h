@@ -79,6 +79,7 @@ public:
 	virtual void OnMouseMove(WPARAM btnState, int x, int y) override;
 
 	virtual void CreateRendererFactory() override;
+	virtual void CreateFilmboxManager() override;
 
 	virtual void SyncTextures(std::unordered_map<std::wstring, std::unique_ptr<GRiTexture>>& mTextures) override;
 	virtual void SyncMaterials(std::unordered_map<std::wstring, std::unique_ptr<GRiMaterial>>& mMaterials) override;

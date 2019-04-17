@@ -4,6 +4,7 @@
 #include "GDxTexture.h"
 #include "GDxFloat4.h"
 #include "GDxFloat4x4.h"
+#include "GDxFilmboxManager.h"
 
 #include <WindowsX.h>
 
@@ -1291,6 +1292,7 @@ void GDxRenderer::BuildShadersAndInputLayout()
 	};
 }
 
+/*
 void GDxRenderer::LoadMeshes()
 {
 	GeometryGenerator geoGen;
@@ -1347,6 +1349,7 @@ void GDxRenderer::LoadMeshes()
 	std::shared_ptr<GMesh> fireplace(FireplaceMesh);
 	mMeshes[fireplace->Name] = fireplace;
 }
+*/
 
 void GDxRenderer::BuildPSOs()
 {
@@ -1814,7 +1817,7 @@ void GDxRenderer::BuildSceneObjects()
 		fullScreenQuadRitem->TexTransform = MathHelper::Identity4x4();
 		fullScreenQuadRitem->ObjCBIndex = indexCB;
 		fullScreenQuadRitem->Mat = pMaterials[L"default"];
-		fullScreenQuadRitem->Mesh = mMeshes["Quad"];
+		fullScreenQuadRitem->Mesh = pMeshes[L"Quad"];
 		fullScreenQuadRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 		//fullScreenQuadRitem->SubmeshName = "quad";
 		//fullScreenQuadRitem->IndexCount = fullScreenQuadRitem->Mesh->Submeshes["quad"].IndexCount;
@@ -1831,7 +1834,7 @@ void GDxRenderer::BuildSceneObjects()
 	//skyRitem->TexTransform = MathHelper::Identity4x4();
 	skyRitem->ObjCBIndex = indexCB;
 	skyRitem->Mat = pMaterials[L"sky"];
-	skyRitem->Mesh = mMeshes["Sphere"];
+	skyRitem->Mesh = pMeshes[L"Sphere"];
 	skyRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 	//skyRitem->SubmeshName = "sphere";
 	//skyRitem->IndexCount = skyRitem->Mesh->Submeshes["sphere"].IndexCount;
@@ -1851,7 +1854,7 @@ void GDxRenderer::BuildSceneObjects()
 		albedoQuadRitem->TexTransform = MathHelper::Identity4x4();
 		albedoQuadRitem->ObjCBIndex = indexCB;
 		albedoQuadRitem->Mat = pMaterials[L"debug_albedo"];
-		albedoQuadRitem->Mesh = mMeshes["Quad"];
+		albedoQuadRitem->Mesh = pMeshes[L"Quad"];
 		albedoQuadRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 		//albedoQuadRitem->SubmeshName = "quad";
 		//albedoQuadRitem->IndexCount = albedoQuadRitem->Mesh->Submeshes["quad"].IndexCount;
@@ -1869,7 +1872,7 @@ void GDxRenderer::BuildSceneObjects()
 		normalQuadRitem->TexTransform = MathHelper::Identity4x4();
 		normalQuadRitem->ObjCBIndex = indexCB;
 		normalQuadRitem->Mat = pMaterials[L"debug_normal"];
-		normalQuadRitem->Mesh = mMeshes["Quad"];
+		normalQuadRitem->Mesh = pMeshes[L"Quad"];
 		normalQuadRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 		//normalQuadRitem->SubmeshName = "quad";
 		//normalQuadRitem->IndexCount = normalQuadRitem->Mesh->Submeshes["quad"].IndexCount;
@@ -1887,7 +1890,7 @@ void GDxRenderer::BuildSceneObjects()
 		worldposQuadRitem->TexTransform = MathHelper::Identity4x4();
 		worldposQuadRitem->ObjCBIndex = indexCB;
 		worldposQuadRitem->Mat = pMaterials[L"debug_worldpos"];
-		worldposQuadRitem->Mesh = mMeshes["Quad"];
+		worldposQuadRitem->Mesh = pMeshes[L"Quad"];
 		worldposQuadRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 		//worldposQuadRitem->SubmeshName = "quad";
 		//worldposQuadRitem->IndexCount = worldposQuadRitem->Mesh->Submeshes["quad"].IndexCount;
@@ -1905,7 +1908,7 @@ void GDxRenderer::BuildSceneObjects()
 		roughnessQuadRitem->TexTransform = MathHelper::Identity4x4();
 		roughnessQuadRitem->ObjCBIndex = indexCB;
 		roughnessQuadRitem->Mat = pMaterials[L"debug_roughness"];
-		roughnessQuadRitem->Mesh = mMeshes["Quad"];
+		roughnessQuadRitem->Mesh = pMeshes[L"Quad"];
 		roughnessQuadRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 		//roughnessQuadRitem->SubmeshName = "quad";
 		//roughnessQuadRitem->IndexCount = roughnessQuadRitem->Mesh->Submeshes["quad"].IndexCount;
@@ -1923,7 +1926,7 @@ void GDxRenderer::BuildSceneObjects()
 		metallicQuadRitem->TexTransform = MathHelper::Identity4x4();
 		metallicQuadRitem->ObjCBIndex = indexCB;
 		metallicQuadRitem->Mat = pMaterials[L"debug_metallic"];
-		metallicQuadRitem->Mesh = mMeshes["Quad"];
+		metallicQuadRitem->Mesh = pMeshes[L"Quad"];
 		metallicQuadRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 		//metallicQuadRitem->SubmeshName = "quad";
 		//metallicQuadRitem->IndexCount = metallicQuadRitem->Mesh->Submeshes["quad"].IndexCount;
@@ -1940,7 +1943,7 @@ void GDxRenderer::BuildSceneObjects()
 	XMStoreFloat4x4(&cerberusRitem->TexTransform, XMMatrixScaling(1.0f, 1.0f, 1.0f));
 	cerberusRitem->ObjCBIndex = indexCB;
 	cerberusRitem->Mat = pMaterials[L"Cerberus"];
-	cerberusRitem->Mesh = mMeshes["Cerberus"];
+	cerberusRitem->Mesh = pMeshes[L"Cerberus"];
 	cerberusRitem->Name = "Cerberus";
 	cerberusRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 	//cerberusRitem->SubmeshName = submesh.first;
@@ -1954,7 +1957,7 @@ void GDxRenderer::BuildSceneObjects()
 	XMStoreFloat4x4(&sphereRitem->TexTransform, XMMatrixScaling(1.0f, 0.5f, 1.0f));
 	sphereRitem->ObjCBIndex = indexCB;
 	sphereRitem->Mat = pMaterials[L"sphere_2"];
-	sphereRitem->Mesh = mMeshes["Sphere"];
+	sphereRitem->Mesh = pMeshes[L"Sphere"];
 	sphereRitem->Name = "Sphere_1";
 	sphereRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 	mSceneObjectLayer[(int)RenderLayer::Deferred].push_back(sphereRitem);
@@ -1967,7 +1970,7 @@ void GDxRenderer::BuildSceneObjects()
 	XMStoreFloat4x4(&sphereRitem2->TexTransform, XMMatrixScaling(1.0f, 0.5f, 1.0f));
 	sphereRitem2->ObjCBIndex = indexCB;
 	sphereRitem2->Mat = pMaterials[L"GreasyPan"];
-	sphereRitem2->Mesh = mMeshes["Sphere"];
+	sphereRitem2->Mesh = pMeshes[L"Sphere"];
 	sphereRitem2->Name = "Sphere_2";
 	sphereRitem2->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 	mSceneObjectLayer[(int)RenderLayer::Deferred].push_back(sphereRitem2);
@@ -2323,6 +2326,7 @@ void GDxRenderer::PreInitialize(HWND OutputWindow, double width, double height)
 		return;
 
 	CreateRendererFactory();
+	CreateFilmboxManager();
 
 	// Do the initial resize code.
 	OnResize();
@@ -3177,6 +3181,11 @@ void GDxRenderer::CreateRendererFactory()
 	//GDxRendererFactory* fac = new GDxRendererFactory(md3dDevice.Get(), mCommandList.Get(), mCommandQueue.Get());
 	GDxRendererFactory fac(md3dDevice.Get(), mCommandList.Get(), mCommandQueue.Get());
 	mFactory = std::make_unique<GDxRendererFactory>(fac);
+}
+
+void GDxRenderer::CreateFilmboxManager()
+{
+	mFilmboxManager = std::make_unique<GDxFilmboxManager>();
 }
 
 void GDxRenderer::CreateCommandObjects()

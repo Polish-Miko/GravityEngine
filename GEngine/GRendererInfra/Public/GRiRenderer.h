@@ -1,6 +1,7 @@
 #pragma once
 #include "GRiPreInclude.h"
 #include "GRiRendererFactory.h"
+#include "GRiFilmboxManager.h"
 
 class GRiRenderer
 {
@@ -31,6 +32,9 @@ public:
 	virtual void CreateRendererFactory() = 0;
 	GRiRendererFactory* GetFactory();
 
+	virtual void CreateFilmboxManager() = 0;
+	GRiFilmboxManager* GetFilmboxManager();
+
 	virtual void SyncTextures(std::unordered_map<std::wstring, std::unique_ptr<GRiTexture>>& mTextures) = 0;
 	virtual void SyncMaterials(std::unordered_map<std::wstring, std::unique_ptr<GRiMaterial>>& mMaterials) = 0;
 	virtual void SyncMeshes(std::unordered_map<std::wstring, std::unique_ptr<GRiMesh>>& mMeshes) = 0;
@@ -46,6 +50,8 @@ protected:
 	int mClientHeight = 600;
 
 	std::unique_ptr<GRiRendererFactory> mFactory;
+
+	std::unique_ptr<GRiFilmboxManager> mFilmboxManager;
 
 	// Set true to use 4X MSAA.  The default is false.
 	//bool      m4xMsaaState = false;    // 4X MSAA enabled

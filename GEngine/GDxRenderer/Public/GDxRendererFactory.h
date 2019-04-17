@@ -25,6 +25,8 @@ public:
 
 	virtual GGiFloat4x4* CreateFloat4x4() override;
 
+	virtual GRiMesh* CreateMesh(std::vector<GRiMeshData> meshData) override;
+
 private:
 
 	ID3D12Device* pDevice;

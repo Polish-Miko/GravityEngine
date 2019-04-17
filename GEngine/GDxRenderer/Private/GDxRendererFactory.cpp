@@ -5,6 +5,7 @@
 #include "GDxFloat4.h"
 #include "GDxFloat4x4.h"
 #include "GDxMaterial.h"
+#include "GDxMesh.h"
 
 
 GDxRendererFactory::GDxRendererFactory(ID3D12Device* device,
@@ -54,5 +55,11 @@ GGiFloat4* GDxRendererFactory::CreateFloat4(float x, float y, float z, float w)
 GGiFloat4x4* GDxRendererFactory::CreateFloat4x4()
 {
 	GGiFloat4x4* ret = GDxFloat4x4::Identity4x4();
+	return ret;
+}
+
+GRiMesh* GDxRendererFactory::CreateMesh(std::vector<GRiMeshData> meshData)
+{
+	GRiMesh* ret = new GDxMesh(pDevice, pCommandList, meshData);
 	return ret;
 }
