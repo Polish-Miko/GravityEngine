@@ -4,6 +4,7 @@
 #include "GRiTextureLoader.h"
 #include "GRiMaterial.h"
 #include "GGiInclude.h"
+#include "GRiMesh.h"
 
 class GRiRendererFactory
 {

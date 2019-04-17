@@ -14,7 +14,7 @@
 //#include "GDxPreInclude.h"
 #include "GEngineInclude.h"
 #include "UploadBuffer.h"
-#include "GeometryGenerator.h"
+//#include "GeometryGenerator.h"
 #include "FrameResource.h"
 #include "ShadowMap.h"
 #include "Ssao.h"
@@ -82,6 +82,7 @@ public:
 
 	virtual void SyncTextures(std::unordered_map<std::wstring, std::unique_ptr<GRiTexture>>& mTextures) override;
 	virtual void SyncMaterials(std::unordered_map<std::wstring, std::unique_ptr<GRiMaterial>>& mMaterials) override;
+	virtual void SyncMeshes(std::unordered_map<std::wstring, std::unique_ptr<GRiMesh>>& mMeshes) override;
 
 	//virtual bool Initialize(HWND OutputWindow, double width, double height);
 
@@ -127,7 +128,7 @@ protected:
 	void BuildRootSignature();
 	void BuildDescriptorHeaps();
 	void BuildShadersAndInputLayout(); 
-	void LoadMeshes();
+	//void LoadMeshes();
 	void BuildPSOs();
 	void BuildFrameResources();
 	//void BuildMaterials();
@@ -229,7 +230,7 @@ protected:
 
 	ComPtr<ID3D12DescriptorHeap> mSrvDescriptorHeap = nullptr;
 
-	std::unordered_map<std::string, std::shared_ptr<GMesh>> mMeshes;
+	std::unordered_map<std::wstring, GRiMesh*> pMeshes;
 	//std::unordered_map<std::string, std::shared_ptr<GMaterial>> mMaterials;
 	//std::unordered_map<std::string, std::unique_ptr<Material>> mLegMaterials;
 	//std::unordered_map<std::string, std::shared_ptr<GTexture>> mTextures;

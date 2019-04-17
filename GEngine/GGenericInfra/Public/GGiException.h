@@ -1,5 +1,6 @@
 #pragma once
 #include "GGiPreInclude.h"
+#include "GGiException.h"
 
 
 #define ThrowGGiException(x)											\

@@ -1,5 +1,6 @@
 #pragma once
 #include "GRiPreInclude.h"
+#include "GRiSubmesh.h"
 
 
 class GRiMesh

@@ -174,11 +174,9 @@
     <ClInclude Include="Common\GCamera.h" />
     <ClInclude Include="Common\d3dx12.h" />
     <ClInclude Include="Common\GDescriptorHeap.h" />
-    <ClInclude Include="Common\GMesh.h" />
     <ClInclude Include="Common\MathHelper.h" />
     <ClInclude Include="Common\DDSTextureLoader.h" />
     <ClInclude Include="Common\FrameResource.h" />
-    <ClInclude Include="Common\GeometryGenerator.h" />
     <ClInclude Include="Common\GSceneObject.h" />
     <ClInclude Include="Common\GLight.h" />
     <ClInclude Include="Common\GDX12Util.h" />
@@ -191,10 +189,8 @@
     <ClInclude Include="Common\GPointLight.h" />
     <ClInclude Include="Common\GSpotlight.h" />
     <ClInclude Include="Common\GCubeRtv.h" />
-    <ClInclude Include="Common\GFilmboxManager.h" />
     <ClInclude Include="Common\GStaticVIBuffer.h" />
     <ClInclude Include="Common\GVertexIndexBuffer.h" />
-    <ClInclude Include="Common\GVertex.h" />
     <ClInclude Include="Public\GDxFilmboxManager.h" />
     <ClInclude Include="Public\GDxGeometryGenerator.h" />
     <ClInclude Include="Public\GDxMesh.h" />
@@ -220,11 +216,9 @@
   <ItemGroup>
     <ClCompile Include="Common\GCamera.cpp" />
     <ClCompile Include="Common\GDescriptorHeap.cpp" />
-    <ClCompile Include="Common\GMesh.cpp" />
     <ClCompile Include="Common\MathHelper.cpp" />
     <ClCompile Include="Common\DDSTextureLoader.cpp" />
     <ClCompile Include="Common\FrameResource.cpp" />
-    <ClCompile Include="Common\GeometryGenerator.cpp" />
     <ClCompile Include="Common\GSceneObject.cpp" />
     <ClCompile Include="Common\GLight.cpp" />
     <ClCompile Include="Common\GDX12Util.cpp" />
@@ -237,10 +231,8 @@
     <ClCompile Include="Common\GPointLight.cpp" />
     <ClCompile Include="Common\GSpotlight.cpp" />
     <ClCompile Include="Common\GCubeRtv.cpp" />
-    <ClCompile Include="Common\GFilmboxManager.cpp" />
     <ClCompile Include="Common\GStaticVIBuffer.cpp" />
     <ClCompile Include="Common\GVertexIndexBuffer.cpp" />
-    <ClCompile Include="Common\GVertex.cpp" />
     <ClCompile Include="Private\GDxFilmboxManager.cpp" />
     <ClCompile Include="Private\GDxGeometryGenerator.cpp" />
     <ClCompile Include="Private\GDxMesh.cpp" />

@@ -5,7 +5,7 @@
 #include "MathHelper.h"
 #include "UploadBuffer.h"
 #include "GLight.h"
-#include "GMaterial.h"
+//#include "GMaterial.h"
 #include "GDirectionalLight.h"
 #include "GPointLight.h"
 #include "GSpotlight.h"

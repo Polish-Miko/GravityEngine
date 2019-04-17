@@ -220,6 +220,8 @@ GRiMeshData GRiGeometryGenerator::CreateSphere(float radius, uint32_t sliceCount
 
 	//meshData.Transform = MathHelper::Identity4x4();
 
+	meshData.SubmeshName = L"Sphere";
+
 	return meshData;
 }
 
@@ -288,33 +290,20 @@ void GRiGeometryGenerator::Subdivide(GRiMeshData& meshData)
 
 GRiVertex GRiGeometryGenerator::MidPoint(const GRiVertex& v0, const GRiVertex& v1)
 {
-	XMVECTOR p0 = XMLoadFloat3(&v0.Position);
-	XMVECTOR p1 = XMLoadFloat3(&v1.Position);
-
-	XMVECTOR n0 = XMLoadFloat3(&v0.Normal);
-	XMVECTOR n1 = XMLoadFloat3(&v1.Normal);
-
-	XMVECTOR tan0 = XMLoadFloat3(&v0.TangentU);
-	XMVECTOR tan1 = XMLoadFloat3(&v1.TangentU);
-
-	XMVECTOR tex0 = XMLoadFloat2(&v0.UV);
-	XMVECTOR tex1 = XMLoadFloat2(&v1.UV);
-
-	// Compute the midpoints of all the attributes.  Vectors need to be normalized
-	// since linear interpolating can make them not unit length.  
-	XMVECTOR pos = 0.5f*(p0 + p1);
-	XMVECTOR normal = XMVector3Normalize(0.5f*(n0 + n1));
-	XMVECTOR tangent = XMVector3Normalize(0.5f*(tan0 + tan1));
-	XMVECTOR tex = 0.5f*(tex0 + tex1);
-
 	GRiVertex v;
 	v.Position[0] = (v0.Position[0] + v1.Position[0]) / 2;
 	v.Position[1] = (v0.Position[1] + v1.Position[1]) / 2;
 	v.Position[2] = (v0.Position[2] + v1.Position[2]) / 2;
-	XMStoreFloat3(&v.Position, pos);
-	XMStoreFloat3(&v.Normal, normal);
-	XMStoreFloat3(&v.TangentU, tangent);
-	XMStoreFloat2(&v.UV, tex);
+	v.Normal[0] = (v0.Normal[0] + v1.Normal[0]) / 2;
+	v.Normal[1] = (v0.Normal[1] + v1.Normal[1]) / 2;
+	v.Normal[2] = (v0.Normal[2] + v1.Normal[2]) / 2;
+	GGiEngineUtil::NormalizeFloat3(v.Normal[0], v.Normal[1], v.Normal[2]);
+	v.TangentU[0] = (v0.TangentU[0] + v1.TangentU[0]) / 2;
+	v.TangentU[1] = (v0.TangentU[1] + v1.TangentU[1]) / 2;
+	v.TangentU[2] = (v0.TangentU[2] + v1.TangentU[2]) / 2;
+	GGiEngineUtil::NormalizeFloat3(v.TangentU[0], v.TangentU[1], v.TangentU[2]);
+	v.UV[0] = (v0.UV[0] + v1.UV[0]) / 2;
+	v.UV[1] = (v0.UV[1] + v1.UV[1]) / 2;
 
 	return v;
 }
@@ -331,14 +320,20 @@ GRiMeshData GRiGeometryGenerator::CreateGeosphere(float radius, uint32_t numSubd
 	const float X = 0.525731f;
 	const float Z = 0.850651f;
 
-	XMFLOAT3 pos[12] =
+	float pos[36] =
 	{
-		XMFLOAT3(-X, 0.0f, Z),  XMFLOAT3(X, 0.0f, Z),
-		XMFLOAT3(-X, 0.0f, -Z), XMFLOAT3(X, 0.0f, -Z),
-		XMFLOAT3(0.0f, Z, X),   XMFLOAT3(0.0f, Z, -X),
-		XMFLOAT3(0.0f, -Z, X),  XMFLOAT3(0.0f, -Z, -X),
-		XMFLOAT3(Z, X, 0.0f),   XMFLOAT3(-Z, X, 0.0f),
-		XMFLOAT3(Z, -X, 0.0f),  XMFLOAT3(-Z, -X, 0.0f)
+		-X, 0.0f, Z,  
+		X, 0.0f, Z,
+		-X, 0.0f, -Z,
+		X, 0.0f, -Z,
+		0.0f, Z, X,  
+		0.0f, Z, -X,
+		0.0f, -Z, X, 
+		0.0f, -Z, -X,
+		Z, X, 0.0f,  
+		-Z, X, 0.0f,
+		Z, -X, 0.0f, 
+		-Z, -X, 0.0f
 	};
 
 	uint32_t k[60] =
@@ -353,7 +348,8 @@ GRiMeshData GRiGeometryGenerator::CreateGeosphere(float radius, uint32_t numSubd
 	meshData.Indices.assign(&k[0], &k[60]);
 
 	for (uint32_t i = 0; i < 12; ++i)
-		meshData.Vertices[i].Position = pos[i];
+		for (uint32_t j = 0; j < 3; ++j)
+			meshData.Vertices[i].Position[j] = pos[i * 3 + j];
 
 	for (uint32_t i = 0; i < numSubdivisions; ++i)
 		Subdivide(meshData);
@@ -362,36 +358,40 @@ GRiMeshData GRiGeometryGenerator::CreateGeosphere(float radius, uint32_t numSubd
 	for (uint32_t i = 0; i < meshData.Vertices.size(); ++i)
 	{
 		// Project onto unit sphere.
-		XMVECTOR n = XMVector3Normalize(XMLoadFloat3(&meshData.Vertices[i].Position));
+		float* n = GGiEngineUtil::GetNormalizedFloat3(meshData.Vertices[i].Position);
+		meshData.Vertices[i].Normal[0] = n[0];
+		meshData.Vertices[i].Normal[1] = n[1];
+		meshData.Vertices[i].Normal[2] = n[2];
 
 		// Project onto sphere.
-		XMVECTOR p = radius * n;
-
-		XMStoreFloat3(&meshData.Vertices[i].Position, p);
-		XMStoreFloat3(&meshData.Vertices[i].Normal, n);
+		float p[3];
+		meshData.Vertices[i].Position[0] = radius * n[0];
+		meshData.Vertices[i].Position[1] = radius * n[1];
+		meshData.Vertices[i].Position[2] = radius * n[2];
 
 		// Derive texture coordinates from spherical coordinates.
-		float theta = atan2f(meshData.Vertices[i].Position.z, meshData.Vertices[i].Position.x);
+		float theta = atan2f(meshData.Vertices[i].Position[2], meshData.Vertices[i].Position[0]);
 
 		// Put in [0, 2pi].
 		if (theta < 0.0f)
 			theta += 2 * GGiEngineUtil::PI;
 
-		float phi = acosf(meshData.Vertices[i].Position.y / radius);
+		float phi = acosf(meshData.Vertices[i].Position[2] / radius);
 
-		meshData.Vertices[i].UV.x = theta / 2 * GGiEngineUtil::PI;
-		meshData.Vertices[i].UV.y = phi / GGiEngineUtil::PI;
+		meshData.Vertices[i].UV[0] = theta / 2 * GGiEngineUtil::PI;
+		meshData.Vertices[i].UV[1] = phi / GGiEngineUtil::PI;
 
 		// Partial derivative of P with respect to theta
-		meshData.Vertices[i].TangentU.x = -radius * sinf(phi)*sinf(theta);
-		meshData.Vertices[i].TangentU.y = 0.0f;
-		meshData.Vertices[i].TangentU.z = +radius * sinf(phi)*cosf(theta);
+		meshData.Vertices[i].TangentU[0] = -radius * sinf(phi)*sinf(theta);
+		meshData.Vertices[i].TangentU[1] = 0.0f;
+		meshData.Vertices[i].TangentU[2] = +radius * sinf(phi)*cosf(theta);
 
-		XMVECTOR T = XMLoadFloat3(&meshData.Vertices[i].TangentU);
-		XMStoreFloat3(&meshData.Vertices[i].TangentU, XMVector3Normalize(T));
+		GGiEngineUtil::NormalizeFloat3(meshData.Vertices[i].TangentU);
 	}
 
 	//meshData.Transform = MathHelper::Identity4x4();
+
+	meshData.SubmeshName = L"Geosphere";
 
 	return meshData;
 }
@@ -421,15 +421,17 @@ GRiMeshData GRiGeometryGenerator::CreateCylinder(float bottomRadius, float topRa
 		float dTheta = 2.0f*GGiEngineUtil::PI / sliceCount;
 		for (uint32_t j = 0; j <= sliceCount; ++j)
 		{
-			GRiVertex GRiVertex;
+			GRiVertex vert;
 
 			float c = cosf(j*dTheta);
 			float s = sinf(j*dTheta);
 
-			GRiVertex.Position = XMFLOAT3(r*c, y, r*s);
+			vert.Position[0] = r*c;
+			vert.Position[1] = y;
+			vert.Position[2] = r * s;
 
-			GRiVertex.UV.x = (float)j / sliceCount;
-			GRiVertex.UV.y = 1.0f - (float)i / stackCount;
+			vert.UV[0] = (float)j / sliceCount;
+			vert.UV[1] = 1.0f - (float)i / stackCount;
 
 			// Cylinder can be parameterized as follows, where we introduce v
 			// parameter that goes in the same direction as the v tex-coord
@@ -451,17 +453,19 @@ GRiMeshData GRiGeometryGenerator::CreateCylinder(float bottomRadius, float topRa
 			//  dz/dv = (r0-r1)*sin(t)
 
 			// This is unit length.
-			GRiVertex.TangentU = XMFLOAT3(-s, 0.0f, c);
+			vert.TangentU[0] = -s;
+			vert.TangentU[1] = 0.0f;
+			vert.TangentU[2] = c;
 
 			float dr = bottomRadius - topRadius;
-			XMFLOAT3 bitangent(dr*c, -height, dr*s);
+			float bitangent[3] = { dr*c, -height, dr*s };
 
-			XMVECTOR T = XMLoadFloat3(&GRiVertex.TangentU);
-			XMVECTOR B = XMLoadFloat3(&bitangent);
-			XMVECTOR N = XMVector3Normalize(XMVector3Cross(T, B));
-			XMStoreFloat3(&GRiVertex.Normal, N);
+			// Normal = tangent cross bitangent
+			vert.Normal[0] = vert.TangentU[1] * bitangent[2] - vert.TangentU[2] * bitangent[1];
+			vert.Normal[1] = vert.TangentU[2] * bitangent[0] - vert.TangentU[0] * bitangent[2];
+			vert.Normal[2] = vert.TangentU[0] * bitangent[1] - vert.TangentU[1] * bitangent[0];
 
-			meshData.Vertices.push_back(GRiVertex);
+			meshData.Vertices.push_back(vert);
 		}
 	}
 
@@ -488,6 +492,8 @@ GRiMeshData GRiGeometryGenerator::CreateCylinder(float bottomRadius, float topRa
 	BuildCylinderBottomCap(bottomRadius, topRadius, height, sliceCount, stackCount, meshData);
 
 	//meshData.Transform = MathHelper::Identity4x4();
+
+	meshData.SubmeshName = L"Cylinder";
 
 	return meshData;
 }
@@ -595,13 +601,19 @@ GRiMeshData GRiGeometryGenerator::CreateGrid(float width, float depth, uint32_t 
 		{
 			float x = -halfWidth + j * dx;
 
-			meshData.Vertices[i*n + j].Position = XMFLOAT3(x, 0.0f, z);
-			meshData.Vertices[i*n + j].Normal = XMFLOAT3(0.0f, 1.0f, 0.0f);
-			meshData.Vertices[i*n + j].TangentU = XMFLOAT3(1.0f, 0.0f, 0.0f);
+			meshData.Vertices[i*n + j].Position[0] = x;
+			meshData.Vertices[i*n + j].Position[1] = 0.0f;
+			meshData.Vertices[i*n + j].Position[2] = z;
+			meshData.Vertices[i*n + j].Normal[0] = 0.0f;
+			meshData.Vertices[i*n + j].Normal[1] = 1.0f;
+			meshData.Vertices[i*n + j].Normal[2] = 0.0f;
+			meshData.Vertices[i*n + j].TangentU[0] = 1.0f;
+			meshData.Vertices[i*n + j].TangentU[1] = 0.0f;
+			meshData.Vertices[i*n + j].TangentU[2] = 0.0f;
 
 			// Stretch texture over grid.
-			meshData.Vertices[i*n + j].UV.x = j * du;
-			meshData.Vertices[i*n + j].UV.y = i * dv;
+			meshData.Vertices[i*n + j].UV[0] = j * du;
+			meshData.Vertices[i*n + j].UV[1] = i * dv;
 		}
 	}
 
@@ -630,6 +642,8 @@ GRiMeshData GRiGeometryGenerator::CreateGrid(float width, float depth, uint32_t 
 	}
 
 	//meshData.Transform = MathHelper::Identity4x4();
+
+	meshData.SubmeshName = L"Grid";
 
 	return meshData;
 }
@@ -675,6 +689,8 @@ GRiMeshData GRiGeometryGenerator::CreateQuad(float x, float y, float w, float h,
 	meshData.Indices[5] = 3;
 
 	//meshData.Transform = MathHelper::Identity4x4();
+
+	meshData.SubmeshName = L"Quad";
 
 	return meshData;
 }

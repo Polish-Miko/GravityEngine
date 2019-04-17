@@ -39,9 +39,6 @@
     <ClInclude Include="Common\FrameResource.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Common\GeometryGenerator.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Common\Ssao.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -84,19 +81,10 @@
     <ClInclude Include="Common\GCubeRtv.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Common\GFilmboxManager.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Common\GStaticVIBuffer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Common\GVertexIndexBuffer.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Common\GVertex.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Common\GMesh.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Common\GSceneObject.h">
@@ -167,9 +155,6 @@
     <ClCompile Include="Common\FrameResource.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Common\GeometryGenerator.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Common\ShadowMap.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -215,19 +200,10 @@
     <ClCompile Include="Common\GCubeRtv.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Common\GFilmboxManager.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Common\GStaticVIBuffer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Common\GVertexIndexBuffer.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Common\GVertex.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Common\GMesh.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Common\GSceneObject.cpp">

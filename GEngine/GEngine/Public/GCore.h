@@ -66,6 +66,7 @@ private:
 
 	std::unordered_map<std::wstring, std::unique_ptr<GRiTexture>> mTextures;
 	std::unordered_map<std::wstring, std::unique_ptr<GRiMaterial>> mMaterials;
+	std::unordered_map<std::wstring, std::unique_ptr<GRiMesh>> mMeshes;
 
 	//void Draw();
 
@@ -80,6 +81,7 @@ private:
 	void LoadTextures();
 	void LoadMaterials();
 	void LoadSkyTexture(std::wstring path);
+	void LoadMeshes();
 
 	void SetWorkDirectory();
 

@@ -2351,7 +2351,7 @@ void GDxRenderer::Initialize(HWND OutputWindow, double width, double height)
 	BuildDescriptorHeaps();
 	BuildRootSignature();
 	BuildShadersAndInputLayout();
-	LoadMeshes();
+	//LoadMeshes();
 	//BuildMaterials();
 	BuildSceneObjects();
 	BuildFrameResources();
@@ -3402,6 +3402,16 @@ void GDxRenderer::SyncMaterials(std::unordered_map<std::wstring, std::unique_ptr
 	for (i = mMaterials.begin(); i != mMaterials.end(); i++)
 	{
 		pMaterials[i->first] = i->second.get();
+	}
+}
+
+void GDxRenderer::SyncMeshes(std::unordered_map<std::wstring, std::unique_ptr<GRiMesh>>& mMeshes)
+{
+	pMeshes.clear();
+	std::unordered_map<std::wstring, std::unique_ptr<GRiMesh>>::iterator i;
+	for (i = mMeshes.begin(); i != mMeshes.end(); i++)
+	{
+		pMeshes[i->first] = i->second.get();
 	}
 }
 

@@ -94,6 +94,8 @@ void GCore::Initialize(HWND OutputWindow, double width, double height)
 			mRenderer->SyncTextures(mTextures);
 			LoadMaterials();
 			mRenderer->SyncMaterials(mMaterials);
+			LoadMeshes();
+			mRenderer->SyncMeshes(mMeshes);
 
 			mRenderer->Initialize(OutputWindow, width, height);
 
@@ -663,6 +665,62 @@ void GCore::LoadMaterials()
 	fireplaceMat->pTextures.push_back(mTextures[L"Content\\Textures\\Fireplace_Normal.png"].get());
 	fireplaceMat->pTextures.push_back(mTextures[L"Content\\Textures\\Fireplace_Orm.png"].get());
 	mMaterials[L"Fireplace"] = std::move(fireplaceMat);
+}
+
+void GCore::LoadMeshes()
+{
+	GRiGeometryGenerator* geoGen;
+
+	std::vector<GRiMeshData> meshData;
+	GRiMeshData boxMeshData = geoGen->CreateBox(1.0f, 1.0f, 1.0f, 3);
+	meshData.push_back(boxMeshData);
+	auto geo = std::make_shared<GMesh>(md3dDevice.Get(), mCommandList.Get(), meshData);
+	geo->Name = "Box";
+	mMeshes[geo->Name] = std::move(geo);
+
+	meshData.clear();
+	MeshData gridMeshData = geoGen.CreateGrid(20.0f, 30.0f, 60, 40);
+	gridMeshData.SubmeshName = "Grid";
+	meshData.push_back(gridMeshData);
+	geo = std::make_shared<GMesh>(md3dDevice.Get(), mCommandList.Get(), meshData);
+	geo->Name = "Grid";
+	mMeshes[geo->Name] = std::move(geo);
+
+	meshData.clear();
+	MeshData sphereMeshData = geoGen.CreateSphere(0.5f, 20, 20);
+	sphereMeshData.SubmeshName = "Sphere";
+	meshData.push_back(sphereMeshData);
+	geo = std::make_shared<GMesh>(md3dDevice.Get(), mCommandList.Get(), meshData);
+	geo->Name = "Sphere";
+	mMeshes[geo->Name] = std::move(geo);
+
+	meshData.clear();
+	MeshData cylinderMeshData = geoGen.CreateCylinder(0.5f, 0.3f, 3.0f, 20, 20);
+	cylinderMeshData.SubmeshName = "Cylinder";
+	meshData.push_back(cylinderMeshData);
+	geo = std::make_shared<GMesh>(md3dDevice.Get(), mCommandList.Get(), meshData);
+	geo->Name = "Cylinder";
+	mMeshes[geo->Name] = std::move(geo);
+
+	meshData.clear();
+	MeshData quadMeshData = geoGen.CreateQuad(0.0f, 1.0f, 1.0f, 1.0f, 0.0f);
+	quadMeshData.SubmeshName = "Quad";
+	meshData.push_back(quadMeshData);
+	geo = std::make_shared<GMesh>(md3dDevice.Get(), mCommandList.Get(), meshData);
+	geo->Name = "Quad";
+	mMeshes[geo->Name] = std::move(geo);
+
+	GMesh* CerberusMesh = new GMesh();
+	GFilmboxManager::GetManager().ImportFbxFile_Mesh(md3dDevice.Get(), mCommandList.Get(), "Models\\Cerberus.FBX", CerberusMesh);
+	CerberusMesh->Name = "Cerberus";
+	std::shared_ptr<GMesh> cerberus(CerberusMesh);
+	mMeshes[cerberus->Name] = cerberus;
+
+	GMesh* FireplaceMesh = new GMesh();
+	GFilmboxManager::GetManager().ImportFbxFile_Mesh(md3dDevice.Get(), mCommandList.Get(), "Models\\Fireplace.FBX", FireplaceMesh);
+	FireplaceMesh->Name = "Fireplace";
+	std::shared_ptr<GMesh> fireplace(FireplaceMesh);
+	mMeshes[fireplace->Name] = fireplace;
 }
 
 void GCore::LoadSkyTexture(std::wstring path)

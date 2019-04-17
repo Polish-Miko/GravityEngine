@@ -2,6 +2,7 @@
 #include "GRiMesh.h"
 
 
+/*
 GRiMesh::GRiMesh()
 {
 }
@@ -10,3 +11,4 @@ GRiMesh::GRiMesh()
 GRiMesh::~GRiMesh()
 {
 }
+*/
