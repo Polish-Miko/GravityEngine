@@ -150,6 +150,8 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="Public\GGiEngineUtil.h" />
+    <ClInclude Include="Public\GGiException.h" />
     <ClInclude Include="Public\GGiFloat4.h" />
     <ClInclude Include="Public\GGiFloat4x4.h" />
     <ClInclude Include="Public\GGiGameTimer.h" />
@@ -159,6 +161,8 @@
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Private\GGiEngineUtil.cpp" />
+    <ClCompile Include="Private\GGiException.cpp" />
     <ClCompile Include="Private\GGiFloat4.cpp" />
     <ClCompile Include="Private\GGiFloat4x4.cpp" />
     <ClCompile Include="Private\GGiGameTimer.cpp" />

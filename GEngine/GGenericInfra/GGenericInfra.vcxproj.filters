@@ -36,6 +36,12 @@
     <ClInclude Include="Public\GGiFloat4.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Public\GGiException.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Public\GGiEngineUtil.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -48,6 +54,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Private\GGiFloat4.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Private\GGiException.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Private\GGiEngineUtil.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

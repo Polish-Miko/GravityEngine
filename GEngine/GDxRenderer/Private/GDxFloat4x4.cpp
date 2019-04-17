@@ -68,6 +68,21 @@ GGiFloat4x4& GDxFloat4x4::operator +(GGiFloat4x4& mat)
 	return *this;
 }
 
+void GDxFloat4x4::SetByTranslation(float x, float y, float z)
+{
+	DirectX::XMStoreFloat4x4(&value, DirectX::XMMatrixTranslation(x, y, z));
+}
+
+void GDxFloat4x4::SetByRotationPitchYawRoll(float pitch, float yaw, float roll)
+{
+	DirectX::XMStoreFloat4x4(&value, DirectX::XMMatrixRotationRollPitchYaw(pitch, yaw, roll));
+}
+
+void GDxFloat4x4::SetByScale(float x, float y, float z)
+{
+	DirectX::XMStoreFloat4x4(&value, DirectX::XMMatrixScaling(x, y, z));
+}
+
 DirectX::XMFLOAT4X4 GDxFloat4x4::GetValue()
 {
 	return value;

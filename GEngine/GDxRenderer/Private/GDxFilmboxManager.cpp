@@ -2,6 +2,7 @@
 #include "GDxFilmboxManager.h"
 
 
+/*
 GDxFilmboxManager::GDxFilmboxManager()
 {
 }
@@ -10,3 +11,4 @@ GDxFilmboxManager::GDxFilmboxManager()
 GDxFilmboxManager::~GDxFilmboxManager()
 {
 }
+*/

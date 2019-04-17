@@ -21,6 +21,8 @@ public:
 
 	virtual GGiFloat4* CreateFloat4() override;
 
+	virtual GGiFloat4* CreateFloat4(float x, float y, float z, float w) override;
+
 	virtual GGiFloat4x4* CreateFloat4x4() override;
 
 private:

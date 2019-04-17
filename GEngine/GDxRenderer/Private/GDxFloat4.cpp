@@ -1,11 +1,19 @@
 #include "stdafx.h"
 #include "GDxFloat4.h"
+#include "GDxFloat4x4.h"
 
 
 GDxFloat4::GDxFloat4()
 {
 	DirectX::XMFLOAT4 zero(0.0f, 0.0f, 0.0f, 0.0f);
 	value = zero;
+}
+
+
+GDxFloat4::GDxFloat4(float x, float y, float z, float w)
+{
+	DirectX::XMFLOAT4 v(x, y, z, w);
+	value = v;
 }
 
 
@@ -48,6 +56,19 @@ GGiFloat4& GDxFloat4::operator *(GGiFloat4& vec)
 	return *this;
 }
 
+GGiFloat4& GDxFloat4::operator *(GGiFloat4x4& mat)
+{
+	GDxFloat4x4 dxMat = dynamic_cast<GDxFloat4x4&>(mat);
+
+	DirectX::XMVECTOR fac1 = DirectX::XMLoadFloat4(&value); 
+	DirectX::XMMATRIX fac2 = DirectX::XMLoadFloat4x4(&dxMat.GetValue());
+	DirectX::XMVECTOR pro = DirectX::XMVector4Transform(fac1, fac2);
+
+	DirectX::XMStoreFloat4(&value, pro);
+
+	return *this;
+}
+
 GGiFloat4& GDxFloat4::operator +(GGiFloat4& vec)
 {
 	GDxFloat4 dxVec = dynamic_cast<GDxFloat4&>(vec);
@@ -59,6 +80,26 @@ GGiFloat4& GDxFloat4::operator +(GGiFloat4& vec)
 	DirectX::XMStoreFloat4(&value, sum);
 
 	return *this;
+}
+
+float GDxFloat4::GetX()
+{
+	return value.x;
+}
+
+float GDxFloat4::GetY()
+{
+	return value.y;
+}
+
+float GDxFloat4::GetZ()
+{
+	return value.z;
+}
+
+float GDxFloat4::GetW()
+{
+	return value.w;
 }
 
 DirectX::XMFLOAT4 GDxFloat4::GetValue()

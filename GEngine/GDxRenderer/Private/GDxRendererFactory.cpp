@@ -45,6 +45,12 @@ GGiFloat4* GDxRendererFactory::CreateFloat4()
 	return ret;
 }
 
+GGiFloat4* GDxRendererFactory::CreateFloat4(float x, float y, float z, float w)
+{
+	GGiFloat4* ret = new GDxFloat4(x, y, z, w);
+	return ret;
+}
+
 GGiFloat4x4* GDxRendererFactory::CreateFloat4x4()
 {
 	GGiFloat4x4* ret = GDxFloat4x4::Identity4x4();

@@ -1,1 +1,14 @@
 #pragma once
+#include <windows.h>
+#include <wrl.h>
+#include <math.h>
+#include <string>
+#include <memory>
+#include <algorithm>
+#include <vector>
+#include <array>
+#include <unordered_map>
+#include <cstdint>
+#include <fstream>
+#include <sstream>
+#include <cassert>

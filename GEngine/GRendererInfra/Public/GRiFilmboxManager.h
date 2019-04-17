@@ -1,6 +1,7 @@
 #pragma once
 #include "GRiPreInclude.h"
 #include "GRiMeshData.h"
+#include "GRiRendererFactory.h"
 
 
 class FbxDeleter {
@@ -17,35 +18,33 @@ class GRiFilmboxManager
 
 public: 
 
-	//GRiFilmboxManager();
+	GRiFilmboxManager() = delete;
 
 	~GRiFilmboxManager(){}
 
 	GRiFilmboxManager(const GRiFilmboxManager& rhs) = delete;
 
-	static GRiFilmboxManager& GetManager()
-	{
-		static GRiFilmboxManager *instance = new GRiFilmboxManager();
-		return *instance;
-	}
+	GRiFilmboxManager(GRiRendererFactory* rFac);
 
-	bool ImportFbxFile_Mesh(std::wstring* FileName, std::vector<GRiMeshData> MeshDataList);
+	bool ImportFbxFile_Mesh(std::wstring* FileName, std::vector<GRiMeshData>& outMeshDataList);
 
 private:
 
 	//GRiFilmboxManager();
 
+	GRiRendererFactory* pRendererFactory;
+
 	std::unique_ptr<FbxManager, FbxDeleter> mManager;
 
 	std::unique_ptr<FbxIOSettings, FbxDeleter> mIoSettings;
 
-	bool ImportNode_Mesh(FbxNode* pNode, std::vector<GRiMeshData>& meshData);
+	bool ImportNode_Mesh(FbxNode* pNode, std::vector<GRiMeshData>& outMeshDataList);
 
-	bool ImportMesh(FbxNode* pNode, std::vector<GRiMeshData>& meshData);
+	bool ImportMesh(FbxNode* pNode, std::vector<GRiMeshData>& outMeshDataList);
 
 	template <typename TGeometryElement, typename TValue> TValue GetVertexElement(TGeometryElement* pElement, int iPoint, int iTriangle, int iVertex, TValue defaultValue);
 
-	//DirectX::XMFLOAT4X4 ToDxMatrix(const FbxAMatrix &fbxMat);
+	GGiFloat4x4 ToGMatrix(const FbxAMatrix &fbxMat);
 
 	FbxAMatrix GetGeometryTransform(FbxNode* pNode);
 };

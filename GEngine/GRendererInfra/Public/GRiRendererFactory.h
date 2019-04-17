@@ -20,6 +20,8 @@ public:
 
 	virtual GGiFloat4* CreateFloat4() = 0;
 
+	virtual GGiFloat4* CreateFloat4(float x, float y, float z, float w) = 0;
+
 	virtual GGiFloat4x4* CreateFloat4x4() = 0;
 
 };

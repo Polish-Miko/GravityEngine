@@ -7,11 +7,23 @@ public:
 	GDxFloat4();
 	~GDxFloat4();
 
+	GDxFloat4(float x, float y, float z, float w);
+
 	virtual GGiFloat4& operator =(GGiFloat4& vec) override;
 
 	virtual GGiFloat4& operator *(GGiFloat4& vec) override;
 
 	virtual GGiFloat4& operator +(GGiFloat4& vec) override;
+
+	virtual GGiFloat4& operator *(GGiFloat4x4& mat) override;
+
+	virtual float GetX() override;
+
+	virtual float GetY() override;
+
+	virtual float GetZ() override;
+
+	virtual float GetW() override;
 
 	static GGiFloat4* ZeroVector();
 

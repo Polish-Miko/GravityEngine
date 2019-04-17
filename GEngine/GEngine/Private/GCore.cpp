@@ -30,42 +30,48 @@ void GCore::Run()
 #if defined(DEBUG) | defined(_DEBUG)
 	_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
 #endif
-
 	try
 	{
-		MSG msg = { 0 };
-
-		mTimer->Reset();
-
-		while (msg.message != WM_QUIT)
+		try
 		{
-			// If there are Window messages then process them.
-			if (PeekMessage(&msg, 0, 0, 0, PM_REMOVE))
-			{
-				TranslateMessage(&msg);
-				DispatchMessage(&msg);
-			}
-			// Otherwise, do animation/game stuff.
-			else
-			{
-				mTimer->Tick();
+			MSG msg = { 0 };
 
-				if (!mAppPaused)
+			mTimer->Reset();
+
+			while (msg.message != WM_QUIT)
+			{
+				// If there are Window messages then process them.
+				if (PeekMessage(&msg, 0, 0, 0, PM_REMOVE))
 				{
-					mRenderer->CalculateFrameStats();
-					Update();
-					mRenderer->Draw(mTimer.get());
+					TranslateMessage(&msg);
+					DispatchMessage(&msg);
 				}
+				// Otherwise, do animation/game stuff.
 				else
 				{
-					Sleep(100);
+					mTimer->Tick();
+
+					if (!mAppPaused)
+					{
+						mRenderer->CalculateFrameStats();
+						Update();
+						mRenderer->Draw(mTimer.get());
+					}
+					else
+					{
+						Sleep(100);
+					}
 				}
 			}
 		}
+		catch (DxException& e)
+		{
+			MessageBox(nullptr, e.ToString().c_str(), L"HR Failed", MB_OK);
+		}
 	}
-	catch (DxException& e)
+	catch (GGiException& e)
 	{
-		MessageBox(nullptr, e.ToString().c_str(), L"HR Failed", MB_OK);
+		MessageBox(nullptr, e.GetErrorMessage().c_str(), L"Engine-defined Exception", MB_OK);
 	}
 }
 
@@ -75,25 +81,31 @@ void GCore::Initialize(HWND OutputWindow, double width, double height)
 #if defined(DEBUG) | defined(_DEBUG)
 	_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
 #endif
-
 	try
 	{
+		try
+		{
 
-		mRenderer->PreInitialize(OutputWindow, width, height);
+			mRenderer->PreInitialize(OutputWindow, width, height);
 
-		pRendererFactory = mRenderer->GetFactory();
-		SetWorkDirectory();
-		LoadTextures();
-		mRenderer->SyncTextures(mTextures);
-		LoadMaterials();
-		mRenderer->SyncMaterials(mMaterials);
+			pRendererFactory = mRenderer->GetFactory();
+			SetWorkDirectory();
+			LoadTextures();
+			mRenderer->SyncTextures(mTextures);
+			LoadMaterials();
+			mRenderer->SyncMaterials(mMaterials);
 
-		mRenderer->Initialize(OutputWindow, width, height);
+			mRenderer->Initialize(OutputWindow, width, height);
 
+		}
+		catch (DxException& e)
+		{
+			MessageBox(nullptr, e.ToString().c_str(), L"HR Failed", MB_OK);
+		}
 	}
-	catch (DxException& e)
+	catch (GGiException& e)
 	{
-		MessageBox(nullptr, e.ToString().c_str(), L"HR Failed", MB_OK);
+		MessageBox(nullptr, e.GetErrorMessage().c_str(), L"Engine-defined Exception", MB_OK);
 	}
 }
 

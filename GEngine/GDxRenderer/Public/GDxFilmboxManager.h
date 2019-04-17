@@ -2,10 +2,13 @@
 #include "GDxPreInclude.h"
 
 
-class GDxFilmboxManager
+class GDxFilmboxManager : public GRiFilmboxManager
 {
+
 public:
-	GDxFilmboxManager();
-	~GDxFilmboxManager();
+
+	//GDxFilmboxManager();
+	//~GDxFilmboxManager();
+
 };
 
