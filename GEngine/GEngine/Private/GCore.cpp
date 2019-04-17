@@ -376,7 +376,7 @@ void GCore::LoadTextures()
 
 	for (auto file : files)
 	{
-		GRiTexture* tex = textureLoader->LoadTexture(WorkDirectory, file, mTextures.size());
+		GRiTexture* tex = textureLoader->LoadTexture(WorkDirectory, file, (int)mTextures.size());
 		std::wstring texName = tex->UniqueFileName;
 		//mTextures[texName] = std::make_unique<GRiTexture>(tex);
 		std::unique_ptr<GRiTexture> temp(tex);
@@ -669,7 +669,7 @@ void GCore::LoadMaterials()
 
 void GCore::LoadMeshes()
 {
-	GRiGeometryGenerator* geoGen;
+	GRiGeometryGenerator* geoGen = pRendererFactory->CreateGeometryGenerator();
 
 	std::vector<GRiMeshData> meshData;
 	GRiMeshData boxMeshData = geoGen->CreateBox(1.0f, 1.0f, 1.0f, 3);
@@ -677,7 +677,8 @@ void GCore::LoadMeshes()
 	auto geo = pRendererFactory->CreateMesh(meshData);
 	geo->UniqueName = L"Box";
 	geo->Name = L"Box";
-	mMeshes[geo->UniqueName] = std::make_unique<GRiMesh>(geo);
+	std::unique_ptr<GRiMesh> temp1(geo);
+	mMeshes[geo->UniqueName] = std::move(temp1);
 
 	meshData.clear();
 	GRiMeshData gridMeshData = geoGen->CreateGrid(20.0f, 30.0f, 60, 40);
@@ -685,7 +686,8 @@ void GCore::LoadMeshes()
 	geo = pRendererFactory->CreateMesh(meshData);
 	geo->UniqueName = L"Grid";
 	geo->Name = L"Grid";
-	mMeshes[geo->UniqueName] = std::make_unique<GRiMesh>(geo);
+	std::unique_ptr<GRiMesh> temp2(geo);
+	mMeshes[geo->UniqueName] = std::move(temp2);
 
 	meshData.clear();
 	GRiMeshData sphereMeshData = geoGen->CreateSphere(0.5f, 20, 20);
@@ -693,7 +695,8 @@ void GCore::LoadMeshes()
 	geo = pRendererFactory->CreateMesh(meshData);
 	geo->UniqueName = L"Sphere";
 	geo->Name = L"Sphere";
-	mMeshes[geo->UniqueName] = std::make_unique<GRiMesh>(geo);
+	std::unique_ptr<GRiMesh> temp3(geo);
+	mMeshes[geo->UniqueName] = std::move(temp3);
 
 	meshData.clear();
 	GRiMeshData cylinderMeshData = geoGen->CreateCylinder(0.5f, 0.3f, 3.0f, 20, 20);
@@ -701,7 +704,8 @@ void GCore::LoadMeshes()
 	geo = pRendererFactory->CreateMesh(meshData);
 	geo->UniqueName = L"Cylinder";
 	geo->Name = L"Cylinder";
-	mMeshes[geo->UniqueName] = std::make_unique<GRiMesh>(geo);
+	std::unique_ptr<GRiMesh> temp4(geo);
+	mMeshes[geo->UniqueName] = std::move(temp4);
 
 	meshData.clear();
 	GRiMeshData quadMeshData = geoGen->CreateQuad(0.0f, 1.0f, 1.0f, 1.0f, 0.0f);
@@ -709,7 +713,8 @@ void GCore::LoadMeshes()
 	geo = pRendererFactory->CreateMesh(meshData);
 	geo->UniqueName = L"Quad";
 	geo->Name = L"Quad";
-	mMeshes[geo->UniqueName] = std::make_unique<GRiMesh>(geo);
+	std::unique_ptr<GRiMesh> temp5(geo);
+	mMeshes[geo->UniqueName] = std::move(temp5);
 
 	std::vector<std::wstring> format;
 	format.emplace_back(L"fbx");
@@ -721,7 +726,8 @@ void GCore::LoadMeshes()
 		geo = pRendererFactory->CreateMesh(meshData);
 		geo->UniqueName = file;
 		geo->Name = GGiEngineUtil::GetFileName(file);
-		mMeshes[geo->UniqueName] = std::make_unique<GRiMesh>(geo);
+		std::unique_ptr<GRiMesh> temp(geo);
+		mMeshes[geo->UniqueName] = std::move(temp);
 	}
 	/*
 	GMesh* CerberusMesh = new GMesh();
@@ -742,7 +748,7 @@ void GCore::LoadSkyTexture(std::wstring path)
 {
 	std::unique_ptr<GRiTextureLoader> textureLoader(pRendererFactory->CreateTextureLoader());
 
-	GRiTexture* tex = textureLoader->LoadTexture(WorkDirectory, path, mTextures.size());
+	GRiTexture* tex = textureLoader->LoadTexture(WorkDirectory, path, (int)mTextures.size());
 	std::wstring texName = L"skyCubeMap";
 	//mTextures[texName].reset(tex);
 	std::unique_ptr<GRiTexture> temp(tex);

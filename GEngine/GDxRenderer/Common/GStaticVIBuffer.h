@@ -8,9 +8,9 @@ public:
 	GStaticVIBuffer() = delete;
 	~GStaticVIBuffer() = default;
 
-	GStaticVIBuffer(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, std::vector<GVertex> vertices, std::vector<uint32_t> indices);
+	GStaticVIBuffer(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, std::vector<GRiVertex> vertices, std::vector<uint32_t> indices);
 
-	virtual void Create(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, std::vector<GVertex> vertices, std::vector<uint32_t> indices) override;
+	virtual void Create(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, std::vector<GRiVertex> vertices, std::vector<uint32_t> indices) override;
 
 	// System memory copies.  Use Blobs because the vertex/index format can be generic.
 	// It is up to the client to cast appropriately.  

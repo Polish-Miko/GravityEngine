@@ -2,9 +2,9 @@
 #include "GRiFilmboxManager.h"
 
 
-GRiFilmboxManager::GRiFilmboxManager(GRiRendererFactory* rFac)
+GRiFilmboxManager::GRiFilmboxManager()
 {
-	pRendererFactory = rFac;
+	//pRendererFactory = rFac;
 
 	// Initialize the SDK manager. This object handles memory management.
 	mManager = std::unique_ptr<FbxManager, FbxDeleter>(FbxManager::Create());
@@ -175,14 +175,14 @@ bool GRiFilmboxManager::ImportMesh(FbxNode* pNode, std::vector<GRiMeshData>& out
 			vertex.Position[0] = vertPos.GetX();
 			vertex.Position[1] = vertPos.GetY();
 			vertex.Position[2] = vertPos.GetZ();
-			vertex.Normal[0] = normal[0];
-			vertex.Normal[1] = normal[1];
-			vertex.Normal[2] = normal[2];
-			vertex.TangentU[0] = tangent[0];
-			vertex.TangentU[1] = tangent[1];
-			vertex.TangentU[2] = tangent[2];
-			vertex.UV[0] = uv[0];
-			vertex.UV[1] = 1.0f - uv[1];
+			vertex.Normal[0] = (float)normal[0];
+			vertex.Normal[1] = (float)normal[1];
+			vertex.Normal[2] = (float)normal[2];
+			vertex.TangentU[0] = (float)tangent[0];
+			vertex.TangentU[1] = (float)tangent[1];
+			vertex.TangentU[2] = (float)tangent[2];
+			vertex.UV[0] = (float)uv[0];
+			vertex.UV[1] = 1.0f - (float)uv[1];
 
 			mdata.Vertices[3 * t + v] = vertex;
 		}
@@ -234,8 +234,11 @@ GGiFloat4x4 GRiFilmboxManager::ToGMatrix(const FbxAMatrix& fbxMat)
 	mR->SetByRotationPitchYawRoll(float(r[0]) * GGiEngineUtil::PI / 180, float(r[1]) * GGiEngineUtil::PI / 180, float(r[2]) * GGiEngineUtil::PI / 180);
 	mS->SetByScale(float(s[0]), float(s[1]), float(s[2]));
 
-	GGiFloat4x4 mTrans = (*mS) * (*mR) * (*mT);
-	pRet = &mTrans;
+
+	GGiFloat4x4* mTrans = pRendererFactory->CreateFloat4x4();
+
+	*mTrans = (*mS) * (*mR) * (*mT);
+	pRet = mTrans;
 
 	return *pRet;
 }
@@ -252,4 +255,9 @@ FbxAMatrix GRiFilmboxManager::GetGeometryTransform(FbxNode* pNode)
 	const FbxVector4 lS = pNode->GetGeometricScaling(FbxNode::eSourcePivot);
 
 	return FbxAMatrix(lT, lR, lS);
+}
+
+void GRiFilmboxManager::SetRendererFactory(GRiRendererFactory* rFac)
+{
+	pRendererFactory = rFac;
 }

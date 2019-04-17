@@ -18,13 +18,15 @@ class GRiFilmboxManager
 
 public: 
 
-	GRiFilmboxManager() = delete;
+	GRiFilmboxManager();
 
-	~GRiFilmboxManager(){}
+	~GRiFilmboxManager() {}
 
-	GRiFilmboxManager(const GRiFilmboxManager& rhs) = delete;
+	//GRiFilmboxManager(const GRiFilmboxManager& rhs) = delete;
 
-	GRiFilmboxManager(GRiRendererFactory* rFac);
+	//GRiFilmboxManager(GRiRendererFactory* rFac);
+
+	void SetRendererFactory(GRiRendererFactory* rFac);
 
 	bool ImportFbxFile_Mesh(std::wstring FileName, std::vector<GRiMeshData>& outMeshDataList);
 

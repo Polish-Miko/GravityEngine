@@ -6,6 +6,7 @@
 #include "GDxFloat4x4.h"
 #include "GDxMaterial.h"
 #include "GDxMesh.h"
+#include "GDxGeometryGenerator.h"
 
 
 GDxRendererFactory::GDxRendererFactory(ID3D12Device* device,
@@ -61,5 +62,11 @@ GGiFloat4x4* GDxRendererFactory::CreateFloat4x4()
 GRiMesh* GDxRendererFactory::CreateMesh(std::vector<GRiMeshData> meshData)
 {
 	GRiMesh* ret = new GDxMesh(pDevice, pCommandList, meshData);
+	return ret;
+}
+
+GRiGeometryGenerator* GDxRendererFactory::CreateGeometryGenerator()
+{
+	GRiGeometryGenerator* ret = new GDxGeometryGenerator();
 	return ret;
 }

@@ -2,7 +2,7 @@
 #include "GVertexIndexBuffer.h"
 
 
-GVertexIndexBuffer::GVertexIndexBuffer(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, std::vector<GVertex> vertices, std::vector<uint32_t> indices)
+GVertexIndexBuffer::GVertexIndexBuffer(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, std::vector<GRiVertex> vertices, std::vector<uint32_t> indices)
 {
 	VertexByteStride = sizeof(GVertex);
 	IndexFormat = DXGI_FORMAT_R32_UINT;

@@ -2,7 +2,7 @@
 #include "GDxPreInclude.h"
 
 
-class GDxGeometryGenerator
+class GDxGeometryGenerator : public GRiGeometryGenerator
 {
 public:
 	GDxGeometryGenerator();

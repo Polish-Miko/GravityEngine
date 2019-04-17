@@ -8,7 +8,7 @@ class GRiMesh
 public:
 
 	GRiMesh() = default;
-	GRiMesh(const GRiMesh& rhs) = delete;
+	//GRiMesh(const GRiMesh& rhs) = delete;
 	~GRiMesh() = default;
 
 	// Unique name for hash table lookup.
@@ -19,6 +19,8 @@ public:
 	bool bIsSkeletalMesh = false;
 
 	std::unordered_map<std::wstring, GRiSubmesh> Submeshes;
+
+	virtual void AllowDynamicCast() {}
 
 };
 

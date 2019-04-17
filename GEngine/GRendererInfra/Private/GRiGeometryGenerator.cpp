@@ -148,11 +148,11 @@ GRiMeshData GRiGeometryGenerator::CreateSphere(float radius, uint32_t sliceCount
 			v.TangentU[1] = 0.0f;
 			v.TangentU[2] = +radius * sinf(phi)*cosf(theta);
 
-			float l = pow(v.TangentU[0] * v.TangentU[0] + v.TangentU[2] * v.TangentU[2], 0.5);
+			float l = (float)pow(v.TangentU[0] * v.TangentU[0] + v.TangentU[2] * v.TangentU[2], 0.5);
 			v.TangentU[0] /= l;
 			v.TangentU[2] /= l;
 
-			l = pow(v.Position[0] * v.Position[0] + v.Position[1] * v.Position[1] + v.Position[2] * v.Position[2], 0.5);
+			l = (float)pow(v.Position[0] * v.Position[0] + v.Position[1] * v.Position[1] + v.Position[2] * v.Position[2], 0.5);
 			v.Position[0] /= l;
 			v.Position[1] /= l;
 			v.Position[2] /= l;
@@ -358,13 +358,13 @@ GRiMeshData GRiGeometryGenerator::CreateGeosphere(float radius, uint32_t numSubd
 	for (uint32_t i = 0; i < meshData.Vertices.size(); ++i)
 	{
 		// Project onto unit sphere.
-		float* n = GGiEngineUtil::GetNormalizedFloat3(meshData.Vertices[i].Position);
+		std::vector<float> n = GGiEngineUtil::GetNormalizedFloat3(meshData.Vertices[i].Position);
 		meshData.Vertices[i].Normal[0] = n[0];
 		meshData.Vertices[i].Normal[1] = n[1];
 		meshData.Vertices[i].Normal[2] = n[2];
 
 		// Project onto sphere.
-		float p[3];
+		// float p[3];
 		meshData.Vertices[i].Position[0] = radius * n[0];
 		meshData.Vertices[i].Position[1] = radius * n[1];
 		meshData.Vertices[i].Position[2] = radius * n[2];

@@ -5,6 +5,7 @@
 #include "GDxFloat4.h"
 #include "GDxFloat4x4.h"
 #include "GDxFilmboxManager.h"
+#include "GDxMesh.h"
 
 #include <WindowsX.h>
 
@@ -2116,9 +2117,14 @@ void GDxRenderer::DrawSceneObjects(ID3D12GraphicsCommandList* cmdList, const Ren
 
 void GDxRenderer::DrawSceneObject(ID3D12GraphicsCommandList* cmdList, const GSceneObject* sObject, bool bSetCBV)
 {
+	GDxMesh* dxMesh = dynamic_cast<GDxMesh*>(sObject->Mesh);
+	if (dxMesh == NULL)
+	{
+		ThrowGGiException("Cast failed : from GRiMesh* to GDxMesh*.")
+	}
 
-	cmdList->IASetVertexBuffers(0, 1, &sObject->Mesh->mVIBuffer->VertexBufferView());
-	cmdList->IASetIndexBuffer(&sObject->Mesh->mVIBuffer->IndexBufferView());
+	cmdList->IASetVertexBuffers(0, 1, &dxMesh->mVIBuffer->VertexBufferView());
+	cmdList->IASetIndexBuffer(&dxMesh->mVIBuffer->IndexBufferView());
 	cmdList->IASetPrimitiveTopology(sObject->PrimitiveType);
 
 	if (bSetCBV)
@@ -2129,7 +2135,7 @@ void GDxRenderer::DrawSceneObject(ID3D12GraphicsCommandList* cmdList, const GSce
 		cmdList->SetGraphicsRootConstantBufferView(0, objCBAddress);
 	}
 
-	cmdList->DrawIndexedInstanced(sObject->Mesh->mVIBuffer->IndexCount, 1, 0, 0, 0);
+	cmdList->DrawIndexedInstanced(dxMesh->mVIBuffer->IndexCount, 1, 0, 0, 0);
 }
 
 #pragma endregion
@@ -3186,6 +3192,7 @@ void GDxRenderer::CreateRendererFactory()
 void GDxRenderer::CreateFilmboxManager()
 {
 	mFilmboxManager = std::make_unique<GDxFilmboxManager>();
+	mFilmboxManager->SetRendererFactory(mFactory.get());
 }
 
 void GDxRenderer::CreateCommandObjects()

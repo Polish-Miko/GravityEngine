@@ -5,6 +5,8 @@
 #include "GRiMaterial.h"
 #include "GGiInclude.h"
 #include "GRiMesh.h"
+#include "GRiMeshData.h"
+#include "GRiGeometryGenerator.h"
 
 class GRiRendererFactory
 {
@@ -26,6 +28,8 @@ public:
 	virtual GGiFloat4x4* CreateFloat4x4() = 0;
 
 	virtual GRiMesh* CreateMesh(std::vector<GRiMeshData> meshData) = 0;
+
+	virtual GRiGeometryGenerator* CreateGeometryGenerator() = 0;
 
 };
 

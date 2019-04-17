@@ -1,6 +1,7 @@
 #pragma once
 #include "GGiPreInclude.h"
 #include "GGiException.h"
+#include "GGiEngineUtil.h"
 
 
 #define ThrowGGiException(x)											\
@@ -14,7 +15,7 @@ class GGiException : public std::exception
 public:
 
 	GGiException() = delete;
-	~GGiException();
+	~GGiException() {}
 
 	GGiException(std::wstring description, const std::string& fileName, int lineNumber) :
 		mDescription(description),

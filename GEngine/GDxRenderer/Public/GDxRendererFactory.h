@@ -27,6 +27,8 @@ public:
 
 	virtual GRiMesh* CreateMesh(std::vector<GRiMeshData> meshData) override;
 
+	virtual GRiGeometryGenerator* CreateGeometryGenerator() override;
+
 private:
 
 	ID3D12Device* pDevice;

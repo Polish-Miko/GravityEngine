@@ -3,13 +3,13 @@
 #include "GDX12Util.h"
 
 
-GStaticVIBuffer::GStaticVIBuffer(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, std::vector<GVertex> vertices, std::vector<uint32_t> indices) : GVertexIndexBuffer(device, cmdList, vertices, indices)
+GStaticVIBuffer::GStaticVIBuffer(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, std::vector<GRiVertex> vertices, std::vector<uint32_t> indices) : GVertexIndexBuffer(device, cmdList, vertices, indices)
 {
 	Create(device, cmdList, vertices, indices);
 }
 
 
-void GStaticVIBuffer::Create(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, std::vector<GVertex> vertices, std::vector<uint32_t> indices)
+void GStaticVIBuffer::Create(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, std::vector<GRiVertex> vertices, std::vector<uint32_t> indices)
 {
 	ThrowIfFailed(D3DCreateBlob(VertexBufferByteSize, &VertexBufferCPU));
 	CopyMemory(VertexBufferCPU->GetBufferPointer(), vertices.data(), VertexBufferByteSize);
