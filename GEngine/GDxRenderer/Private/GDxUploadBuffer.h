@@ -2,13 +2,13 @@
 
 //#include "GUtilInclude.h"
 #include "GDxPreInclude.h"
-#include "GDX12Util.h"
+#include "GDxUtil.h"
 
 template<typename T>
-class UploadBuffer
+class GDxUploadBuffer
 {
 public:
-	UploadBuffer(ID3D12Device* device, UINT elementCount, bool isConstantBuffer) :
+	GDxUploadBuffer(ID3D12Device* device, UINT elementCount, bool isConstantBuffer) :
 		mIsConstantBuffer(isConstantBuffer)
 	{
 		mElementByteSize = sizeof(T);
@@ -21,7 +21,7 @@ public:
 		// UINT   SizeInBytes;   // multiple of 256
 		// } D3D12_CONSTANT_BUFFER_VIEW_DESC;
 		if (isConstantBuffer)
-			mElementByteSize = GDX12Util::CalcConstantBufferByteSize(sizeof(T));
+			mElementByteSize = GDxUtil::CalcConstantBufferByteSize(sizeof(T));
 
 		ThrowIfFailed(device->CreateCommittedResource(
 			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
@@ -37,9 +37,9 @@ public:
 		// the resource while it is in use by the GPU (so we must use synchronization techniques).
 	}
 
-	UploadBuffer(const UploadBuffer& rhs) = delete;
-	UploadBuffer& operator=(const UploadBuffer& rhs) = delete;
-	~UploadBuffer()
+	GDxUploadBuffer(const GDxUploadBuffer& rhs) = delete;
+	GDxUploadBuffer& operator=(const GDxUploadBuffer& rhs) = delete;
+	~GDxUploadBuffer()
 	{
 		if (mUploadBuffer != nullptr)
 			mUploadBuffer->Unmap(0, nullptr);

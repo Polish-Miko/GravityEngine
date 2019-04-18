@@ -1,8 +1,8 @@
 #include "stdafx.h"
-#include "GCubeRtv.h"
+#include "GDxCubeRtv.h"
 
 
-GCubeRtv::GCubeRtv(ID3D12Device* device, UINT CubemapSize,
+GDxCubeRtv::GDxCubeRtv(ID3D12Device* device, UINT CubemapSize,
 	//UINT MipLevels,
 	CD3DX12_CPU_DESCRIPTOR_HANDLE cpuSrv,
 	CD3DX12_GPU_DESCRIPTOR_HANDLE gpuSrv,
@@ -24,7 +24,7 @@ GCubeRtv::GCubeRtv(ID3D12Device* device, UINT CubemapSize,
 	BuildDescriptors();
 }
 
-void GCubeRtv::BuildResources()
+void GDxCubeRtv::BuildResources()
 {
 	D3D12_RESOURCE_DESC texDesc;
 	ZeroMemory(&texDesc, sizeof(D3D12_RESOURCE_DESC));
@@ -42,7 +42,7 @@ void GCubeRtv::BuildResources()
 	ThrowIfFailed(md3dDevice->CreateCommittedResource(&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT), D3D12_HEAP_FLAG_NONE, &texDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&mResource)));
 }
 
-void GCubeRtv::BuildDescriptors()
+void GDxCubeRtv::BuildDescriptors()
 {
 	// Create RTVs.
 	for (size_t i = 0; i < 6; i++)
@@ -72,13 +72,13 @@ void GCubeRtv::BuildDescriptors()
 	md3dDevice->CreateShaderResourceView(mResource.Get(), &srvDesc, SrvCpu);
 }
 
-void GCubeRtv::SetDescriptorSize()
+void GDxCubeRtv::SetDescriptorSize()
 {
 	SrvDescriptorSize = md3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	RtvDescriptorSize = md3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 }
 
-void GCubeRtv::SetViewportAndScissorRect(UINT CubemapSize)
+void GDxCubeRtv::SetViewportAndScissorRect(UINT CubemapSize)
 {
 	mViewport.TopLeftX = 0.0f;
 	mViewport.TopLeftY = 0.0f;
@@ -90,7 +90,7 @@ void GCubeRtv::SetViewportAndScissorRect(UINT CubemapSize)
 	mScissorRect = { 0, 0, (int)(mViewport.Width), (int)(mViewport.Height) };
 }
 
-CD3DX12_GPU_DESCRIPTOR_HANDLE GCubeRtv::GetSrvGpu()
+CD3DX12_GPU_DESCRIPTOR_HANDLE GDxCubeRtv::GetSrvGpu()
 {
 	return SrvGpu;
 }

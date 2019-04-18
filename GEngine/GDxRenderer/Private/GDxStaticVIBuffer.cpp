@@ -1,15 +1,15 @@
 #include "stdafx.h"
-#include "GStaticVIBuffer.h"
-#include "GDX12Util.h"
+#include "GDxStaticVIBuffer.h"
+#include "GDxUtil.h"
 
 
-GStaticVIBuffer::GStaticVIBuffer(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, std::vector<GRiVertex> vertices, std::vector<uint32_t> indices) : GVertexIndexBuffer(device, cmdList, vertices, indices)
+GDxStaticVIBuffer::GDxStaticVIBuffer(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, std::vector<GRiVertex> vertices, std::vector<uint32_t> indices) : GDxVertexIndexBuffer(device, cmdList, vertices, indices)
 {
 	Create(device, cmdList, vertices, indices);
 }
 
 
-void GStaticVIBuffer::Create(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, std::vector<GRiVertex> vertices, std::vector<uint32_t> indices)
+void GDxStaticVIBuffer::Create(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, std::vector<GRiVertex> vertices, std::vector<uint32_t> indices)
 {
 	ThrowIfFailed(D3DCreateBlob(VertexBufferByteSize, &VertexBufferCPU));
 	CopyMemory(VertexBufferCPU->GetBufferPointer(), vertices.data(), VertexBufferByteSize);
@@ -17,14 +17,14 @@ void GStaticVIBuffer::Create(ID3D12Device* device, ID3D12GraphicsCommandList* cm
 	ThrowIfFailed(D3DCreateBlob(IndexBufferByteSize, &IndexBufferCPU));
 	CopyMemory(IndexBufferCPU->GetBufferPointer(), indices.data(), IndexBufferByteSize);
 
-	VertexBufferGPU = GDX12Util::CreateDefaultBuffer(device,
+	VertexBufferGPU = GDxUtil::CreateDefaultBuffer(device,
 		cmdList, vertices.data(), VertexBufferByteSize, VertexBufferUploader);
 
-	IndexBufferGPU = GDX12Util::CreateDefaultBuffer(device,
+	IndexBufferGPU = GDxUtil::CreateDefaultBuffer(device,
 		cmdList, indices.data(), IndexBufferByteSize, IndexBufferUploader);
 }
 
-D3D12_INDEX_BUFFER_VIEW GStaticVIBuffer::IndexBufferView() const
+D3D12_INDEX_BUFFER_VIEW GDxStaticVIBuffer::IndexBufferView() const
 {
 	D3D12_INDEX_BUFFER_VIEW ibv;
 	ibv.BufferLocation = IndexBufferGPU->GetGPUVirtualAddress();
@@ -34,7 +34,7 @@ D3D12_INDEX_BUFFER_VIEW GStaticVIBuffer::IndexBufferView() const
 	return ibv;
 }
 
-D3D12_VERTEX_BUFFER_VIEW GStaticVIBuffer::VertexBufferView() const
+D3D12_VERTEX_BUFFER_VIEW GDxStaticVIBuffer::VertexBufferView() const
 {
 	D3D12_VERTEX_BUFFER_VIEW vbv;
 	vbv.BufferLocation = VertexBufferGPU->GetGPUVirtualAddress();
@@ -44,7 +44,7 @@ D3D12_VERTEX_BUFFER_VIEW GStaticVIBuffer::VertexBufferView() const
 	return vbv;
 }
 
-void GStaticVIBuffer::DisposeUploaders()
+void GDxStaticVIBuffer::DisposeUploaders()
 {
 	VertexBufferUploader = nullptr;
 	IndexBufferUploader = nullptr;

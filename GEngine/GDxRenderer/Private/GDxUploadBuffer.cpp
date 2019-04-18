@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "UploadBuffer.h"
+#include "GDxUploadBuffer.h"
 
 /*
 UploadBuffer::UploadBuffer()

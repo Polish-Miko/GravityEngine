@@ -12,12 +12,14 @@
 
 #include "GRiInclude.h"
 //#include "GDxPreInclude.h"
-#include "GEngineInclude.h"
-#include "UploadBuffer.h"
+//#include "GEngineInclude.h"
+#include "GDxUploadBuffer.h"
 //#include "GeometryGenerator.h"
-#include "FrameResource.h"
-#include "ShadowMap.h"
-#include "Ssao.h"
+#include "GDxFrameResource.h"
+#include "GDxCubeRtv.h"
+#include "GDxRtvHeap.h"
+//#include "ShadowMap.h"
+//#include "Ssao.h"
 
 // Link necessary d3d12 libraries.
 #pragma comment(lib,"d3dcompiler.lib")
@@ -196,8 +198,8 @@ protected:
 	//int mClientHeight = 600;
 
 protected:
-	std::vector<std::unique_ptr<FrameResource>> mFrameResources;
-	FrameResource* mCurrFrameResource = nullptr;
+	std::vector<std::unique_ptr<GDxFrameResource>> mFrameResources;
+	GDxFrameResource* mCurrFrameResource = nullptr;
 	int mCurrFrameResourceIndex = 0;
 
 	//ComPtr<ID3D12RootSignature> mRootSignature = nullptr;
@@ -211,8 +213,8 @@ protected:
 	//std::unordered_map<std::string, std::shared_ptr<GTexture>> mTextures;
 	//std::vector<std::shared_ptr<GTexture>> mTextureList;
 	//std::unordered_map<std::string, std::unique_ptr<Texture>> mLegTextures;
-	std::unordered_map<std::string, std::unique_ptr<GRtvHeap>> mRtvHeaps;
-	std::unordered_map<std::string, std::unique_ptr<GCubeRtv>> mCubeRtvs;
+	std::unordered_map<std::string, std::unique_ptr<GDxRtvHeap>> mRtvHeaps;
+	std::unordered_map<std::string, std::unique_ptr<GDxCubeRtv>> mCubeRtvs;
 	UINT mPrefilterLevels = 5u;
 	std::unordered_map<std::string, ComPtr<ID3DBlob>> mShaders;
 	std::unordered_map<std::string, ComPtr<ID3D12PipelineState>> mPSOs;
@@ -246,20 +248,20 @@ protected:
 	PassConstants mShadowPassCB;// index 1 of pass cbuffer.
 	SkyPassConstants mSkyPassCB;
 
-	std::vector<std::unique_ptr<UploadBuffer<SkyPassConstants>>> PreIntegrationPassCbs;
+	std::vector<std::unique_ptr<GDxUploadBuffer<SkyPassConstants>>> PreIntegrationPassCbs;
 
-	std::unique_ptr<ShadowMap> mShadowMap;
+	//std::unique_ptr<ShadowMap> mShadowMap;
 
-	std::unique_ptr<Ssao> mSsao;
+	//std::unique_ptr<Ssao> mSsao;
 
 	DirectX::BoundingSphere mSceneBounds;
 
 	float mLightNearZ = 0.0f;
 	float mLightFarZ = 0.0f;
 	XMFLOAT3 mLightPosW;
-	XMFLOAT4X4 mLightView = MathHelper::Identity4x4();
-	XMFLOAT4X4 mLightProj = MathHelper::Identity4x4();
-	XMFLOAT4X4 mShadowTransform = MathHelper::Identity4x4();
+	XMFLOAT4X4 mLightView = GDxMathHelper::Identity4x4();
+	XMFLOAT4X4 mLightProj = GDxMathHelper::Identity4x4();
+	XMFLOAT4X4 mShadowTransform = GDxMathHelper::Identity4x4();
 
 	float mLightRotationAngle = 0.0f;
 	XMFLOAT3 mBaseLightDirections[3] = {

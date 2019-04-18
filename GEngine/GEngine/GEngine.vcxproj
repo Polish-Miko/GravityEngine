@@ -106,7 +106,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;FBXSDK_SHARED;GENGINE_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)GDxRenderer\Public;$(SolutionDir)GDxRenderer\Render;$(SolutionDir)GDxRenderer\Common;$(SolutionDir)GDxRenderer\;$(SolutionDir)ThirdParty\FBX SDK\2019.2\include;Private;Public;$(SolutionDir)GRendererInfra\;$(SolutionDir)GGenericInfra;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)GDxRenderer\Private;$(SolutionDir)GDxRenderer\Public;$(SolutionDir)GDxRenderer\Render;$(SolutionDir)GDxRenderer\Common;$(SolutionDir)GDxRenderer\;$(SolutionDir)ThirdParty\FBX SDK\2019.2\include;Private;Public;$(SolutionDir)GRendererInfra\;$(SolutionDir)GGenericInfra;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
     </ClCompile>
     <Link>

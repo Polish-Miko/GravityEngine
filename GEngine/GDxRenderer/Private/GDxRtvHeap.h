@@ -1,26 +1,26 @@
 #pragma once
 //#include "GUtilInclude.h"
-#include "GRtv.h"
-#include "GDescriptorHeap.h"
+#include "GDxRtv.h"
+#include "GDxDescriptorHeap.h"
 
 
-class GRtvHeap
+class GDxRtvHeap
 {
 public:
 
-	GRtvHeap() = delete;
-	GRtvHeap(ID3D12Device* device, UINT ClientWidth, UINT ClientHeight,
+	GDxRtvHeap() = delete;
+	GDxRtvHeap(ID3D12Device* device, UINT ClientWidth, UINT ClientHeight,
 		CD3DX12_CPU_DESCRIPTOR_HANDLE cpuSrv,
 		CD3DX12_GPU_DESCRIPTOR_HANDLE gpuSrv,
 		std::vector<GRtvProperties> gRtvProperties);
-	GRtvHeap(const GRtvHeap& rhs) = delete;
-	GRtvHeap& operator=(const GRtvHeap& rhs) = delete;
-	~GRtvHeap() = default;
+	GDxRtvHeap(const GDxRtvHeap& rhs) = delete;
+	GDxRtvHeap& operator=(const GDxRtvHeap& rhs) = delete;
+	~GDxRtvHeap() = default;
 
-	GDescriptorHeap mRtvHeap;
+	GDxDescriptorHeap mRtvHeap;
 	//GDescriptorHeap mSrvHeap;
 
-	std::vector<std::shared_ptr<GRtv>> mRtv;
+	std::vector<std::shared_ptr<GDxRtv>> mRtv;
 
 	void BuildResources();
 

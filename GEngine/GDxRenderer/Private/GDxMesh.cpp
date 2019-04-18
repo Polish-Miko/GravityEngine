@@ -1,6 +1,6 @@
 #include "stdafx.h"
 #include "GDxMesh.h"
-#include "GStaticVIBuffer.h"
+#include "GDxStaticVIBuffer.h"
 
 /*
 GDxMesh::GDxMesh()
@@ -42,7 +42,7 @@ void GDxMesh::Create(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, s
 		indexOffset += (UINT)mdata.Indices.size();
 	}
 
-	mVIBuffer = std::make_shared<GStaticVIBuffer>(device, cmdList, vertices, indices);
+	mVIBuffer = std::make_shared<GDxStaticVIBuffer>(device, cmdList, vertices, indices);
 	if (mVIBuffer == nullptr)
 		ThrowDxException(L"GStaticVIBuffer Cast Fail");
 

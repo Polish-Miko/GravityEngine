@@ -3,15 +3,15 @@
 //#include "GUtilInclude.h"
 #include "GDxPreInclude.h"
 
-class GDescriptorHeap
+class GDxDescriptorHeap
 {
 public:
 	//GDescriptorHeap();
-	GDescriptorHeap() 
+	GDxDescriptorHeap()
 	{ 
 		memset(this, 0, sizeof(*this));
 	}
-	~GDescriptorHeap() {}
+	~GDxDescriptorHeap() {}
 
 	HRESULT Create(
 		ID3D12Device* pDevice,

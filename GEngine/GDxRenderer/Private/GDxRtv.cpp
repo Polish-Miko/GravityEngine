@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "GRtv.h"
+#include "GDxRtv.h"
 
 /*
 GRtv::GRtv()

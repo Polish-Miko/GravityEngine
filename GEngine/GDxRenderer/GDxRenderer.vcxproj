@@ -115,7 +115,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_LIB;FBXSDK_SHARED;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)ThirdParty\FBX SDK\2019.2\include\;Common\;Render\;Public\;Private\;$(SolutionDir)GRendererInfra;$(SolutionDir)GGenericInfra;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)ThirdParty\FBX SDK\2019.2\include\;Common\;Render\;Public;Private;$(SolutionDir)GRendererInfra;$(SolutionDir)GGenericInfra;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
@@ -171,20 +171,18 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="Common\d3dx12.h" />
-    <ClInclude Include="Common\GDescriptorHeap.h" />
-    <ClInclude Include="Common\MathHelper.h" />
-    <ClInclude Include="Common\DDSTextureLoader.h" />
-    <ClInclude Include="Common\FrameResource.h" />
-    <ClInclude Include="Common\GDX12Util.h" />
-    <ClInclude Include="Common\GShaderManager.h" />
-    <ClInclude Include="Common\GInputLayout.h" />
-    <ClInclude Include="Common\GEngineInclude.h" />
-    <ClInclude Include="Common\GRtvHeap.h" />
-    <ClInclude Include="Common\GRtv.h" />
-    <ClInclude Include="Common\GCubeRtv.h" />
-    <ClInclude Include="Common\GStaticVIBuffer.h" />
-    <ClInclude Include="Common\GVertexIndexBuffer.h" />
+    <ClInclude Include="Private\d3dx12.h" />
+    <ClInclude Include="Private\GDxDescriptorHeap.h" />
+    <ClInclude Include="Private\GDxMathHelper.h" />
+    <ClInclude Include="Private\GDxFrameResource.h" />
+    <ClInclude Include="Private\GDxUtil.h" />
+    <ClInclude Include="Private\GDxShaderManager.h" />
+    <ClInclude Include="Private\GDxInputLayout.h" />
+    <ClInclude Include="Private\GDxRtvHeap.h" />
+    <ClInclude Include="Private\GDxRtv.h" />
+    <ClInclude Include="Private\GDxCubeRtv.h" />
+    <ClInclude Include="Private\GDxStaticVIBuffer.h" />
+    <ClInclude Include="Private\GDxVertexIndexBuffer.h" />
     <ClInclude Include="Public\GDxFilmboxManager.h" />
     <ClInclude Include="Public\GDxGeometryGenerator.h" />
     <ClInclude Include="Public\GDxMesh.h" />
@@ -201,26 +199,21 @@
     <ClInclude Include="Public\GDxTextureLoader.h" />
     <ClInclude Include="Public\GDxTexture.h" />
     <ClInclude Include="Public\GDxRenderer.h" />
-    <ClInclude Include="Common\ShadowMap.h" />
-    <ClInclude Include="Common\Ssao.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
-    <ClInclude Include="Common\UploadBuffer.h" />
+    <ClInclude Include="Private\GDxUploadBuffer.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Common\GDescriptorHeap.cpp" />
-    <ClCompile Include="Common\MathHelper.cpp" />
-    <ClCompile Include="Common\DDSTextureLoader.cpp" />
-    <ClCompile Include="Common\FrameResource.cpp" />
-    <ClCompile Include="Common\GDX12Util.cpp" />
-    <ClCompile Include="Common\GShaderManager.cpp" />
-    <ClCompile Include="Common\GInputLayout.cpp" />
-    <ClCompile Include="Common\GEngineInclude.cpp" />
-    <ClCompile Include="Common\GRtvHeap.cpp" />
-    <ClCompile Include="Common\GRtv.cpp" />
-    <ClCompile Include="Common\GCubeRtv.cpp" />
-    <ClCompile Include="Common\GStaticVIBuffer.cpp" />
-    <ClCompile Include="Common\GVertexIndexBuffer.cpp" />
+    <ClCompile Include="Private\GDxDescriptorHeap.cpp" />
+    <ClCompile Include="Private\GDxMathHelper.cpp" />
+    <ClCompile Include="Private\GDxFrameResource.cpp" />
+    <ClCompile Include="Private\GDxUtil.cpp" />
+    <ClCompile Include="Private\GDxShaderManager.cpp" />
+    <ClCompile Include="Private\GDxRtvHeap.cpp" />
+    <ClCompile Include="Private\GDxRtv.cpp" />
+    <ClCompile Include="Private\GDxCubeRtv.cpp" />
+    <ClCompile Include="Private\GDxStaticVIBuffer.cpp" />
+    <ClCompile Include="Private\GDxVertexIndexBuffer.cpp" />
     <ClCompile Include="Private\GDxFilmboxManager.cpp" />
     <ClCompile Include="Private\GDxGeometryGenerator.cpp" />
     <ClCompile Include="Private\GDxMesh.cpp" />
@@ -235,15 +228,13 @@
     <ClCompile Include="Private\GDxTextureLoader.cpp" />
     <ClCompile Include="Private\GDxTexture.cpp" />
     <ClCompile Include="Private\GDxRenderer.cpp" />
-    <ClCompile Include="Common\ShadowMap.cpp" />
-    <ClCompile Include="Common\Ssao.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="Common\UploadBuffer.cpp" />
+    <ClCompile Include="Private\GDxUploadBuffer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shaders\AmbientPassPS.hlsl">

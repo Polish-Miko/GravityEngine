@@ -4,13 +4,13 @@
 #include "GDxPreInclude.h"
 #include "GVertex.h"
 
-class GVertexIndexBuffer
+class GDxVertexIndexBuffer
 {
 public:
-	GVertexIndexBuffer() = delete;
-	virtual ~GVertexIndexBuffer() {}
+	GDxVertexIndexBuffer() = delete;
+	virtual ~GDxVertexIndexBuffer() {}
 
-	GVertexIndexBuffer(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, std::vector<GRiVertex> vertices, std::vector<uint32_t> indices);
+	GDxVertexIndexBuffer(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, std::vector<GRiVertex> vertices, std::vector<uint32_t> indices);
 
 	virtual void Create(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, std::vector<GRiVertex> vertices, std::vector<uint32_t> indices) = 0;
 

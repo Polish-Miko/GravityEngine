@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "GDX12Util.h"
+#include "GDxUtil.h"
 
 #include <comdef.h>
 #include <fstream>
@@ -7,12 +7,12 @@
 using Microsoft::WRL::ComPtr;
 
 
-bool GDX12Util::IsKeyDown(int vkeyCode)
+bool GDxUtil::IsKeyDown(int vkeyCode)
 {
 	return (GetAsyncKeyState(vkeyCode) & 0x8000) != 0;
 }
 
-ComPtr<ID3DBlob> GDX12Util::LoadBinary(const std::wstring& filename)
+ComPtr<ID3DBlob> GDxUtil::LoadBinary(const std::wstring& filename)
 {
 	std::ifstream fin(filename, std::ios::binary);
 
@@ -29,7 +29,7 @@ ComPtr<ID3DBlob> GDX12Util::LoadBinary(const std::wstring& filename)
 	return blob;
 }
 
-Microsoft::WRL::ComPtr<ID3D12Resource> GDX12Util::CreateDefaultBuffer(
+Microsoft::WRL::ComPtr<ID3D12Resource> GDxUtil::CreateDefaultBuffer(
 	ID3D12Device* device,
 	ID3D12GraphicsCommandList* cmdList,
 	const void* initData,

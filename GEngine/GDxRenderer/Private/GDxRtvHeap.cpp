@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "GRtvHeap.h"
+#include "GDxRtvHeap.h"
 
 
 /*
@@ -9,7 +9,7 @@ GRtvHeap::GRtvHeap()
 }
 */
 
-GRtvHeap::GRtvHeap(ID3D12Device* device, UINT ClientWidth, UINT ClientHeight,
+GDxRtvHeap::GDxRtvHeap(ID3D12Device* device, UINT ClientWidth, UINT ClientHeight,
 	CD3DX12_CPU_DESCRIPTOR_HANDLE cpuSrv,
 	CD3DX12_GPU_DESCRIPTOR_HANDLE gpuSrv, 
 	std::vector<GRtvProperties> gRtvProperties)
@@ -22,7 +22,7 @@ GRtvHeap::GRtvHeap(ID3D12Device* device, UINT ClientWidth, UINT ClientHeight,
 	SetDescriptorSize();
 	for (size_t i = 0; i < gRtvProperties.size(); i++)
 	{
-		std::shared_ptr<GRtv> vRtv = std::make_shared<GRtv>(gRtvProperties[i], ClientWidth, ClientHeight);
+		std::shared_ptr<GDxRtv> vRtv = std::make_shared<GDxRtv>(gRtvProperties[i], ClientWidth, ClientHeight);
 		mRtv.push_back(vRtv);
 	}
 	ThrowIfFailed(mRtvHeap.Create(md3dDevice, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, (UINT)(mRtv.size())));
@@ -30,7 +30,7 @@ GRtvHeap::GRtvHeap(ID3D12Device* device, UINT ClientWidth, UINT ClientHeight,
 	BuildDescriptors();
 }
 
-void GRtvHeap::BuildDescriptors()
+void GDxRtvHeap::BuildDescriptors()
 {
 	// Create RTVs.
 	D3D12_RENDER_TARGET_VIEW_DESC rtvDesc;
@@ -67,7 +67,7 @@ void GRtvHeap::BuildDescriptors()
 	}
 }
 
-void GRtvHeap::BuildResources()
+void GDxRtvHeap::BuildResources()
 {
 	D3D12_RESOURCE_DESC texDesc;
 	ZeroMemory(&texDesc, sizeof(D3D12_RESOURCE_DESC));
@@ -105,7 +105,7 @@ void GRtvHeap::BuildResources()
 	}
 }
 
-void GRtvHeap::OnResize(UINT newWidth, UINT newHeight)
+void GDxRtvHeap::OnResize(UINT newWidth, UINT newHeight)
 {
 	if (mClientWidth != newWidth || mClientHeight != newHeight)
 	{
@@ -122,13 +122,13 @@ void GRtvHeap::OnResize(UINT newWidth, UINT newHeight)
 	}
 }
 
-void GRtvHeap::SetDescriptorSize()
+void GDxRtvHeap::SetDescriptorSize()
 {
 	SrvDescriptorSize = md3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	RtvDescriptorSize = md3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 }
 
-CD3DX12_GPU_DESCRIPTOR_HANDLE GRtvHeap::GetSrvGpuStart()
+CD3DX12_GPU_DESCRIPTOR_HANDLE GDxRtvHeap::GetSrvGpuStart()
 {
 	return SrvGpuStart;
 }

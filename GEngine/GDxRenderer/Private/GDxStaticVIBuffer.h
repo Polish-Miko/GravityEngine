@@ -1,14 +1,14 @@
 #pragma once
 
-#include "GVertexIndexBuffer.h"
+#include "GDxVertexIndexBuffer.h"
 
-class GStaticVIBuffer : public GVertexIndexBuffer
+class GDxStaticVIBuffer : public GDxVertexIndexBuffer
 {
 public:
-	GStaticVIBuffer() = delete;
-	~GStaticVIBuffer() = default;
+	GDxStaticVIBuffer() = delete;
+	~GDxStaticVIBuffer() = default;
 
-	GStaticVIBuffer(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, std::vector<GRiVertex> vertices, std::vector<uint32_t> indices);
+	GDxStaticVIBuffer(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, std::vector<GRiVertex> vertices, std::vector<uint32_t> indices);
 
 	virtual void Create(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, std::vector<GRiVertex> vertices, std::vector<uint32_t> indices) override;
 

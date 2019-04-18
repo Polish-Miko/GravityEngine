@@ -7,6 +7,8 @@
 #include "GDxFilmboxManager.h"
 #include "GDxMesh.h"
 #include "GDxSceneObject.h"
+#include "GDxInputLayout.h"
+#include "GDxShaderManager.h"
 
 #include <WindowsX.h>
 
@@ -254,18 +256,37 @@ void GDxRenderer::UpdateLightCB(const GGiGameTimer* gt)
 	lightCB.dirLight[1].Direction[0] = -0.57735f;
 	lightCB.dirLight[1].Direction[1] = -0.57735f;
 	lightCB.dirLight[1].Direction[2] = -0.57735f;
-	lightCB.dirLight[1].DiffuseColor = XMFLOAT4(0.3f, 0.3f, 0.3f, 1.0f);
-	lightCB.dirLight[1].AmbientColor = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
+	lightCB.dirLight[1].DiffuseColor[0] = 0.3f;
+	lightCB.dirLight[1].DiffuseColor[1] = 0.3f;
+	lightCB.dirLight[1].DiffuseColor[2] = 0.3f;
+	lightCB.dirLight[1].DiffuseColor[3] = 1.0f;
+	lightCB.dirLight[1].AmbientColor[0] = 0.0f;
+	lightCB.dirLight[1].AmbientColor[1] = 0.0f;
+	lightCB.dirLight[1].AmbientColor[2] = 0.0f;
+	lightCB.dirLight[1].AmbientColor[3] = 1.0f;
 	lightCB.dirLight[1].Intensity = 3.0f;
 
-	lightCB.dirLight[2].Direction = XMFLOAT3(0.0f, -0.707f, 0.707f);
-	lightCB.dirLight[2].DiffuseColor = XMFLOAT4(0.1f, 0.1f, 0.1f, 1.0f);
-	lightCB.dirLight[2].AmbientColor = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
+	lightCB.dirLight[2].Direction[0] = 0.0;
+	lightCB.dirLight[2].Direction[1] = -0.707f;
+	lightCB.dirLight[2].Direction[2] = 0.707f;
+	lightCB.dirLight[2].DiffuseColor[0] = 0.1f;
+	lightCB.dirLight[2].DiffuseColor[1] = 0.1f;
+	lightCB.dirLight[2].DiffuseColor[2] = 0.1f;
+	lightCB.dirLight[2].DiffuseColor[3] = 1.0f;
+	lightCB.dirLight[2].AmbientColor[0] = 0.0f;
+	lightCB.dirLight[2].AmbientColor[1] = 0.0f;
+	lightCB.dirLight[2].AmbientColor[2] = 0.0f;
+	lightCB.dirLight[2].AmbientColor[3] = 1.0f;
 	lightCB.dirLight[2].Intensity = 3.0f;
 
-	lightCB.pointLight[0].Color = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0);
+	lightCB.pointLight[0].Color[0] = 1.0f;
+	lightCB.pointLight[0].Color[1] = 1.0f;
+	lightCB.pointLight[0].Color[2] = 1.0f;
+	lightCB.pointLight[0].Color[3] = 1.0f;
 	lightCB.pointLight[0].Intensity = 100.0f;
-	lightCB.pointLight[0].Position = XMFLOAT3(0.0f, -4.0f, 0.0f);
+	lightCB.pointLight[0].Position[0] = 0.0f;
+	lightCB.pointLight[0].Position[1] = -4.0f;
+	lightCB.pointLight[0].Position[2] = 0.0f;
 	lightCB.pointLight[0].Range = 100.0f;
 
 	lightCB.dirLightCount = 3;
@@ -1182,7 +1203,7 @@ void GDxRenderer::BuildDescriptorHeaps()
 			prop.mClearColor[3] = rtvClearColor[i][3];
 			propVec.push_back(prop);
 		}
-		auto gBufferRtvHeap = std::make_unique<GRtvHeap>(md3dDevice.Get(), mClientWidth, mClientHeight, GetCpuSrv(mGBufferSrvIndex), GetGpuSrv(mGBufferSrvIndex), propVec);
+		auto gBufferRtvHeap = std::make_unique<GDxRtvHeap>(md3dDevice.Get(), mClientWidth, mClientHeight, GetCpuSrv(mGBufferSrvIndex), GetGpuSrv(mGBufferSrvIndex), propVec);
 		mRtvHeaps["GBuffer"] = std::move(gBufferRtvHeap);
 	}
 
@@ -1211,7 +1232,7 @@ void GDxRenderer::BuildDescriptorHeaps()
 			prop.mClearColor[3] = rtvClearColor[i][3];
 			propVec.push_back(prop);
 		}
-		auto gBufferRtvHeap = std::make_unique<GRtvHeap>(md3dDevice.Get(), mClientWidth, mClientHeight, GetCpuSrv(mLightPassSrvIndex), GetGpuSrv(mLightPassSrvIndex), propVec);
+		auto gBufferRtvHeap = std::make_unique<GDxRtvHeap>(md3dDevice.Get(), mClientWidth, mClientHeight, GetCpuSrv(mLightPassSrvIndex), GetGpuSrv(mLightPassSrvIndex), propVec);
 		mRtvHeaps["LightPass"] = std::move(gBufferRtvHeap);
 	}
 
@@ -1226,7 +1247,7 @@ void GDxRenderer::BuildDescriptorHeaps()
 		prop.mClearColor[2] = 0;
 		prop.mClearColor[3] = 1;
 
-		auto gIrradianceCubemap = std::make_unique<GCubeRtv>(md3dDevice.Get(), 2048, GetCpuSrv(mIblIndex), GetGpuSrv(mIblIndex), prop);
+		auto gIrradianceCubemap = std::make_unique<GDxCubeRtv>(md3dDevice.Get(), 2048, GetCpuSrv(mIblIndex), GetGpuSrv(mIblIndex), prop);
 		mCubeRtvs["Irradiance"] = std::move(gIrradianceCubemap);
 	}
 
@@ -1257,7 +1278,7 @@ void GDxRenderer::BuildDescriptorHeaps()
 		prop.mClearColor[2] = 0;
 		prop.mClearColor[3] = 1;
 
-		auto gPrefilterCubemap = std::make_unique<GCubeRtv>(md3dDevice.Get(), (UINT)(2048 / pow(2, i)), GetCpuSrv(mIblIndex + 2 + i), GetGpuSrv(mIblIndex + 2 + i), prop);
+		auto gPrefilterCubemap = std::make_unique<GDxCubeRtv>(md3dDevice.Get(), (UINT)(2048 / pow(2, i)), GetCpuSrv(mIblIndex + 2 + i), GetGpuSrv(mIblIndex + 2 + i), prop);
 		mCubeRtvs["Prefilter_" + std::to_string(i)] = std::move(gPrefilterCubemap);
 	}
 
@@ -1418,10 +1439,10 @@ void GDxRenderer::BuildPSOs()
 
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC gBufferPsoDesc;
 	ZeroMemory(&gBufferPsoDesc, sizeof(gBufferPsoDesc));
-	gBufferPsoDesc.VS = GShaderManager::LoadShader(L"Shaders\\DefaultVS.cso");
-	gBufferPsoDesc.PS = GShaderManager::LoadShader(L"Shaders\\DeferredPS.cso");
-	gBufferPsoDesc.InputLayout.pInputElementDescs = GInputLayout::DefaultLayout;
-	gBufferPsoDesc.InputLayout.NumElements = _countof(GInputLayout::DefaultLayout);
+	gBufferPsoDesc.VS = GDxShaderManager::LoadShader(L"Shaders\\DefaultVS.cso");
+	gBufferPsoDesc.PS = GDxShaderManager::LoadShader(L"Shaders\\DeferredPS.cso");
+	gBufferPsoDesc.InputLayout.pInputElementDescs = GDxInputLayout::DefaultLayout;
+	gBufferPsoDesc.InputLayout.NumElements = _countof(GDxInputLayout::DefaultLayout);
 	gBufferPsoDesc.pRootSignature = mRootSignatures["GBuffer"].Get();
 	//gBufferPsoDesc.pRootSignature = mRootSignatures["Forward"].Get();
 	gBufferPsoDesc.DepthStencilState = gBufferDSD;
@@ -1476,14 +1497,14 @@ void GDxRenderer::BuildPSOs()
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC descPipelineState;
 	ZeroMemory(&descPipelineState, sizeof(descPipelineState));
 
-	descPipelineState.VS = GShaderManager::LoadShader(L"Shaders\\FullScreenVS.cso");
-	descPipelineState.PS = GShaderManager::LoadShader(L"Shaders\\DirectLightPassPS.cso");
+	descPipelineState.VS = GDxShaderManager::LoadShader(L"Shaders\\FullScreenVS.cso");
+	descPipelineState.PS = GDxShaderManager::LoadShader(L"Shaders\\DirectLightPassPS.cso");
 	descPipelineState.pRootSignature = mRootSignatures["LightPass"].Get();
 	descPipelineState.BlendState = blendState;
 	descPipelineState.DepthStencilState = lightPassDSD;
 	descPipelineState.DepthStencilState.DepthEnable = false;
-	descPipelineState.InputLayout.pInputElementDescs = GInputLayout::DefaultLayout;
-	descPipelineState.InputLayout.NumElements = _countof(GInputLayout::DefaultLayout);
+	descPipelineState.InputLayout.pInputElementDescs = GDxInputLayout::DefaultLayout;
+	descPipelineState.InputLayout.NumElements = _countof(GDxInputLayout::DefaultLayout);
 	descPipelineState.RasterizerState = rasterizer;
 	descPipelineState.NumRenderTargets = 1;
 	descPipelineState.RTVFormats[0] = mRtvHeaps["LightPass"]->mRtv[0]->mProperties.mRtvFormat;
@@ -1529,14 +1550,14 @@ void GDxRenderer::BuildPSOs()
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC descAmbientPSO;
 	ZeroMemory(&descAmbientPSO, sizeof(descAmbientPSO));
 
-	descAmbientPSO.VS = GShaderManager::LoadShader(L"Shaders\\FullScreenVS.cso");
-	descAmbientPSO.PS = GShaderManager::LoadShader(L"Shaders\\AmbientPassPS.cso");
+	descAmbientPSO.VS = GDxShaderManager::LoadShader(L"Shaders\\FullScreenVS.cso");
+	descAmbientPSO.PS = GDxShaderManager::LoadShader(L"Shaders\\AmbientPassPS.cso");
 	descAmbientPSO.pRootSignature = mRootSignatures["LightPass"].Get();
 	descAmbientPSO.BlendState = ambientBlendState;
 	descAmbientPSO.DepthStencilState = ambientPassDSD;
 	descAmbientPSO.DepthStencilState.DepthEnable = false;
-	descAmbientPSO.InputLayout.pInputElementDescs = GInputLayout::DefaultLayout;
-	descAmbientPSO.InputLayout.NumElements = _countof(GInputLayout::DefaultLayout);
+	descAmbientPSO.InputLayout.pInputElementDescs = GDxInputLayout::DefaultLayout;
+	descAmbientPSO.InputLayout.NumElements = _countof(GDxInputLayout::DefaultLayout);
 	descAmbientPSO.RasterizerState = ambientRasterizer;
 	descAmbientPSO.NumRenderTargets = 1;
 	descAmbientPSO.RTVFormats[0] = mRtvHeaps["LightPass"]->mRtv[0]->mProperties.mRtvFormat;
@@ -1570,8 +1591,8 @@ void GDxRenderer::BuildPSOs()
 	ZeroMemory(&PostProcessPsoDesc, sizeof(D3D12_GRAPHICS_PIPELINE_STATE_DESC));
 	PostProcessPsoDesc.InputLayout = { mInputLayout.data(), (UINT)mInputLayout.size() };
 	PostProcessPsoDesc.pRootSignature = mRootSignatures["PostProcess"].Get();
-	PostProcessPsoDesc.VS = GShaderManager::LoadShader(L"Shaders\\FullScreenVS.cso");
-	PostProcessPsoDesc.PS = GShaderManager::LoadShader(L"Shaders\\PostProcessPS.cso");
+	PostProcessPsoDesc.VS = GDxShaderManager::LoadShader(L"Shaders\\FullScreenVS.cso");
+	PostProcessPsoDesc.PS = GDxShaderManager::LoadShader(L"Shaders\\PostProcessPS.cso");
 	PostProcessPsoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
 	PostProcessPsoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
 	PostProcessPsoDesc.DepthStencilState = postProcessDSD;
@@ -1623,8 +1644,8 @@ void GDxRenderer::BuildPSOs()
 
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC debugPsoDesc = basePsoDesc;
 	debugPsoDesc.pRootSignature = mRootSignatures["GBufferDebug"].Get();
-	debugPsoDesc.VS = GShaderManager::LoadShader(L"Shaders\\ScreenVS.cso");
-	debugPsoDesc.PS = GShaderManager::LoadShader(L"Shaders\\GBufferDebugPS.cso");
+	debugPsoDesc.VS = GDxShaderManager::LoadShader(L"Shaders\\ScreenVS.cso");
+	debugPsoDesc.PS = GDxShaderManager::LoadShader(L"Shaders\\GBufferDebugPS.cso");
 	debugPsoDesc.DepthStencilState = gBufferDebugDSD;
 	ThrowIfFailed(md3dDevice->CreateGraphicsPipelineState(&debugPsoDesc, IID_PPV_ARGS(&mPSOs["GBufferDebug"])));
 
@@ -1655,8 +1676,8 @@ void GDxRenderer::BuildPSOs()
 	skyPsoDesc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
 	skyPsoDesc.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
 	skyPsoDesc.pRootSignature = mRootSignatures["Sky"].Get();
-	skyPsoDesc.VS = GShaderManager::LoadShader(L"Shaders\\SkyVS.cso");
-	skyPsoDesc.PS = GShaderManager::LoadShader(L"Shaders\\SkyPS.cso");
+	skyPsoDesc.VS = GDxShaderManager::LoadShader(L"Shaders\\SkyVS.cso");
+	skyPsoDesc.PS = GDxShaderManager::LoadShader(L"Shaders\\SkyPS.cso");
 	ThrowIfFailed(md3dDevice->CreateGraphicsPipelineState(&skyPsoDesc, IID_PPV_ARGS(&mPSOs["Sky"])));
 
 	//
@@ -1686,8 +1707,8 @@ void GDxRenderer::BuildPSOs()
 	irradiancePsoDesc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
 	irradiancePsoDesc.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
 	irradiancePsoDesc.pRootSignature = mRootSignatures["Sky"].Get();
-	irradiancePsoDesc.VS = GShaderManager::LoadShader(L"Shaders\\SkyVS.cso");
-	irradiancePsoDesc.PS = GShaderManager::LoadShader(L"Shaders\\IrradianceCubemapPS.cso");
+	irradiancePsoDesc.VS = GDxShaderManager::LoadShader(L"Shaders\\SkyVS.cso");
+	irradiancePsoDesc.PS = GDxShaderManager::LoadShader(L"Shaders\\IrradianceCubemapPS.cso");
 	ThrowIfFailed(md3dDevice->CreateGraphicsPipelineState(&irradiancePsoDesc, IID_PPV_ARGS(&mPSOs["Irradiance"])));
 
 	//
@@ -1717,8 +1738,8 @@ void GDxRenderer::BuildPSOs()
 	prefilterPsoDesc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
 	prefilterPsoDesc.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
 	prefilterPsoDesc.pRootSignature = mRootSignatures["Sky"].Get();
-	prefilterPsoDesc.VS = GShaderManager::LoadShader(L"Shaders\\SkyVS.cso");
-	prefilterPsoDesc.PS = GShaderManager::LoadShader(L"Shaders\\PrefilterCubemapPS.cso");
+	prefilterPsoDesc.VS = GDxShaderManager::LoadShader(L"Shaders\\SkyVS.cso");
+	prefilterPsoDesc.PS = GDxShaderManager::LoadShader(L"Shaders\\PrefilterCubemapPS.cso");
 	ThrowIfFailed(md3dDevice->CreateGraphicsPipelineState(&prefilterPsoDesc, IID_PPV_ARGS(&mPSOs["Prefilter"])));
 
 }
@@ -1727,7 +1748,7 @@ void GDxRenderer::BuildFrameResources()
 {
 	for (int i = 0; i < NUM_FRAME_RESOURCES; ++i)
 	{
-		mFrameResources.push_back(std::make_unique<FrameResource>(md3dDevice.Get(),
+		mFrameResources.push_back(std::make_unique<GDxFrameResource>(md3dDevice.Get(),
 			2, (UINT)pSceneObjects.size(), (UINT)pMaterials.size()));
 	}
 }
@@ -2028,7 +2049,7 @@ void GDxRenderer::CubemapPreIntegration()
 	for (auto i = 0u; i < (6 * mPrefilterLevels); i++)
 	{
 
-		PreIntegrationPassCbs.push_back(std::make_unique<UploadBuffer<SkyPassConstants>>(md3dDevice.Get(), 1, true));
+		PreIntegrationPassCbs.push_back(std::make_unique<GDxUploadBuffer<SkyPassConstants>>(md3dDevice.Get(), 1, true));
 	}
 
 	ID3D12DescriptorHeap* descriptorHeaps[] = { mSrvDescriptorHeap.Get() };
@@ -2193,7 +2214,7 @@ void GDxRenderer::DrawSceneObject(ID3D12GraphicsCommandList* cmdList, GRiSceneOb
 
 	if (bSetCBV)
 	{
-		UINT objCBByteSize = GDX12Util::CalcConstantBufferByteSize(sizeof(ObjectConstants));
+		UINT objCBByteSize = GDxUtil::CalcConstantBufferByteSize(sizeof(ObjectConstants));
 		auto objectCB = mCurrFrameResource->ObjectCB->Resource();
 		D3D12_GPU_VIRTUAL_ADDRESS objCBAddress = objectCB->GetGPUVirtualAddress() + sObject->ObjIndex * objCBByteSize;
 		cmdList->SetGraphicsRootConstantBufferView(0, objCBAddress);
@@ -2744,7 +2765,7 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 
 			mCommandList->SetPipelineState(mPSOs["GBuffer"].Get());
 
-			UINT objCBByteSize = GDX12Util::CalcConstantBufferByteSize(sizeof(ObjectConstants));
+			UINT objCBByteSize = GDxUtil::CalcConstantBufferByteSize(sizeof(ObjectConstants));
 			auto objectCB = mCurrFrameResource->ObjectCB->Resource();
 
 			auto passCB = mCurrFrameResource->PassCB->Resource();
@@ -2883,7 +2904,7 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 
 			mCommandList->SetPipelineState(mPSOs["GBufferDebug"].Get());
 
-			UINT objCBByteSize = GDX12Util::CalcConstantBufferByteSize(sizeof(ObjectConstants));
+			UINT objCBByteSize = GDxUtil::CalcConstantBufferByteSize(sizeof(ObjectConstants));
 			auto objectCB = mCurrFrameResource->ObjectCB->Resource();
 
 			mCommandList->SetGraphicsRootDescriptorTable(1, mRtvHeaps["GBuffer"]->GetSrvGpuStart());

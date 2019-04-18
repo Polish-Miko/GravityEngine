@@ -1,3 +1,3 @@
 #include "stdafx.h"
-#include "GInputLayout.h"
+#include "GDxInputLayout.h"
 

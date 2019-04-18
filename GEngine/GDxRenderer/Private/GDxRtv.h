@@ -14,12 +14,12 @@ struct GRtvProperties
 	FLOAT mClearColor[4] = { 0,0,0,0 };
 };
 
-class GRtv
+class GDxRtv
 {
 
 public:
 
-	GRtv(GRtvProperties prop, UINT ClientWidth, UINT ClientHeight, bool ScaledByViewport = true)
+	GDxRtv(GRtvProperties prop, UINT ClientWidth, UINT ClientHeight, bool ScaledByViewport = true)
 	{
 		mProperties = prop;
 
@@ -38,7 +38,7 @@ public:
 		}
 	}
 
-	~GRtv(){}
+	~GDxRtv(){}
 
 	void OnResize(UINT ClientWidth, UINT ClientHeight)
 	{

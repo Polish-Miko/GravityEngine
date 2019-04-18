@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "GShaderManager.h"
+#include "GDxShaderManager.h"
 
 /*
 GShaderManager::GShaderManager()
@@ -12,7 +12,7 @@ GShaderManager::~GShaderManager()
 }
 */
 
-Microsoft::WRL::ComPtr<ID3DBlob> GShaderManager::CompileShader(
+Microsoft::WRL::ComPtr<ID3DBlob> GDxShaderManager::CompileShader(
 	const std::wstring& filename,
 	const D3D_SHADER_MACRO* defines,
 	const std::string& entrypoint,
@@ -38,7 +38,7 @@ Microsoft::WRL::ComPtr<ID3DBlob> GShaderManager::CompileShader(
 	return byteCode;
 }
 
-D3D12_SHADER_BYTECODE GShaderManager::LoadShader(std::wstring shaderCsoFile)
+D3D12_SHADER_BYTECODE GDxShaderManager::LoadShader(std::wstring shaderCsoFile)
 {
 	ID3DBlob* shaderBlob;
 	ThrowIfFailed(D3DReadFileToBlob(shaderCsoFile.c_str(), &shaderBlob));

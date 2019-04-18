@@ -9,7 +9,7 @@
 
 //#include "GUtilInclude.h"
 #include "GDxPreInclude.h"
-#include "FrameResource.h"
+#include "GDxFrameResource.h"
 
 
 class Ssao
@@ -67,7 +67,7 @@ public:
 	///</summary>
 	void ComputeSsao(
 		ID3D12GraphicsCommandList* cmdList,
-		FrameResource* currFrame,
+		GDxFrameResource* currFrame,
 		int blurCount);
 
 
@@ -78,7 +78,7 @@ private:
 	/// few random samples per pixel.  We use an edge preserving blur so that 
 	/// we do not blur across discontinuities--we want edges to remain edges.
 	///</summary>
-	void BlurAmbientMap(ID3D12GraphicsCommandList* cmdList, FrameResource* currFrame, int blurCount);
+	void BlurAmbientMap(ID3D12GraphicsCommandList* cmdList, GDxFrameResource* currFrame, int blurCount);
 	void BlurAmbientMap(ID3D12GraphicsCommandList* cmdList, bool horzBlur);
 
 	void BuildResources();

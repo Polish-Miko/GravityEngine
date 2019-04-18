@@ -3,11 +3,11 @@
 //#include "GUtilInclude.h"
 #include "GDxPreInclude.h"
 
-class GDX12Util
+class GDxUtil
 {
 public:
-	GDX12Util() {}
-	~GDX12Util() {}
+	GDxUtil() {}
+	~GDxUtil() {}
 
 	static bool IsKeyDown(int vkeyCode);
 

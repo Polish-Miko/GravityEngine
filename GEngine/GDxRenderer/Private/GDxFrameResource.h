@@ -2,8 +2,8 @@
 
 //#include "GUtilInclude.h"
 #include "GDxPreInclude.h"
-#include "MathHelper.h"
-#include "UploadBuffer.h"
+#include "GDxMathHelper.h"
+#include "GDxUploadBuffer.h"
 #include "GLight.h"
 //#include "GMaterial.h"
 //#include "GDirectionalLight.h"
@@ -17,8 +17,8 @@
 
 struct ObjectConstants
 {
-	DirectX::XMFLOAT4X4 World = MathHelper::Identity4x4();
-	DirectX::XMFLOAT4X4 TexTransform = MathHelper::Identity4x4();
+	DirectX::XMFLOAT4X4 World = GDxMathHelper::Identity4x4();
+	DirectX::XMFLOAT4X4 TexTransform = GDxMathHelper::Identity4x4();
 	UINT     MaterialIndex;
 	UINT     ObjPad0;
 	UINT     ObjPad1;
@@ -27,14 +27,14 @@ struct ObjectConstants
 
 struct PassConstants
 {
-	DirectX::XMFLOAT4X4 View = MathHelper::Identity4x4();
-	DirectX::XMFLOAT4X4 InvView = MathHelper::Identity4x4();
-	DirectX::XMFLOAT4X4 Proj = MathHelper::Identity4x4();
-	DirectX::XMFLOAT4X4 InvProj = MathHelper::Identity4x4();
-	DirectX::XMFLOAT4X4 ViewProj = MathHelper::Identity4x4();
-	DirectX::XMFLOAT4X4 InvViewProj = MathHelper::Identity4x4();
-	DirectX::XMFLOAT4X4 ViewProjTex = MathHelper::Identity4x4();
-	DirectX::XMFLOAT4X4 ShadowTransform = MathHelper::Identity4x4();
+	DirectX::XMFLOAT4X4 View = GDxMathHelper::Identity4x4();
+	DirectX::XMFLOAT4X4 InvView = GDxMathHelper::Identity4x4();
+	DirectX::XMFLOAT4X4 Proj = GDxMathHelper::Identity4x4();
+	DirectX::XMFLOAT4X4 InvProj = GDxMathHelper::Identity4x4();
+	DirectX::XMFLOAT4X4 ViewProj = GDxMathHelper::Identity4x4();
+	DirectX::XMFLOAT4X4 InvViewProj = GDxMathHelper::Identity4x4();
+	DirectX::XMFLOAT4X4 ViewProjTex = GDxMathHelper::Identity4x4();
+	DirectX::XMFLOAT4X4 ShadowTransform = GDxMathHelper::Identity4x4();
 	DirectX::XMFLOAT3 EyePosW = { 0.0f, 0.0f, 0.0f };
 	float cbPerObjectPad1 = 0.0f;
 	DirectX::XMFLOAT2 RenderTargetSize = { 0.0f, 0.0f };
@@ -68,7 +68,7 @@ struct LightConstants
 
 struct SkyPassConstants
 {
-	DirectX::XMFLOAT4X4 ViewProj = MathHelper::Identity4x4();
+	DirectX::XMFLOAT4X4 ViewProj = GDxMathHelper::Identity4x4();
 	DirectX::XMFLOAT3 EyePosW = { 0.0f, 0.0f, 0.0f };
 	float roughness = 0.0f;
 };
@@ -95,7 +95,7 @@ struct SsaoConstants
 struct MaterialData
 {
 	// Used in texture mapping.
-	DirectX::XMFLOAT4X4 MatTransform = MathHelper::Identity4x4();
+	DirectX::XMFLOAT4X4 MatTransform = GDxMathHelper::Identity4x4();
 
 	UINT TextureIndex[MATERIAL_MAX_TEXTURE_NUM];
 	//UINT TextureSrgb[MATERIAL_MAX_TEXTURE_NUM];
@@ -123,14 +123,14 @@ struct Vertex
 
 // Stores the resources needed for the CPU to build the command lists
 // for a frame.  
-struct FrameResource
+struct GDxFrameResource
 {
 public:
 
-	FrameResource(ID3D12Device* device, UINT passCount, UINT objectCount, UINT materialCount);
-	FrameResource(const FrameResource& rhs) = delete;
-	FrameResource& operator=(const FrameResource& rhs) = delete;
-	~FrameResource();
+	GDxFrameResource(ID3D12Device* device, UINT passCount, UINT objectCount, UINT materialCount);
+	GDxFrameResource(const GDxFrameResource& rhs) = delete;
+	GDxFrameResource& operator=(const GDxFrameResource& rhs) = delete;
+	~GDxFrameResource();
 
 	// We cannot reset the allocator until the GPU is done processing the commands.
 	// So each frame needs their own allocator.
@@ -138,13 +138,13 @@ public:
 
 	// We cannot update a cbuffer until the GPU is done processing the commands
 	// that reference it.  So each frame needs their own cbuffers.
-	std::unique_ptr<UploadBuffer<PassConstants>> PassCB = nullptr;
-	std::unique_ptr<UploadBuffer<ObjectConstants>> ObjectCB = nullptr;
-	std::unique_ptr<UploadBuffer<SsaoConstants>> SsaoCB = nullptr;
-	std::unique_ptr<UploadBuffer<LightConstants>> LightCB = nullptr;
-	std::unique_ptr<UploadBuffer<SkyPassConstants>> SkyCB = nullptr;
+	std::unique_ptr<GDxUploadBuffer<PassConstants>> PassCB = nullptr;
+	std::unique_ptr<GDxUploadBuffer<ObjectConstants>> ObjectCB = nullptr;
+	std::unique_ptr<GDxUploadBuffer<SsaoConstants>> SsaoCB = nullptr;
+	std::unique_ptr<GDxUploadBuffer<LightConstants>> LightCB = nullptr;
+	std::unique_ptr<GDxUploadBuffer<SkyPassConstants>> SkyCB = nullptr;
 
-	std::unique_ptr<UploadBuffer<MaterialData>> MaterialBuffer = nullptr;
+	std::unique_ptr<GDxUploadBuffer<MaterialData>> MaterialBuffer = nullptr;
 
 	// Fence value to mark commands up to this fence point.  This lets us
 	// check if these frame resources are still in use by the GPU.

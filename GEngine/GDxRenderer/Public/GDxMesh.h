@@ -1,6 +1,6 @@
 #pragma once
 #include "GDxPreInclude.h"
-#include "GVertexIndexBuffer.h"
+#include "GDxVertexIndexBuffer.h"
 
 
 class GDxMesh : public GRiMesh
@@ -15,7 +15,7 @@ public:
 
 	void Create(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, std::vector<GRiMeshData> meshData);
 
-	std::shared_ptr<GVertexIndexBuffer> mVIBuffer;
+	std::shared_ptr<GDxVertexIndexBuffer> mVIBuffer;
 
 };
 

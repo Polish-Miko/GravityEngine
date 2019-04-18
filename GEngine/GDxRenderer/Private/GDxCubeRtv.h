@@ -1,30 +1,30 @@
 #pragma once
 
-#include "GRtv.h"
-#include "GDescriptorHeap.h"
+#include "GDxRtv.h"
+#include "GDxDescriptorHeap.h"
 
-class GCubeRtv
+class GDxCubeRtv
 {
 public:
-	GCubeRtv() = delete;
+	GDxCubeRtv() = delete;
 
-	GCubeRtv(ID3D12Device* device, UINT CubemapSize,
+	GDxCubeRtv(ID3D12Device* device, UINT CubemapSize,
 		//UINT MipLevels,
 		CD3DX12_CPU_DESCRIPTOR_HANDLE cpuSrv,
 		CD3DX12_GPU_DESCRIPTOR_HANDLE gpuSrv,
 		GRtvProperties gRtvProperties);
 
-	GCubeRtv(const GCubeRtv& rhs) = delete;
+	GDxCubeRtv(const GDxCubeRtv& rhs) = delete;
 
-	GCubeRtv& operator=(const GCubeRtv& rhs) = delete;
+	GDxCubeRtv& operator=(const GDxCubeRtv& rhs) = delete;
 
-	~GCubeRtv() = default;
+	~GDxCubeRtv() = default;
 
 	void BuildResources();
 
 	void BuildDescriptors();
 
-	GDescriptorHeap mRtvHeap;
+	GDxDescriptorHeap mRtvHeap;
 
 	CD3DX12_GPU_DESCRIPTOR_HANDLE GetSrvGpu();
 

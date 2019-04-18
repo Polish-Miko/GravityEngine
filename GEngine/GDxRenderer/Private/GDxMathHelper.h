@@ -10,7 +10,7 @@
 #include <DirectXMath.h>
 #include <cstdint>
 
-class MathHelper
+class GDxMathHelper
 {
 public:
 	// Returns random float in [0, 1).

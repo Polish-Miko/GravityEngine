@@ -3,11 +3,11 @@
 //#include "GUtilInclude.h"
 #include "GDxPreInclude.h"
 
-class GShaderManager
+class GDxShaderManager
 {
 public:
-	GShaderManager(){}
-	~GShaderManager(){}
+	GDxShaderManager(){}
+	~GDxShaderManager(){}
 
 	static D3D12_SHADER_BYTECODE LoadShader(std::wstring shaderCsoFile);
 
