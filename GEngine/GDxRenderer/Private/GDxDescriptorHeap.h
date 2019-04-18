@@ -42,13 +42,6 @@ public:
 	}
 	operator ID3D12DescriptorHeap*() { return pDescriptorHeap.Get(); }
 
-	//size_t MakeOffsetted(size_t ptr, UINT index)
-	//{
-	//	size_t offsetted;
-	//	offsetted = ptr + static_cast<size_t>(index * HandleIncrementSize);
-	//	return offsetted;
-	//}
-
 	UINT64 MakeOffsetted(UINT64 ptr, UINT index)
 	{
 		UINT64 offsetted;

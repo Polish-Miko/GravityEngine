@@ -11,15 +11,10 @@
 #endif
 
 #include "GRiInclude.h"
-//#include "GDxPreInclude.h"
-//#include "GEngineInclude.h"
 #include "GDxUploadBuffer.h"
-//#include "GeometryGenerator.h"
 #include "GDxFrameResource.h"
 #include "GDxCubeRtv.h"
 #include "GDxRtvHeap.h"
-//#include "ShadowMap.h"
-//#include "Ssao.h"
 
 // Link necessary d3d12 libraries.
 #pragma comment(lib,"d3dcompiler.lib")

@@ -2,7 +2,7 @@
 
 //#include "GUtilInclude.h"
 #include "GDxPreInclude.h"
-#include "GVertex.h"
+//#include "GVertex.h"
 
 class GDxVertexIndexBuffer
 {

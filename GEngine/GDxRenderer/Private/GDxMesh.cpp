@@ -2,16 +2,8 @@
 #include "GDxMesh.h"
 #include "GDxStaticVIBuffer.h"
 
-/*
-GDxMesh::GDxMesh()
-{
-}
 
 
-GDxMesh::~GDxMesh()
-{
-}
-*/
 
 
 GDxMesh::GDxMesh(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, std::vector<GRiMeshData> meshData)

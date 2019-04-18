@@ -23,7 +23,6 @@
 #include <cassert>
 #include "d3dx12.h"
 #include "DDSTextureLoader.h"
-//#include "GDxMathHelper.h"
 #include "ResourceUploadBatch.h"
 #include <WICTextureLoader.h>
 #include <fbxsdk.h>
@@ -134,23 +133,8 @@ public:
     throw DxException(0, wInfo, wfn, __LINE__);					      \
 }
 #endif
-/*
-inline void ThrowDxException(std::wstring wFunctionName)
-{
-	std::wstring wfn = AnsiToWString(__FILE__);
-	throw DxException(0, wFunctionName, wfn, __LINE__);
-}
-*/
 
 #ifndef ReleaseCom
 #define ReleaseCom(x) { if(x){ x->Release(); x = 0; } }
 #endif
 
-/*
-class WinInclude
-{
-public:
-	WinInclude();
-	~WinInclude();
-};
-*/

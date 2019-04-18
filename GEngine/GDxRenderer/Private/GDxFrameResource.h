@@ -1,16 +1,10 @@
 #pragma once
 
-//#include "GUtilInclude.h"
 #include "GDxPreInclude.h"
 #include "GDxMathHelper.h"
 #include "GDxUploadBuffer.h"
-#include "GLight.h"
-//#include "GMaterial.h"
-//#include "GDirectionalLight.h"
-//#include "GPointLight.h"
-//#include "GSpotlight.h"
 
-// should be the same with Lighting.hlsli
+// should be the same with the definition in Lighting.hlsli
 #define MAX_DIRECTIONAL_LIGHT_NUM 4
 #define MAX_POINT_LIGHT_NUM 16
 #define MAX_SPOTLIGHT_NUM 16
@@ -45,25 +39,15 @@ struct PassConstants
 	float DeltaTime = 0.0f;
 
 	DirectX::XMFLOAT4 AmbientLight = { 0.0f, 0.0f, 0.0f, 1.0f };
-
-	// Indices [0, NUM_DIR_LIGHTS) are directional lights;
-	// indices [NUM_DIR_LIGHTS, NUM_DIR_LIGHTS+NUM_POINT_LIGHTS) are point lights;
-	// indices [NUM_DIR_LIGHTS+NUM_POINT_LIGHTS, NUM_DIR_LIGHTS+NUM_POINT_LIGHT+NUM_SPOT_LIGHTS)
-	// are spot lights for a maximum of MaxLights per object.
-	//GLight Lights[MaxLights];
 };
 
 struct LightConstants
 {
 	GRiDirectionalLight dirLight[MAX_DIRECTIONAL_LIGHT_NUM];
 	GRiPointLight pointLight[MAX_POINT_LIGHT_NUM];
-	//GSpotlight spotLight[MAX_SPOTLIGHT_NUM];
-	//DirectX::XMFLOAT4X4 invProjView;
 	DirectX::XMFLOAT3 cameraPosition;
 	int pointLightCount;
-	//int pointLightIndex;
 	int dirLightCount;
-	//int dirLightIndex;
 };
 
 struct SkyPassConstants
@@ -101,16 +85,6 @@ struct MaterialData
 	//UINT TextureSrgb[MATERIAL_MAX_TEXTURE_NUM];
 	float ScalarParams[MATERIAL_MAX_SCALAR_NUM];
 	DirectX::XMFLOAT4 VectorParams[MATERIAL_MAX_VECTOR_NUM];
-
-	//DirectX::XMFLOAT4 DiffuseAlbedo = { 1.0f, 1.0f, 1.0f, 1.0f };
-	//DirectX::XMFLOAT3 FresnelR0 = { 0.01f, 0.01f, 0.01f };
-	//float Roughness = 0.5f;
-
-
-	//UINT DiffuseMapIndex = 0;
-	//UINT NormalMapIndex = 0;
-	//UINT MaterialPad1;
-	//UINT MaterialPad2;
 };
 
 struct Vertex
