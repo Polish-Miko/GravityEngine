@@ -182,9 +182,6 @@
     <ClInclude Include="Common\GEngineInclude.h" />
     <ClInclude Include="Common\GRtvHeap.h" />
     <ClInclude Include="Common\GRtv.h" />
-    <ClInclude Include="Common\GDirectionalLight.h" />
-    <ClInclude Include="Common\GPointLight.h" />
-    <ClInclude Include="Common\GSpotlight.h" />
     <ClInclude Include="Common\GCubeRtv.h" />
     <ClInclude Include="Common\GStaticVIBuffer.h" />
     <ClInclude Include="Common\GVertexIndexBuffer.h" />
@@ -221,9 +218,6 @@
     <ClCompile Include="Common\GEngineInclude.cpp" />
     <ClCompile Include="Common\GRtvHeap.cpp" />
     <ClCompile Include="Common\GRtv.cpp" />
-    <ClCompile Include="Common\GDirectionalLight.cpp" />
-    <ClCompile Include="Common\GPointLight.cpp" />
-    <ClCompile Include="Common\GSpotlight.cpp" />
     <ClCompile Include="Common\GCubeRtv.cpp" />
     <ClCompile Include="Common\GStaticVIBuffer.cpp" />
     <ClCompile Include="Common\GVertexIndexBuffer.cpp" />

@@ -238,12 +238,22 @@ void GDxRenderer::UpdateLightCB(const GGiGameTimer* gt)
 	auto pos = pCamera->GetPosition();
 	lightCB.cameraPosition = DirectX::XMFLOAT3(pos[0], pos[1], pos[2]);
 
-	lightCB.dirLight[0].Direction = XMFLOAT3(0.57735f, -0.57735f, -0.57735f);
-	lightCB.dirLight[0].DiffuseColor = XMFLOAT4(0.7f, 0.7f, 0.6f, 1.0f);
-	lightCB.dirLight[0].AmbientColor = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
+	lightCB.dirLight[0].Direction[0] = 0.57735f;
+	lightCB.dirLight[0].Direction[1] = -0.57735f;
+	lightCB.dirLight[0].Direction[2] = -0.57735f;
+	lightCB.dirLight[0].DiffuseColor[0] = 0.7f;
+	lightCB.dirLight[0].DiffuseColor[1] = 0.7f;
+	lightCB.dirLight[0].DiffuseColor[2] = 0.6f;
+	lightCB.dirLight[0].DiffuseColor[3] = 1.0f;
+	lightCB.dirLight[0].AmbientColor[0] = 0.0f;
+	lightCB.dirLight[0].AmbientColor[1] = 0.0f;
+	lightCB.dirLight[0].AmbientColor[2] = 0.0f;
+	lightCB.dirLight[0].AmbientColor[3] = 1.0f;
 	lightCB.dirLight[0].Intensity = 3.0f;
 
-	lightCB.dirLight[1].Direction = XMFLOAT3(-0.57735f, -0.57735f, -0.57735f);
+	lightCB.dirLight[1].Direction[0] = -0.57735f;
+	lightCB.dirLight[1].Direction[1] = -0.57735f;
+	lightCB.dirLight[1].Direction[2] = -0.57735f;
 	lightCB.dirLight[1].DiffuseColor = XMFLOAT4(0.3f, 0.3f, 0.3f, 1.0f);
 	lightCB.dirLight[1].AmbientColor = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
 	lightCB.dirLight[1].Intensity = 3.0f;

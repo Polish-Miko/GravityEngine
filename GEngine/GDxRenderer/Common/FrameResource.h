@@ -6,9 +6,9 @@
 #include "UploadBuffer.h"
 #include "GLight.h"
 //#include "GMaterial.h"
-#include "GDirectionalLight.h"
-#include "GPointLight.h"
-#include "GSpotlight.h"
+//#include "GDirectionalLight.h"
+//#include "GPointLight.h"
+//#include "GSpotlight.h"
 
 // should be the same with Lighting.hlsli
 #define MAX_DIRECTIONAL_LIGHT_NUM 4
@@ -55,8 +55,8 @@ struct PassConstants
 
 struct LightConstants
 {
-	GDirectionalLight dirLight[MAX_DIRECTIONAL_LIGHT_NUM];
-	GPointLight pointLight[MAX_POINT_LIGHT_NUM];
+	GRiDirectionalLight dirLight[MAX_DIRECTIONAL_LIGHT_NUM];
+	GRiPointLight pointLight[MAX_POINT_LIGHT_NUM];
 	//GSpotlight spotLight[MAX_SPOTLIGHT_NUM];
 	//DirectX::XMFLOAT4X4 invProjView;
 	DirectX::XMFLOAT3 cameraPosition;
