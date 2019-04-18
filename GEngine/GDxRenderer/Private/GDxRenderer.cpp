@@ -6,6 +6,7 @@
 #include "GDxFloat4x4.h"
 #include "GDxFilmboxManager.h"
 #include "GDxMesh.h"
+#include "GDxSceneObject.h"
 
 #include <WindowsX.h>
 
@@ -194,28 +195,36 @@ void GDxRenderer::AnimateMaterials(const GGiGameTimer* gt)
 void GDxRenderer::UpdateObjectCBs(const GGiGameTimer* gt)
 {
 	auto currObjectCB = mCurrFrameResource->ObjectCB.get();
-	for (auto& e : mAllRitems)
+	for (auto& e : pSceneObjects)
 	{
 		// Only update the cbuffer data if the constants have changed.  
 		// This needs to be tracked per frame resource.
-		if (e->NumFramesDirty > 0)
+		if (e.second->NumFramesDirty > 0)
 		{
-			XMMATRIX renderObjectTrans = XMLoadFloat4x4(&e->GetTransform());
+			GDxFloat4x4* dxTrans = dynamic_cast<GDxFloat4x4*>(e.second->GetTransform());
+			if (dxTrans == nullptr)
+				ThrowGGiException("Cast failed from GGiFloat4x4* to GDxFloat4x4*.");
+
+			GDxFloat4x4* dxTexTrans = dynamic_cast<GDxFloat4x4*>(e.second->TexTransform);
+			if (dxTexTrans == nullptr)
+				ThrowGGiException("Cast failed from GGiFloat4x4* to GDxFloat4x4*.");
+			
+			XMMATRIX renderObjectTrans = XMLoadFloat4x4(&(dxTrans->GetValue()));
 			//auto tempSubTrans = e->GetSubmesh().Transform;
 			//XMMATRIX submeshTrans = XMLoadFloat4x4(&tempSubTrans);
-			XMMATRIX texTransform = XMLoadFloat4x4(&e->TexTransform);
+			XMMATRIX texTransform = XMLoadFloat4x4(&(dxTexTrans->GetValue()));
 			//auto world = submeshTrans * renderObjectTrans;
 			auto world = renderObjectTrans;
 
 			ObjectConstants objConstants;
 			XMStoreFloat4x4(&objConstants.World, XMMatrixTranspose(world));
 			XMStoreFloat4x4(&objConstants.TexTransform, XMMatrixTranspose(texTransform));
-			objConstants.MaterialIndex = e->Mat->MatIndex;
+			objConstants.MaterialIndex = e.second->Mat->MatIndex;
 
-			currObjectCB->CopyData(e->ObjCBIndex, objConstants);
+			currObjectCB->CopyData(e.second->ObjIndex, objConstants);
 
 			// Next FrameResource need to be updated too.
-			e->NumFramesDirty--;
+			e.second->NumFramesDirty--;
 		}
 	}
 }
@@ -1686,7 +1695,7 @@ void GDxRenderer::BuildFrameResources()
 	for (int i = 0; i < NUM_FRAME_RESOURCES; ++i)
 	{
 		mFrameResources.push_back(std::make_unique<FrameResource>(md3dDevice.Get(),
-			2, (UINT)mAllRitems.size(), (UINT)pMaterials.size()));
+			2, (UINT)pSceneObjects.size(), (UINT)pMaterials.size()));
 	}
 }
 
@@ -1806,6 +1815,7 @@ void GDxRenderer::BuildMaterials()
 }
 */
 
+/*
 void GDxRenderer::BuildSceneObjects()
 {
 	UINT indexCB = 0;
@@ -1978,6 +1988,7 @@ void GDxRenderer::BuildSceneObjects()
 	mAllRitems.push_back(std::move(sphereRitem2));
 	indexCB++;
 }
+*/
 
 void GDxRenderer::CubemapPreIntegration()
 {
@@ -2008,19 +2019,27 @@ void GDxRenderer::CubemapPreIntegration()
 	// Load object CB.
 	mCurrFrameResource = mFrameResources[0].get();
 	auto currObjectCB = mCurrFrameResource->ObjectCB.get();
-	for (auto& e : mAllRitems)
+	for (auto& e : pSceneObjects)
 	{
+		GDxFloat4x4* dxTrans = dynamic_cast<GDxFloat4x4*>(e.second->GetTransform());
+		if (dxTrans == nullptr)
+			ThrowGGiException("Cast failed from GGiFloat4x4* to GDxFloat4x4*.");
+
+		GDxFloat4x4* dxTexTrans = dynamic_cast<GDxFloat4x4*>(e.second->TexTransform);
+		if (dxTexTrans == nullptr)
+			ThrowGGiException("Cast failed from GGiFloat4x4* to GDxFloat4x4*.");
+
 		// Only update the cbuffer data if the constants have changed.  
 		// This needs to be tracked per frame resource.
-		XMMATRIX world = XMLoadFloat4x4(&e->GetTransform());
-		XMMATRIX texTransform = XMLoadFloat4x4(&e->TexTransform);
+		XMMATRIX world = XMLoadFloat4x4(&(dxTrans->GetValue()));
+		XMMATRIX texTransform = XMLoadFloat4x4(&(dxTexTrans->GetValue()));
 
 		ObjectConstants objConstants;
 		XMStoreFloat4x4(&objConstants.World, XMMatrixTranspose(world));
 		XMStoreFloat4x4(&objConstants.TexTransform, XMMatrixTranspose(texTransform));
-		objConstants.MaterialIndex = e->Mat->MatIndex;
+		objConstants.MaterialIndex = e.second->Mat->MatIndex;
 
-		currObjectCB->CopyData(e->ObjCBIndex, objConstants);
+		currObjectCB->CopyData(e.second->ObjIndex, objConstants);
 	}
 
 	// Load sky pass CB.
@@ -2108,15 +2127,21 @@ void GDxRenderer::CubemapPreIntegration()
 void GDxRenderer::DrawSceneObjects(ID3D12GraphicsCommandList* cmdList, const RenderLayer layer, bool bSetCBV)
 {
 	// For each render item...
-	for (size_t i = 0; i < mSceneObjectLayer[((int)layer)].size(); ++i)
+	for (size_t i = 0; i < pSceneObjectLayer[((int)layer)].size(); ++i)
 	{
-		auto sObject = mSceneObjectLayer[((int)layer)][i];
-		DrawSceneObject(cmdList, sObject.get(), bSetCBV);
+		auto sObject = pSceneObjectLayer[((int)layer)][i];
+		DrawSceneObject(cmdList, sObject, bSetCBV);
 	}
 }
 
-void GDxRenderer::DrawSceneObject(ID3D12GraphicsCommandList* cmdList, const GSceneObject* sObject, bool bSetCBV)
+void GDxRenderer::DrawSceneObject(ID3D12GraphicsCommandList* cmdList, GRiSceneObject* sObject, bool bSetCBV)
 {
+	GDxSceneObject* dxSO = dynamic_cast<GDxSceneObject*>(sObject);
+	if (dxSO == NULL)
+	{
+		ThrowGGiException("Cast failed : from GRiSceneObject* to GDxSceneObject*.")
+	}
+
 	GDxMesh* dxMesh = dynamic_cast<GDxMesh*>(sObject->Mesh);
 	if (dxMesh == NULL)
 	{
@@ -2125,13 +2150,13 @@ void GDxRenderer::DrawSceneObject(ID3D12GraphicsCommandList* cmdList, const GSce
 
 	cmdList->IASetVertexBuffers(0, 1, &dxMesh->mVIBuffer->VertexBufferView());
 	cmdList->IASetIndexBuffer(&dxMesh->mVIBuffer->IndexBufferView());
-	cmdList->IASetPrimitiveTopology(sObject->PrimitiveType);
+	cmdList->IASetPrimitiveTopology(dxSO->PrimitiveType);
 
 	if (bSetCBV)
 	{
 		UINT objCBByteSize = GDX12Util::CalcConstantBufferByteSize(sizeof(ObjectConstants));
 		auto objectCB = mCurrFrameResource->ObjectCB->Resource();
-		D3D12_GPU_VIRTUAL_ADDRESS objCBAddress = objectCB->GetGPUVirtualAddress() + sObject->ObjCBIndex * objCBByteSize;
+		D3D12_GPU_VIRTUAL_ADDRESS objCBAddress = objectCB->GetGPUVirtualAddress() + sObject->ObjIndex * objCBByteSize;
 		cmdList->SetGraphicsRootConstantBufferView(0, objCBAddress);
 	}
 
@@ -2363,7 +2388,7 @@ void GDxRenderer::Initialize(HWND OutputWindow, double width, double height)
 	BuildShadersAndInputLayout();
 	//LoadMeshes();
 	//BuildMaterials();
-	BuildSceneObjects();
+	//BuildSceneObjects();
 	BuildFrameResources();
 	BuildPSOs();
 
@@ -2377,8 +2402,6 @@ void GDxRenderer::Initialize(HWND OutputWindow, double width, double height)
 
 	// Wait until initialization is complete.
 	FlushCommandQueue();
-
-	SetSceneObjectsCallback();
 }
 
 #pragma endregion
@@ -3431,6 +3454,23 @@ void GDxRenderer::SyncMeshes(std::unordered_map<std::wstring, std::unique_ptr<GR
 	}
 }
 
+void GDxRenderer::SyncSceneObjects(std::unordered_map<std::wstring, std::unique_ptr<GRiSceneObject>>& mSceneObjects, std::vector<GRiSceneObject*>* mSceneObjectLayer)
+{
+	pSceneObjects.clear();
+	std::unordered_map<std::wstring, std::unique_ptr<GRiSceneObject>>::iterator i;
+	for (i = mSceneObjects.begin(); i != mSceneObjects.end(); i++)
+	{
+		pSceneObjects[i->first] = i->second.get();
+	}
+	for (size_t layer = 0; layer != (size_t)(RenderLayer::Count); layer++)
+	{
+		for (auto pSObj : mSceneObjectLayer[layer])
+		{
+			pSceneObjectLayer[layer].push_back(pSObj);
+		}
+	}
+}
+
 #pragma region Util
 
 bool GDxRenderer::IsRunning()
@@ -3439,72 +3479,6 @@ bool GDxRenderer::IsRunning()
 		return true;
 	else
 		return false;
-}
-
-#pragma endregion
-
-#pragma region export
-
-int GDxRenderer::GetSceneObjectNum()
-{
-	return (int)(mSceneObjectLayer[(int)RenderLayer::Deferred].size());
-}
-
-const char* GDxRenderer::GetSceneObjectName(int index)
-{
-	//char* cstr = new char[256];
-	//strcpy_s(cstr, 256, mSceneObjectLayer[(int)RenderLayer::Deferred][index]->Name.c_str());
-	//return cstr;
-	return mSceneObjectLayer[(int)RenderLayer::Deferred][index]->Name.c_str();
-}
-
-void GDxRenderer::SetSetSceneObjectsCallback(VoidFuncPointerType pSetSceneObjectsCallback)
-{
-	mSetSceneObjectsCallback = pSetSceneObjectsCallback;
-}
-
-void GDxRenderer::SetSceneObjectsCallback()
-{
-	mSetSceneObjectsCallback();
-}
-
-void GDxRenderer::GetSceneObjectTransform(char* objName, float* trans)
-{
-	std::string sObjectName(objName);
-	for (auto sObject : mAllRitems)
-	{
-		if (sObject->Name == sObjectName)
-		{
-			XMFLOAT3 loc = sObject->GetLocation();
-			XMFLOAT3 rot = sObject->GetRotation();
-			XMFLOAT3 scale = sObject->GetScale();
-			trans[0] = loc.x;
-			trans[1] = loc.y;
-			trans[2] = loc.z;
-			trans[3] = rot.x;
-			trans[4] = rot.y;
-			trans[5] = rot.z;
-			trans[6] = scale.x;
-			trans[7] = scale.y;
-			trans[8] = scale.z;
-			return;
-		}
-	}
-}
-
-void GDxRenderer::SetSceneObjectTransform(char* objName, float* trans)
-{
-	std::string sObjectName(objName);
-	for (auto sObject : mAllRitems)
-	{
-		if (sObject->Name == sObjectName)
-		{
-			sObject->SetLocation(trans[0], trans[1], trans[2]);
-			sObject->SetRotation(trans[3], trans[4], trans[5]);
-			sObject->SetScale(trans[6], trans[7], trans[8]);
-			return;
-		}
-	}
 }
 
 #pragma endregion

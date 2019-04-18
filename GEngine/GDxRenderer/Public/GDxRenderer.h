@@ -28,18 +28,6 @@ using Microsoft::WRL::ComPtr;
 using namespace DirectX;
 using namespace DirectX::PackedVector;
 
-typedef void(__stdcall * VoidFuncPointerType)(void);
-
-enum class RenderLayer : int
-{
-	Opaque = 0,
-	Debug,
-	Sky,
-	Deferred,
-	ScreenQuad,
-	Count
-};
-
 class GDxRenderer : public GRiRenderer
 {
 protected:
@@ -84,26 +72,11 @@ public:
 	virtual void SyncTextures(std::unordered_map<std::wstring, std::unique_ptr<GRiTexture>>& mTextures) override;
 	virtual void SyncMaterials(std::unordered_map<std::wstring, std::unique_ptr<GRiMaterial>>& mMaterials) override;
 	virtual void SyncMeshes(std::unordered_map<std::wstring, std::unique_ptr<GRiMesh>>& mMeshes) override;
+	virtual void SyncSceneObjects(std::unordered_map<std::wstring, std::unique_ptr<GRiSceneObject>>& mSceneObjects, std::vector<GRiSceneObject*>* mSceneObjectLayer) override;
 
 	//virtual bool Initialize(HWND OutputWindow, double width, double height);
 
 	//virtual void MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
-
-#pragma region export
-
-	//void MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
-
-	int GetSceneObjectNum();
-
-	const char* GetSceneObjectName(int index);
-
-	void SetSetSceneObjectsCallback(VoidFuncPointerType pSetSceneObjectsCallback);
-
-	void GetSceneObjectTransform(char* objName, float* trans);
-
-	void SetSceneObjectTransform(char* objName, float* trans);
-
-#pragma endregion
 
 protected:
 	virtual void CreateRtvAndDsvDescriptorHeaps();
@@ -133,7 +106,7 @@ protected:
 	void BuildPSOs();
 	void BuildFrameResources();
 	//void BuildMaterials();
-	void BuildSceneObjects();
+	//void BuildSceneObjects();
 
 	void CubemapPreIntegration();
 
@@ -145,7 +118,7 @@ protected:
 	CD3DX12_CPU_DESCRIPTOR_HANDLE GetRtv(int index)const;
 
 	void DrawSceneObjects(ID3D12GraphicsCommandList* cmdList, const RenderLayer layer, bool bSetCBV);
-	void DrawSceneObject(ID3D12GraphicsCommandList* cmdList, const GSceneObject* rObject, bool bSetCBV);
+	void DrawSceneObject(ID3D12GraphicsCommandList* cmdList, GRiSceneObject* sObject, bool bSetCBV);
 
 protected:
 
@@ -247,10 +220,10 @@ protected:
 	std::vector<D3D12_INPUT_ELEMENT_DESC> mInputLayout;
 
 	// List of all the render items.
-	std::vector<std::shared_ptr<GSceneObject>> mAllRitems;
+	std::unordered_map<std::wstring, GRiSceneObject*> pSceneObjects;
 
 	// Render items divided by PSO.
-	std::vector<std::shared_ptr<GSceneObject>> mSceneObjectLayer[(int)RenderLayer::Count];
+	std::vector<GRiSceneObject*> pSceneObjectLayer[(int)RenderLayer::Count];
 
 	UINT mTextrueHeapIndex = 0;
 	UINT mSkyTexHeapIndex = 0;
@@ -306,14 +279,6 @@ private:
 	GDxRenderer();
 
 	//void LoadTextures();
-
-#pragma region Export-Related
-
-	VoidFuncPointerType mSetSceneObjectsCallback;
-
-	void SetSceneObjectsCallback();
-
-#pragma endregion
 
 };
 

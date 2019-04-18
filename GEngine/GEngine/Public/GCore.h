@@ -14,7 +14,7 @@ using Microsoft::WRL::ComPtr;
 using namespace DirectX;
 using namespace DirectX::PackedVector;
 
-//typedef void(__stdcall * VoidFuncPointerType)(void);
+typedef void(__stdcall * VoidFuncPointerType)(void);
 
 class GCore// : public GRenderer
 {
@@ -35,15 +35,15 @@ public:
 
 	void MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
-	//int GetSceneObjectNum();
+	int GetSceneObjectNum();
 
-	//const char* GetSceneObjectName(int index);
+	const wchar_t* GetSceneObjectName(int index);
 
-	//void SetSetSceneObjectsCallback(VoidFuncPointerType pSetSceneObjectsCallback);
+	void SetSetSceneObjectsCallback(VoidFuncPointerType pSetSceneObjectsCallback);
 
-	//void GetSceneObjectTransform(char* objName, float* trans);
+	void GetSceneObjectTransform(wchar_t* objName, float* trans);
 
-	//void SetSceneObjectTransform(char* objName, float* trans);
+	void SetSceneObjectTransform(wchar_t* objName, float* trans);
 
 #pragma endregion
 
@@ -67,6 +67,8 @@ private:
 	std::unordered_map<std::wstring, std::unique_ptr<GRiTexture>> mTextures;
 	std::unordered_map<std::wstring, std::unique_ptr<GRiMaterial>> mMaterials;
 	std::unordered_map<std::wstring, std::unique_ptr<GRiMesh>> mMeshes;
+	std::unordered_map<std::wstring, std::unique_ptr<GRiSceneObject>> mSceneObjects;
+	std::vector<GRiSceneObject*> mSceneObjectLayer[(int)RenderLayer::Count];
 
 	//void Draw();
 
@@ -82,14 +84,13 @@ private:
 	void LoadMaterials();
 	void LoadSkyTexture(std::wstring path);
 	void LoadMeshes();
+	void LoadSceneObjects();
 
 	void SetWorkDirectory();
 
 	//Util
 	std::vector<std::wstring> GetAllFilesInFolder(std::wstring path, bool bCheckFormat, std::vector<std::wstring> format);
 	std::vector<std::wstring> GetAllFilesUnderFolder(std::wstring path, bool bCheckFormat, std::vector<std::wstring> format);
-
-	//std::wstring WorkDirectory;
 
 	/*
 #pragma region Export-Related
@@ -100,5 +101,13 @@ private:
 
 #pragma endregion
 	*/
+
+#pragma region Export-Related
+
+	VoidFuncPointerType mSetSceneObjectsCallback;
+
+	void SetSceneObjectsCallback();
+
+#pragma endregion
 
 };

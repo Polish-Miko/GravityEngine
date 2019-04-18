@@ -2,10 +2,15 @@
 #include "GDxPreInclude.h"
 
 
-class GDxSceneObject
+class GDxSceneObject : public GRiSceneObject
 {
+
 public:
-	GDxSceneObject();
-	~GDxSceneObject();
+
+	// Primitive topology.
+	D3D12_PRIMITIVE_TOPOLOGY PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+
+	virtual GGiFloat4x4* GetTransform() override;
+
 };
 

@@ -29,6 +29,8 @@ public:
 
 	virtual GRiGeometryGenerator* CreateGeometryGenerator() override;
 
+	virtual GRiSceneObject* CreateSceneObject() override;
+
 private:
 
 	ID3D12Device* pDevice;

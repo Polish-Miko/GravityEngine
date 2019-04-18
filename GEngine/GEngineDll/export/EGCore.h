@@ -4,6 +4,18 @@
 
 
 
+
+
+extern "C"
+{
+	__declspec(dllexport) void __stdcall InitD3D(HWND hWnd, double width, double height);
+}
+
+extern "C"
+{
+	__declspec(dllexport) int __stdcall Run(void);
+}
+
 extern "C"
 {
 	__declspec(dllexport) void __stdcall MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
@@ -16,7 +28,7 @@ extern "C"
 
 extern "C"
 {
-	__declspec(dllexport) const char* __stdcall GetSceneObjectName(int index);
+	__declspec(dllexport) const wchar_t* __stdcall GetSceneObjectName(int index);
 }
 
 extern "C"
@@ -26,12 +38,12 @@ extern "C"
 
 extern "C"
 {
-	__declspec(dllexport) void __stdcall GetSceneObjectTransform(char* objName, float* trans);
+	__declspec(dllexport) void __stdcall GetSceneObjectTransform(wchar_t* objName, float* trans);
 }
 
 extern "C"
 {
-	__declspec(dllexport) void __stdcall SetSceneObjectTransform(char* objName, float* trans);
+	__declspec(dllexport) void __stdcall SetSceneObjectTransform(wchar_t* objName, float* trans);
 }
 
 /*

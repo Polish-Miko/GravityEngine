@@ -88,5 +88,5 @@ public:
 		else
 			return L"";
 	}
-};
 
+};

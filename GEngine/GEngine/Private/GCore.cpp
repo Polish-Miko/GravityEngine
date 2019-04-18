@@ -96,8 +96,12 @@ void GCore::Initialize(HWND OutputWindow, double width, double height)
 			mRenderer->SyncMaterials(mMaterials);
 			LoadMeshes();
 			mRenderer->SyncMeshes(mMeshes);
+			LoadSceneObjects();
+			mRenderer->SyncSceneObjects(mSceneObjects, mSceneObjectLayer);
 
 			mRenderer->Initialize(OutputWindow, width, height);
+
+			SetSceneObjectsCallback();
 
 		}
 		catch (DxException& e)
@@ -378,165 +382,11 @@ void GCore::LoadTextures()
 	{
 		GRiTexture* tex = textureLoader->LoadTexture(WorkDirectory, file, (int)mTextures.size());
 		std::wstring texName = tex->UniqueFileName;
-		//mTextures[texName] = std::make_unique<GRiTexture>(tex);
 		std::unique_ptr<GRiTexture> temp(tex);
 		mTextures[texName] = std::move(temp);
-		//mRenderer->pTextures[texName] = mTextures[texName].get();
 	}
 
 	LoadSkyTexture(L"Content\\Textures\\Cubemap_LancellottiChapel.dds");
-
-	/*
-	//
-	// Load non-DDS images.
-	//
-	std::vector<std::string> texNames =
-	{
-		"IBL_BRDF_LUT",
-		"default_albedo",
-		"default_normal",
-		"default_OcclussionRoughnessMetallic",
-		"sphere_1_BaseColor",
-		"sphere_1_Normal",
-		"sphere_1_OcclusionRoughnessMetallic",
-		"sphere_2_BaseColor",
-		"sphere_2_Normal",
-		"sphere_2_OcclusionRoughnessMetallic",
-		"Greasy_Pan_Albedo",
-		"Greasy_Pan_Normal",
-		"Greasy_Pan_Orm",
-		"Rusted_Iron_Albedo",
-		"Rusted_Iron_Normal",
-		"Rusted_Iron_Orm",
-		"Cerberus_Albedo",
-		"Cerberus_Normal",
-		"Cerberus_Orm",
-		"Fireplace_Albedo",
-		"Fireplace_Normal",
-		"Fireplace_Orm"
-	};
-
-	std::vector<std::wstring> texFilenames =
-	{
-		L"Textures/IBL_BRDF_LUT.png",
-		L"Textures/default_albedo.png",
-		L"Textures/default_normal.png",
-		L"Textures/default_OcclussionRoughnessMetallic.png",
-		L"Textures/sphere_1_BaseColor.png",
-		L"Textures/sphere_1_Normal.png",
-		L"Textures/sphere_1_OcclusionRoughnessMetallic.png",
-		L"Textures/sphere_2_BaseColor.png",
-		L"Textures/sphere_2_Normal.png",
-		L"Textures/sphere_2_OcclusionRoughnessMetallic.png",
-		L"Textures/Greasy_Pan_Albedo.png",
-		L"Textures/Greasy_Pan_Normal.png",
-		L"Textures/Greasy_Pan_Orm.png",
-		L"Textures/Rusted_Iron_Albedo.png",
-		L"Textures/Rusted_Iron_Normal.png",
-		L"Textures/Rusted_Iron_Orm.png",
-		L"Textures/Cerberus_Albedo.png",
-		L"Textures/Cerberus_Normal.png",
-		L"Textures/Cerberus_Orm.png",
-		L"Textures/Fireplace_Albedo.png",
-		L"Textures/Fireplace_Normal.png",
-		L"Textures/Fireplace_Orm.png"
-	};
-
-	std::vector<bool> texSrgb =
-	{
-		false,
-		true,
-		false,
-		false,
-		true,
-		false,
-		false,
-		true,
-		false,
-		false,
-		true,
-		false,
-		false,
-		true,
-		false,
-		false,
-		true,
-		false,
-		false,
-		true,
-		false,
-		false
-	};
-
-	for (int i = 0; i < (int)texNames.size(); ++i)
-	{
-		auto texMap = std::make_shared<GTexture>();
-		texMap->Name = texNames[i];
-		texMap->Filename = texFilenames[i];
-		texMap->descriptorHeapIndex = i;
-		ResourceUploadBatch resourceUpload(md3dDevice.Get());
-		resourceUpload.Begin();
-		unsigned int srgbFlag;
-		if (texSrgb[i])
-		{
-			srgbFlag = WIC_LOADER_FORCE_SRGB;
-		}
-		else
-		{
-			srgbFlag = WIC_LOADER_IGNORE_SRGB;
-		}
-		//ThrowIfFailed(CreateWICTextureFromFile(md3dDevice.Get(), resourceUpload, texMap->Filename.c_str(), texMap->Resource.ReleaseAndGetAddressOf()));
-		ThrowIfFailed(CreateWICTextureFromFileEx(md3dDevice.Get(), resourceUpload, texMap->Filename.c_str(), 0u, D3D12_RESOURCE_FLAG_NONE, srgbFlag, texMap->Resource.ReleaseAndGetAddressOf()));
-		auto uploadResourcesFinished = resourceUpload.End(mCommandQueue.Get());
-		uploadResourcesFinished.wait();
-
-		//CreateShaderResourceView(md3dDevice.Get(), texMap->Resource.Get(), m_resourceDescriptors->GetCpuHandle(Descriptors::Cat));
-		std::shared_ptr<GTexture> texListPtr(texMap);
-		mTextureList.push_back(texListPtr);
-		mTextures[texMap->Name] = std::move(texMap);
-	}
-
-	//
-	// Load DDS images.
-	//
-	std::vector<std::string> ddsTexNames =
-	{
-		"bricksDiffuseMap",
-		"bricksNormalMap",
-		"tileDiffuseMap",
-		"tileNormalMap",
-		"defaultDiffuseMap",
-		"defaultNormalMap",
-		"skyCubeMap"
-	};
-
-	std::vector<std::wstring> ddsTexFilenames =
-	{
-		L"Textures/bricks2.dds",
-		L"Textures/bricks2_nmap.dds",
-		L"Textures/tile.dds",
-		L"Textures/tile_nmap.dds",
-		L"Textures/white1x1.dds",
-		L"Textures/default_nmap.dds",
-		//L"Textures/sunsetcube1024.dds"
-		L"Textures/Cubemap_LancellottiChapel.dds"
-	};
-
-	for (int i = 0; i < (int)ddsTexNames.size(); ++i)
-	{
-		auto texMap = std::make_shared<GTexture>();
-		texMap->Name = ddsTexNames[i];
-		texMap->Filename = ddsTexFilenames[i];
-		texMap->descriptorHeapIndex = i + (int)texNames.size();
-		ThrowIfFailed(DirectX::CreateDDSTextureFromFile12(md3dDevice.Get(),
-			mCommandList.Get(), texMap->Filename.c_str(),
-			texMap->Resource, texMap->UploadHeap));
-
-		std::shared_ptr<GTexture> texListPtr(texMap);  
-		mTextureList.push_back(texListPtr);
-		mTextures[texMap->Name] = std::move(texMap);
-	}
-	*/
 }
 
 void GCore::LoadMaterials()
@@ -617,8 +467,6 @@ void GCore::LoadMaterials()
 	sky->UniqueName = L"sky";
 	sky->Name = L"sky";
 	sky->MatIndex = index++;
-	//sky->DiffuseSrvHeapIndex = 6;
-	//sky->NormalSrvHeapIndex = 7;
 	sky->pTextures.push_back(mTextures[L"Content\\Textures\\sphere_1_BaseColor.png"].get());//Diffuse
 	sky->pTextures.push_back(mTextures[L"Content\\Textures\\sphere_1_BaseColor.png"].get());//Normal
 	//sky->VectorParams.push_back(XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f));//DiffuseAlbedo
@@ -669,6 +517,7 @@ void GCore::LoadMaterials()
 
 void GCore::LoadMeshes()
 {
+
 	GRiGeometryGenerator* geoGen = pRendererFactory->CreateGeometryGenerator();
 
 	std::vector<GRiMeshData> meshData;
@@ -729,19 +578,130 @@ void GCore::LoadMeshes()
 		std::unique_ptr<GRiMesh> temp(geo);
 		mMeshes[geo->UniqueName] = std::move(temp);
 	}
-	/*
-	GMesh* CerberusMesh = new GMesh();
-	GFilmboxManager::GetManager().ImportFbxFile_Mesh(md3dDevice.Get(), mCommandList.Get(), "Models\\Cerberus.FBX", CerberusMesh);
-	CerberusMesh->Name = "Cerberus";
-	std::shared_ptr<GMesh> cerberus(CerberusMesh);
-	mMeshes[cerberus->Name] = cerberus;
+}
 
-	GMesh* FireplaceMesh = new GMesh();
-	GFilmboxManager::GetManager().ImportFbxFile_Mesh(md3dDevice.Get(), mCommandList.Get(), "Models\\Fireplace.FBX", FireplaceMesh);
-	FireplaceMesh->Name = "Fireplace";
-	std::shared_ptr<GMesh> fireplace(FireplaceMesh);
-	mMeshes[fireplace->Name] = fireplace;
-	*/
+void GCore::LoadSceneObjects()
+{
+	UINT index = 0;
+
+	// Create screen quads for light pass and post process.
+	std::unique_ptr<GRiSceneObject> fullScreenQuadSO(pRendererFactory->CreateSceneObject());
+	fullScreenQuadSO->UniqueName = L"FullScreenQuad";
+	fullScreenQuadSO->TexTransform = pRendererFactory->CreateFloat4x4();
+	fullScreenQuadSO->ObjIndex = index;
+	fullScreenQuadSO->Mat = mMaterials[L"default"].get();
+	fullScreenQuadSO->Mesh = mMeshes[L"Quad"].get();
+	mSceneObjectLayer[(int)RenderLayer::ScreenQuad].push_back(fullScreenQuadSO.get());
+	mSceneObjects[fullScreenQuadSO->UniqueName] = std::move(fullScreenQuadSO);
+	index++;
+
+	std::unique_ptr<GRiSceneObject> skySO(pRendererFactory->CreateSceneObject());
+	skySO->UniqueName = L"Sky";
+	skySO->SetScale(5000.f, 5000.f, 5000.f);
+	skySO->ObjIndex = index;
+	skySO->TexTransform = pRendererFactory->CreateFloat4x4();
+	skySO->Mat = mMaterials[L"sky"].get();
+	skySO->Mesh = mMeshes[L"Sphere"].get();
+	mSceneObjectLayer[(int)RenderLayer::Sky].push_back(skySO.get());
+	mSceneObjects[skySO->UniqueName] = std::move(skySO);
+	index++;
+
+	// Create debug quads.
+	{
+		std::unique_ptr<GRiSceneObject> albedoQuadSO(pRendererFactory->CreateSceneObject());
+		albedoQuadSO->UniqueName = L"AlbedoQuad";
+		albedoQuadSO->SetScale(.2f, .2f, .2f);
+		albedoQuadSO->SetLocation(0.f, 0.f, 0.f);
+		albedoQuadSO->TexTransform = pRendererFactory->CreateFloat4x4();
+		albedoQuadSO->ObjIndex = index;
+		albedoQuadSO->Mat = mMaterials[L"debug_albedo"].get();
+		albedoQuadSO->Mesh = mMeshes[L"Quad"].get();
+		mSceneObjectLayer[(int)RenderLayer::Debug].push_back(albedoQuadSO.get());
+		mSceneObjects[albedoQuadSO->UniqueName] = std::move(albedoQuadSO);
+		index++;
+
+		std::unique_ptr<GRiSceneObject> normalQuadSO(pRendererFactory->CreateSceneObject());
+		normalQuadSO->UniqueName = L"NormalQuad";
+		normalQuadSO->SetScale(.2f, .2f, .2f);
+		normalQuadSO->SetLocation(.2f, 0.f, 0.f);
+		normalQuadSO->TexTransform = pRendererFactory->CreateFloat4x4();
+		normalQuadSO->ObjIndex = index;
+		normalQuadSO->Mat = mMaterials[L"debug_normal"].get();
+		normalQuadSO->Mesh = mMeshes[L"Quad"].get();
+		mSceneObjectLayer[(int)RenderLayer::Debug].push_back(normalQuadSO.get());
+		mSceneObjects[normalQuadSO->UniqueName] = std::move(normalQuadSO);
+		index++;
+
+		std::unique_ptr<GRiSceneObject> worldPosQuadSO(pRendererFactory->CreateSceneObject());
+		worldPosQuadSO->UniqueName = L"WorldPosQuad";
+		worldPosQuadSO->SetScale(.2f, .2f, .2f);
+		worldPosQuadSO->SetLocation(.4f, 0.f, 0.f);
+		worldPosQuadSO->TexTransform = pRendererFactory->CreateFloat4x4();
+		worldPosQuadSO->ObjIndex = index;
+		worldPosQuadSO->Mat = mMaterials[L"debug_worldpos"].get();
+		worldPosQuadSO->Mesh = mMeshes[L"Quad"].get();
+		mSceneObjectLayer[(int)RenderLayer::Debug].push_back(worldPosQuadSO.get());
+		mSceneObjects[worldPosQuadSO->UniqueName] = std::move(worldPosQuadSO);
+		index++;
+
+		std::unique_ptr<GRiSceneObject> roughnessQuadSO(pRendererFactory->CreateSceneObject());
+		roughnessQuadSO->UniqueName = L"RoughnessQuad";
+		roughnessQuadSO->SetScale(.2f, .2f, .2f);
+		roughnessQuadSO->SetLocation(.6f, 0.f, 0.f);
+		roughnessQuadSO->TexTransform = pRendererFactory->CreateFloat4x4();
+		roughnessQuadSO->ObjIndex = index;
+		roughnessQuadSO->Mat = mMaterials[L"debug_roughness"].get();
+		roughnessQuadSO->Mesh = mMeshes[L"Quad"].get();
+		mSceneObjectLayer[(int)RenderLayer::Debug].push_back(roughnessQuadSO.get());
+		mSceneObjects[roughnessQuadSO->UniqueName] = std::move(roughnessQuadSO);
+		index++;
+
+		std::unique_ptr<GRiSceneObject> metallicQuadSO(pRendererFactory->CreateSceneObject());
+		metallicQuadSO->UniqueName = L"MetallicQuad";
+		metallicQuadSO->SetScale(.2f, .2f, .2f);
+		metallicQuadSO->SetLocation(.8f, 0.f, 0.f);
+		metallicQuadSO->TexTransform = pRendererFactory->CreateFloat4x4();
+		metallicQuadSO->ObjIndex = index;
+		metallicQuadSO->Mat = mMaterials[L"debug_metallic"].get();
+		metallicQuadSO->Mesh = mMeshes[L"Quad"].get();
+		mSceneObjectLayer[(int)RenderLayer::Debug].push_back(metallicQuadSO.get());
+		mSceneObjects[metallicQuadSO->UniqueName] = std::move(metallicQuadSO);
+		index++;
+	}
+
+	std::unique_ptr<GRiSceneObject> cerberusSO(pRendererFactory->CreateSceneObject());
+	cerberusSO->UniqueName = L"Cerberus";
+	cerberusSO->TexTransform = pRendererFactory->CreateFloat4x4();
+	cerberusSO->ObjIndex = index;
+	cerberusSO->Mat = mMaterials[L"Cerberus"].get();
+	cerberusSO->Mesh = mMeshes[L"Content\\Models\\Cerberus.fbx"].get();
+	mSceneObjectLayer[(int)RenderLayer::Deferred].push_back(cerberusSO.get());
+	mSceneObjects[cerberusSO->UniqueName] = std::move(cerberusSO);
+	index++;
+
+	std::unique_ptr<GRiSceneObject> sphereSO_1(pRendererFactory->CreateSceneObject());
+	sphereSO_1->SetScale(20.f, 20.f, 20.f);
+	sphereSO_1->SetLocation(0.f, -100.f, 0.f);
+	sphereSO_1->UniqueName = L"Sphere";
+	sphereSO_1->TexTransform = pRendererFactory->CreateFloat4x4();
+	sphereSO_1->ObjIndex = index;
+	sphereSO_1->Mat = mMaterials[L"sphere_2"].get();
+	sphereSO_1->Mesh = mMeshes[L"Sphere"].get();
+	mSceneObjectLayer[(int)RenderLayer::Deferred].push_back(sphereSO_1.get());
+	mSceneObjects[sphereSO_1->UniqueName] = std::move(sphereSO_1);
+	index++;
+
+	std::unique_ptr<GRiSceneObject> sphereSO_2(pRendererFactory->CreateSceneObject());
+	sphereSO_2->SetScale(20.f, 20.f, 20.f);
+	sphereSO_2->SetLocation(20.f, -100.f, 0.f);
+	sphereSO_2->UniqueName = L"Sphere_2";
+	sphereSO_2->TexTransform = pRendererFactory->CreateFloat4x4();
+	sphereSO_2->ObjIndex = index;
+	sphereSO_2->Mat = mMaterials[L"GreasyPan"].get();
+	sphereSO_2->Mesh = mMeshes[L"Sphere"].get();
+	mSceneObjectLayer[(int)RenderLayer::Deferred].push_back(sphereSO_2.get());
+	mSceneObjects[sphereSO_2->UniqueName] = std::move(sphereSO_2);
+	index++;
 }
 
 void GCore::LoadSkyTexture(std::wstring path)
@@ -750,10 +710,8 @@ void GCore::LoadSkyTexture(std::wstring path)
 
 	GRiTexture* tex = textureLoader->LoadTexture(WorkDirectory, path, (int)mTextures.size());
 	std::wstring texName = L"skyCubeMap";
-	//mTextures[texName].reset(tex);
 	std::unique_ptr<GRiTexture> temp(tex);
 	mTextures[texName] = std::move(temp);
-	//mRenderer->pTextures[texName] = mTextures[texName].get();
 }
 
 void GCore::SetWorkDirectory()
@@ -866,8 +824,6 @@ std::vector<std::wstring> GCore::GetAllFilesUnderFolder(std::wstring relPath, bo
 
 #pragma endregion
 
-//export
-/*
 #pragma region export
 
 int GCore::GetSceneObjectNum()
@@ -875,12 +831,9 @@ int GCore::GetSceneObjectNum()
 	return (int)(mSceneObjectLayer[(int)RenderLayer::Deferred].size());
 }
 
-const char* GCore::GetSceneObjectName(int index)
+const wchar_t* GCore::GetSceneObjectName(int index)
 {
-	//char* cstr = new char[256];
-	//strcpy_s(cstr, 256, mSceneObjectLayer[(int)RenderLayer::Deferred][index]->Name.c_str());
-	//return cstr;
-	return mSceneObjectLayer[(int)RenderLayer::Deferred][index]->Name.c_str();
+	return mSceneObjectLayer[(int)RenderLayer::Deferred][index]->UniqueName.c_str();
 }
 
 void GCore::SetSetSceneObjectsCallback(VoidFuncPointerType pSetSceneObjectsCallback)
@@ -893,44 +846,32 @@ void GCore::SetSceneObjectsCallback()
 	mSetSceneObjectsCallback();
 }
 
-void GCore::GetSceneObjectTransform(char* objName, float* trans)
+void GCore::GetSceneObjectTransform(wchar_t* objName, float* trans)
 {
-	std::string sObjectName(objName);
-	for (auto sObject : mAllRitems)
-	{
-		if (sObject->Name == sObjectName)
-		{
-			XMFLOAT3 loc = sObject->GetLocation();
-			XMFLOAT3 rot = sObject->GetRotation();
-			XMFLOAT3 scale = sObject->GetScale();
-			trans[0] = loc.x;
-			trans[1] = loc.y;
-			trans[2] = loc.z;
-			trans[3] = rot.x;
-			trans[4] = rot.y;
-			trans[5] = rot.z;
-			trans[6] = scale.x;
-			trans[7] = scale.y;
-			trans[8] = scale.z;
-			return;
-		}
-	}
+	std::wstring sObjectName(objName);
+
+	std::vector<float> loc = mSceneObjects[sObjectName]->GetLocation();
+	std::vector<float> rot = mSceneObjects[sObjectName]->GetRotation();
+	std::vector<float> scale = mSceneObjects[sObjectName]->GetScale();
+
+	trans[0] = loc[0];
+	trans[1] = loc[1];
+	trans[2] = loc[2];
+	trans[3] = rot[0];
+	trans[4] = rot[1];
+	trans[5] = rot[2];
+	trans[6] = scale[0];
+	trans[7] = scale[1];
+	trans[8] = scale[2];
 }
 
-void GCore::SetSceneObjectTransform(char* objName, float* trans)
+void GCore::SetSceneObjectTransform(wchar_t* objName, float* trans)
 {
-	std::string sObjectName(objName);
-	for (auto sObject : mAllRitems)
-	{
-		if (sObject->Name == sObjectName)
-		{
-			sObject->SetLocation(trans[0], trans[1], trans[2]);
-			sObject->SetRotation(trans[3], trans[4], trans[5]);
-			sObject->SetScale(trans[6], trans[7], trans[8]);
-			return;
-		}
-	}
+	std::wstring sObjectName(objName);
+
+	mSceneObjects[sObjectName]->SetLocation(trans[0], trans[1], trans[2]);
+	mSceneObjects[sObjectName]->SetRotation(trans[3], trans[4], trans[5]);
+	mSceneObjects[sObjectName]->SetScale(trans[6], trans[7], trans[8]);
 }
 
 #pragma endregion
-*/

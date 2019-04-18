@@ -4,6 +4,18 @@
 
 
 
+
+void __stdcall InitD3D(HWND hWnd, double width, double height)
+{
+	GCore::GetCore().Initialize(hWnd, width, height);
+}
+
+int __stdcall Run(void)
+{
+	GCore::GetCore().Run();
+	return 0;
+}
+
 void __stdcall MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
 	//GDxRenderer::GetRenderer().MsgProc(hwnd, msg, wParam, lParam);
@@ -12,25 +24,25 @@ void __stdcall MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
 int __stdcall GetSceneObjectNum(void)
 {
-	return GDxRenderer::GetRenderer().GetSceneObjectNum();
+	return GCore::GetCore().GetSceneObjectNum();
 }
 
-const char* __stdcall GetSceneObjectName(int index)
+const wchar_t* __stdcall GetSceneObjectName(int index)
 {
-	return GDxRenderer::GetRenderer().GetSceneObjectName(index);
+	return GCore::GetCore().GetSceneObjectName(index);
 }
 
 void __stdcall SetSetSceneObjectsCallback(VoidFuncPointerType pSetSceneObjectsCallback)
 {
-	GDxRenderer::GetRenderer().SetSetSceneObjectsCallback(pSetSceneObjectsCallback);
+	GCore::GetCore().SetSetSceneObjectsCallback(pSetSceneObjectsCallback);
 }
 
-void __stdcall GetSceneObjectTransform(char* objName, float* trans)
+void __stdcall GetSceneObjectTransform(wchar_t* objName, float* trans)
 {
-	GDxRenderer::GetRenderer().GetSceneObjectTransform(objName, trans);
+	GCore::GetCore().GetSceneObjectTransform(objName, trans);
 }
 
-void __stdcall SetSceneObjectTransform(char* objName, float* trans)
+void __stdcall SetSceneObjectTransform(wchar_t* objName, float* trans)
 {
-	GDxRenderer::GetRenderer().SetSceneObjectTransform(objName, trans);
+	GCore::GetCore().SetSceneObjectTransform(objName, trans);
 }

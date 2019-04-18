@@ -31,5 +31,7 @@ public:
 
 	virtual GRiGeometryGenerator* CreateGeometryGenerator() = 0;
 
+	virtual GRiSceneObject* CreateSceneObject() = 0;
+
 };
 

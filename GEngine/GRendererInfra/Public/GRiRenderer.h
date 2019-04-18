@@ -38,6 +38,7 @@ public:
 	virtual void SyncTextures(std::unordered_map<std::wstring, std::unique_ptr<GRiTexture>>& mTextures) = 0;
 	virtual void SyncMaterials(std::unordered_map<std::wstring, std::unique_ptr<GRiMaterial>>& mMaterials) = 0;
 	virtual void SyncMeshes(std::unordered_map<std::wstring, std::unique_ptr<GRiMesh>>& mMeshes) = 0;
+	virtual void SyncSceneObjects(std::unordered_map<std::wstring, std::unique_ptr<GRiSceneObject>>& mSceneObjects, std::vector<GRiSceneObject*>* mSceneObjectLayer) = 0;
 
 	std::unordered_map<std::wstring, GRiTexture*> pTextures;
 	std::unordered_map<std::wstring, GRiMaterial*> pMaterials;

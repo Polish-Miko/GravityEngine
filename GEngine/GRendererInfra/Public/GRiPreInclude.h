@@ -30,3 +30,12 @@
 
 
 #define NUM_FRAME_RESOURCES 3
+
+enum class RenderLayer : int
+{
+	Deferred = 0,
+	Debug,
+	Sky,
+	ScreenQuad,
+	Count
+};

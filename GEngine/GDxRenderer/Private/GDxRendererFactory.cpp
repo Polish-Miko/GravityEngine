@@ -7,6 +7,7 @@
 #include "GDxMaterial.h"
 #include "GDxMesh.h"
 #include "GDxGeometryGenerator.h"
+#include "GDxSceneObject.h"
 
 
 GDxRendererFactory::GDxRendererFactory(ID3D12Device* device,
@@ -68,5 +69,11 @@ GRiMesh* GDxRendererFactory::CreateMesh(std::vector<GRiMeshData> meshData)
 GRiGeometryGenerator* GDxRendererFactory::CreateGeometryGenerator()
 {
 	GRiGeometryGenerator* ret = new GDxGeometryGenerator();
+	return ret;
+}
+
+GRiSceneObject* GDxRendererFactory::CreateSceneObject()
+{
+	GRiSceneObject* ret = new GDxSceneObject();
 	return ret;
 }
