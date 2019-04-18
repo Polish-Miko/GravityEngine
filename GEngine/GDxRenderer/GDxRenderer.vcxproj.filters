@@ -42,9 +42,6 @@
     <ClInclude Include="Common\Ssao.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Common\GLight.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Common\GShaderManager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -55,9 +52,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Common\GEngineInclude.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Common\GCamera.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Common\GRtvHeap.h">
@@ -158,9 +152,6 @@
     <ClCompile Include="Common\Ssao.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Common\GLight.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Common\GDX12Util.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -171,9 +162,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Common\GEngineInclude.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Common\GCamera.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Common\GRtvHeap.cpp">

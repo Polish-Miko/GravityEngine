@@ -156,6 +156,10 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="Public\GRiCamera.h" />
+    <ClInclude Include="Public\GRiDirectionalLight.h" />
+    <ClInclude Include="Public\GRiPointLight.h" />
+    <ClInclude Include="Public\GRiSpotlight.h" />
     <ClInclude Include="Public\GRiFilmboxManager.h" />
     <ClInclude Include="Public\GRiGeometryGenerator.h" />
     <ClInclude Include="GRiInclude.h" />
@@ -174,6 +178,10 @@
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Private\GRiCamera.cpp" />
+    <ClCompile Include="Private\GRiDirectionalLight.cpp" />
+    <ClCompile Include="Private\GRiPointLight.cpp" />
+    <ClCompile Include="Private\GRiSpotlight.cpp" />
     <ClCompile Include="Private\GRiFilmboxManager.cpp" />
     <ClCompile Include="Private\GRiGeometryGenerator.cpp" />
     <ClCompile Include="Private\GRiMesh.cpp" />

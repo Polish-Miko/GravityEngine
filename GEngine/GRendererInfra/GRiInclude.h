@@ -14,5 +14,9 @@
 #include "Public/GRiSceneObject.h"
 #include "Public/GRiGeometryGenerator.h"
 #include "Public/GRiFilmboxManager.h"
+#include "Public/GRiCamera.h"
+#include "Public/GRiPointLight.h"
+#include "Public/GRiDirectionalLight.h"
+#include "Public/GRiSpotlight.h"
 
 #define MAX_TEXTURE_NUM 1024

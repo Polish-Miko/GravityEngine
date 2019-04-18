@@ -171,13 +171,11 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="Common\GCamera.h" />
     <ClInclude Include="Common\d3dx12.h" />
     <ClInclude Include="Common\GDescriptorHeap.h" />
     <ClInclude Include="Common\MathHelper.h" />
     <ClInclude Include="Common\DDSTextureLoader.h" />
     <ClInclude Include="Common\FrameResource.h" />
-    <ClInclude Include="Common\GLight.h" />
     <ClInclude Include="Common\GDX12Util.h" />
     <ClInclude Include="Common\GShaderManager.h" />
     <ClInclude Include="Common\GInputLayout.h" />
@@ -213,12 +211,10 @@
     <ClInclude Include="Common\UploadBuffer.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Common\GCamera.cpp" />
     <ClCompile Include="Common\GDescriptorHeap.cpp" />
     <ClCompile Include="Common\MathHelper.cpp" />
     <ClCompile Include="Common\DDSTextureLoader.cpp" />
     <ClCompile Include="Common\FrameResource.cpp" />
-    <ClCompile Include="Common\GLight.cpp" />
     <ClCompile Include="Common\GDX12Util.cpp" />
     <ClCompile Include="Common\GShaderManager.cpp" />
     <ClCompile Include="Common\GInputLayout.cpp" />

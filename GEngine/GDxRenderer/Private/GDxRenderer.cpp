@@ -68,10 +68,12 @@ HWND GDxRenderer::MainWnd()const
 	return mhMainWnd;
 }
 
+/*
 float GDxRenderer::AspectRatio()const
 {
 	return static_cast<float>(mClientWidth) / mClientHeight;
 }
+*/
 
 /*
 bool GDxRenderer::Get4xMsaaState()const
@@ -167,24 +169,24 @@ void GDxRenderer::OnKeyboardInput(const GGiGameTimer* gt)
 	const float dt = gt->DeltaTime();
 
 	if (GetAsyncKeyState('W') & 0x8000)
-		mCamera.Walk(150.0f*dt);
+		pCamera->Walk(150.0f*dt);
 
 	if (GetAsyncKeyState('S') & 0x8000)
-		mCamera.Walk(-150.0f*dt);
+		pCamera->Walk(-150.0f*dt);
 
 	if (GetAsyncKeyState('A') & 0x8000)
-		mCamera.Strafe(-150.0f*dt);
+		pCamera->Strafe(-150.0f*dt);
 
 	if (GetAsyncKeyState('D') & 0x8000)
-		mCamera.Strafe(150.0f*dt);
+		pCamera->Strafe(150.0f*dt);
 
 	if (GetAsyncKeyState('E') & 0x8000)
-		mCamera.Ascend(150.0f*dt);
+		pCamera->Ascend(150.0f*dt);
 
 	if (GetAsyncKeyState('Q') & 0x8000)
-		mCamera.Ascend(-150.0f*dt);
+		pCamera->Ascend(-150.0f*dt);
 
-	mCamera.UpdateViewMatrix();
+	pCamera->UpdateViewMatrix();
 }
 
 void GDxRenderer::AnimateMaterials(const GGiGameTimer* gt)
@@ -233,7 +235,8 @@ void GDxRenderer::UpdateLightCB(const GGiGameTimer* gt)
 {
 	LightConstants lightCB;
 
-	DirectX::XMStoreFloat3(&(lightCB.cameraPosition), mCamera.GetPosition());
+	auto pos = pCamera->GetPosition();
+	lightCB.cameraPosition = DirectX::XMFLOAT3(pos[0], pos[1], pos[2]);
 
 	lightCB.dirLight[0].Direction = XMFLOAT3(0.57735f, -0.57735f, -0.57735f);
 	lightCB.dirLight[0].DiffuseColor = XMFLOAT4(0.7f, 0.7f, 0.6f, 1.0f);
@@ -364,8 +367,16 @@ void GDxRenderer::UpdateShadowTransform(const GGiGameTimer* gt)
 
 void GDxRenderer::UpdateMainPassCB(const GGiGameTimer* gt)
 {
-	XMMATRIX view = mCamera.GetView();
-	XMMATRIX proj = mCamera.GetProj();
+	auto viewMat = dynamic_cast<GDxFloat4x4*>(pCamera->GetView());
+	if (viewMat == nullptr)
+		ThrowGGiException("Cast failed from GGiFloat4x4* to GDxFloat4x4*.");
+
+	auto projMat = dynamic_cast<GDxFloat4x4*>(pCamera->GetProj());
+	if (projMat == nullptr)
+		ThrowGGiException("Cast failed from GGiFloat4x4* to GDxFloat4x4*.");
+
+	XMMATRIX view = DirectX::XMLoadFloat4x4(&(viewMat->GetValue()));
+	XMMATRIX proj = DirectX::XMLoadFloat4x4(&(projMat->GetValue()));
 
 	XMMATRIX viewProj = XMMatrixMultiply(view, proj);
 	XMMATRIX invView = XMMatrixInverse(&XMMatrixDeterminant(view), view);
@@ -390,7 +401,8 @@ void GDxRenderer::UpdateMainPassCB(const GGiGameTimer* gt)
 	XMStoreFloat4x4(&mMainPassCB.InvViewProj, XMMatrixTranspose(invViewProj));
 	XMStoreFloat4x4(&mMainPassCB.ViewProjTex, XMMatrixTranspose(viewProjTex));
 	XMStoreFloat4x4(&mMainPassCB.ShadowTransform, XMMatrixTranspose(shadowTransform));
-	mMainPassCB.EyePosW = mCamera.GetPosition3f();
+	auto eyePos = pCamera->GetPosition();
+	mMainPassCB.EyePosW = DirectX::XMFLOAT3(eyePos[0], eyePos[1], eyePos[2]);
 	mMainPassCB.RenderTargetSize = XMFLOAT2((float)mClientWidth, (float)mClientHeight);
 	mMainPassCB.InvRenderTargetSize = XMFLOAT2(1.0f / mClientWidth, 1.0f / mClientHeight);
 	mMainPassCB.NearZ = 1.0f;
@@ -413,11 +425,20 @@ void GDxRenderer::UpdateMainPassCB(const GGiGameTimer* gt)
 
 void GDxRenderer::UpdateSkyPassCB(const GGiGameTimer* gt)
 {
-	XMMATRIX view = mCamera.GetView();
-	XMMATRIX proj = mCamera.GetProj();
+	auto viewMat = dynamic_cast<GDxFloat4x4*>(pCamera->GetView());
+	if (viewMat == nullptr)
+		ThrowGGiException("Cast failed from GGiFloat4x4* to GDxFloat4x4*.");
+
+	auto projMat = dynamic_cast<GDxFloat4x4*>(pCamera->GetProj());
+	if (projMat == nullptr)
+		ThrowGGiException("Cast failed from GGiFloat4x4* to GDxFloat4x4*.");
+
+	XMMATRIX view = DirectX::XMLoadFloat4x4(&(viewMat->GetValue()));
+	XMMATRIX proj = DirectX::XMLoadFloat4x4(&(projMat->GetValue()));
 	XMMATRIX viewProj = XMMatrixMultiply(view, proj);
 	XMStoreFloat4x4(&mSkyPassCB.ViewProj, XMMatrixTranspose(viewProj));
-	mSkyPassCB.EyePosW = mCamera.GetPosition3f();
+	auto eyePos = pCamera->GetPosition();
+	mSkyPassCB.EyePosW = DirectX::XMFLOAT3(eyePos[0], eyePos[1], eyePos[2]);
 	mSkyPassCB.roughness = 0.3f; // doesn't matter
 
 	auto currPassCB = mCurrFrameResource->SkyCB.get();
@@ -495,6 +516,7 @@ void GRenderer::UpdateSsaoCB(const GameTimer& gt)
 
 #pragma region Init
 
+/*
 void GDxRenderer::BuildCubemapSampleCameras()
 {
 	XMFLOAT3 center(0.0f, 0.0f, 0.0f);
@@ -528,6 +550,7 @@ void GDxRenderer::BuildCubemapSampleCameras()
 		mCubemapSampleCamera[i].UpdateViewMatrix();
 	}
 }
+*/
 
 /*
 void GDxRenderer::LoadTextures()
@@ -2047,11 +2070,17 @@ void GDxRenderer::CubemapPreIntegration()
 	{
 		for (auto j = 0u; j < 6u; j++)
 		{
-			XMMATRIX view = mCubemapSampleCamera[j].GetView();
-			XMMATRIX proj = mCubemapSampleCamera[j].GetProj();
-			XMMATRIX viewProj = XMMatrixMultiply(view, proj);
-			XMStoreFloat4x4(&mSkyPassCB.ViewProj, XMMatrixTranspose(viewProj));
-			mSkyPassCB.EyePosW = mCamera.GetPosition3f();
+			auto view = pCubemapSampleCamera[j]->GetView();
+			auto proj = pCubemapSampleCamera[j]->GetProj();
+			GGiFloat4x4* viewProj = &((*view) * (*proj));
+			GDxFloat4x4* dxVP = dynamic_cast<GDxFloat4x4*>(viewProj);
+			if (dxVP == nullptr)
+				ThrowGGiException("Cast fail from GGiFloat4x4* to GDxFloat4x4*.");
+
+			dxVP->Transpose();
+			mSkyPassCB.ViewProj = dxVP->GetValue();
+			auto eyePos = pCamera->GetPosition();
+			mSkyPassCB.EyePosW = DirectX::XMFLOAT3(eyePos[0], eyePos[1], eyePos[2]);
 			if (i == 0)
 			{
 				mSkyPassCB.roughness = 0.01f;
@@ -2270,7 +2299,8 @@ void GDxRenderer::OnResize()
 
 	mScissorRect = { 0, 0, mClientWidth, mClientHeight };
 
-	mCamera.SetLens(0.25f*MathHelper::Pi, AspectRatio(), 1.0f, 1000.0f);
+	if(pCamera!=nullptr)
+		pCamera->SetLens(0.25f * GGiEngineUtil::PI, AspectRatio(), 1.0f, 1000.0f);
 
 	/*
 	if (mSsao != nullptr)
@@ -2312,8 +2342,8 @@ void GDxRenderer::OnMouseMove(WPARAM btnState, int x, int y)
 		float dx = XMConvertToRadians(0.25f*static_cast<float>(x - mLastMousePos.x));
 		float dy = XMConvertToRadians(0.25f*static_cast<float>(y - mLastMousePos.y));
 
-		mCamera.Pitch(dy);
-		mCamera.RotateY(dx);
+		pCamera->Pitch(dy);
+		pCamera->RotateY(dx);
 	}
 
 	mLastMousePos.x = x;
@@ -2371,7 +2401,7 @@ void GDxRenderer::Initialize(HWND OutputWindow, double width, double height)
 
 	// Reset the command list to prep for initialization commands.
 
-	mCamera.SetPosition(0.0f, 2.0f, -5.0f);
+	//mCamera.SetPosition(0.0f, 2.0f, -5.0f);
 	/*
 	mShadowMap = std::make_unique<ShadowMap>(md3dDevice.Get(),
 		2048, 2048);
@@ -2381,7 +2411,7 @@ void GDxRenderer::Initialize(HWND OutputWindow, double width, double height)
 		mCommandList.Get(),
 		mClientWidth, mClientHeight);
 	*/
-	BuildCubemapSampleCameras();
+	//BuildCubemapSampleCameras();
 	//LoadTextures();
 	BuildDescriptorHeaps();
 	BuildRootSignature();
@@ -3469,6 +3499,13 @@ void GDxRenderer::SyncSceneObjects(std::unordered_map<std::wstring, std::unique_
 			pSceneObjectLayer[layer].push_back(pSObj);
 		}
 	}
+}
+
+void GDxRenderer::SyncCameras(std::vector<GRiCamera*> mCameras)
+{
+	pCamera = mCameras[0];
+	for (auto i = 0u; i < 6; i++)
+		pCubemapSampleCamera[i] = mCameras[i + 1];
 }
 
 #pragma region Util

@@ -98,6 +98,17 @@ void GCore::Initialize(HWND OutputWindow, double width, double height)
 			mRenderer->SyncMeshes(mMeshes);
 			LoadSceneObjects();
 			mRenderer->SyncSceneObjects(mSceneObjects, mSceneObjectLayer);
+			LoadCameras();
+			std::vector<GRiCamera*> cam = {
+				mCamera.get(), 
+				mCubemapSampleCamera[0].get(),
+				mCubemapSampleCamera[1].get(),
+				mCubemapSampleCamera[2].get(),
+				mCubemapSampleCamera[3].get(),
+				mCubemapSampleCamera[4].get(),
+				mCubemapSampleCamera[5].get() 
+			};
+			mRenderer->SyncCameras(cam);
 
 			mRenderer->Initialize(OutputWindow, width, height);
 
@@ -702,6 +713,48 @@ void GCore::LoadSceneObjects()
 	mSceneObjectLayer[(int)RenderLayer::Deferred].push_back(sphereSO_2.get());
 	mSceneObjects[sphereSO_2->UniqueName] = std::move(sphereSO_2);
 	index++;
+}
+
+void GCore::LoadCameras()
+{
+	mCamera = std::make_unique<GRiCamera>();
+	mCamera->SetRendererFactory(pRendererFactory);
+	mCamera->SetPosition(0.0f, 2.0f, -5.0f);
+	mCamera->SetLens(0.25f * GGiEngineUtil::PI, mRenderer->AspectRatio(), 1.0f, 1000.0f);
+
+	// Build cubemap sampler cameras.
+	std::vector<float> center = { 0.0f, 0.0f, 0.0f };
+	std::vector<float> worldUp = { 0.0f, 1.0f, 0.0f };
+
+	// Look along each coordinate axis. 
+	std::vector<float> targets[6] = {
+		{1.0f, 0.0f, 0.0f}, // +X 
+		{-1.0f, 0.0f, 0.0f}, // -X 
+		{0.0f, 1.0f, 0.0f}, // +Y 
+		{0.0f, -1.0f, 0.0f}, // -Y 
+		{0.0f, 0.0f, 1.0f}, // +Z 
+		{0.0f, 0.0f, -1.0f} // -Z 
+	};
+
+	// Use world up vector (0,1,0) for all directions except +Y/-Y.  In these cases, we 
+	// are looking down +Y or -Y, so we need a different "up" vector. 
+	std::vector<float> ups[6] = {
+		{0.0f, 1.0f, 0.0f}, // +X 
+		{0.0f, 1.0f, 0.0f}, // -X 
+		{0.0f, 0.0f, -1.0f}, // +Y 
+		{0.0f, 0.0f, +1.0f}, // -Y 
+		{0.0f, 1.0f, 0.0f},	// +Z 
+		{0.0f, 1.0f, 0.0f}	// -Z 
+	};
+
+	for (int i = 0; i < 6; ++i)
+	{
+		mCubemapSampleCamera[i] = std::make_unique<GRiCamera>();
+		mCubemapSampleCamera[i]->SetRendererFactory(pRendererFactory);
+		mCubemapSampleCamera[i]->LookAt(center, targets[i], ups[i]);
+		mCubemapSampleCamera[i]->SetLens(0.5f * GGiEngineUtil::PI, 1.0f, 0.1f, 1000.0f);
+		mCubemapSampleCamera[i]->UpdateViewMatrix();
+	}
 }
 
 void GCore::LoadSkyTexture(std::wstring path)

@@ -2,6 +2,7 @@
 #include "GRiPreInclude.h"
 #include "GRiRendererFactory.h"
 #include "GRiFilmboxManager.h"
+#include "GRiCamera.h"
 
 class GRiRenderer
 {
@@ -19,6 +20,8 @@ public:
 	virtual void OnResize() = 0;
 
 	virtual bool IsRunning() = 0;
+
+	virtual float AspectRatio() const;
 
 	void SetClientWidth(int width);
 	void SetClientHeight(int height);
@@ -39,9 +42,13 @@ public:
 	virtual void SyncMaterials(std::unordered_map<std::wstring, std::unique_ptr<GRiMaterial>>& mMaterials) = 0;
 	virtual void SyncMeshes(std::unordered_map<std::wstring, std::unique_ptr<GRiMesh>>& mMeshes) = 0;
 	virtual void SyncSceneObjects(std::unordered_map<std::wstring, std::unique_ptr<GRiSceneObject>>& mSceneObjects, std::vector<GRiSceneObject*>* mSceneObjectLayer) = 0;
+	virtual void SyncCameras(std::vector<GRiCamera*> mCameras) = 0;
 
 	std::unordered_map<std::wstring, GRiTexture*> pTextures;
 	std::unordered_map<std::wstring, GRiMaterial*> pMaterials;
+
+	GRiCamera* pCamera = nullptr;
+	GRiCamera* pCubemapSampleCamera[6];
 
 protected:
 

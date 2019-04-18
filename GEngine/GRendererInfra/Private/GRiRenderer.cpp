@@ -65,6 +65,11 @@ GRiFilmboxManager* GRiRenderer::GetFilmboxManager()
 	return mFilmboxManager.get();
 }
 
+float GRiRenderer::AspectRatio() const
+{
+	return static_cast<float>(mClientWidth) / mClientHeight;
+}
+
 /*
 void GRiRenderer::Set4xMsaaState(bool state)
 {

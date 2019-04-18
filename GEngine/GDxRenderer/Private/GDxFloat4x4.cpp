@@ -17,6 +17,31 @@ GDxFloat4x4::~GDxFloat4x4()
 {
 }
 
+DirectX::XMFLOAT4X4 GDxFloat4x4::GetValue()
+{
+	return value;
+}
+
+void GDxFloat4x4::SetValue(DirectX::XMFLOAT4X4 v)
+{
+	value = v;
+}
+
+float GDxFloat4x4::GetElement(int i, int j)
+{
+	return value.m[i][j];
+}
+
+void GDxFloat4x4::SetElement(int i, int j, float v)
+{
+	value.m[i][j] = v;
+}
+
+void GDxFloat4x4::Transpose()
+{
+	DirectX::XMStoreFloat4x4(&value, DirectX::XMMatrixTranspose(DirectX::XMLoadFloat4x4(&value)));
+}
+
 GGiFloat4x4* GDxFloat4x4::Identity4x4()
 {
 	GDxFloat4x4* ret = new GDxFloat4x4();
@@ -83,12 +108,29 @@ void GDxFloat4x4::SetByScale(float x, float y, float z)
 	DirectX::XMStoreFloat4x4(&value, DirectX::XMMatrixScaling(x, y, z));
 }
 
-DirectX::XMFLOAT4X4 GDxFloat4x4::GetValue()
+void GDxFloat4x4::SetByPerspectiveFovLH(float fovAngleY, float aspectRatio, float nearZ, float farZ)
 {
-	return value;
+	DirectX::XMStoreFloat4x4(&value, DirectX::XMMatrixPerspectiveFovLH(fovAngleY, aspectRatio, nearZ, farZ));
 }
 
-void GDxFloat4x4::SetValue(DirectX::XMFLOAT4X4 v)
+void GDxFloat4x4::SetByRotationAxis(float axisX, float axisY, float axisZ, float angle)
 {
-	value = v;
+	DirectX::XMFLOAT3 axis(axisX, axisY, axisZ);
+	DirectX::XMStoreFloat4x4(&value, DirectX::XMMatrixRotationAxis(DirectX::XMLoadFloat3(&axis), angle));
+}
+
+void GDxFloat4x4::SetByRotationY(float angle)
+{
+	DirectX::XMStoreFloat4x4(&value, DirectX::XMMatrixRotationY(angle));
+}
+
+std::vector<float> GDxFloat4x4::TransformNormal(std::vector<float> vec)
+{
+	DirectX::XMFLOAT3 norm(vec[0], vec[1], vec[2]);
+	DirectX::XMVECTOR result = DirectX::XMVector3TransformNormal(DirectX::XMLoadFloat3(&norm), DirectX::XMLoadFloat4x4(&value));
+	std::vector<float> out(3);
+	out[0] = result.m128_f32[0];
+	out[1] = result.m128_f32[1];
+	out[2] = result.m128_f32[2];
+	return out;
 }

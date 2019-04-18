@@ -46,7 +46,7 @@ public:
 
 	//HINSTANCE AppInst()const;
 	HWND      MainWnd()const;
-	float     AspectRatio()const;
+	//float     AspectRatio()const;
 
 	//bool Get4xMsaaState()const;
 	//void Set4xMsaaState(bool value);
@@ -58,7 +58,7 @@ public:
 	virtual void Initialize(HWND OutputWindow, double width, double height) override;
 
 	virtual bool IsRunning() override;
-
+	
 	virtual void OnResize() override;
 
 	// Convenience overrides for handling mouse input.
@@ -73,6 +73,7 @@ public:
 	virtual void SyncMaterials(std::unordered_map<std::wstring, std::unique_ptr<GRiMaterial>>& mMaterials) override;
 	virtual void SyncMeshes(std::unordered_map<std::wstring, std::unique_ptr<GRiMesh>>& mMeshes) override;
 	virtual void SyncSceneObjects(std::unordered_map<std::wstring, std::unique_ptr<GRiSceneObject>>& mSceneObjects, std::vector<GRiSceneObject*>* mSceneObjectLayer) override;
+	virtual void SyncCameras(std::vector<GRiCamera*> mCameras) override;
 
 	//virtual bool Initialize(HWND OutputWindow, double width, double height);
 
@@ -97,7 +98,7 @@ protected:
 	//void UpdateSsaoCB(const GameTimer* gt);
 	void UpdateLightCB(const GGiGameTimer* gt);
 
-	void BuildCubemapSampleCameras();
+	//void BuildCubemapSampleCameras();
 	//void LoadTextures();
 	void BuildRootSignature();
 	void BuildDescriptorHeaps();
@@ -246,10 +247,6 @@ protected:
 	SkyPassConstants mSkyPassCB;
 
 	std::vector<std::unique_ptr<UploadBuffer<SkyPassConstants>>> PreIntegrationPassCbs;
-
-	GCamera mCamera;
-
-	GCamera mCubemapSampleCamera[6];
 
 	std::unique_ptr<ShadowMap> mShadowMap;
 

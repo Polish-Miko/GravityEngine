@@ -60,6 +60,22 @@ public:
 		x[2] /= l;
 	}
 
+	static std::vector<float> Normalize(std::vector<float> in)
+	{
+		float size = 0;
+		for (auto i : in)
+		{
+			size = size + i * i;
+		}
+		size = (float)pow(size, 0.5);
+		std::vector<float> out;
+		for (auto i : in)
+		{
+			out.push_back(i / size);
+		}
+		return out;
+	}
+
 	static std::wstring GetExtension(std::wstring path)
 	{
 		if ((path.rfind('.') != std::wstring::npos) && (path.rfind('.') != (path.length() - 1)))
@@ -87,6 +103,51 @@ public:
 			return path.substr(path.rfind('\\') + 1, dot - slash);
 		else
 			return L"";
+	}
+
+	static std::vector<float> CrossFloat3(std::vector<float> i1, std::vector<float> i2)
+	{
+		std::vector<float> o(3);
+		o[0] = i1[1] * i2[2] - i2[1] * i1[2];
+		o[1] = i1[2] * i2[0] - i1[0] * i2[2];
+		o[2] = i1[0] * i2[1] - i2[0] * i1[1];
+		return o;
+	}
+
+	static std::vector<float> VectorSubtract(std::vector<float> i1, std::vector<float> i2)
+	{
+		size_t size = min(i1.size(), i2.size());
+		std::vector<float> o(size);
+		for (auto i = 0u; i < size; i++)
+			o[i] = i1[i] - i2[i];
+		return o;
+	}
+
+	static std::vector<float> VectorAdd(std::vector<float> i1, std::vector<float> i2)
+	{
+		size_t size = min(i1.size(), i2.size());
+		std::vector<float> o(size);
+		for (auto i = 0u; i < size; i++)
+			o[i] = i1[i] + i2[i];
+		return o;
+	}
+
+	static std::vector<float> VectorMultiply(std::vector<float> i1, std::vector<float> i2)
+	{
+		size_t size = min(i1.size(), i2.size());
+		std::vector<float> o(size);
+		for (auto i = 0u; i < size; i++)
+			o[i] = i1[i] * i2[i];
+		return o;
+	}
+
+	static float VectorDotProduct(std::vector<float> i1, std::vector<float> i2)
+	{
+		size_t size = min(i1.size(), i2.size());
+		float o = 0;
+		for (auto i = 0u; i < size; i++)
+			o += i1[i] * i2[i];
+		return o;
 	}
 
 };

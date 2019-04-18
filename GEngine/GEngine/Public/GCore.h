@@ -70,6 +70,10 @@ private:
 	std::unordered_map<std::wstring, std::unique_ptr<GRiSceneObject>> mSceneObjects;
 	std::vector<GRiSceneObject*> mSceneObjectLayer[(int)RenderLayer::Count];
 
+	std::unique_ptr<GRiCamera> mCamera;
+
+	std::unique_ptr<GRiCamera> mCubemapSampleCamera[6];
+
 	//void Draw();
 
 	//void SetWorkDirectory();
@@ -85,6 +89,7 @@ private:
 	void LoadSkyTexture(std::wstring path);
 	void LoadMeshes();
 	void LoadSceneObjects();
+	void LoadCameras();
 
 	void SetWorkDirectory();
 
