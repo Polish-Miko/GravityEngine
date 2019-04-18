@@ -32,6 +32,8 @@ to
 ## todo
 - [x] deferred pipeline
 - [x] physically based rendering
-- [ ] partially refactor
+- [ ] scene editing
 - [ ] shadow
 - [ ] AO
+- [ ] AA
+- [ ] instancing/culling
