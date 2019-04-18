@@ -177,7 +177,6 @@
     <ClInclude Include="Common\MathHelper.h" />
     <ClInclude Include="Common\DDSTextureLoader.h" />
     <ClInclude Include="Common\FrameResource.h" />
-    <ClInclude Include="Common\GSceneObject.h" />
     <ClInclude Include="Common\GLight.h" />
     <ClInclude Include="Common\GDX12Util.h" />
     <ClInclude Include="Common\GShaderManager.h" />
@@ -219,7 +218,6 @@
     <ClCompile Include="Common\MathHelper.cpp" />
     <ClCompile Include="Common\DDSTextureLoader.cpp" />
     <ClCompile Include="Common\FrameResource.cpp" />
-    <ClCompile Include="Common\GSceneObject.cpp" />
     <ClCompile Include="Common\GLight.cpp" />
     <ClCompile Include="Common\GDX12Util.cpp" />
     <ClCompile Include="Common\GShaderManager.cpp" />

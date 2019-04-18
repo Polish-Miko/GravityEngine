@@ -24,10 +24,10 @@ namespace GEditor
         public static extern void SetSetSceneObjectsCallback(VoidFuncPointerType pSetSceneObjectsCallback);
 
         [DllImport(@"Build\GEngineDll.dll")]
-        public static extern void GetSceneObjectTransform(string objName, [In, Out] float[] trans);
+        public static extern void GetSceneObjectTransform([MarshalAs(UnmanagedType.LPWStr)] string objName, [In, Out] float[] trans);
 
         [DllImport(@"Build\GEngineDll.dll")]
-        public static extern void SetSceneObjectTransform(string objName, [In, Out] float[] trans);
+        public static extern void SetSceneObjectTransform([MarshalAs(UnmanagedType.LPWStr)] string objName, [In, Out] float[] trans);
 
     }
 }

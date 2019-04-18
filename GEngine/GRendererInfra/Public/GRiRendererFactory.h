@@ -7,6 +7,7 @@
 #include "GRiMesh.h"
 #include "GRiMeshData.h"
 #include "GRiGeometryGenerator.h"
+#include "GRiSceneObject.h"
 
 class GRiRendererFactory
 {

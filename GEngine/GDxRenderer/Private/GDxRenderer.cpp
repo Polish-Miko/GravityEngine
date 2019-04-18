@@ -2008,7 +2008,7 @@ void GDxRenderer::CubemapPreIntegration()
 	// Reset root parameters and PSO.
 	mCommandList->RSSetViewports(1, &mCubeRtvs["Irradiance"]->mViewport);
 	mCommandList->RSSetScissorRects(1, &mCubeRtvs["Irradiance"]->mScissorRect);
-
+	
 	mCommandList->SetGraphicsRootSignature(mRootSignatures["Sky"].Get());
 
 	mCommandList->SetPipelineState(mPSOs["Irradiance"].Get());

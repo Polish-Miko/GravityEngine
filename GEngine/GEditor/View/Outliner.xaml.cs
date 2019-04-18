@@ -83,7 +83,8 @@ namespace GEditor.View
             for (int i = 0; i < numObj; i++)
             {
                 IntPtr pName = IGCore.GetSceneObjectName(i);
-                string objName = Marshal.PtrToStringAnsi(pName);
+                string objName = Marshal.PtrToStringUni(pName);
+                //string objName = Marshal.PtrToStringAnsi(pName);
                 OutlinerItemModel obj = new OutlinerItemModel();
                 obj.Icon = outlinerIcons["Mesh"];
                 obj.Name = objName;

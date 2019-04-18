@@ -41,9 +41,9 @@ public:
 
 protected:
 
-	float Location[3];
-	float Rotation[3];
-	float Scale[3];
+	float Location[3] = { 0.0f, 0.0f, 0.0f };
+	float Rotation[3] = { 0.0f, 0.0f, 0.0f };
+	float Scale[3] = { 1.0f, 1.0f, 1.0f };
 
 };
 

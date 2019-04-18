@@ -3,7 +3,7 @@
 //#include "GUtilInclude.h"
 #include "GDxPreInclude.h"
 #include "GameTimer.h"
-#include "GSceneObject.h"
+//#include "GSceneObject.h"
 #include "GLight.h"
 #include "GShaderManager.h"
 #include "GDX12Util.h"
