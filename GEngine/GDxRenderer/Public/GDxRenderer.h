@@ -62,7 +62,6 @@ protected:
 
 	void BuildRootSignature();
 	void BuildDescriptorHeaps();
-	void BuildShadersAndInputLayout(); 
 	void BuildPSOs();
 	void BuildFrameResources();
 
@@ -143,8 +142,6 @@ protected:
 	std::unordered_map<std::string, ComPtr<ID3DBlob>> mShaders;
 	std::unordered_map<std::string, ComPtr<ID3D12PipelineState>> mPSOs;
 	std::unordered_map<std::string, ComPtr<ID3D12RootSignature>> mRootSignatures;
-
-	std::vector<D3D12_INPUT_ELEMENT_DESC> mInputLayout;
 
 	UINT mTextrueHeapIndex = 0;
 	UINT mSkyTexHeapIndex = 0;

@@ -124,7 +124,6 @@ void GDxRenderer::Initialize(HWND OutputWindow, double width, double height)
 {
 	BuildDescriptorHeaps();
 	BuildRootSignature();
-	BuildShadersAndInputLayout();
 	BuildFrameResources();
 	BuildPSOs();
 
@@ -811,19 +810,13 @@ void GDxRenderer::BuildRootSignature()
 {
 	// GBuffer root signature
 	{
-
 		//G-Buffer inputs
 		CD3DX12_DESCRIPTOR_RANGE range;
-		range.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, /*(UINT)mTextureList.size()*/MAX_TEXTURE_NUM, 0);
+		range.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, MAX_TEXTURE_NUM, 0);
 
 		CD3DX12_ROOT_PARAMETER gBufferRootParameters[4];
-		//gBufferRootParameters[0].InitAsDescriptorTable(1, &range[0], D3D12_SHADER_VISIBILITY_VERTEX);
-		//gBufferRootParameters[1].InitAsDescriptorTable(1, &range[1], D3D12_SHADER_VISIBILITY_PIXEL);
 		gBufferRootParameters[0].InitAsConstantBufferView(0);
 		gBufferRootParameters[1].InitAsConstantBufferView(1);
-		//gBufferRootParameters[2].InitAsShaderResourceView(0, 0);//albedo
-		//gBufferRootParameters[3].InitAsShaderResourceView(1, 0);//normal
-		//gBufferRootParameters[4].InitAsShaderResourceView(2, 0);//occlusion roughness metallic
 		gBufferRootParameters[2].InitAsDescriptorTable(1, &range, D3D12_SHADER_VISIBILITY_ALL);
 		gBufferRootParameters[3].InitAsShaderResourceView(0, 1);
 
@@ -1060,7 +1053,6 @@ void GDxRenderer::BuildRootSignature()
 		slotRootParameter[3].InitAsDescriptorTable(1, &texTable0, D3D12_SHADER_VISIBILITY_PIXEL);
 		slotRootParameter[4].InitAsDescriptorTable(1, &texTable1, D3D12_SHADER_VISIBILITY_PIXEL);
 
-
 		auto staticSamplers = GetStaticSamplers();
 
 		// A root signature is an array of root parameters.
@@ -1165,7 +1157,7 @@ void GDxRenderer::BuildDescriptorHeaps()
 	// Create the SRV heap.
 	//
 	D3D12_DESCRIPTOR_HEAP_DESC srvHeapDesc = {};
-	srvHeapDesc.NumDescriptors = /*(UINT)mTextures.size()*/MAX_TEXTURE_NUM
+	srvHeapDesc.NumDescriptors = MAX_TEXTURE_NUM
 		+ 1 //sky
 		+ 4 //g-buffer
 		+ 2 //light pass
@@ -1325,23 +1317,6 @@ void GDxRenderer::BuildDescriptorHeaps()
 			md3dDevice->CreateShaderResourceView(dxTex->Resource.Get(), &srvDesc, GetCpuSrv(mTextrueHeapIndex + dxTex->texIndex));
 		}
 	}
-}
-
-void GDxRenderer::BuildShadersAndInputLayout()
-{
-	const D3D_SHADER_MACRO alphaTestDefines[] =
-	{
-		"ALPHA_TEST", "1",
-		NULL, NULL
-	};
-
-	mInputLayout =
-	{
-		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-		{ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 20, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-		{ "TANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 32, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-	};
 }
 
 void GDxRenderer::BuildPSOs()
@@ -1518,7 +1493,8 @@ void GDxRenderer::BuildPSOs()
 	postProcessDSD.BackFace.StencilFunc = D3D12_COMPARISON_FUNC_GREATER_EQUAL;
 
 	ZeroMemory(&PostProcessPsoDesc, sizeof(D3D12_GRAPHICS_PIPELINE_STATE_DESC));
-	PostProcessPsoDesc.InputLayout = { mInputLayout.data(), (UINT)mInputLayout.size() };
+	PostProcessPsoDesc.InputLayout.pInputElementDescs = GDxInputLayout::DefaultLayout;
+	PostProcessPsoDesc.InputLayout.NumElements = _countof(GDxInputLayout::DefaultLayout);
 	PostProcessPsoDesc.pRootSignature = mRootSignatures["PostProcess"].Get();
 	PostProcessPsoDesc.VS = GDxShaderManager::LoadShader(L"Shaders\\FullScreenVS.cso");
 	PostProcessPsoDesc.PS = GDxShaderManager::LoadShader(L"Shaders\\PostProcessPS.cso");
@@ -1534,22 +1510,6 @@ void GDxRenderer::BuildPSOs()
 	PostProcessPsoDesc.DSVFormat = mDepthStencilFormat;
 	ThrowIfFailed(md3dDevice->CreateGraphicsPipelineState(&PostProcessPsoDesc, IID_PPV_ARGS(&mPSOs["PostProcess"])));
 
-	//
-	D3D12_GRAPHICS_PIPELINE_STATE_DESC basePsoDesc;
-
-	ZeroMemory(&basePsoDesc, sizeof(D3D12_GRAPHICS_PIPELINE_STATE_DESC));
-	basePsoDesc.InputLayout = { mInputLayout.data(), (UINT)mInputLayout.size() };
-	basePsoDesc.pRootSignature = mRootSignatures["Forward"].Get();
-	basePsoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
-	basePsoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
-	basePsoDesc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
-	basePsoDesc.SampleMask = UINT_MAX;
-	basePsoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-	basePsoDesc.NumRenderTargets = 1;
-	basePsoDesc.RTVFormats[0] = mBackBufferFormat;
-	basePsoDesc.SampleDesc.Count = 1;
-	basePsoDesc.SampleDesc.Quality = 0;
-	basePsoDesc.DSVFormat = mDepthStencilFormat;
 
 	//
 	// PSO for GBuffer debug layer.
@@ -1571,7 +1531,22 @@ void GDxRenderer::BuildPSOs()
 	gBufferDebugDSD.BackFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
 	gBufferDebugDSD.BackFace.StencilFunc = D3D12_COMPARISON_FUNC_ALWAYS;
 
-	D3D12_GRAPHICS_PIPELINE_STATE_DESC debugPsoDesc = basePsoDesc;
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC debugPsoDesc;
+
+	ZeroMemory(&debugPsoDesc, sizeof(D3D12_GRAPHICS_PIPELINE_STATE_DESC));
+	debugPsoDesc.InputLayout.pInputElementDescs = GDxInputLayout::DefaultLayout;
+	debugPsoDesc.InputLayout.NumElements = _countof(GDxInputLayout::DefaultLayout);
+	debugPsoDesc.pRootSignature = mRootSignatures["Forward"].Get();
+	debugPsoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+	debugPsoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+	debugPsoDesc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
+	debugPsoDesc.SampleMask = UINT_MAX;
+	debugPsoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+	debugPsoDesc.NumRenderTargets = 1;
+	debugPsoDesc.RTVFormats[0] = mBackBufferFormat;
+	debugPsoDesc.SampleDesc.Count = 1;
+	debugPsoDesc.SampleDesc.Quality = 0;
+	debugPsoDesc.DSVFormat = mDepthStencilFormat;
 	debugPsoDesc.pRootSignature = mRootSignatures["GBufferDebug"].Get();
 	debugPsoDesc.VS = GDxShaderManager::LoadShader(L"Shaders\\ScreenVS.cso");
 	debugPsoDesc.PS = GDxShaderManager::LoadShader(L"Shaders\\GBufferDebugPS.cso");
@@ -1584,7 +1559,8 @@ void GDxRenderer::BuildPSOs()
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC skyPsoDesc;
 
 	ZeroMemory(&skyPsoDesc, sizeof(D3D12_GRAPHICS_PIPELINE_STATE_DESC));
-	skyPsoDesc.InputLayout = { mInputLayout.data(), (UINT)mInputLayout.size() };
+	skyPsoDesc.InputLayout.pInputElementDescs = GDxInputLayout::DefaultLayout;
+	skyPsoDesc.InputLayout.NumElements = _countof(GDxInputLayout::DefaultLayout);
 	skyPsoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
 	skyPsoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
 	skyPsoDesc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
@@ -1615,7 +1591,8 @@ void GDxRenderer::BuildPSOs()
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC irradiancePsoDesc;
 
 	ZeroMemory(&irradiancePsoDesc, sizeof(D3D12_GRAPHICS_PIPELINE_STATE_DESC));
-	irradiancePsoDesc.InputLayout = { mInputLayout.data(), (UINT)mInputLayout.size() };
+	irradiancePsoDesc.InputLayout.pInputElementDescs = GDxInputLayout::DefaultLayout;
+	irradiancePsoDesc.InputLayout.NumElements = _countof(GDxInputLayout::DefaultLayout);
 	irradiancePsoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
 	irradiancePsoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
 	irradiancePsoDesc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
@@ -1646,7 +1623,8 @@ void GDxRenderer::BuildPSOs()
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC prefilterPsoDesc;
 
 	ZeroMemory(&prefilterPsoDesc, sizeof(D3D12_GRAPHICS_PIPELINE_STATE_DESC));
-	prefilterPsoDesc.InputLayout = { mInputLayout.data(), (UINT)mInputLayout.size() };
+	prefilterPsoDesc.InputLayout.pInputElementDescs = GDxInputLayout::DefaultLayout;
+	prefilterPsoDesc.InputLayout.NumElements = _countof(GDxInputLayout::DefaultLayout);
 	prefilterPsoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
 	prefilterPsoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
 	prefilterPsoDesc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);

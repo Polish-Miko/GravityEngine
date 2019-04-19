@@ -10,7 +10,7 @@ using namespace DirectX::PackedVector;
 
 typedef void(__stdcall * VoidFuncPointerType)(void);
 
-class GCore// : public GRenderer
+class GCore
 {
 public:
 	GCore(const GCore& rhs) = delete;
