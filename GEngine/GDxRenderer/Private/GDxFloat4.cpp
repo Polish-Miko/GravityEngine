@@ -51,9 +51,13 @@ GGiFloat4& GDxFloat4::operator *(GGiFloat4& vec)
 	DirectX::XMVECTOR fac2 = DirectX::XMLoadFloat4(&value);
 	DirectX::XMVECTOR pro = DirectX::XMVector4Dot(fac1, fac2);
 
-	DirectX::XMStoreFloat4(&value, pro);
+	GDxFloat4* ret = new GDxFloat4();
+	DirectX::XMStoreFloat4(&(ret->value), pro);
+	return *ret;
 
-	return *this;
+	//DirectX::XMStoreFloat4(&value, pro);
+
+	//return *this;
 }
 
 GGiFloat4& GDxFloat4::operator *(GGiFloat4x4& mat)
@@ -64,9 +68,13 @@ GGiFloat4& GDxFloat4::operator *(GGiFloat4x4& mat)
 	DirectX::XMMATRIX fac2 = DirectX::XMLoadFloat4x4(&dxMat.GetValue());
 	DirectX::XMVECTOR pro = DirectX::XMVector4Transform(fac1, fac2);
 
-	DirectX::XMStoreFloat4(&value, pro);
+	GDxFloat4* ret = new GDxFloat4();
+	DirectX::XMStoreFloat4(&(ret->value), pro);
+	return *ret;
 
-	return *this;
+	//DirectX::XMStoreFloat4(&value, pro);
+
+	//return *this;
 }
 
 GGiFloat4& GDxFloat4::operator +(GGiFloat4& vec)
@@ -77,9 +85,13 @@ GGiFloat4& GDxFloat4::operator +(GGiFloat4& vec)
 	DirectX::XMVECTOR add2 = DirectX::XMLoadFloat4(&value);
 	DirectX::XMVECTOR sum = DirectX::XMVectorAdd(add1, add2);
 
-	DirectX::XMStoreFloat4(&value, sum);
+	GDxFloat4* ret = new GDxFloat4();
+	DirectX::XMStoreFloat4(&(ret->value), sum);
+	return *ret;
 
-	return *this;
+	//DirectX::XMStoreFloat4(&value, sum);
+
+	//return *this;
 }
 
 float GDxFloat4::GetX()

@@ -2103,7 +2103,7 @@ void GDxRenderer::CubemapPreIntegration()
 		{
 			auto view = pCubemapSampleCamera[j]->GetView();
 			auto proj = pCubemapSampleCamera[j]->GetProj();
-			GGiFloat4x4* viewProj = &((*view) * (*proj));
+			GGiFloat4x4* viewProj = &((*proj) * (*view));
 			GDxFloat4x4* dxVP = dynamic_cast<GDxFloat4x4*>(viewProj);
 			if (dxVP == nullptr)
 				ThrowGGiException("Cast fail from GGiFloat4x4* to GDxFloat4x4*.");

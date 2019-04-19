@@ -75,9 +75,13 @@ GGiFloat4x4& GDxFloat4x4::operator *(GGiFloat4x4& mat)
 	DirectX::XMMATRIX fac2 = DirectX::XMLoadFloat4x4(&value);
 	DirectX::XMMATRIX pro = fac1 * fac2;
 
-	DirectX::XMStoreFloat4x4(&value, pro);
+	GDxFloat4x4* ret = new GDxFloat4x4();
+	DirectX::XMStoreFloat4x4(&(ret->value), pro);
+	return *ret;
 	
-	return *this;
+	//DirectX::XMStoreFloat4x4(&value, pro);
+	
+	//return *this;
 }
 
 GGiFloat4x4& GDxFloat4x4::operator +(GGiFloat4x4& mat)
@@ -88,9 +92,13 @@ GGiFloat4x4& GDxFloat4x4::operator +(GGiFloat4x4& mat)
 	DirectX::XMMATRIX add2 = DirectX::XMLoadFloat4x4(&value);
 	DirectX::XMMATRIX sum = add1 + add2;
 
-	DirectX::XMStoreFloat4x4(&value, sum);
+	GDxFloat4x4* ret = new GDxFloat4x4();
+	DirectX::XMStoreFloat4x4(&(ret->value), sum);
+	return *ret;
 
-	return *this;
+	//DirectX::XMStoreFloat4x4(&value, sum);
+
+	//return *this;
 }
 
 void GDxFloat4x4::SetByTranslation(float x, float y, float z)
