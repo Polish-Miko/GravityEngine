@@ -20,30 +20,6 @@ cbuffer cbPass : register(b1)
 	float4x4 gViewProj;
 	float3 gEyePosW;
 	float roughnessCb;
-	/*
-	float4x4 gView;
-	float4x4 gInvView;
-	float4x4 gProj;
-	float4x4 gInvProj;
-	float4x4 gViewProj;
-	float4x4 gInvViewProj;
-	float4x4 gViewProjTex;
-	float4x4 gShadowTransform;
-	float3 gEyePosW;
-	float cbPerObjectPad1;
-	float2 gRenderTargetSize;
-	float2 gInvRenderTargetSize;
-	float gNearZ;
-	float gFarZ;
-	float gTotalTime;
-	float gDeltaTime;
-	float4 gAmbientLight;
-	*/
-	// Indices [0, NUM_DIR_LIGHTS) are directional lights;
-	// indices [NUM_DIR_LIGHTS, NUM_DIR_LIGHTS+NUM_POINT_LIGHTS) are point lights;
-	// indices [NUM_DIR_LIGHTS+NUM_POINT_LIGHTS, NUM_DIR_LIGHTS+NUM_POINT_LIGHT+NUM_SPOT_LIGHTS)
-	// are spot lights for a maximum of MaxLights per object.
-	//Light gLights[MaxLights];
 };
 
 float RadicalInverse_VdC(uint bits)
@@ -92,33 +68,6 @@ struct VertexOut
 
 float4 main(VertexOut pin) : SV_TARGET
 {
-	/*
-	float roughness = 0.1f;
-	const uint NumSamples = 1024u;
-	float3 N = normalize(input.uvw);
-	float3 R = N;
-	float3 V = R;
-
-	float3 prefilteredColor = float3(0.f, 0.f, 0.f);
-	float totalWeight = 0.f;
-	for (uint i = 0u; i < NumSamples; ++i)
-	{
-		float2 Xi = Hammersley(i, NumSamples);
-		float3 H = ImportanceSampleGGX(Xi, N, roughness);
-		float3 L = normalize(2.0f * dot(V, H) * H - V);
-		float NdotL = max(dot(N, L), 0.0f);
-		if (NdotL > 0.f)
-		{
-			prefilteredColor += EnvMap.Sample(basicSampler, L).rgb * NdotL;
-			totalWeight += NdotL;
-		}
-	}
-
-	prefilteredColor = prefilteredColor / totalWeight;
-
-	return float4(prefilteredColor, 1);
-	*/
-
 	// Pre-integration
 	float3 irradiance = float3(0.0f, 0.0f, 0.0f);
 
@@ -128,7 +77,6 @@ float4 main(VertexOut pin) : SV_TARGET
 	up = cross(normal, right);
 
 	float sampleDelta = 0.025f;
-	//sampleDelta = 0.2f;
 	float numSamples = 0.0f;
 	for (float phi = 0.0f; phi < 2.0f * PI; phi += sampleDelta)
 	{
@@ -146,5 +94,4 @@ float4 main(VertexOut pin) : SV_TARGET
 	irradiance = PI * irradiance * (1.0f / numSamples);
 
 	return float4(irradiance, 1.0f);
-	//return float4(1.0f, 1.0f, 1.0f, 1.0f);
 }

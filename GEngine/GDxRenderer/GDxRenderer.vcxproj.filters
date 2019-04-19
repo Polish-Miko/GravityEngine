@@ -196,10 +196,8 @@
     <FxCompile Include="Shaders\DefaultVS.hlsl" />
     <FxCompile Include="Shaders\ScreenVS.hlsl" />
     <FxCompile Include="Shaders\GBufferDebugPS.hlsl" />
-    <FxCompile Include="Shaders\LightShapeVS.hlsl" />
     <FxCompile Include="Shaders\ScreenQuadVS.hlsl" />
     <FxCompile Include="Shaders\AmbientPassPS.hlsl" />
-    <FxCompile Include="Shaders\LightPassLegPS.hlsl" />
     <FxCompile Include="Shaders\FullScreenVS.hlsl" />
     <FxCompile Include="Shaders\DirectLightPassPS.hlsl" />
     <FxCompile Include="Shaders\PostProcessPS.hlsl" />

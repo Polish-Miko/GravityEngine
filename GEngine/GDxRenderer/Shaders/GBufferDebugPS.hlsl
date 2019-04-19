@@ -47,19 +47,4 @@ float4 main(VertexOut input) : SV_TARGET
 		break;
 	}
 	return color;
-	/*
-	float3 normal = calculateNormalFromMap(input.uv, normalize(input.normal), input.tangent);
-	PixelOutput output;
-	output.albedo = AlbedoTexture.Sample(Sampler, input.uv);
-	output.normal = float4(normalize(normal), 1.0f);
-	output.worldPos = float4(input.worldPos, 0.0f);
-	float roughness = OcclusionRoughnessMetallicTexture.Sample(Sampler, input.uv).g;
-	float metal = OcclusionRoughnessMetallicTexture.Sample(Sampler, input.uv).b;
-	output.roughness = float4(roughness, roughness, roughness, 0);
-	output.metalness = float4(metal, metal, metal, 0);
-	output.albedo.a = input.linearZ;
-	output.shadowPos = input.shadowPos;
-	return output;
-	*/
-	//return float4(gTextureMaps[index].Sample(Sampler, input.TexC).ggg, 1.0f);
 }

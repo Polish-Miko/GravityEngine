@@ -35,19 +35,13 @@ struct PointLight
 	float3 Padding;
 };
 
-//static const int MaxPointLights = 16;
-//static const int MaxDirLights = 4;
-
 cbuffer externalData : register(b0)
 {
 	DirectionalLight dirLight[MAX_DIRECTIONAL_LIGHT_NUM];
 	PointLight pointLight[MAX_POINT_LIGHT_NUM];
-	//float4x4 invProjView;
 	float3 cameraPosition;
 	int pointLightCount;
-	//int pointLightIndex;
 	int dirLightCount;
-	//int dirLightIndex;
 }
 
 float Attenuate(float3 position, float range, float3 worldPos)
@@ -139,40 +133,10 @@ float3 CookTorrance(float3 n, float3 l, float3 v, float roughness, float metalne
 	return (D * F * G) / (4 * max(NdotV * NdotL, 0.01f));
 }
 
-
-float3 DiffuseEnergyConserve(float diffuse, float3 specular, float metalness)
-{
-	return diffuse * ((1 - saturate(specular)) * (1 - metalness));
-}
-
 float3 AmbientPBR(float3 kD, float metalness, float3 diffuse, float ao, float3 specular)
 {
 	kD *= (1.0f - metalness);
 	return (kD * diffuse + specular) * ao;
-}
-
-float3 DirLightPBR(DirectionalLight light, float3 normal, float3 worldPos,
-	float3 camPos, float roughness, float metalness,
-	float3 albedo, float shadowAmount)
-{
-	float3 f0 = lerp(F0_NON_METAL.rrr, albedo.rgb, metalness);
-	//float ao = 1.0f;
-	float3 toLight = normalize(-light.Direction);
-	float3 toCam = normalize(camPos - worldPos);
-	float3 kS = float3(0.f, 0.f, 0.f);
-	float3 specBRDF = CookTorrance(normal, toLight, toCam, roughness, metalness, f0, kS);
-	float3 diffBRDF = LambertDiffuse(kS, albedo, metalness);
-	//float3 balancedDiff = DiffuseEnergyConserve(diff, spec, metalness);
-	//float3 specular = prefilteredColor * (kS * brdf.x + brdf.y);
-	//float3 kD = float3(1.0f, 1.0f, 1.0f) - kS;
-	//float3 diffuse = irradiance * surfaceColor;
-	//float3 ambient = AmbientPBR(kD, metalness, diffuse, ao, specular);
-
-	float NdotL = max(dot(normal, toLight), 0.0);
-
-	//return (diffBRDF + specBRDF) * NdotL * light.DiffuseColor.rgb * light.Intensity * shadowAmount;// +ambient;
-	return (diffBRDF + specBRDF) * NdotL * light.DiffuseColor.rgb * light.Intensity * shadowAmount;// +ambient;
-
 }
 
 float3 AmbientPBR(float3 normal, float3 worldPos,
@@ -195,39 +159,18 @@ float3 AmbientPBR(float3 normal, float3 worldPos,
 	return ambient;
 }
 
-float3 PointLightPBR(PointLight light, float3 normal, float3 worldPos, float3 camPos, float roughness, float metalness, float3 albedo, float shadowAmount)
-{
-	float3 f0 = lerp(F0_NON_METAL.rrr, albedo.rgb, metalness);
-	float ao = 1.0f;
-	float3 toLight = normalize(light.Position - worldPos);
-	float3 toCam = normalize(camPos - worldPos);
-	float atten = Attenuate(light.Position, light.Range, worldPos);
-	float3 kS = float3(0.f, 0.f, 0.f);
-	float3 specBRDF = CookTorrance(normal, toLight, toCam, roughness, metalness, f0, kS);
-	float3 diffBRDF = LambertDiffuse(kS, albedo, metalness);
-
-	//float3 balancedDiff = DiffuseEnergyConserve(diff, spec, metalness);
-
-	float NdotL = max(dot(normal, toLight), 0.0);
-
-	return (diffBRDF + specBRDF) * atten * NdotL * light.Intensity * light.Color.rgb * shadowAmount;// +ambient;
-}
-
 float3 DirectPBR(float lightIntensity, float3 lightColor, float3 toLight, float3 normal, float3 worldPos, float3 camPos, float roughness, float metalness, float3 albedo, float shadowAmount)
 {
 	float3 f0 = lerp(F0_NON_METAL.rrr, albedo.rgb, metalness);
 	float ao = 1.0f;
 	float3 toCam = normalize(camPos - worldPos);
-	//float atten = Attenuate(light.Position, light.Range, worldPos);
 	float3 kS = float3(0.f, 0.f, 0.f);
 	float3 specBRDF = CookTorrance(normal, toLight, toCam, roughness, metalness, f0, kS);
 	float3 diffBRDF = LambertDiffuse(kS, albedo, metalness);
 
-	//float3 balancedDiff = DiffuseEnergyConserve(diff, spec, metalness);
-
 	float NdotL = max(dot(normal, toLight), 0.0);
 
-	return (diffBRDF + specBRDF) * NdotL * lightIntensity * lightColor.rgb * shadowAmount;// +ambient;
+	return (diffBRDF + specBRDF) * NdotL * lightIntensity * lightColor.rgb * shadowAmount;
 }
 
-#endif 
+#endif

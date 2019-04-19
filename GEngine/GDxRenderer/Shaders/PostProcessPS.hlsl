@@ -1,14 +1,4 @@
-//#define POINT_INTENSITY 0.5
-//#include "Lighting.hlsli"
 
-/*
-cbuffer PerFrame : register(b1)
-{
-	float	nearZ;
-	float	farZ;
-	float2	lightPerspectiveValues;
-};
-*/
 
 struct VertexToPixel
 {
@@ -19,23 +9,6 @@ struct VertexToPixel
 //Light Render Results
 Texture2D gDirectLight			: register(t0);
 Texture2D gAmbientLight			: register(t1);
-
-//G-Buffer
-//Texture2D gAlbedoTexture			: register(t0);
-//Texture2D gNormalTexture			: register(t1);
-//Texture2D gWorldPosTexture			: register(t2);
-//Texture2D gOrmTexture				: register(t3);
-//Texture2D gMetalnessTexture			: register(t4); //t5, t6 for light pass
-
-//IBL Textures
-//Texture2D gDepth					: register(t7);
-//TextureCube skyIrradianceTexture	: register(t8);
-//Texture2D brdfLUTTexture			: register(t9);
-
-//Shadow 
-//Texture2D gShadowMap				: register(t11);
-//Texture2D gShadowPos				: register(t12);
-//TextureCube<float> gPointShadowMap	: register(t13);
 
 SamplerState			basicSampler	: register(s0);
 SamplerComparisonState	shadowSampler	: register(s1);

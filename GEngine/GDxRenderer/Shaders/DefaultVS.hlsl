@@ -28,25 +28,6 @@ struct VertexOutput
 	float4 shadowPos	: SHADOWPOS;
 };
 
-/*
-cbuffer ConstantBuffer : register(b0)
-{
-	float4x4 worldViewProjection;
-	float4x4 world;
-	float4x4 view;
-	float4x4 projection;
-	float4x4 shadowView;
-	float4x4 shadowProjection;
-	float2	 uvScale;
-};
-cbuffer PerFrame : register(b1)
-{
-	float nearZ;
-	float farZ;
-	float2 lightPerspectiveValues;
-};
-*/
-
 // Constant data that varies per frame.
 
 cbuffer cbPerObject : register(b0)
@@ -84,7 +65,7 @@ cbuffer cbPass : register(b1)
 	// indices [NUM_DIR_LIGHTS, NUM_DIR_LIGHTS+NUM_POINT_LIGHTS) are point lights;
 	// indices [NUM_DIR_LIGHTS+NUM_POINT_LIGHTS, NUM_DIR_LIGHTS+NUM_POINT_LIGHT+NUM_SPOT_LIGHTS)
 	// are spot lights for a maximum of MaxLights per object.
-	Light gLights[16];
+	//Light gLights[16];
 };
 
 float2 ProjectionConstants(float gNearZ, float gFarZ)
@@ -106,37 +87,14 @@ float LinearZ(float4 outPosition)
 VertexOutput main(VertexInput input)
 {
 	VertexOutput output;
-	//float4x4 shadowVP = mul(mul(world, shadowView), shadowProjection);
 
-	// Fetch the material data.
-	//MaterialData matData = gMaterialData[gMaterialIndex];
-
-	// Transform to world space.
-	//float4 posW = mul(float4(vin.PosL, 1.0f), gWorld);
-	//vout.PosW = posW.xyz;
-
-	// Assumes nonuniform scaling; otherwise, need to use inverse-transpose of world matrix.
-	//vout.NormalW = mul(vin.NormalL, (float3x3)gWorld);
-
-	//vout.TangentW = mul(vin.TangentU, (float3x3)gWorld);
-
-	// Transform to homogeneous clip space.
-	//vout.PosH = mul(posW, gViewProj);
-
-	// Generate projective tex-coords to project SSAO map onto scene.
-	//vout.SsaoPosH = mul(posW, gViewProjTex);
-
-	//output.pos = mul(float4(input.pos, 1.0f), worldViewProjection);
 	float4 worldPos = mul(float4(input.pos, 1.0f), gWorld);
 	output.pos = mul(worldPos, gViewProj);
-	//input.uv.x = uvScale.x * input.uv.x;
-	//input.uv.y = uvScale.y * input.uv.y;
 	output.uv = input.uv;
 	output.normal = normalize(mul(input.normal, (float3x3)gWorld));
 	output.tangent = normalize(mul(input.tangent, (float3x3)gWorld));
 	output.worldPos = mul(float4(input.pos, 1.0f), gWorld).xyz;
 	output.linearZ = LinearZ(output.pos);
-	//output.shadowPos = mul(float4(input.pos, 1.0f), shadowVP);
 	output.shadowPos = mul(float4(input.pos, 1.0f), gShadowTransform);
 	output.ssaoPos = mul(worldPos, gViewProjTex);
 	return output;
