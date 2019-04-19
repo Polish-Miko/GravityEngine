@@ -1,14 +1,8 @@
-
 #pragma once
 
 #include "GDxRenderer.h"
-//#include "MathHelper.h"
-//#include "UploadBuffer.h"
-//#include "GeometryGenerator.h"
-//#include "Camera.h"
-//#include "FrameResource.h"
-//#include "ShadowMap.h"
-//#include "Ssao.h"
+
+
 
 using Microsoft::WRL::ComPtr;
 using namespace DirectX;
@@ -29,11 +23,9 @@ public:
 
 	void Initialize(HWND OutputWindow, double width, double height);
 
-	//virtual bool Initialize(HWND OutputWindow, double width, double height)override;
+	void MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 #pragma region export
-
-	void MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 	int GetSceneObjectNum();
 
@@ -49,7 +41,6 @@ public:
 
 private:
 
-	//HINSTANCE mhAppInst = nullptr; // application instance handle
 	bool      mAppPaused = false;  // is the application paused?
 	bool      mMinimized = false;  // is the application minimized?
 	bool      mMaximized = false;  // is the application maximized?
@@ -74,15 +65,20 @@ private:
 
 	std::unique_ptr<GRiCamera> mCubemapSampleCamera[6];
 
-	//void Draw();
-
-	//void SetWorkDirectory();
+	POINT mLastMousePos;
 
 private:
 
 	GCore();
+	
+	void OnResize();
 
 	void Update();
+
+	void OnKeyboardInput(const GGiGameTimer* gt);
+	void OnMouseDown(WPARAM btnState, int x, int y);
+	void OnMouseUp(WPARAM btnState, int x, int y);
+	void OnMouseMove(WPARAM btnState, int x, int y);
 
 	void LoadTextures();
 	void LoadMaterials();
@@ -96,16 +92,6 @@ private:
 	//Util
 	std::vector<std::wstring> GetAllFilesInFolder(std::wstring path, bool bCheckFormat, std::vector<std::wstring> format);
 	std::vector<std::wstring> GetAllFilesUnderFolder(std::wstring path, bool bCheckFormat, std::vector<std::wstring> format);
-
-	/*
-#pragma region Export-Related
-
-	VoidFuncPointerType mSetSceneObjectsCallback;
-
-	void SetSceneObjectsCallback();
-
-#pragma endregion
-	*/
 
 #pragma region Export-Related
 

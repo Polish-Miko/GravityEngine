@@ -22,13 +22,10 @@ public:
 	virtual bool IsRunning() = 0;
 
 	virtual float AspectRatio() const;
+	HWND MainWnd() const;
 
 	void SetClientWidth(int width);
 	void SetClientHeight(int height);
-
-	virtual void OnMouseDown(WPARAM btnState, int x, int y) = 0;
-	virtual void OnMouseUp(WPARAM btnState, int x, int y) = 0;
-	virtual void OnMouseMove(WPARAM btnState, int x, int y) = 0;
 
 	void CalculateFrameStats();
 
@@ -38,19 +35,24 @@ public:
 	virtual void CreateFilmboxManager() = 0;
 	GRiFilmboxManager* GetFilmboxManager();
 
-	virtual void SyncTextures(std::unordered_map<std::wstring, std::unique_ptr<GRiTexture>>& mTextures) = 0;
-	virtual void SyncMaterials(std::unordered_map<std::wstring, std::unique_ptr<GRiMaterial>>& mMaterials) = 0;
-	virtual void SyncMeshes(std::unordered_map<std::wstring, std::unique_ptr<GRiMesh>>& mMeshes) = 0;
-	virtual void SyncSceneObjects(std::unordered_map<std::wstring, std::unique_ptr<GRiSceneObject>>& mSceneObjects, std::vector<GRiSceneObject*>* mSceneObjectLayer) = 0;
-	virtual void SyncCameras(std::vector<GRiCamera*> mCameras) = 0;
+	virtual void SyncTextures(std::unordered_map<std::wstring, std::unique_ptr<GRiTexture>>& mTextures);
+	virtual void SyncMaterials(std::unordered_map<std::wstring, std::unique_ptr<GRiMaterial>>& mMaterials);
+	virtual void SyncMeshes(std::unordered_map<std::wstring, std::unique_ptr<GRiMesh>>& mMeshes);
+	virtual void SyncSceneObjects(std::unordered_map<std::wstring, std::unique_ptr<GRiSceneObject>>& mSceneObjects, std::vector<GRiSceneObject*>* mSceneObjectLayer);
+	virtual void SyncCameras(std::vector<GRiCamera*> mCameras);
 
 	std::unordered_map<std::wstring, GRiTexture*> pTextures;
 	std::unordered_map<std::wstring, GRiMaterial*> pMaterials;
+	std::unordered_map<std::wstring, GRiMesh*> pMeshes;
+	std::unordered_map<std::wstring, GRiSceneObject*> pSceneObjects;
+	std::vector<GRiSceneObject*> pSceneObjectLayer[(int)RenderLayer::Count];
 
 	GRiCamera* pCamera = nullptr;
 	GRiCamera* pCubemapSampleCamera[6];
 
 protected:
+
+	HWND mhMainWnd = nullptr; // main window handle
 
 	GGiGameTimer* pTimer;
 
@@ -61,9 +63,6 @@ protected:
 
 	std::unique_ptr<GRiFilmboxManager> mFilmboxManager;
 
-	// Set true to use 4X MSAA.  The default is false.
-	//bool      m4xMsaaState = false;    // 4X MSAA enabled
-	//UINT      m4xMsaaQuality = 0;      // quality level of 4X MSAA
-
 };
+
 

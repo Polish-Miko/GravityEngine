@@ -16,23 +16,8 @@ using Microsoft::WRL::ComPtr;
 using namespace std;
 using namespace DirectX;
 
-/*
-LRESULT CALLBACK
-MainWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
-{
-	// Forward hwnd on because we can get messages (e.g., WM_CREATE)
-	// before CreateWindow returns, and thus before mhMainWnd is valid.
-	return D3DApp::GetApp()->MsgProc(hwnd, msg, wParam, lParam);
-}
-*/
 
-
-/*
-GRenderer* GRenderer::GetApp()
-{
-	return mApp;
-}
-*/
+#pragma region Class
 
 GDxRenderer& GDxRenderer::GetRenderer()
 {
@@ -50,151 +35,501 @@ GDxRenderer::GDxRenderer()
 	mSceneBounds.Radius = sqrtf(10.0f*10.0f + 15.0f*15.0f);
 }
 
-///*
 GDxRenderer::~GDxRenderer()
 {
 	if (md3dDevice != nullptr)
 		FlushCommandQueue();
 }
-//*/
 
-/*
-HINSTANCE GRenderer::AppInst()const
-{
-	return mhAppInst;
-}
-*/
+#pragma endregion
 
-HWND GDxRenderer::MainWnd()const
-{
-	return mhMainWnd;
-}
+#pragma region Main
 
-/*
-float GDxRenderer::AspectRatio()const
+bool GDxRenderer::InitDirect3D()
 {
-	return static_cast<float>(mClientWidth) / mClientHeight;
-}
-*/
+	ThrowIfFailed(CreateDXGIFactory1(IID_PPV_ARGS(&mdxgiFactory)));
 
-/*
-bool GDxRenderer::Get4xMsaaState()const
-{
-	return m4xMsaaState;
-}
+	// Try to create hardware device.
+	HRESULT hardwareResult = D3D12CreateDevice(
+		nullptr,             // default adapter
+		D3D_FEATURE_LEVEL_11_0,
+		IID_PPV_ARGS(&md3dDevice));
 
-void GDxRenderer::Set4xMsaaState(bool value)
-{
-	if (m4xMsaaState != value)
+	// Fallback to WARP device.
+	if (FAILED(hardwareResult))
 	{
-		m4xMsaaState = value;
+		ComPtr<IDXGIAdapter> pWarpAdapter;
+		ThrowIfFailed(mdxgiFactory->EnumWarpAdapter(IID_PPV_ARGS(&pWarpAdapter)));
 
-		// Recreate the swapchain and buffers with new multisample settings.
-		CreateSwapChain();
-		OnResize();
+		ThrowIfFailed(D3D12CreateDevice(
+			pWarpAdapter.Get(),
+			D3D_FEATURE_LEVEL_11_0,
+			IID_PPV_ARGS(&md3dDevice)));
 	}
+
+	ThrowIfFailed(md3dDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE,
+		IID_PPV_ARGS(&mFence)));
+
+	mRtvDescriptorSize = md3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+	mDsvDescriptorSize = md3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+	mCbvSrvUavDescriptorSize = md3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
+	// Check 4X MSAA quality support for our back buffer format.
+	// All Direct3D 11 capable devices support 4X MSAA for all render 
+	// target formats, so we only need to check quality support.
+
+	D3D12_FEATURE_DATA_MULTISAMPLE_QUALITY_LEVELS msQualityLevels;
+	msQualityLevels.Format = mBackBufferFormat;
+	msQualityLevels.SampleCount = 4;
+	msQualityLevels.Flags = D3D12_MULTISAMPLE_QUALITY_LEVELS_FLAG_NONE;
+	msQualityLevels.NumQualityLevels = 0;
+	ThrowIfFailed(md3dDevice->CheckFeatureSupport(
+		D3D12_FEATURE_MULTISAMPLE_QUALITY_LEVELS,
+		&msQualityLevels,
+		sizeof(msQualityLevels)));
+
+	//m4xMsaaQuality = msQualityLevels.NumQualityLevels;
+	//assert(m4xMsaaQuality > 0 && "Unexpected MSAA quality level.");
+
+#ifdef _DEBUG
+	LogAdapters();
+#endif
+
+	CreateCommandObjects();
+	CreateSwapChain();
+	CreateRtvAndDsvDescriptorHeaps();
+
+	return true;
 }
-*/
 
-/*
-int GDxRenderer::Run()
+void GDxRenderer::PreInitialize(HWND OutputWindow, double width, double height)
 {
-	try
+	mhMainWnd = OutputWindow;
+	mClientWidth = (int)width;
+	mClientHeight = (int)height;
+
+	if (!InitDirect3D())
+		return;
+
+	CreateRendererFactory();
+	CreateFilmboxManager();
+
+	// Do the initial resize code.
+	OnResize();
+
+	ThrowIfFailed(mCommandList->Reset(mDirectCmdListAlloc.Get(), nullptr));
+}
+
+void GDxRenderer::Initialize(HWND OutputWindow, double width, double height)
+{
+	BuildDescriptorHeaps();
+	BuildRootSignature();
+	BuildShadersAndInputLayout();
+	BuildFrameResources();
+	BuildPSOs();
+
+	CubemapPreIntegration();
+
+	// Execute the initialization commands.
+	ThrowIfFailed(mCommandList->Close());
+	ID3D12CommandList* cmdsLists[] = { mCommandList.Get() };
+	mCommandQueue->ExecuteCommandLists(_countof(cmdsLists), cmdsLists);
+
+	// Wait until initialization is complete.
+	FlushCommandQueue();
+}
+
+void GDxRenderer::Draw(const GGiGameTimer* gt)
+{
+	auto cmdListAlloc = mCurrFrameResource->CmdListAlloc;
+
+	// Reuse the memory associated with command recording.
+	// We can only reset when the associated command lists have finished execution on the GPU.
+	ThrowIfFailed(cmdListAlloc->Reset());
+
+	// A command list can be reset after it has been added to the command queue via ExecuteCommandList.
+	// Reusing the command list reuses memory.
+	ThrowIfFailed(mCommandList->Reset(cmdListAlloc.Get(), mPSOs["GBuffer"].Get()));
+
+	ID3D12DescriptorHeap* descriptorHeaps[] = { mSrvDescriptorHeap.Get() };
+	mCommandList->SetDescriptorHeaps(_countof(descriptorHeaps), descriptorHeaps);
+
+	auto matBuffer = mCurrFrameResource->MaterialBuffer->Resource();
+	// Indicate a state transition on the resource usage.
+	mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(),
+		D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET));
+
+	// Clear the back buffer.
+	mCommandList->ClearRenderTargetView(CurrentBackBufferView(), Colors::LightSteelBlue, 0, nullptr);
+	mCommandList->ClearDepthStencilView(DepthStencilView(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
+
+	// G-Buffer Pass
 	{
-		MSG msg = { 0 };
+		mCommandList->RSSetViewports(1, &(mRtvHeaps["GBuffer"]->mRtv[0]->mViewport));
+		mCommandList->RSSetScissorRects(1, &(mRtvHeaps["GBuffer"]->mRtv[0]->mScissorRect));
 
-		pTimer->Reset();
+		mCommandList->SetGraphicsRootSignature(mRootSignatures["GBuffer"].Get());
 
-		while (msg.message != WM_QUIT)
+		mCommandList->SetPipelineState(mPSOs["GBuffer"].Get());
+
+		UINT objCBByteSize = GDxUtil::CalcConstantBufferByteSize(sizeof(ObjectConstants));
+		auto objectCB = mCurrFrameResource->ObjectCB->Resource();
+
+		auto passCB = mCurrFrameResource->PassCB->Resource();
+		mCommandList->SetGraphicsRootConstantBufferView(1, passCB->GetGPUVirtualAddress());
+
+		//mCommandList->SetGraphicsRootDescriptorTable(2, mSrvDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
+		mCommandList->SetGraphicsRootDescriptorTable(2, GetGpuSrv(mTextrueHeapIndex));
+
+		matBuffer = mCurrFrameResource->MaterialBuffer->Resource();
+		mCommandList->SetGraphicsRootShaderResourceView(3, matBuffer->GetGPUVirtualAddress());
+
+		mCommandList->OMSetStencilRef(1);
+
+		// Indicate a state transition on the resource usage.
+		for (size_t i = 0; i < mRtvHeaps["GBuffer"]->mRtv.size(); i++)
 		{
-			// If there are Window messages then process them.
-			if (PeekMessage(&msg, 0, 0, 0, PM_REMOVE))
-			{
-				TranslateMessage(&msg);
-				DispatchMessage(&msg);
-			}
-			// Otherwise, do animation/game stuff.
-			else
-			{
-				pTimer->Tick();
+			mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["GBuffer"]->mRtv[i]->mResource.Get(),
+				D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_RENDER_TARGET));
 
-				if (!mAppPaused)
-				{
-					CalculateFrameStats();
-					Update(pTimer);
-					Draw(pTimer);
-				}
-				else
-				{
-					Sleep(100);
-				}
-			}
+			// Clear the back buffer.
+			DirectX::XMVECTORF32 clearColor = { mRtvHeaps["GBuffer"]->mRtv[i]->mProperties.mClearColor[0],
+			mRtvHeaps["GBuffer"]->mRtv[i]->mProperties.mClearColor[1],
+			mRtvHeaps["GBuffer"]->mRtv[i]->mProperties.mClearColor[2],
+			mRtvHeaps["GBuffer"]->mRtv[i]->mProperties.mClearColor[3]
+			};
+
+			// WE ALREADY WROTE THE DEPTH INFO TO THE DEPTH BUFFER IN DrawNormalsAndDepth,
+			// SO DO NOT CLEAR DEPTH.
+			mCommandList->ClearRenderTargetView(mRtvHeaps["GBuffer"]->mRtvHeap.handleCPU((UINT)i), clearColor, 0, nullptr);
+		}
+
+		// Specify the buffers we are going to render to.
+		//mCommandList->OMSetRenderTargets(mRtvHeaps["GBuffer"]->mRtvHeap.HeapDesc.NumDescriptors, &(mRtvHeaps["GBuffer"]->mRtvHeap.hCPUHeapStart), true, &DepthStencilView());
+		mCommandList->OMSetRenderTargets(mRtvHeaps["GBuffer"]->mRtvHeap.HeapDesc.NumDescriptors, &(mRtvHeaps["GBuffer"]->mRtvHeap.hCPUHeapStart), true, &DepthStencilView());
+
+		// For each render item...
+		DrawSceneObjects(mCommandList.Get(), RenderLayer::Deferred, true);
+
+		for (size_t i = 0; i < mRtvHeaps["GBuffer"]->mRtv.size(); i++)
+		{
+			mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["GBuffer"]->mRtv[i]->mResource.Get(),
+				D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ));
 		}
 	}
-	catch (DxException& e)
+
+	// Direct Light Pass
 	{
-		MessageBox(nullptr, e.ToString().c_str(), L"HR Failed", MB_OK);
-		return 0;
+		mCommandList->RSSetViewports(1, &(mRtvHeaps["LightPass"]->mRtv[0]->mViewport));
+		mCommandList->RSSetScissorRects(1, &(mRtvHeaps["LightPass"]->mRtv[0]->mScissorRect));
+
+		mCommandList->SetGraphicsRootSignature(mRootSignatures["LightPass"].Get());
+
+		mCommandList->SetPipelineState(mPSOs["DirectLightPass"].Get());
+
+		auto lightCB = mCurrFrameResource->LightCB->Resource();
+		mCommandList->SetGraphicsRootConstantBufferView(0, lightCB->GetGPUVirtualAddress());
+
+		mCommandList->SetGraphicsRootDescriptorTable(1, mRtvHeaps["GBuffer"]->GetSrvGpuStart());
+
+		mCommandList->SetGraphicsRootDescriptorTable(2, mCubeRtvs["Irradiance"]->GetSrvGpu());
+
+		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["LightPass"]->mRtv[0]->mResource.Get(),
+			D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_RENDER_TARGET));
+
+		// Clear the back buffer.
+		DirectX::XMVECTORF32 clearColor = { mRtvHeaps["LightPass"]->mRtv[0]->mProperties.mClearColor[0],
+		mRtvHeaps["LightPass"]->mRtv[0]->mProperties.mClearColor[1],
+		mRtvHeaps["LightPass"]->mRtv[0]->mProperties.mClearColor[2],
+		mRtvHeaps["LightPass"]->mRtv[0]->mProperties.mClearColor[3]
+		};
+
+		// WE ALREADY WROTE THE DEPTH INFO TO THE DEPTH BUFFER IN DrawNormalsAndDepth,
+		// SO DO NOT CLEAR DEPTH.
+		mCommandList->ClearRenderTargetView(mRtvHeaps["LightPass"]->mRtvHeap.handleCPU(0), clearColor, 0, nullptr);
+
+		// Specify the buffers we are going to render to.
+		//mCommandList->OMSetRenderTargets(mRtvHeaps["GBuffer"]->mRtvHeap.HeapDesc.NumDescriptors, &(mRtvHeaps["GBuffer"]->mRtvHeap.hCPUHeapStart), true, &DepthStencilView());
+		mCommandList->OMSetRenderTargets(1, &(mRtvHeaps["LightPass"]->mRtvHeap.handleCPU(0)), true, &DepthStencilView());
+
+		// For each render item...
+		DrawSceneObjects(mCommandList.Get(), RenderLayer::ScreenQuad, false);
+
+		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["LightPass"]->mRtv[0]->mResource.Get(),
+			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ));
 	}
 
-	//return (int)msg.wParam;
-	return 1;
-}
-*/
+	// Ambient Light Pass
+	{
+		mCommandList->RSSetViewports(1, &(mRtvHeaps["LightPass"]->mRtv[1]->mViewport));
+		mCommandList->RSSetScissorRects(1, &(mRtvHeaps["LightPass"]->mRtv[1]->mScissorRect));
 
-/*
-void GRenderer::CreateRtvAndDsvDescriptorHeaps()
+		mCommandList->SetGraphicsRootSignature(mRootSignatures["LightPass"].Get());
+
+		mCommandList->SetPipelineState(mPSOs["AmbientLightPass"].Get());
+
+		auto lightCB = mCurrFrameResource->LightCB->Resource();
+		mCommandList->SetGraphicsRootConstantBufferView(0, lightCB->GetGPUVirtualAddress());
+
+		mCommandList->SetGraphicsRootDescriptorTable(1, mRtvHeaps["GBuffer"]->GetSrvGpuStart());
+
+		mCommandList->SetGraphicsRootDescriptorTable(2, mCubeRtvs["Irradiance"]->GetSrvGpu());
+
+		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["LightPass"]->mRtv[1]->mResource.Get(),
+			D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_RENDER_TARGET));
+
+		// Clear the back buffer.
+		DirectX::XMVECTORF32 clearColor = { mRtvHeaps["LightPass"]->mRtv[1]->mProperties.mClearColor[0],
+		mRtvHeaps["LightPass"]->mRtv[1]->mProperties.mClearColor[1],
+		mRtvHeaps["LightPass"]->mRtv[1]->mProperties.mClearColor[2],
+		mRtvHeaps["LightPass"]->mRtv[1]->mProperties.mClearColor[3]
+		};
+
+		// WE ALREADY WROTE THE DEPTH INFO TO THE DEPTH BUFFER IN DrawNormalsAndDepth,
+		// SO DO NOT CLEAR DEPTH.
+		mCommandList->ClearRenderTargetView(mRtvHeaps["LightPass"]->mRtvHeap.handleCPU(1), clearColor, 0, nullptr);
+
+		// Specify the buffers we are going to render to.
+		//mCommandList->OMSetRenderTargets(mRtvHeaps["GBuffer"]->mRtvHeap.HeapDesc.NumDescriptors, &(mRtvHeaps["GBuffer"]->mRtvHeap.hCPUHeapStart), true, &DepthStencilView());
+		mCommandList->OMSetRenderTargets(1, &(mRtvHeaps["LightPass"]->mRtvHeap.handleCPU(1)), true, &DepthStencilView());
+
+		// For each render item...
+		DrawSceneObjects(mCommandList.Get(), RenderLayer::ScreenQuad, false);
+
+		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["LightPass"]->mRtv[1]->mResource.Get(),
+			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ));
+	}
+
+	// Debug Pass
+	bool bDrawDebugQuad = true;
+	if (bDrawDebugQuad)
+	{
+		mCommandList->RSSetViewports(1, &mScreenViewport);
+		mCommandList->RSSetScissorRects(1, &mScissorRect);
+
+		mCommandList->SetGraphicsRootSignature(mRootSignatures["GBufferDebug"].Get());
+
+		mCommandList->SetPipelineState(mPSOs["GBufferDebug"].Get());
+
+		UINT objCBByteSize = GDxUtil::CalcConstantBufferByteSize(sizeof(ObjectConstants));
+		auto objectCB = mCurrFrameResource->ObjectCB->Resource();
+
+		mCommandList->SetGraphicsRootDescriptorTable(1, mRtvHeaps["GBuffer"]->GetSrvGpuStart());
+
+		matBuffer = mCurrFrameResource->MaterialBuffer->Resource();
+		mCommandList->SetGraphicsRootShaderResourceView(2, matBuffer->GetGPUVirtualAddress());
+
+		mCommandList->OMSetRenderTargets(1, &CurrentBackBufferView(), true, &DepthStencilView());
+
+		// For each render item...
+		DrawSceneObjects(mCommandList.Get(), RenderLayer::Debug, true);
+	}
+
+	// Post Process Pass
+	{
+		mCommandList->RSSetViewports(1, &mScreenViewport);
+		mCommandList->RSSetScissorRects(1, &mScissorRect);
+
+		mCommandList->SetGraphicsRootSignature(mRootSignatures["PostProcess"].Get());
+
+		mCommandList->SetPipelineState(mPSOs["PostProcess"].Get());
+
+		mCommandList->SetGraphicsRootDescriptorTable(0, mRtvHeaps["LightPass"]->GetSrvGpuStart());
+
+		// Specify the buffers we are going to render to.
+		//mCommandList->OMSetRenderTargets(1, &CurrentBackBufferView(), true, &DepthStencilView());
+		mCommandList->OMSetRenderTargets(1, &CurrentBackBufferView(), true, &DepthStencilView());
+
+		// For each render item...
+		DrawSceneObjects(mCommandList.Get(), RenderLayer::ScreenQuad, false);
+	}
+
+	// Sky Pass
+	{
+		mCommandList->RSSetViewports(1, &mScreenViewport);
+		mCommandList->RSSetScissorRects(1, &mScissorRect);
+
+		mCommandList->SetGraphicsRootSignature(mRootSignatures["Sky"].Get());
+
+		// Specify the buffers we are going to render to.
+		mCommandList->OMSetRenderTargets(1, &CurrentBackBufferView(), true, &DepthStencilView());
+
+		auto passCB = mCurrFrameResource->SkyCB->Resource();
+		mCommandList->SetGraphicsRootConstantBufferView(1, passCB->GetGPUVirtualAddress());
+
+		///*
+		CD3DX12_GPU_DESCRIPTOR_HANDLE skyTexDescriptor(mSrvDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
+		skyTexDescriptor.Offset(mSkyTexHeapIndex, mCbvSrvUavDescriptorSize);
+		mCommandList->SetGraphicsRootDescriptorTable(2, skyTexDescriptor);
+		//*/
+
+		// Irradiance cubemap debug.
+		//CD3DX12_GPU_DESCRIPTOR_HANDLE skyTexDescriptor(mSrvDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
+		//skyTexDescriptor.Offset(mIblIndex + 1, mCbvSrvUavDescriptorSize);
+		//mCommandList->SetGraphicsRootDescriptorTable(2, GetGpuSrv(mIblIndex + 2));
+
+		mCommandList->SetPipelineState(mPSOs["Sky"].Get());
+		DrawSceneObjects(mCommandList.Get(), RenderLayer::Sky, true);
+	}
+
+	// Indicate a state transition on the resource usage.
+	mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(),
+		D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
+
+	// Done recording commands.
+	ThrowIfFailed(mCommandList->Close());
+
+	// Add the command list to the queue for execution.
+	ID3D12CommandList* cmdsLists[] = { mCommandList.Get() };
+	mCommandQueue->ExecuteCommandLists(_countof(cmdsLists), cmdsLists);
+
+	// Swap the back and front buffers
+	ThrowIfFailed(mSwapChain->Present(0, 0));
+	mCurrBackBuffer = (mCurrBackBuffer + 1) % SwapChainBufferCount;
+
+	// Advance the fence value to mark commands up to this fence point.
+	mCurrFrameResource->Fence = ++mCurrentFence;
+
+	// Add an instruction to the command queue to set a new fence point. 
+	// Because we are on the GPU timeline, the new fence point won't be 
+	// set until the GPU finishes processing all the commands prior to this Signal().
+	mCommandQueue->Signal(mFence.Get(), mCurrentFence);
+}
+
+void GDxRenderer::Update(const GGiGameTimer* gt)
 {
-	D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc;
-	rtvHeapDesc.NumDescriptors = SwapChainBufferCount;
-	rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
-	rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-	rtvHeapDesc.NodeMask = 0;
-	ThrowIfFailed(md3dDevice->CreateDescriptorHeap(
-		&rtvHeapDesc, IID_PPV_ARGS(mRtvHeap.GetAddressOf())));
+	// Cycle through the circular frame resource array.
+	mCurrFrameResourceIndex = (mCurrFrameResourceIndex + 1) % NUM_FRAME_RESOURCES;
+	mCurrFrameResource = mFrameResources[mCurrFrameResourceIndex].get();
 
+	// Has the GPU finished processing the commands of the current frame resource?
+	// If not, wait until the GPU has completed commands up to this fence point.
+	if (mCurrFrameResource->Fence != 0 && mFence->GetCompletedValue() < mCurrFrameResource->Fence)
+	{
+		HANDLE eventHandle = CreateEventEx(nullptr, false, false, EVENT_ALL_ACCESS);
+		ThrowIfFailed(mFence->SetEventOnCompletion(mCurrFrameResource->Fence, eventHandle));
+		WaitForSingleObject(eventHandle, INFINITE);
+		CloseHandle(eventHandle);
+	}
 
-	D3D12_DESCRIPTOR_HEAP_DESC dsvHeapDesc;
-	dsvHeapDesc.NumDescriptors = 1;
-	dsvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
-	dsvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-	dsvHeapDesc.NodeMask = 0;
-	ThrowIfFailed(md3dDevice->CreateDescriptorHeap(
-		&dsvHeapDesc, IID_PPV_ARGS(mDsvHeap.GetAddressOf())));
+	//
+	// Animate the lights (and hence shadows).
+	//
+
+	mLightRotationAngle += 0.1f * gt->DeltaTime();
+
+	XMMATRIX R = XMMatrixRotationY(mLightRotationAngle);
+	for (int i = 0; i < 3; ++i)
+	{
+		XMVECTOR lightDir = XMLoadFloat3(&mBaseLightDirections[i]);
+		lightDir = XMVector3TransformNormal(lightDir, R);
+		XMStoreFloat3(&mRotatedLightDirections[i], lightDir);
+	}
+
+	UpdateObjectCBs(gt);
+	UpdateMaterialBuffer(gt);
+	UpdateShadowTransform(gt);
+	UpdateMainPassCB(gt);
+	UpdateSkyPassCB(gt);
+	UpdateLightCB(gt);
 }
-*/
+
+void GDxRenderer::OnResize()
+{
+	assert(md3dDevice);
+	assert(mSwapChain);
+	assert(mDirectCmdListAlloc);
+
+	// Flush before changing any resources.
+	FlushCommandQueue();
+
+	ThrowIfFailed(mCommandList->Reset(mDirectCmdListAlloc.Get(), nullptr));
+
+	// Release the previous resources we will be recreating.
+	for (int i = 0; i < SwapChainBufferCount; ++i)
+		mSwapChainBuffer[i].Reset();
+	mDepthStencilBuffer.Reset();
+
+	// Resize the swap chain.
+	ThrowIfFailed(mSwapChain->ResizeBuffers(
+		SwapChainBufferCount,
+		mClientWidth, mClientHeight,
+		mBackBufferFormat,
+		DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH));
+
+	mCurrBackBuffer = 0;
+
+	CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHeapHandle(mRtvHeap->GetCPUDescriptorHandleForHeapStart());
+	for (UINT i = 0; i < SwapChainBufferCount; i++)
+	{
+		ThrowIfFailed(mSwapChain->GetBuffer(i, IID_PPV_ARGS(&mSwapChainBuffer[i])));
+		md3dDevice->CreateRenderTargetView(mSwapChainBuffer[i].Get(), nullptr, rtvHeapHandle);
+		rtvHeapHandle.Offset(1, mRtvDescriptorSize);
+	}
+
+	// Create the depth/stencil buffer and view.
+	D3D12_RESOURCE_DESC depthStencilDesc;
+	depthStencilDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+	depthStencilDesc.Alignment = 0;
+	depthStencilDesc.Width = mClientWidth;
+	depthStencilDesc.Height = mClientHeight;
+	depthStencilDesc.DepthOrArraySize = 1;
+	depthStencilDesc.MipLevels = 1;
+	depthStencilDesc.Format = mDepthStencilFormat;
+	depthStencilDesc.SampleDesc.Count = 1;
+	depthStencilDesc.SampleDesc.Quality = 0;
+	depthStencilDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+	depthStencilDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
+
+	D3D12_CLEAR_VALUE optClear;
+	optClear.Format = mDepthStencilFormat;
+	optClear.DepthStencil.Depth = 1.0f;
+	optClear.DepthStencil.Stencil = 0;
+	ThrowIfFailed(md3dDevice->CreateCommittedResource(
+		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+		D3D12_HEAP_FLAG_NONE,
+		&depthStencilDesc,
+		D3D12_RESOURCE_STATE_COMMON,
+		&optClear,
+		IID_PPV_ARGS(mDepthStencilBuffer.GetAddressOf())));
+
+	// Create descriptor to mip level 0 of entire resource using the format of the resource.
+	md3dDevice->CreateDepthStencilView(mDepthStencilBuffer.Get(), nullptr, DepthStencilView());
+
+	// Transition the resource from its initial state to be used as a depth buffer.
+	mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mDepthStencilBuffer.Get(),
+		D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_DEPTH_WRITE));
+
+	// Execute the resize commands.
+	ThrowIfFailed(mCommandList->Close());
+	ID3D12CommandList* cmdsLists[] = { mCommandList.Get() };
+	mCommandQueue->ExecuteCommandLists(_countof(cmdsLists), cmdsLists);
+
+	// Wait until resize is complete.
+	FlushCommandQueue();
+
+	// Update the viewport transform to cover the client area.
+	mScreenViewport.TopLeftX = 0;
+	mScreenViewport.TopLeftY = 0;
+	mScreenViewport.Width = static_cast<float>(mClientWidth);
+	mScreenViewport.Height = static_cast<float>(mClientHeight);
+	mScreenViewport.MinDepth = 0.0f;
+	mScreenViewport.MaxDepth = 1.0f;
+
+	mScissorRect = { 0, 0, mClientWidth, mClientHeight };
+
+	for (auto &rtvHeap : mRtvHeaps)
+	{
+		if (rtvHeap.second->mRtv.size() != 0 && rtvHeap.second->mRtv[0]->mResource != nullptr)
+		{
+			rtvHeap.second->OnResize(mClientWidth, mClientHeight);
+		}
+	}
+}
+
+#pragma endregion
 
 #pragma region Update
-
-void GDxRenderer::OnKeyboardInput(const GGiGameTimer* gt)
-{
-	const float dt = gt->DeltaTime();
-
-	if (GetAsyncKeyState('W') & 0x8000)
-		pCamera->Walk(150.0f*dt);
-
-	if (GetAsyncKeyState('S') & 0x8000)
-		pCamera->Walk(-150.0f*dt);
-
-	if (GetAsyncKeyState('A') & 0x8000)
-		pCamera->Strafe(-150.0f*dt);
-
-	if (GetAsyncKeyState('D') & 0x8000)
-		pCamera->Strafe(150.0f*dt);
-
-	if (GetAsyncKeyState('E') & 0x8000)
-		pCamera->Ascend(150.0f*dt);
-
-	if (GetAsyncKeyState('Q') & 0x8000)
-		pCamera->Ascend(-150.0f*dt);
-
-	pCamera->UpdateViewMatrix();
-}
-
-void GDxRenderer::AnimateMaterials(const GGiGameTimer* gt)
-{
-
-}
 
 void GDxRenderer::UpdateObjectCBs(const GGiGameTimer* gt)
 {
@@ -441,14 +776,6 @@ void GDxRenderer::UpdateMainPassCB(const GGiGameTimer* gt)
 	mMainPassCB.TotalTime = gt->TotalTime();
 	mMainPassCB.DeltaTime = gt->DeltaTime();
 	mMainPassCB.AmbientLight = { 0.4f, 0.4f, 0.6f, 1.0f };
-	/*
-	mMainPassCB.Lights[0].Direction = mRotatedLightDirections[0];
-	mMainPassCB.Lights[0].Strength = { 0.7f, 0.7f, 0.6f };
-	mMainPassCB.Lights[1].Direction = mRotatedLightDirections[1];
-	mMainPassCB.Lights[1].Strength = { 0.3f, 0.3f, 0.3f };
-	mMainPassCB.Lights[2].Direction = mRotatedLightDirections[2];
-	mMainPassCB.Lights[2].Strength = { 0.1f, 0.1f, 0.1f };
-	*/
 
 	auto currPassCB = mCurrFrameResource->PassCB.get();
 	currPassCB->CopyData(0, mMainPassCB);
@@ -476,267 +803,9 @@ void GDxRenderer::UpdateSkyPassCB(const GGiGameTimer* gt)
 	currPassCB->CopyData(0, mSkyPassCB);
 }
 
-/*
-void GRenderer::UpdateShadowPassCB(const GameTimer& gt)
-{
-	XMMATRIX view = XMLoadFloat4x4(&mLightView);
-	XMMATRIX proj = XMLoadFloat4x4(&mLightProj);
-
-	XMMATRIX viewProj = XMMatrixMultiply(view, proj);
-	XMMATRIX invView = XMMatrixInverse(&XMMatrixDeterminant(view), view);
-	XMMATRIX invProj = XMMatrixInverse(&XMMatrixDeterminant(proj), proj);
-	XMMATRIX invViewProj = XMMatrixInverse(&XMMatrixDeterminant(viewProj), viewProj);
-
-	UINT w = mShadowMap->Width();
-	UINT h = mShadowMap->Height();
-
-	XMStoreFloat4x4(&mShadowPassCB.View, XMMatrixTranspose(view));
-	XMStoreFloat4x4(&mShadowPassCB.InvView, XMMatrixTranspose(invView));
-	XMStoreFloat4x4(&mShadowPassCB.Proj, XMMatrixTranspose(proj));
-	XMStoreFloat4x4(&mShadowPassCB.InvProj, XMMatrixTranspose(invProj));
-	XMStoreFloat4x4(&mShadowPassCB.ViewProj, XMMatrixTranspose(viewProj));
-	XMStoreFloat4x4(&mShadowPassCB.InvViewProj, XMMatrixTranspose(invViewProj));
-	mShadowPassCB.EyePosW = mLightPosW;
-	mShadowPassCB.RenderTargetSize = XMFLOAT2((float)w, (float)h);
-	mShadowPassCB.InvRenderTargetSize = XMFLOAT2(1.0f / w, 1.0f / h);
-	mShadowPassCB.NearZ = mLightNearZ;
-	mShadowPassCB.FarZ = mLightFarZ;
-
-	auto currPassCB = mCurrFrameResource->PassCB.get();
-	currPassCB->CopyData(1, mShadowPassCB);
-}
-
-void GRenderer::UpdateSsaoCB(const GameTimer& gt)
-{
-	SsaoConstants ssaoCB;
-
-	XMMATRIX P = mCamera.GetProj();
-
-	// Transform NDC space [-1,+1]^2 to texture space [0,1]^2
-	XMMATRIX T(
-		0.5f, 0.0f, 0.0f, 0.0f,
-		0.0f, -0.5f, 0.0f, 0.0f,
-		0.0f, 0.0f, 1.0f, 0.0f,
-		0.5f, 0.5f, 0.0f, 1.0f);
-
-	ssaoCB.Proj = mMainPassCB.Proj;
-	ssaoCB.InvProj = mMainPassCB.InvProj;
-	XMStoreFloat4x4(&ssaoCB.ProjTex, XMMatrixTranspose(P*T));
-
-	mSsao->GetOffsetVectors(ssaoCB.OffsetVectors);
-
-	auto blurWeights = mSsao->CalcGaussWeights(2.5f);
-	ssaoCB.BlurWeights[0] = XMFLOAT4(&blurWeights[0]);
-	ssaoCB.BlurWeights[1] = XMFLOAT4(&blurWeights[4]);
-	ssaoCB.BlurWeights[2] = XMFLOAT4(&blurWeights[8]);
-
-	ssaoCB.InvRenderTargetSize = XMFLOAT2(1.0f / mSsao->SsaoMapWidth(), 1.0f / mSsao->SsaoMapHeight());
-
-	// Coordinates given in view space.
-	ssaoCB.OcclusionRadius = 0.5f;
-	ssaoCB.OcclusionFadeStart = 0.2f;
-	ssaoCB.OcclusionFadeEnd = 1.0f;
-	ssaoCB.SurfaceEpsilon = 0.05f;
-
-	auto currSsaoCB = mCurrFrameResource->SsaoCB.get();
-	currSsaoCB->CopyData(0, ssaoCB);
-}
-*/
-
 #pragma endregion
 
-#pragma region Init
-
-/*
-void GDxRenderer::BuildCubemapSampleCameras()
-{
-	XMFLOAT3 center(0.0f, 0.0f, 0.0f);
-	XMFLOAT3 worldUp(0.0f, 1.0f, 0.0f);
-
-	// Look along each coordinate axis. 
-	XMFLOAT3 targets[6] = {
-		XMFLOAT3(1.0f, 0.0f, 0.0f), // +X 
-		XMFLOAT3(-1.0f, 0.0f, 0.0f), // -X 
-		XMFLOAT3(0.0f, 1.0f, 0.0f), // +Y 
-		XMFLOAT3(0.0f, -1.0f, 0.0f), // -Y 
-		XMFLOAT3(0.0f, 0.0f, 1.0f), // +Z 
-		XMFLOAT3(0.0f, 0.0f, -1.0f) // -Z 
-	};
-
-	// Use world up vector (0,1,0) for all directions except +Y/-Y.  In these cases, we 
-	// are looking down +Y or -Y, so we need a different "up" vector. 
-	XMFLOAT3 ups[6] = {
-		XMFLOAT3(0.0f, 1.0f, 0.0f), // +X 
-		XMFLOAT3(0.0f, 1.0f, 0.0f), // -X 
-		XMFLOAT3(0.0f, 0.0f, -1.0f), // +Y 
-		XMFLOAT3(0.0f, 0.0f, +1.0f), // -Y 
-		XMFLOAT3(0.0f, 1.0f, 0.0f),	// +Z 
-		XMFLOAT3(0.0f, 1.0f, 0.0f)	// -Z 
-	};
-
-	for (int i = 0; i < 6; ++i)
-	{
-		mCubemapSampleCamera[i].LookAt(center, targets[i], ups[i]);
-		mCubemapSampleCamera[i].SetLens(0.5f*XM_PI, 1.0f, 0.1f, 1000.0f);
-		mCubemapSampleCamera[i].UpdateViewMatrix();
-	}
-}
-*/
-
-/*
-void GDxRenderer::LoadTextures()
-{
-	//
-	// Load non-DDS images.
-	//
-	std::vector<std::string> texNames =
-	{
-		"IBL_BRDF_LUT",
-		"default_albedo",
-		"default_normal",
-		"default_OcclussionRoughnessMetallic",
-		"sphere_1_BaseColor",
-		"sphere_1_Normal",
-		"sphere_1_OcclusionRoughnessMetallic",
-		"sphere_2_BaseColor",
-		"sphere_2_Normal",
-		"sphere_2_OcclusionRoughnessMetallic",
-		"Greasy_Pan_Albedo",
-		"Greasy_Pan_Normal",
-		"Greasy_Pan_Orm",
-		"Rusted_Iron_Albedo",
-		"Rusted_Iron_Normal",
-		"Rusted_Iron_Orm",
-		"Cerberus_Albedo",
-		"Cerberus_Normal",
-		"Cerberus_Orm",
-		"Fireplace_Albedo",
-		"Fireplace_Normal",
-		"Fireplace_Orm"
-	};
-
-	std::vector<std::wstring> texFilenames =
-	{
-		L"Textures/IBL_BRDF_LUT.png",
-		L"Textures/default_albedo.png",
-		L"Textures/default_normal.png",
-		L"Textures/default_OcclussionRoughnessMetallic.png",
-		L"Textures/sphere_1_BaseColor.png",
-		L"Textures/sphere_1_Normal.png",
-		L"Textures/sphere_1_OcclusionRoughnessMetallic.png",
-		L"Textures/sphere_2_BaseColor.png",
-		L"Textures/sphere_2_Normal.png",
-		L"Textures/sphere_2_OcclusionRoughnessMetallic.png",
-		L"Textures/Greasy_Pan_Albedo.png",
-		L"Textures/Greasy_Pan_Normal.png",
-		L"Textures/Greasy_Pan_Orm.png",
-		L"Textures/Rusted_Iron_Albedo.png",
-		L"Textures/Rusted_Iron_Normal.png",
-		L"Textures/Rusted_Iron_Orm.png",
-		L"Textures/Cerberus_Albedo.png",
-		L"Textures/Cerberus_Normal.png",
-		L"Textures/Cerberus_Orm.png",
-		L"Textures/Fireplace_Albedo.png",
-		L"Textures/Fireplace_Normal.png",
-		L"Textures/Fireplace_Orm.png"
-	};
-
-	std::vector<bool> texSrgb =
-	{
-		false,
-		true,
-		false,
-		false,
-		true,
-		false,
-		false,
-		true,
-		false,
-		false,
-		true,
-		false,
-		false,
-		true,
-		false,
-		false,
-		true,
-		false,
-		false,
-		true,
-		false,
-		false
-	};
-
-	for (int i = 0; i < (int)texNames.size(); ++i)
-	{
-		auto texMap = std::make_shared<GTexture>();
-		texMap->Name = texNames[i];
-		texMap->Filename = texFilenames[i];
-		texMap->descriptorHeapIndex = i;
-		ResourceUploadBatch resourceUpload(md3dDevice.Get());
-		resourceUpload.Begin();
-		unsigned int srgbFlag;
-		if (texSrgb[i])
-		{
-			srgbFlag = WIC_LOADER_FORCE_SRGB;
-		}
-		else
-		{
-			srgbFlag = WIC_LOADER_IGNORE_SRGB;
-		}
-		//ThrowIfFailed(CreateWICTextureFromFile(md3dDevice.Get(), resourceUpload, texMap->Filename.c_str(), texMap->Resource.ReleaseAndGetAddressOf()));
-		ThrowIfFailed(CreateWICTextureFromFileEx(md3dDevice.Get(), resourceUpload, texMap->Filename.c_str(), 0u, D3D12_RESOURCE_FLAG_NONE, srgbFlag, texMap->Resource.ReleaseAndGetAddressOf()));
-		auto uploadResourcesFinished = resourceUpload.End(mCommandQueue.Get());
-		uploadResourcesFinished.wait();
-
-		//CreateShaderResourceView(md3dDevice.Get(), texMap->Resource.Get(), m_resourceDescriptors->GetCpuHandle(Descriptors::Cat));
-		std::shared_ptr<GTexture> texListPtr(texMap);
-		mTextureList.push_back(texListPtr);
-		mTextures[texMap->Name] = std::move(texMap);
-	}
-
-	//
-	// Load DDS images.
-	//
-	std::vector<std::string> ddsTexNames =
-	{
-		"bricksDiffuseMap",
-		"bricksNormalMap",
-		"tileDiffuseMap",
-		"tileNormalMap",
-		"defaultDiffuseMap",
-		"defaultNormalMap",
-		"skyCubeMap"
-	};
-
-	std::vector<std::wstring> ddsTexFilenames =
-	{
-		L"Textures/bricks2.dds",
-		L"Textures/bricks2_nmap.dds",
-		L"Textures/tile.dds",
-		L"Textures/tile_nmap.dds",
-		L"Textures/white1x1.dds",
-		L"Textures/default_nmap.dds",
-		//L"Textures/sunsetcube1024.dds"
-		L"Textures/Cubemap_LancellottiChapel.dds"
-	};
-
-	for (int i = 0; i < (int)ddsTexNames.size(); ++i)
-	{
-		auto texMap = std::make_shared<GTexture>();
-		texMap->Name = ddsTexNames[i];
-		texMap->Filename = ddsTexFilenames[i];
-		texMap->descriptorHeapIndex = i + (int)texNames.size();
-		ThrowIfFailed(DirectX::CreateDDSTextureFromFile12(md3dDevice.Get(),
-			mCommandList.Get(), texMap->Filename.c_str(),
-			texMap->Resource, texMap->UploadHeap));
-
-		std::shared_ptr<GTexture> texListPtr(texMap);
-		mTextureList.push_back(texListPtr);
-		mTextures[texMap->Name] = std::move(texMap);
-	}
-}
-*/
+#pragma region Initialization
 
 void GDxRenderer::BuildRootSignature()
 {
@@ -1133,46 +1202,6 @@ void GDxRenderer::BuildDescriptorHeaps()
 
 
 	mSkyTexHeapIndex = 0;
-	//mSkyTexHeapIndex = (UINT)mTextureList.size() - 1;
-	//mShadowMapHeapIndex = mSkyTexHeapIndex + 1;
-	//mSsaoHeapIndexStart = mShadowMapHeapIndex + 1;
-	//mSsaoAmbientMapIndex = mSsaoHeapIndexStart + 3;
-	//mNullCubeSrvIndex = mSsaoHeapIndexStart + 5;
-	//mNullTexSrvIndex1 = mNullCubeSrvIndex + 1;
-	//mNullTexSrvIndex2 = mNullTexSrvIndex1 + 1;
-
-	/*
-	auto nullSrv = GetCpuSrv(mNullCubeSrvIndex);
-	mNullSrv = GetGpuSrv(mNullCubeSrvIndex);
-
-	md3dDevice->CreateShaderResourceView(nullptr, &srvDesc, nullSrv);
-	nullSrv.Offset(1, mCbvSrvUavDescriptorSize);
-
-	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-	srvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-	srvDesc.Texture2D.MostDetailedMip = 0;
-	srvDesc.Texture2D.MipLevels = 1;
-	srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
-	md3dDevice->CreateShaderResourceView(nullptr, &srvDesc, nullSrv);
-
-	nullSrv.Offset(1, mCbvSrvUavDescriptorSize);
-	md3dDevice->CreateShaderResourceView(nullptr, &srvDesc, nullSrv);
-	*/
-
-	/*
-	mShadowMap->BuildDescriptors(
-		GetCpuSrv(mShadowMapHeapIndex),
-		GetGpuSrv(mShadowMapHeapIndex),
-		GetDsv(1));
-
-	mSsao->BuildDescriptors(
-		mDepthStencilBuffer.Get(),
-		GetCpuSrv(mSsaoHeapIndexStart),
-		GetGpuSrv(mSsaoHeapIndexStart),
-		GetRtv(SwapChainBufferCount),
-		mCbvSrvUavDescriptorSize,
-		mRtvDescriptorSize);
-	*/
 
 	// Build RTV heap and SRV for GBuffers.
 	{
@@ -1295,48 +1324,7 @@ void GDxRenderer::BuildDescriptorHeaps()
 			srvDesc.Texture2D.MipLevels = dxTex->Resource->GetDesc().MipLevels;
 			md3dDevice->CreateShaderResourceView(dxTex->Resource.Get(), &srvDesc, GetCpuSrv(mTextrueHeapIndex + dxTex->texIndex));
 		}
-		/*
-		for (UINT i = 0; i < (UINT)pTextures.size(); ++i)
-		{
-			if (pTextures[i]->Name == "skyCubeMap")
-				continue;
-			srvDesc.Format = mTextureList[i]->Resource->GetDesc().Format;
-			srvDesc.Texture2D.MipLevels = mTextureList[i]->Resource->GetDesc().MipLevels;
-			md3dDevice->CreateShaderResourceView(mTextureList[i]->Resource.Get(), &srvDesc, GetCpuSrv(mTextrueHeapIndex + i));
-
-			// next descriptor
-			// hDescriptor.Offset(1, mCbvSrvUavDescriptorSize);
-		}
-		*/
 	}
-}
-
-CD3DX12_CPU_DESCRIPTOR_HANDLE GDxRenderer::GetCpuSrv(int index)const
-{
-	auto srv = CD3DX12_CPU_DESCRIPTOR_HANDLE(mSrvDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
-	srv.Offset(index, mCbvSrvUavDescriptorSize);
-	return srv;
-}
-
-CD3DX12_GPU_DESCRIPTOR_HANDLE GDxRenderer::GetGpuSrv(int index)const
-{
-	auto srv = CD3DX12_GPU_DESCRIPTOR_HANDLE(mSrvDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
-	srv.Offset(index, mCbvSrvUavDescriptorSize);
-	return srv;
-}
-
-CD3DX12_CPU_DESCRIPTOR_HANDLE GDxRenderer::GetDsv(int index)const
-{
-	auto dsv = CD3DX12_CPU_DESCRIPTOR_HANDLE(mDsvHeap->GetCPUDescriptorHandleForHeapStart());
-	dsv.Offset(index, mDsvDescriptorSize);
-	return dsv;
-}
-
-CD3DX12_CPU_DESCRIPTOR_HANDLE GDxRenderer::GetRtv(int index)const
-{
-	auto rtv = CD3DX12_CPU_DESCRIPTOR_HANDLE(mRtvHeap->GetCPUDescriptorHandleForHeapStart());
-	rtv.Offset(index, mRtvDescriptorSize);
-	return rtv;
 }
 
 void GDxRenderer::BuildShadersAndInputLayout()
@@ -1355,65 +1343,6 @@ void GDxRenderer::BuildShadersAndInputLayout()
 		{ "TANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 32, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
 	};
 }
-
-/*
-void GDxRenderer::LoadMeshes()
-{
-	GeometryGenerator geoGen;
-
-	std::vector<MeshData> meshData;
-	MeshData boxMeshData = geoGen.CreateBox(1.0f, 1.0f, 1.0f, 3);
-	boxMeshData.SubmeshName = "Box";
-	meshData.push_back(boxMeshData);
-	auto geo = std::make_shared<GMesh>(md3dDevice.Get(), mCommandList.Get(), meshData);
-	geo->Name = "Box";
-	mMeshes[geo->Name] = std::move(geo);
-
-	meshData.clear();
-	MeshData gridMeshData = geoGen.CreateGrid(20.0f, 30.0f, 60, 40);
-	gridMeshData.SubmeshName = "Grid";
-	meshData.push_back(gridMeshData);
-	geo = std::make_shared<GMesh>(md3dDevice.Get(), mCommandList.Get(), meshData);
-	geo->Name = "Grid";
-	mMeshes[geo->Name] = std::move(geo);
-
-	meshData.clear();
-	MeshData sphereMeshData = geoGen.CreateSphere(0.5f, 20, 20);
-	sphereMeshData.SubmeshName = "Sphere";
-	meshData.push_back(sphereMeshData);
-	geo = std::make_shared<GMesh>(md3dDevice.Get(), mCommandList.Get(), meshData);
-	geo->Name = "Sphere";
-	mMeshes[geo->Name] = std::move(geo);
-
-	meshData.clear();
-	MeshData cylinderMeshData = geoGen.CreateCylinder(0.5f, 0.3f, 3.0f, 20, 20);
-	cylinderMeshData.SubmeshName = "Cylinder";
-	meshData.push_back(cylinderMeshData);
-	geo = std::make_shared<GMesh>(md3dDevice.Get(), mCommandList.Get(), meshData);
-	geo->Name = "Cylinder";
-	mMeshes[geo->Name] = std::move(geo);
-
-	meshData.clear();
-	MeshData quadMeshData = geoGen.CreateQuad(0.0f, 1.0f, 1.0f, 1.0f, 0.0f);
-	quadMeshData.SubmeshName = "Quad";
-	meshData.push_back(quadMeshData);
-	geo = std::make_shared<GMesh>(md3dDevice.Get(), mCommandList.Get(), meshData);
-	geo->Name = "Quad";
-	mMeshes[geo->Name] = std::move(geo);
-
-	GMesh* CerberusMesh = new GMesh();
-	GFilmboxManager::GetManager().ImportFbxFile_Mesh(md3dDevice.Get(), mCommandList.Get(), "Models\\Cerberus.FBX", CerberusMesh);
-	CerberusMesh->Name = "Cerberus";
-	std::shared_ptr<GMesh> cerberus(CerberusMesh);
-	mMeshes[cerberus->Name] = cerberus;
-
-	GMesh* FireplaceMesh = new GMesh();
-	GFilmboxManager::GetManager().ImportFbxFile_Mesh(md3dDevice.Get(), mCommandList.Get(), "Models\\Fireplace.FBX", FireplaceMesh);
-	FireplaceMesh->Name = "Fireplace";
-	std::shared_ptr<GMesh> fireplace(FireplaceMesh);
-	mMeshes[fireplace->Name] = fireplace;
-}
-*/
 
 void GDxRenderer::BuildPSOs()
 {
@@ -1753,297 +1682,6 @@ void GDxRenderer::BuildFrameResources()
 	}
 }
 
-/*
-void GDxRenderer::BuildMaterials()
-{
-	auto defaultMat = std::make_unique<GMaterial>();
-	defaultMat->Name = "default";
-	defaultMat->MatCBIndex = 0;
-	pTextures[L"Content\\Textures\\sphere_1_BaseColor.png"]->bSrgb = true;
-	defaultMat->pTextures.push_back(pTextures[L"Content\\Textures\\sphere_1_BaseColor.png"]);
-	defaultMat->pTextures.push_back(pTextures[L"Content\\Textures\\sphere_1_Normal.png"]);
-	defaultMat->pTextures.push_back(pTextures[L"Content\\Textures\\sphere_1_OcclusionRoughnessMetallic.png"]);
-	mMaterials["default"] = std::move(defaultMat);
-
-	auto debug_albedo = std::make_unique<GMaterial>();
-	debug_albedo->Name = "debug_albedo";
-	debug_albedo->MatCBIndex = 1;
-	debug_albedo->ScalarParams.push_back(0.01f);//Albedo
-	debug_albedo->ScalarParams.push_back(0.01f);//RGB
-	mMaterials["debug_albedo"] = std::move(debug_albedo);
-
-	auto debug_normal = std::make_unique<GMaterial>();
-	debug_normal->Name = "debug_normal";
-	debug_normal->MatCBIndex = 2;
-	debug_normal->ScalarParams.push_back(1.01f);//Normal
-	debug_normal->ScalarParams.push_back(0.01f);//RGB
-	mMaterials["debug_normal"] = std::move(debug_normal);
-
-	auto debug_worldpos = std::make_unique<GMaterial>();
-	debug_worldpos->Name = "debug_worldpos";
-	debug_worldpos->MatCBIndex = 3;
-	debug_worldpos->ScalarParams.push_back(2.01f);//WorldPos
-	debug_worldpos->ScalarParams.push_back(0.01f);//RGB
-	mMaterials["debug_worldpos"] = std::move(debug_worldpos);
-
-	auto debug_roughness = std::make_unique<GMaterial>();
-	debug_roughness->Name = "debug_roughness";
-	debug_roughness->MatCBIndex = 4;
-	debug_roughness->ScalarParams.push_back(3.01f);//OcclusionRoughnessMetallic
-	debug_roughness->ScalarParams.push_back(2.01f);//Green
-	mMaterials["debug_roughness"] = std::move(debug_roughness);
-
-	auto debug_metallic = std::make_unique<GMaterial>();
-	debug_metallic->Name = "debug_metallic";
-	debug_metallic->MatCBIndex = 5;
-	debug_metallic->ScalarParams.push_back(3.01f);//OcclusionRoughnessMetallic
-	debug_metallic->ScalarParams.push_back(3.01f);//Blue
-	mMaterials["debug_metallic"] = std::move(debug_metallic);
-
-	auto sphere_1 = std::make_unique<GMaterial>();
-	sphere_1->Name = "sphere_1";
-	sphere_1->MatCBIndex = 6;
-	pTextures[L"Content\\Textures\\sphere_1_BaseColor.png"]->bSrgb = true;
-	sphere_1->pTextures.push_back(pTextures[L"Content\\Textures\\sphere_1_BaseColor.png"]);
-	sphere_1->pTextures.push_back(pTextures[L"Content\\Textures\\sphere_1_Normal.png"]);
-	sphere_1->pTextures.push_back(pTextures[L"Content\\Textures\\sphere_1_OcclusionRoughnessMetallic.png"]);
-	mMaterials["sphere_1"] = std::move(sphere_1);
-
-	auto sphere_2 = std::make_unique<GMaterial>();
-	sphere_2->Name = "sphere_2";
-	sphere_2->MatCBIndex = 7;
-	pTextures[L"Content\\Textures\\sphere_2_BaseColor.png"]->bSrgb = true;
-	sphere_2->pTextures.push_back(pTextures[L"Content\\Textures\\sphere_2_BaseColor.png"]);
-	sphere_2->pTextures.push_back(pTextures[L"Content\\Textures\\sphere_2_Normal.png"]);
-	sphere_2->pTextures.push_back(pTextures[L"Content\\Textures\\sphere_2_OcclusionRoughnessMetallic.png"]);
-	mMaterials["sphere_2"] = std::move(sphere_2);
-
-	auto sky = std::make_unique<GMaterial>();
-	sky->Name = "sky";
-	sky->MatCBIndex = 12;
-	//sky->DiffuseSrvHeapIndex = 6;
-	//sky->NormalSrvHeapIndex = 7;
-	sky->pTextures.push_back(pTextures[L"Content\\Textures\\sphere_1_BaseColor.png"]);//Diffuse
-	sky->pTextures.push_back(pTextures[L"Content\\Textures\\sphere_1_BaseColor.png"]);//Normal
-	sky->VectorParams.push_back(XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f));//DiffuseAlbedo
-	sky->VectorParams.push_back(XMFLOAT4(0.1f, 0.1f, 0.1f, 0.f));//FresnelR0
-	sky->ScalarParams.push_back(1.0f);//Roughness
-	mMaterials["sky"] = std::move(sky);
-
-	auto greasyPanMat = std::make_unique<GMaterial>();
-	greasyPanMat->Name = "GreasyPan";
-	greasyPanMat->MatCBIndex = 13;
-	pTextures[L"Content\\Textures\\Greasy_Pan_Albedo.png"]->bSrgb = true;
-	greasyPanMat->pTextures.push_back(pTextures[L"Content\\Textures\\Greasy_Pan_Albedo.png"]);
-	greasyPanMat->pTextures.push_back(pTextures[L"Content\\Textures\\Greasy_Pan_Normal.png"]);
-	greasyPanMat->pTextures.push_back(pTextures[L"Content\\Textures\\Greasy_Pan_Orm.png"]);
-	mMaterials["GreasyPan"] = std::move(greasyPanMat);
-
-	auto rustedIronMat = std::make_unique<GMaterial>();
-	rustedIronMat->Name = "RustedIron";
-	rustedIronMat->MatCBIndex = 14;
-	pTextures[L"Content\\Textures\\Rusted_Iron_Albedo.png"]->bSrgb = true;
-	rustedIronMat->pTextures.push_back(pTextures[L"Content\\Textures\\Rusted_Iron_Albedo.png"]);
-	rustedIronMat->pTextures.push_back(pTextures[L"Content\\Textures\\Rusted_Iron_Normal.png"]);
-	rustedIronMat->pTextures.push_back(pTextures[L"Content\\Textures\\Rusted_Iron_Orm.png"]);
-	mMaterials["RustedIron"] = std::move(rustedIronMat);
-
-	auto cerberusMat = std::make_unique<GMaterial>();
-	cerberusMat->Name = "Cerberus";
-	cerberusMat->MatCBIndex = 15;
-	pTextures[L"Content\\Textures\\Cerberus_Albedo.png"]->bSrgb = true;
-	cerberusMat->pTextures.push_back(pTextures[L"Content\\Textures\\Cerberus_Albedo.png"]);
-	cerberusMat->pTextures.push_back(pTextures[L"Content\\Textures\\Cerberus_Normal.png"]);
-	cerberusMat->pTextures.push_back(pTextures[L"Content\\Textures\\Cerberus_Orm.png"]);
-	mMaterials["Cerberus"] = std::move(cerberusMat);
-
-	auto fireplaceMat = std::make_unique<GMaterial>();
-	fireplaceMat->Name = "Fireplace";
-	fireplaceMat->MatCBIndex = 16;
-	pTextures[L"Content\\Textures\\Fireplace_Albedo.png"]->bSrgb = true;
-	fireplaceMat->pTextures.push_back(pTextures[L"Content\\Textures\\Fireplace_Albedo.png"]);
-	fireplaceMat->pTextures.push_back(pTextures[L"Content\\Textures\\Fireplace_Normal.png"]);
-	fireplaceMat->pTextures.push_back(pTextures[L"Content\\Textures\\Fireplace_Orm.png"]);
-	mMaterials["Fireplace"] = std::move(fireplaceMat);
-
-}
-*/
-
-/*
-void GDxRenderer::BuildSceneObjects()
-{
-	UINT indexCB = 0;
-
-	// Create screen quads for light pass and post process.
-	{
-		auto fullScreenQuadRitem = std::make_shared<GSceneObject>();
-		//fullScreenQuadRitem->World = MathHelper::Identity4x4();
-		//XMStoreFloat4x4(&fullScreenQuadRitem->World, XMMatrixScaling(1.0f, 1.0f, 1.0f)*XMMatrixTranslation(0.0f, 0.0f, 0.0f));
-		fullScreenQuadRitem->TexTransform = MathHelper::Identity4x4();
-		fullScreenQuadRitem->ObjCBIndex = indexCB;
-		fullScreenQuadRitem->Mat = pMaterials[L"default"];
-		fullScreenQuadRitem->Mesh = pMeshes[L"Quad"];
-		fullScreenQuadRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-		//fullScreenQuadRitem->SubmeshName = "quad";
-		//fullScreenQuadRitem->IndexCount = fullScreenQuadRitem->Mesh->Submeshes["quad"].IndexCount;
-		//fullScreenQuadRitem->StartIndexLocation = fullScreenQuadRitem->Mesh->Submeshes["quad"].StartIndexLocation;
-		//fullScreenQuadRitem->BaseVertexLocation = fullScreenQuadRitem->Mesh->Submeshes["quad"].BaseVertexLocation;
-		mSceneObjectLayer[(int)RenderLayer::ScreenQuad].push_back(fullScreenQuadRitem);
-		mAllRitems.push_back(std::move(fullScreenQuadRitem));
-		indexCB++;
-	}
-
-	auto skyRitem = std::make_shared<GSceneObject>();
-	//XMStoreFloat4x4(&skyRitem->World, XMMatrixScaling(5000.0f, 5000.0f, 5000.0f));
-	skyRitem->SetScale(5000.f, 5000.f, 5000.f);
-	//skyRitem->TexTransform = MathHelper::Identity4x4();
-	skyRitem->ObjCBIndex = indexCB;
-	skyRitem->Mat = pMaterials[L"sky"];
-	skyRitem->Mesh = pMeshes[L"Sphere"];
-	skyRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-	//skyRitem->SubmeshName = "sphere";
-	//skyRitem->IndexCount = skyRitem->Mesh->Submeshes["sphere"].IndexCount;
-	//skyRitem->StartIndexLocation = skyRitem->Mesh->Submeshes["sphere"].StartIndexLocation;
-	//skyRitem->BaseVertexLocation = skyRitem->Mesh->Submeshes["sphere"].BaseVertexLocation;
-	mSceneObjectLayer[(int)RenderLayer::Sky].push_back(skyRitem);
-	mAllRitems.push_back(std::move(skyRitem));
-	indexCB++;
-
-	// Create debug quads.
-	{
-		auto albedoQuadRitem = std::make_shared<GSceneObject>();
-		//albedoQuadRitem->World = MathHelper::Identity4x4();
-		//XMStoreFloat4x4(&albedoQuadRitem->World, XMMatrixScaling(0.2f, 0.2f, 0.2f)*XMMatrixTranslation(0.0f, 0.0f, 0.0f));
-		albedoQuadRitem->SetScale(.2f, .2f, .2f);
-		albedoQuadRitem->SetLocation(0.f, 0.f, 0.f);
-		albedoQuadRitem->TexTransform = MathHelper::Identity4x4();
-		albedoQuadRitem->ObjCBIndex = indexCB;
-		albedoQuadRitem->Mat = pMaterials[L"debug_albedo"];
-		albedoQuadRitem->Mesh = pMeshes[L"Quad"];
-		albedoQuadRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-		//albedoQuadRitem->SubmeshName = "quad";
-		//albedoQuadRitem->IndexCount = albedoQuadRitem->Mesh->Submeshes["quad"].IndexCount;
-		//albedoQuadRitem->StartIndexLocation = albedoQuadRitem->Mesh->Submeshes["quad"].StartIndexLocation;
-		//albedoQuadRitem->BaseVertexLocation = albedoQuadRitem->Mesh->Submeshes["quad"].BaseVertexLocation;
-		mSceneObjectLayer[(int)RenderLayer::Debug].push_back(albedoQuadRitem);
-		mAllRitems.push_back(std::move(albedoQuadRitem));
-		indexCB++;
-
-		auto normalQuadRitem = std::make_shared<GSceneObject>();
-		//normalQuadRitem->World = MathHelper::Identity4x4();
-		//XMStoreFloat4x4(&normalQuadRitem->World, XMMatrixScaling(0.2f, 0.2f, 0.2f)*XMMatrixTranslation(0.2f, 0.0f, 0.0f));
-		normalQuadRitem->SetScale(.2f, .2f, .2f);
-		normalQuadRitem->SetLocation(.2f, 0.f, 0.f);
-		normalQuadRitem->TexTransform = MathHelper::Identity4x4();
-		normalQuadRitem->ObjCBIndex = indexCB;
-		normalQuadRitem->Mat = pMaterials[L"debug_normal"];
-		normalQuadRitem->Mesh = pMeshes[L"Quad"];
-		normalQuadRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-		//normalQuadRitem->SubmeshName = "quad";
-		//normalQuadRitem->IndexCount = normalQuadRitem->Mesh->Submeshes["quad"].IndexCount;
-		//normalQuadRitem->StartIndexLocation = normalQuadRitem->Mesh->Submeshes["quad"].StartIndexLocation;
-		//normalQuadRitem->BaseVertexLocation = normalQuadRitem->Mesh->Submeshes["quad"].BaseVertexLocation;
-		mSceneObjectLayer[(int)RenderLayer::Debug].push_back(normalQuadRitem);
-		mAllRitems.push_back(std::move(normalQuadRitem));
-		indexCB++;
-
-		auto worldposQuadRitem = std::make_shared<GSceneObject>();
-		//worldposQuadRitem->World = MathHelper::Identity4x4();
-		//XMStoreFloat4x4(&worldposQuadRitem->World, XMMatrixScaling(0.2f, 0.2f, 0.2f)*XMMatrixTranslation(0.4f, 0.0f, 0.0f));
-		worldposQuadRitem->SetScale(.2f, .2f, .2f);
-		worldposQuadRitem->SetLocation(.4f, 0.f, 0.f);
-		worldposQuadRitem->TexTransform = MathHelper::Identity4x4();
-		worldposQuadRitem->ObjCBIndex = indexCB;
-		worldposQuadRitem->Mat = pMaterials[L"debug_worldpos"];
-		worldposQuadRitem->Mesh = pMeshes[L"Quad"];
-		worldposQuadRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-		//worldposQuadRitem->SubmeshName = "quad";
-		//worldposQuadRitem->IndexCount = worldposQuadRitem->Mesh->Submeshes["quad"].IndexCount;
-		//worldposQuadRitem->StartIndexLocation = worldposQuadRitem->Mesh->Submeshes["quad"].StartIndexLocation;
-		//worldposQuadRitem->BaseVertexLocation = worldposQuadRitem->Mesh->Submeshes["quad"].BaseVertexLocation;
-		mSceneObjectLayer[(int)RenderLayer::Debug].push_back(worldposQuadRitem);
-		mAllRitems.push_back(std::move(worldposQuadRitem));
-		indexCB++;
-
-		auto roughnessQuadRitem = std::make_shared<GSceneObject>();
-		//roughnessQuadRitem->World = MathHelper::Identity4x4();
-		//XMStoreFloat4x4(&roughnessQuadRitem->World, XMMatrixScaling(0.2f, 0.2f, 0.2f)*XMMatrixTranslation(0.6f, 0.0f, 0.0f));
-		roughnessQuadRitem->SetScale(.2f, .2f, .2f);
-		roughnessQuadRitem->SetLocation(.6f, 0.f, 0.f);
-		roughnessQuadRitem->TexTransform = MathHelper::Identity4x4();
-		roughnessQuadRitem->ObjCBIndex = indexCB;
-		roughnessQuadRitem->Mat = pMaterials[L"debug_roughness"];
-		roughnessQuadRitem->Mesh = pMeshes[L"Quad"];
-		roughnessQuadRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-		//roughnessQuadRitem->SubmeshName = "quad";
-		//roughnessQuadRitem->IndexCount = roughnessQuadRitem->Mesh->Submeshes["quad"].IndexCount;
-		//roughnessQuadRitem->StartIndexLocation = roughnessQuadRitem->Mesh->Submeshes["quad"].StartIndexLocation;
-		//roughnessQuadRitem->BaseVertexLocation = roughnessQuadRitem->Mesh->Submeshes["quad"].BaseVertexLocation;
-		mSceneObjectLayer[(int)RenderLayer::Debug].push_back(roughnessQuadRitem);
-		mAllRitems.push_back(std::move(roughnessQuadRitem));
-		indexCB++;
-
-		auto metallicQuadRitem = std::make_shared<GSceneObject>();
-		//metallicQuadRitem->World = MathHelper::Identity4x4();
-		//XMStoreFloat4x4(&metallicQuadRitem->World, XMMatrixScaling(0.2f, 0.2f, 0.2f)*XMMatrixTranslation(0.8f, 0.0f, 0.0f));
-		metallicQuadRitem->SetScale(.2f, .2f, .2f);
-		metallicQuadRitem->SetLocation(.8f, 0.f, 0.f);
-		metallicQuadRitem->TexTransform = MathHelper::Identity4x4();
-		metallicQuadRitem->ObjCBIndex = indexCB;
-		metallicQuadRitem->Mat = pMaterials[L"debug_metallic"];
-		metallicQuadRitem->Mesh = pMeshes[L"Quad"];
-		metallicQuadRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-		//metallicQuadRitem->SubmeshName = "quad";
-		//metallicQuadRitem->IndexCount = metallicQuadRitem->Mesh->Submeshes["quad"].IndexCount;
-		//metallicQuadRitem->StartIndexLocation = metallicQuadRitem->Mesh->Submeshes["quad"].StartIndexLocation;
-		//metallicQuadRitem->BaseVertexLocation = metallicQuadRitem->Mesh->Submeshes["quad"].BaseVertexLocation;
-		mSceneObjectLayer[(int)RenderLayer::Debug].push_back(metallicQuadRitem);
-		mAllRitems.push_back(std::move(metallicQuadRitem));
-		indexCB++;
-	}
-
-	auto cerberusRitem = std::make_shared<GSceneObject>();
-	//XMStoreFloat4x4(&cerberusRitem->World, XMMatrixScaling(0.1f, 0.1f, 0.1f) * XMMatrixTranslation(0.0f, 0.0f, 0.0f));
-	//cerberusRitem->World = MathHelper::Identity4x4();
-	XMStoreFloat4x4(&cerberusRitem->TexTransform, XMMatrixScaling(1.0f, 1.0f, 1.0f));
-	cerberusRitem->ObjCBIndex = indexCB;
-	cerberusRitem->Mat = pMaterials[L"Cerberus"];
-	cerberusRitem->Mesh = pMeshes[L"Content\\Models\\Cerberus.fbx"];
-	cerberusRitem->Name = "Cerberus";
-	cerberusRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-	//cerberusRitem->SubmeshName = submesh.first;
-	mSceneObjectLayer[(int)RenderLayer::Deferred].push_back(cerberusRitem);
-	mAllRitems.push_back(std::move(cerberusRitem));
-	indexCB++;
-
-	auto sphereRitem = std::make_shared<GSceneObject>();
-	sphereRitem->SetScale(20.f, 20.f, 20.f);
-	sphereRitem->SetLocation(0.f, -100.f, 0.f);
-	XMStoreFloat4x4(&sphereRitem->TexTransform, XMMatrixScaling(1.0f, 0.5f, 1.0f));
-	sphereRitem->ObjCBIndex = indexCB;
-	sphereRitem->Mat = pMaterials[L"sphere_2"];
-	sphereRitem->Mesh = pMeshes[L"Sphere"];
-	sphereRitem->Name = "Sphere_1";
-	sphereRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-	mSceneObjectLayer[(int)RenderLayer::Deferred].push_back(sphereRitem);
-	mAllRitems.push_back(std::move(sphereRitem));
-	indexCB++;
-
-	auto sphereRitem2 = std::make_shared<GSceneObject>();
-	sphereRitem2->SetScale(20.f, 20.f, 20.f);
-	sphereRitem2->SetLocation(0.f, -100.f, 0.f);
-	XMStoreFloat4x4(&sphereRitem2->TexTransform, XMMatrixScaling(1.0f, 0.5f, 1.0f));
-	sphereRitem2->ObjCBIndex = indexCB;
-	sphereRitem2->Mat = pMaterials[L"GreasyPan"];
-	sphereRitem2->Mesh = pMeshes[L"Sphere"];
-	sphereRitem2->Name = "Sphere_2";
-	sphereRitem2->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-	mSceneObjectLayer[(int)RenderLayer::Deferred].push_back(sphereRitem2);
-	mAllRitems.push_back(std::move(sphereRitem2));
-	indexCB++;
-}
-*/
-
 void GDxRenderer::CubemapPreIntegration()
 {
 	for (auto i = 0u; i < (6 * mPrefilterLevels); i++)
@@ -2184,1091 +1822,8 @@ void GDxRenderer::CubemapPreIntegration()
 
 }
 
-void GDxRenderer::DrawSceneObjects(ID3D12GraphicsCommandList* cmdList, const RenderLayer layer, bool bSetCBV)
-{
-	// For each render item...
-	for (size_t i = 0; i < pSceneObjectLayer[((int)layer)].size(); ++i)
-	{
-		auto sObject = pSceneObjectLayer[((int)layer)][i];
-		DrawSceneObject(cmdList, sObject, bSetCBV);
-	}
-}
-
-void GDxRenderer::DrawSceneObject(ID3D12GraphicsCommandList* cmdList, GRiSceneObject* sObject, bool bSetCBV)
-{
-	GDxSceneObject* dxSO = dynamic_cast<GDxSceneObject*>(sObject);
-	if (dxSO == NULL)
-	{
-		ThrowGGiException("Cast failed : from GRiSceneObject* to GDxSceneObject*.")
-	}
-
-	GDxMesh* dxMesh = dynamic_cast<GDxMesh*>(sObject->Mesh);
-	if (dxMesh == NULL)
-	{
-		ThrowGGiException("Cast failed : from GRiMesh* to GDxMesh*.")
-	}
-
-	cmdList->IASetVertexBuffers(0, 1, &dxMesh->mVIBuffer->VertexBufferView());
-	cmdList->IASetIndexBuffer(&dxMesh->mVIBuffer->IndexBufferView());
-	cmdList->IASetPrimitiveTopology(dxSO->PrimitiveType);
-
-	if (bSetCBV)
-	{
-		UINT objCBByteSize = GDxUtil::CalcConstantBufferByteSize(sizeof(ObjectConstants));
-		auto objectCB = mCurrFrameResource->ObjectCB->Resource();
-		D3D12_GPU_VIRTUAL_ADDRESS objCBAddress = objectCB->GetGPUVirtualAddress() + sObject->ObjIndex * objCBByteSize;
-		cmdList->SetGraphicsRootConstantBufferView(0, objCBAddress);
-	}
-
-	cmdList->DrawIndexedInstanced(dxMesh->mVIBuffer->IndexCount, 1, 0, 0, 0);
-}
-
-#pragma endregion
-
-void GDxRenderer::CreateRtvAndDsvDescriptorHeaps()
-{
-	// Add +1 for screen normal map, +2 for ambient maps.
-	D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc;
-	rtvHeapDesc.NumDescriptors = SwapChainBufferCount + 3;
-	rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
-	rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-	rtvHeapDesc.NodeMask = 0;
-	ThrowIfFailed(md3dDevice->CreateDescriptorHeap(
-		&rtvHeapDesc, IID_PPV_ARGS(mRtvHeap.GetAddressOf())));
-
-	// Add +1 DSV for shadow map.
-	D3D12_DESCRIPTOR_HEAP_DESC dsvHeapDesc;
-	dsvHeapDesc.NumDescriptors = 2;
-	dsvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
-	dsvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-	dsvHeapDesc.NodeMask = 0;
-	ThrowIfFailed(md3dDevice->CreateDescriptorHeap(
-		&dsvHeapDesc, IID_PPV_ARGS(mDsvHeap.GetAddressOf())));
-}
-
-void GDxRenderer::OnResize()
-{
-	assert(md3dDevice);
-	assert(mSwapChain);
-	assert(mDirectCmdListAlloc);
-
-	// Flush before changing any resources.
-	FlushCommandQueue();
-
-	ThrowIfFailed(mCommandList->Reset(mDirectCmdListAlloc.Get(), nullptr));
-
-	// Release the previous resources we will be recreating.
-	for (int i = 0; i < SwapChainBufferCount; ++i)
-		mSwapChainBuffer[i].Reset();
-	mDepthStencilBuffer.Reset();
-
-	// Resize the swap chain.
-	ThrowIfFailed(mSwapChain->ResizeBuffers(
-		SwapChainBufferCount,
-		mClientWidth, mClientHeight,
-		mBackBufferFormat,
-		DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH));
-
-	mCurrBackBuffer = 0;
-
-	CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHeapHandle(mRtvHeap->GetCPUDescriptorHandleForHeapStart());
-	for (UINT i = 0; i < SwapChainBufferCount; i++)
-	{
-		ThrowIfFailed(mSwapChain->GetBuffer(i, IID_PPV_ARGS(&mSwapChainBuffer[i])));
-		md3dDevice->CreateRenderTargetView(mSwapChainBuffer[i].Get(), nullptr, rtvHeapHandle);
-		rtvHeapHandle.Offset(1, mRtvDescriptorSize);
-	}
-
-	// Create the depth/stencil buffer and view.
-	D3D12_RESOURCE_DESC depthStencilDesc;
-	depthStencilDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-	depthStencilDesc.Alignment = 0;
-	depthStencilDesc.Width = mClientWidth;
-	depthStencilDesc.Height = mClientHeight;
-	depthStencilDesc.DepthOrArraySize = 1;
-	depthStencilDesc.MipLevels = 1;
-	depthStencilDesc.Format = mDepthStencilFormat;
-	depthStencilDesc.SampleDesc.Count = 1;
-	depthStencilDesc.SampleDesc.Quality = 0;
-	depthStencilDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
-	depthStencilDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
-
-	D3D12_CLEAR_VALUE optClear;
-	optClear.Format = mDepthStencilFormat;
-	optClear.DepthStencil.Depth = 1.0f;
-	optClear.DepthStencil.Stencil = 0;
-	ThrowIfFailed(md3dDevice->CreateCommittedResource(
-		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
-		D3D12_HEAP_FLAG_NONE,
-		&depthStencilDesc,
-		D3D12_RESOURCE_STATE_COMMON,
-		&optClear,
-		IID_PPV_ARGS(mDepthStencilBuffer.GetAddressOf())));
-
-	// Create descriptor to mip level 0 of entire resource using the format of the resource.
-	md3dDevice->CreateDepthStencilView(mDepthStencilBuffer.Get(), nullptr, DepthStencilView());
-
-	// Transition the resource from its initial state to be used as a depth buffer.
-	mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mDepthStencilBuffer.Get(),
-		D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_DEPTH_WRITE));
-
-	// Execute the resize commands.
-	ThrowIfFailed(mCommandList->Close());
-	ID3D12CommandList* cmdsLists[] = { mCommandList.Get() };
-	mCommandQueue->ExecuteCommandLists(_countof(cmdsLists), cmdsLists);
-
-	// Wait until resize is complete.
-	FlushCommandQueue();
-
-	// Update the viewport transform to cover the client area.
-	mScreenViewport.TopLeftX = 0;
-	mScreenViewport.TopLeftY = 0;
-	mScreenViewport.Width = static_cast<float>(mClientWidth);
-	mScreenViewport.Height = static_cast<float>(mClientHeight);
-	mScreenViewport.MinDepth = 0.0f;
-	mScreenViewport.MaxDepth = 1.0f;
-
-	mScissorRect = { 0, 0, mClientWidth, mClientHeight };
-
-	if(pCamera!=nullptr)
-		pCamera->SetLens(0.25f * GGiEngineUtil::PI, AspectRatio(), 1.0f, 1000.0f);
-
-	/*
-	if (mSsao != nullptr)
-	{
-		mSsao->OnResize(mClientWidth, mClientHeight);
-
-		// Resources changed, so need to rebuild descriptors.
-		mSsao->RebuildDescriptors(mDepthStencilBuffer.Get());
-	}
-	*/
-
-	for (auto &rtvHeap : mRtvHeaps)
-	{
-		if (rtvHeap.second->mRtv.size() != 0 && rtvHeap.second->mRtv[0]->mResource != nullptr)
-		{
-			rtvHeap.second->OnResize(mClientWidth, mClientHeight);
-		}
-	}
-}
-
-void GDxRenderer::OnMouseDown(WPARAM btnState, int x, int y)
-{
-	mLastMousePos.x = x;
-	mLastMousePos.y = y;
-
-	SetCapture(mhMainWnd);
-}
-
-void GDxRenderer::OnMouseUp(WPARAM btnState, int x, int y)
-{
-	ReleaseCapture();
-}
-
-void GDxRenderer::OnMouseMove(WPARAM btnState, int x, int y)
-{
-	if ((btnState & MK_RBUTTON) != 0)
-	{
-		// Make each pixel correspond to a quarter of a degree.
-		float dx = XMConvertToRadians(0.25f*static_cast<float>(x - mLastMousePos.x));
-		float dy = XMConvertToRadians(0.25f*static_cast<float>(y - mLastMousePos.y));
-
-		pCamera->Pitch(dy);
-		pCamera->RotateY(dx);
-	}
-
-	mLastMousePos.x = x;
-	mLastMousePos.y = y;
-}
-
-/*
-void GCore::OnResize()
-{
-	GRenderer::OnResize();
-
-	mCamera.SetLens(0.25f*MathHelper::Pi, AspectRatio(), 1.0f, 1000.0f);
-
-	if (mSsao != nullptr)
-	{
-		mSsao->OnResize(mClientWidth, mClientHeight);
-
-		// Resources changed, so need to rebuild descriptors.
-		mSsao->RebuildDescriptors(mDepthStencilBuffer.Get());
-	}
-
-	for (auto &rtvHeap : mRtvHeaps)
-	{
-		if (rtvHeap.second->mRtv.size() != 0 && rtvHeap.second->mRtv[0]->mResource != nullptr)
-		{
-			rtvHeap.second->OnResize(mClientWidth, mClientHeight);
-		}
-	}
-}
-*/
-
-#pragma region Initialize
-
-void GDxRenderer::PreInitialize(HWND OutputWindow, double width, double height)
-{
-	mhMainWnd = OutputWindow;
-	mClientWidth = (int)width;
-	mClientHeight = (int)height;
-
-	if (!InitDirect3D())
-		return;
-
-	CreateRendererFactory();
-	CreateFilmboxManager();
-
-	// Do the initial resize code.
-	OnResize();
-
-	ThrowIfFailed(mCommandList->Reset(mDirectCmdListAlloc.Get(), nullptr));
-}
-
-void GDxRenderer::Initialize(HWND OutputWindow, double width, double height)
-{
-	//PreInitialize(OutputWindow, width, height);
-
-	// Reset the command list to prep for initialization commands.
-
-	//mCamera.SetPosition(0.0f, 2.0f, -5.0f);
-	/*
-	mShadowMap = std::make_unique<ShadowMap>(md3dDevice.Get(),
-		2048, 2048);
-
-	mSsao = std::make_unique<Ssao>(
-		md3dDevice.Get(),
-		mCommandList.Get(),
-		mClientWidth, mClientHeight);
-	*/
-	//BuildCubemapSampleCameras();
-	//LoadTextures();
-	BuildDescriptorHeaps();
-	BuildRootSignature();
-	BuildShadersAndInputLayout();
-	//LoadMeshes();
-	//BuildMaterials();
-	//BuildSceneObjects();
-	BuildFrameResources();
-	BuildPSOs();
-
-	CubemapPreIntegration();
-
-	//mSsao->SetPSOs(mPSOs["ssao"].Get(), mPSOs["ssaoBlur"].Get());
-	// Execute the initialization commands.
-	ThrowIfFailed(mCommandList->Close());
-	ID3D12CommandList* cmdsLists[] = { mCommandList.Get() };
-	mCommandQueue->ExecuteCommandLists(_countof(cmdsLists), cmdsLists);
-
-	// Wait until initialization is complete.
-	FlushCommandQueue();
-}
-
-#pragma endregion
-
-#pragma region MsgProc
-
-/*
-void GDxRenderer::MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
-{
-	switch (msg)
-	{
-		// WM_ACTIVATE is sent when the window is activated or deactivated.
-		// We pause the game when the window is deactivated and unpause it
-		// when it becomes active.
-	case WM_ACTIVATE:
-		if (LOWORD(wParam) == WA_INACTIVE)
-		{
-			mAppPaused = true;
-			pTimer->Stop();
-		}
-		else
-		{
-			mAppPaused = false;
-			pTimer->Start();
-		}
-		return; 0;
-
-		// WM_SIZE is sent when the user resizes the window.
-	case WM_SIZE:
-		// Save the new client area dimensions.
-		mClientWidth = LOWORD(lParam);
-		mClientHeight = HIWORD(lParam);
-		if (md3dDevice)
-		{
-			if (wParam == SIZE_MINIMIZED)
-			{
-				mAppPaused = true;
-				mMinimized = true;
-				mMaximized = false;
-			}
-			else if (wParam == SIZE_MAXIMIZED)
-			{
-				mAppPaused = false;
-				mMinimized = false;
-				mMaximized = true;
-				OnResize();
-			}
-			else if (wParam == SIZE_RESTORED)
-			{
-
-				// Restoring from minimized state?
-				if (mMinimized)
-				{
-					mAppPaused = false;
-					mMinimized = false;
-					OnResize();
-				}
-
-				// Restoring from maximized state?
-				else if (mMaximized)
-				{
-					mAppPaused = false;
-					mMaximized = false;
-					OnResize();
-				}
-				else if (mResizing)
-				{
-					// If user is dragging the resize bars, we do not resize
-					// the buffers here because as the user continuously
-					// drags the resize bars, a stream of WM_SIZE messages are
-					// sent to the window, and it would be pointless (and slow)
-					// to resize for each WM_SIZE message received from dragging
-					// the resize bars.  So instead, we reset after the user is
-					// done resizing the window and releases the resize bars, which
-					// sends a WM_EXITSIZEMOVE message.
-				}
-				else // API call such as SetWindowPos or mSwapChain->SetFullscreenState.
-				{
-					OnResize();
-				}
-			}
-		}
-		return; 0;
-
-		// WM_EXITSIZEMOVE is sent when the user grabs the resize bars.
-	case WM_ENTERSIZEMOVE:
-		mAppPaused = true;
-		mResizing = true;
-		pTimer->Stop();
-		return; 0;
-
-		// WM_EXITSIZEMOVE is sent when the user releases the resize bars.
-		// Here we reset everything based on the new window dimensions.
-	case WM_EXITSIZEMOVE:
-		mAppPaused = false;
-		mResizing = false;
-		pTimer->Start();
-		OnResize();
-		return; 0;
-
-		// WM_DESTROY is sent when the window is being destroyed.
-	case WM_DESTROY:
-		PostQuitMessage(0);
-		return; 0;
-
-		// The WM_MENUCHAR message is sent when a menu is active and the user presses
-		// a key that does not correspond to any mnemonic or accelerator key.
-	case WM_MENUCHAR:
-		// Don't beep when we alt-enter.
-		return; MAKELRESULT(0, MNC_CLOSE);
-
-		// Catch this message so to prevent the window from becoming too small.
-	case WM_GETMINMAXINFO:
-		((MINMAXINFO*)lParam)->ptMinTrackSize.x = 200;
-		((MINMAXINFO*)lParam)->ptMinTrackSize.y = 200;
-		return; 0;
-
-	case WM_LBUTTONDOWN:
-	case WM_MBUTTONDOWN:
-	case WM_RBUTTONDOWN:
-		OnMouseDown(wParam, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
-		return; 0;
-	case WM_LBUTTONUP:
-	case WM_MBUTTONUP:
-	case WM_RBUTTONUP:
-		OnMouseUp(wParam, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
-		return; 0;
-	case WM_MOUSEMOVE:
-		OnMouseMove(wParam, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
-		return; 0;
-	case WM_KEYUP:
-		if (wParam == VK_ESCAPE)
-		{
-			PostQuitMessage(0);
-		}
-		else if ((int)wParam == VK_F2)
-			Set4xMsaaState(!m4xMsaaState);
-
-		return; 0;
-	}
-}
-*/
-
-#pragma endregion
-
-#pragma region Update
-
-void GDxRenderer::Update(const GGiGameTimer* gt)
-{
-	OnKeyboardInput(gt);
-
-	// Cycle through the circular frame resource array.
-	mCurrFrameResourceIndex = (mCurrFrameResourceIndex + 1) % NUM_FRAME_RESOURCES;
-	mCurrFrameResource = mFrameResources[mCurrFrameResourceIndex].get();
-
-	// Has the GPU finished processing the commands of the current frame resource?
-	// If not, wait until the GPU has completed commands up to this fence point.
-	if (mCurrFrameResource->Fence != 0 && mFence->GetCompletedValue() < mCurrFrameResource->Fence)
-	{
-		HANDLE eventHandle = CreateEventEx(nullptr, false, false, EVENT_ALL_ACCESS);
-		ThrowIfFailed(mFence->SetEventOnCompletion(mCurrFrameResource->Fence, eventHandle));
-		WaitForSingleObject(eventHandle, INFINITE);
-		CloseHandle(eventHandle);
-	}
-
-	//
-	// Animate the lights (and hence shadows).
-	//
-
-	mLightRotationAngle += 0.1f * gt->DeltaTime();
-
-	XMMATRIX R = XMMatrixRotationY(mLightRotationAngle);
-	for (int i = 0; i < 3; ++i)
-	{
-		XMVECTOR lightDir = XMLoadFloat3(&mBaseLightDirections[i]);
-		lightDir = XMVector3TransformNormal(lightDir, R);
-		XMStoreFloat3(&mRotatedLightDirections[i], lightDir);
-	}
-
-	AnimateMaterials(gt);
-	UpdateObjectCBs(gt);
-	UpdateMaterialBuffer(gt);
-	UpdateShadowTransform(gt);
-	UpdateMainPassCB(gt);
-	UpdateSkyPassCB(gt);
-	//UpdateShadowPassCB(gt);
-	//UpdateSsaoCB(gt);
-	UpdateLightCB(gt);
-}
-
-#pragma endregion
-
-#pragma region Draw
-
-void GDxRenderer::Draw(const GGiGameTimer* gt)
-{
-	auto cmdListAlloc = mCurrFrameResource->CmdListAlloc;
-
-	// Reuse the memory associated with command recording.
-	// We can only reset when the associated command lists have finished execution on the GPU.
-	ThrowIfFailed(cmdListAlloc->Reset());
-
-	// A command list can be reset after it has been added to the command queue via ExecuteCommandList.
-	// Reusing the command list reuses memory.
-	ThrowIfFailed(mCommandList->Reset(cmdListAlloc.Get(), mPSOs["GBuffer"].Get()));
-
-	ID3D12DescriptorHeap* descriptorHeaps[] = { mSrvDescriptorHeap.Get() };
-	mCommandList->SetDescriptorHeaps(_countof(descriptorHeaps), descriptorHeaps);
-
-	mCommandList->SetGraphicsRootSignature(mRootSignatures["Forward"].Get());
-
-	//
-	// Shadow map pass.
-	//
-
-	// Bind all the materials used in this scene.  For structured buffers, we can bypass the heap and 
-	// set as a root descriptor.
-	auto matBuffer = mCurrFrameResource->MaterialBuffer->Resource();
-	mCommandList->SetGraphicsRootShaderResourceView(2, matBuffer->GetGPUVirtualAddress());
-
-	// Bind null SRV for shadow map pass.
-	mCommandList->SetGraphicsRootDescriptorTable(3, mNullSrv);
-
-	// Bind all the textures used in this scene.  Observe
-	// that we only have to specify the first descriptor in the table.  
-	// The root signature knows how many descriptors are expected in the table.
-	mCommandList->SetGraphicsRootDescriptorTable(4, mSrvDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
-
-	//DrawSceneToShadowMap();
-
-	//
-	// Normal/depth pass.
-	//
-
-	//DrawNormalsAndDepth();
-
-	//
-	// Compute SSAO.
-	// 
-
-	//mCommandList->SetGraphicsRootSignature(mSsaoRootSignature.Get());
-	//mSsao->ComputeSsao(mCommandList.Get(), mCurrFrameResource, 3);
-
-	//
-	// Main rendering pass.
-	//
-
-	mCommandList->SetGraphicsRootSignature(mRootSignatures["Forward"].Get());
-
-	// Rebind state whenever graphics root signature changes.
-
-	// Bind all the materials used in this scene.  For structured buffers, we can bypass the heap and 
-	// set as a root descriptor.
-	matBuffer = mCurrFrameResource->MaterialBuffer->Resource();
-	mCommandList->SetGraphicsRootShaderResourceView(2, matBuffer->GetGPUVirtualAddress());
-
-	mCommandList->RSSetViewports(1, &mScreenViewport);
-	mCommandList->RSSetScissorRects(1, &mScissorRect);
-
-	// Indicate a state transition on the resource usage.
-	mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(),
-		D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET));
-
-	// Clear the back buffer.
-	mCommandList->ClearRenderTargetView(CurrentBackBufferView(), Colors::LightSteelBlue, 0, nullptr);
-
-	// WE ALREADY WROTE THE DEPTH INFO TO THE DEPTH BUFFER IN DrawNormalsAndDepth,
-	// SO DO NOT CLEAR DEPTH.
-	mCommandList->ClearDepthStencilView(DepthStencilView(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
-
-	// Specify the buffers we are going to render to.
-	mCommandList->OMSetRenderTargets(1, &CurrentBackBufferView(), true, &DepthStencilView());
-
-	// Bind all the textures used in this scene.  Observe
-	// that we only have to specify the first descriptor in the table.  
-	// The root signature knows how many descriptors are expected in the table.
-	mCommandList->SetGraphicsRootDescriptorTable(4, mSrvDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
-
-	auto passCB = mCurrFrameResource->PassCB->Resource();
-	mCommandList->SetGraphicsRootConstantBufferView(1, passCB->GetGPUVirtualAddress());
-
-	// Bind the sky cube map.  For our demos, we just use one "world" cube map representing the environment
-	// from far away, so all objects will use the same cube map and we only need to set it once per-frame.  
-	// If we wanted to use "local" cube maps, we would have to change them per-object, or dynamically
-	// index into an array of cube maps.
-
-	CD3DX12_GPU_DESCRIPTOR_HANDLE skyTexDescriptor(mSrvDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
-	skyTexDescriptor.Offset(mSkyTexHeapIndex, mCbvSrvUavDescriptorSize);
-	mCommandList->SetGraphicsRootDescriptorTable(3, skyTexDescriptor);
-
-	bool bDeferredRendering = true;
-	if (bDeferredRendering)
-	{
-		// G-Buffer Pass
-		{
-			mCommandList->RSSetViewports(1, &(mRtvHeaps["GBuffer"]->mRtv[0]->mViewport));
-			mCommandList->RSSetScissorRects(1, &(mRtvHeaps["GBuffer"]->mRtv[0]->mScissorRect));
-
-			mCommandList->SetGraphicsRootSignature(mRootSignatures["GBuffer"].Get());
-
-			mCommandList->SetPipelineState(mPSOs["GBuffer"].Get());
-
-			UINT objCBByteSize = GDxUtil::CalcConstantBufferByteSize(sizeof(ObjectConstants));
-			auto objectCB = mCurrFrameResource->ObjectCB->Resource();
-
-			auto passCB = mCurrFrameResource->PassCB->Resource();
-			mCommandList->SetGraphicsRootConstantBufferView(1, passCB->GetGPUVirtualAddress());
-
-			//mCommandList->SetGraphicsRootDescriptorTable(2, mSrvDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
-			mCommandList->SetGraphicsRootDescriptorTable(2, GetGpuSrv(mTextrueHeapIndex));
-
-			matBuffer = mCurrFrameResource->MaterialBuffer->Resource();
-			mCommandList->SetGraphicsRootShaderResourceView(3, matBuffer->GetGPUVirtualAddress());
-
-			mCommandList->OMSetStencilRef(1);
-
-			// Indicate a state transition on the resource usage.
-			for (size_t i = 0; i < mRtvHeaps["GBuffer"]->mRtv.size(); i++)
-			{
-				mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["GBuffer"]->mRtv[i]->mResource.Get(),
-					D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_RENDER_TARGET));
-
-				// Clear the back buffer.
-				DirectX::XMVECTORF32 clearColor = { mRtvHeaps["GBuffer"]->mRtv[i]->mProperties.mClearColor[0],
-				mRtvHeaps["GBuffer"]->mRtv[i]->mProperties.mClearColor[1],
-				mRtvHeaps["GBuffer"]->mRtv[i]->mProperties.mClearColor[2],
-				mRtvHeaps["GBuffer"]->mRtv[i]->mProperties.mClearColor[3]
-				};
-
-				// WE ALREADY WROTE THE DEPTH INFO TO THE DEPTH BUFFER IN DrawNormalsAndDepth,
-				// SO DO NOT CLEAR DEPTH.
-				mCommandList->ClearRenderTargetView(mRtvHeaps["GBuffer"]->mRtvHeap.handleCPU((UINT)i), clearColor, 0, nullptr);
-			}
-
-			// Specify the buffers we are going to render to.
-			//mCommandList->OMSetRenderTargets(mRtvHeaps["GBuffer"]->mRtvHeap.HeapDesc.NumDescriptors, &(mRtvHeaps["GBuffer"]->mRtvHeap.hCPUHeapStart), true, &DepthStencilView());
-			mCommandList->OMSetRenderTargets(mRtvHeaps["GBuffer"]->mRtvHeap.HeapDesc.NumDescriptors, &(mRtvHeaps["GBuffer"]->mRtvHeap.hCPUHeapStart), true, &DepthStencilView());
-
-			// For each render item...
-			DrawSceneObjects(mCommandList.Get(), RenderLayer::Deferred, true);
-
-			for (size_t i = 0; i < mRtvHeaps["GBuffer"]->mRtv.size(); i++)
-			{
-				mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["GBuffer"]->mRtv[i]->mResource.Get(),
-					D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ));
-			}
-		}
-
-		// Direct Light Pass
-		{
-			mCommandList->RSSetViewports(1, &(mRtvHeaps["LightPass"]->mRtv[0]->mViewport));
-			mCommandList->RSSetScissorRects(1, &(mRtvHeaps["LightPass"]->mRtv[0]->mScissorRect));
-
-			mCommandList->SetGraphicsRootSignature(mRootSignatures["LightPass"].Get());
-
-			mCommandList->SetPipelineState(mPSOs["DirectLightPass"].Get());
-
-			auto lightCB = mCurrFrameResource->LightCB->Resource();
-			mCommandList->SetGraphicsRootConstantBufferView(0, lightCB->GetGPUVirtualAddress());
-
-			mCommandList->SetGraphicsRootDescriptorTable(1, mRtvHeaps["GBuffer"]->GetSrvGpuStart());
-
-			mCommandList->SetGraphicsRootDescriptorTable(2, mCubeRtvs["Irradiance"]->GetSrvGpu());
-
-			mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["LightPass"]->mRtv[0]->mResource.Get(),
-				D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_RENDER_TARGET));
-
-			// Clear the back buffer.
-			DirectX::XMVECTORF32 clearColor = { mRtvHeaps["LightPass"]->mRtv[0]->mProperties.mClearColor[0],
-			mRtvHeaps["LightPass"]->mRtv[0]->mProperties.mClearColor[1],
-			mRtvHeaps["LightPass"]->mRtv[0]->mProperties.mClearColor[2],
-			mRtvHeaps["LightPass"]->mRtv[0]->mProperties.mClearColor[3]
-			};
-
-			// WE ALREADY WROTE THE DEPTH INFO TO THE DEPTH BUFFER IN DrawNormalsAndDepth,
-			// SO DO NOT CLEAR DEPTH.
-			mCommandList->ClearRenderTargetView(mRtvHeaps["LightPass"]->mRtvHeap.handleCPU(0), clearColor, 0, nullptr);
-
-			// Specify the buffers we are going to render to.
-			//mCommandList->OMSetRenderTargets(mRtvHeaps["GBuffer"]->mRtvHeap.HeapDesc.NumDescriptors, &(mRtvHeaps["GBuffer"]->mRtvHeap.hCPUHeapStart), true, &DepthStencilView());
-			mCommandList->OMSetRenderTargets(1, &(mRtvHeaps["LightPass"]->mRtvHeap.handleCPU(0)), true, &DepthStencilView());
-
-			// For each render item...
-			DrawSceneObjects(mCommandList.Get(), RenderLayer::ScreenQuad, false);
-
-			mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["LightPass"]->mRtv[0]->mResource.Get(),
-				D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ));
-		}
-
-		// Ambient Light Pass
-		{
-			mCommandList->RSSetViewports(1, &(mRtvHeaps["LightPass"]->mRtv[1]->mViewport));
-			mCommandList->RSSetScissorRects(1, &(mRtvHeaps["LightPass"]->mRtv[1]->mScissorRect));
-
-			mCommandList->SetGraphicsRootSignature(mRootSignatures["LightPass"].Get());
-
-			mCommandList->SetPipelineState(mPSOs["AmbientLightPass"].Get());
-
-			auto lightCB = mCurrFrameResource->LightCB->Resource();
-			mCommandList->SetGraphicsRootConstantBufferView(0, lightCB->GetGPUVirtualAddress());
-
-			mCommandList->SetGraphicsRootDescriptorTable(1, mRtvHeaps["GBuffer"]->GetSrvGpuStart());
-
-			mCommandList->SetGraphicsRootDescriptorTable(2, mCubeRtvs["Irradiance"]->GetSrvGpu());
-
-			mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["LightPass"]->mRtv[1]->mResource.Get(),
-				D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_RENDER_TARGET));
-
-			// Clear the back buffer.
-			DirectX::XMVECTORF32 clearColor = { mRtvHeaps["LightPass"]->mRtv[1]->mProperties.mClearColor[0],
-			mRtvHeaps["LightPass"]->mRtv[1]->mProperties.mClearColor[1],
-			mRtvHeaps["LightPass"]->mRtv[1]->mProperties.mClearColor[2],
-			mRtvHeaps["LightPass"]->mRtv[1]->mProperties.mClearColor[3]
-			};
-
-			// WE ALREADY WROTE THE DEPTH INFO TO THE DEPTH BUFFER IN DrawNormalsAndDepth,
-			// SO DO NOT CLEAR DEPTH.
-			mCommandList->ClearRenderTargetView(mRtvHeaps["LightPass"]->mRtvHeap.handleCPU(1), clearColor, 0, nullptr);
-
-			// Specify the buffers we are going to render to.
-			//mCommandList->OMSetRenderTargets(mRtvHeaps["GBuffer"]->mRtvHeap.HeapDesc.NumDescriptors, &(mRtvHeaps["GBuffer"]->mRtvHeap.hCPUHeapStart), true, &DepthStencilView());
-			mCommandList->OMSetRenderTargets(1, &(mRtvHeaps["LightPass"]->mRtvHeap.handleCPU(1)), true, &DepthStencilView());
-
-			// For each render item...
-			DrawSceneObjects(mCommandList.Get(), RenderLayer::ScreenQuad, false);
-
-			mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["LightPass"]->mRtv[1]->mResource.Get(),
-				D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ));
-		}
-
-		// Debug Pass
-		bool bDrawDebugQuad = true;
-		if (bDrawDebugQuad)
-		{
-			mCommandList->RSSetViewports(1, &mScreenViewport);
-			mCommandList->RSSetScissorRects(1, &mScissorRect);
-
-			mCommandList->SetGraphicsRootSignature(mRootSignatures["GBufferDebug"].Get());
-
-			mCommandList->SetPipelineState(mPSOs["GBufferDebug"].Get());
-
-			UINT objCBByteSize = GDxUtil::CalcConstantBufferByteSize(sizeof(ObjectConstants));
-			auto objectCB = mCurrFrameResource->ObjectCB->Resource();
-
-			mCommandList->SetGraphicsRootDescriptorTable(1, mRtvHeaps["GBuffer"]->GetSrvGpuStart());
-
-			matBuffer = mCurrFrameResource->MaterialBuffer->Resource();
-			mCommandList->SetGraphicsRootShaderResourceView(2, matBuffer->GetGPUVirtualAddress());
-
-			mCommandList->OMSetRenderTargets(1, &CurrentBackBufferView(), true, &DepthStencilView());
-
-			// For each render item...
-			DrawSceneObjects(mCommandList.Get(), RenderLayer::Debug, true);
-		}
-
-		// Post Process Pass
-		{
-			mCommandList->RSSetViewports(1, &mScreenViewport);
-			mCommandList->RSSetScissorRects(1, &mScissorRect);
-
-			mCommandList->SetGraphicsRootSignature(mRootSignatures["PostProcess"].Get());
-
-			mCommandList->SetPipelineState(mPSOs["PostProcess"].Get());
-
-			mCommandList->SetGraphicsRootDescriptorTable(0, mRtvHeaps["LightPass"]->GetSrvGpuStart());
-
-			// Specify the buffers we are going to render to.
-			//mCommandList->OMSetRenderTargets(1, &CurrentBackBufferView(), true, &DepthStencilView());
-			mCommandList->OMSetRenderTargets(1, &CurrentBackBufferView(), true, &DepthStencilView());
-
-			// For each render item...
-			DrawSceneObjects(mCommandList.Get(), RenderLayer::ScreenQuad, false);
-		}
-
-		// Reset root parameters and rencer target.
-		{
-			mCommandList->RSSetViewports(1, &mScreenViewport);
-			mCommandList->RSSetScissorRects(1, &mScissorRect);
-
-			mCommandList->SetGraphicsRootSignature(mRootSignatures["Sky"].Get());
-
-			// Specify the buffers we are going to render to.
-			mCommandList->OMSetRenderTargets(1, &CurrentBackBufferView(), true, &DepthStencilView());
-
-			auto passCB = mCurrFrameResource->SkyCB->Resource();
-			mCommandList->SetGraphicsRootConstantBufferView(1, passCB->GetGPUVirtualAddress());
-
-			///*
-			CD3DX12_GPU_DESCRIPTOR_HANDLE skyTexDescriptor(mSrvDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
-			skyTexDescriptor.Offset(mSkyTexHeapIndex, mCbvSrvUavDescriptorSize);
-			mCommandList->SetGraphicsRootDescriptorTable(2, skyTexDescriptor);
-			//*/
-
-			// Irradiance cubemap debug.
-			//CD3DX12_GPU_DESCRIPTOR_HANDLE skyTexDescriptor(mSrvDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
-			//skyTexDescriptor.Offset(mIblIndex + 1, mCbvSrvUavDescriptorSize);
-			//mCommandList->SetGraphicsRootDescriptorTable(2, GetGpuSrv(mIblIndex + 2));
-
-			mCommandList->OMSetRenderTargets(1, &CurrentBackBufferView(), true, &DepthStencilView());
-		}
-
-	}
-
-	mCommandList->SetPipelineState(mPSOs["Sky"].Get());
-	DrawSceneObjects(mCommandList.Get(), RenderLayer::Sky, true);
-
-	// Indicate a state transition on the resource usage.
-	mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(),
-		D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
-
-	// Done recording commands.
-	ThrowIfFailed(mCommandList->Close());
-
-	// Add the command list to the queue for execution.
-	ID3D12CommandList* cmdsLists[] = { mCommandList.Get() };
-	mCommandQueue->ExecuteCommandLists(_countof(cmdsLists), cmdsLists);
-
-	// Swap the back and front buffers
-	ThrowIfFailed(mSwapChain->Present(0, 0));
-	mCurrBackBuffer = (mCurrBackBuffer + 1) % SwapChainBufferCount;
-
-	// Advance the fence value to mark commands up to this fence point.
-	mCurrFrameResource->Fence = ++mCurrentFence;
-
-	// Add an instruction to the command queue to set a new fence point. 
-	// Because we are on the GPU timeline, the new fence point won't be 
-	// set until the GPU finishes processing all the commands prior to this Signal().
-	mCommandQueue->Signal(mFence.Get(), mCurrentFence);
-}
-
-#pragma endregion
-
-/*
-#pragma region Init
-
-void GDxRenderer::LoadTextures()
-{
-	//
-	// Load non-DDS images.
-	//
-	std::vector<std::string> texNames =
-	{
-		"IBL_BRDF_LUT",
-		"default_albedo",
-		"default_normal",
-		"default_OcclussionRoughnessMetallic",
-		"sphere_1_BaseColor",
-		"sphere_1_Normal",
-		"sphere_1_OcclusionRoughnessMetallic",
-		"sphere_2_BaseColor",
-		"sphere_2_Normal",
-		"sphere_2_OcclusionRoughnessMetallic",
-		"Greasy_Pan_Albedo",
-		"Greasy_Pan_Normal",
-		"Greasy_Pan_Orm",
-		"Rusted_Iron_Albedo",
-		"Rusted_Iron_Normal",
-		"Rusted_Iron_Orm",
-		"Cerberus_Albedo",
-		"Cerberus_Normal",
-		"Cerberus_Orm",
-		"Fireplace_Albedo",
-		"Fireplace_Normal",
-		"Fireplace_Orm"
-	};
-
-	std::vector<std::wstring> texFilenames =
-	{
-		L"Textures/IBL_BRDF_LUT.png",
-		L"Textures/default_albedo.png",
-		L"Textures/default_normal.png",
-		L"Textures/default_OcclussionRoughnessMetallic.png",
-		L"Textures/sphere_1_BaseColor.png",
-		L"Textures/sphere_1_Normal.png",
-		L"Textures/sphere_1_OcclusionRoughnessMetallic.png",
-		L"Textures/sphere_2_BaseColor.png",
-		L"Textures/sphere_2_Normal.png",
-		L"Textures/sphere_2_OcclusionRoughnessMetallic.png",
-		L"Textures/Greasy_Pan_Albedo.png",
-		L"Textures/Greasy_Pan_Normal.png",
-		L"Textures/Greasy_Pan_Orm.png",
-		L"Textures/Rusted_Iron_Albedo.png",
-		L"Textures/Rusted_Iron_Normal.png",
-		L"Textures/Rusted_Iron_Orm.png",
-		L"Textures/Cerberus_Albedo.png",
-		L"Textures/Cerberus_Normal.png",
-		L"Textures/Cerberus_Orm.png",
-		L"Textures/Fireplace_Albedo.png",
-		L"Textures/Fireplace_Normal.png",
-		L"Textures/Fireplace_Orm.png"
-	};
-
-	std::vector<bool> texSrgb =
-	{
-		false,
-		true,
-		false,
-		false,
-		true,
-		false,
-		false,
-		true,
-		false,
-		false,
-		true,
-		false,
-		false,
-		true,
-		false,
-		false,
-		true,
-		false,
-		false,
-		true,
-		false,
-		false
-	};
-
-	for (int i = 0; i < (int)texNames.size(); ++i)
-	{
-		auto texMap = std::make_shared<GTexture>();
-		texMap->Name = texNames[i];
-		texMap->Filename = texFilenames[i];
-		texMap->descriptorHeapIndex = i;
-		ResourceUploadBatch resourceUpload(md3dDevice.Get());
-		resourceUpload.Begin();
-		unsigned int srgbFlag;
-		if (texSrgb[i])
-		{
-			srgbFlag = WIC_LOADER_FORCE_SRGB;
-		}
-		else
-		{
-			srgbFlag = WIC_LOADER_IGNORE_SRGB;
-		}
-		//ThrowIfFailed(CreateWICTextureFromFile(md3dDevice.Get(), resourceUpload, texMap->Filename.c_str(), texMap->Resource.ReleaseAndGetAddressOf()));
-		ThrowIfFailed(CreateWICTextureFromFileEx(md3dDevice.Get(), resourceUpload, texMap->Filename.c_str(), 0u, D3D12_RESOURCE_FLAG_NONE, srgbFlag, texMap->Resource.ReleaseAndGetAddressOf()));
-		auto uploadResourcesFinished = resourceUpload.End(mCommandQueue.Get());
-		uploadResourcesFinished.wait();
-
-		//CreateShaderResourceView(md3dDevice.Get(), texMap->Resource.Get(), m_resourceDescriptors->GetCpuHandle(Descriptors::Cat));
-		std::shared_ptr<GTexture> texListPtr(texMap);
-		mTextureList.push_back(texListPtr);
-		mTextures[texMap->Name] = std::move(texMap);
-	}
-
-	//
-	// Load DDS images.
-	//
-	std::vector<std::string> ddsTexNames =
-	{
-		"bricksDiffuseMap",
-		"bricksNormalMap",
-		"tileDiffuseMap",
-		"tileNormalMap",
-		"defaultDiffuseMap",
-		"defaultNormalMap",
-		"skyCubeMap"
-	};
-
-	std::vector<std::wstring> ddsTexFilenames =
-	{
-		L"Textures/bricks2.dds",
-		L"Textures/bricks2_nmap.dds",
-		L"Textures/tile.dds",
-		L"Textures/tile_nmap.dds",
-		L"Textures/white1x1.dds",
-		L"Textures/default_nmap.dds",
-		//L"Textures/sunsetcube1024.dds"
-		L"Textures/Cubemap_LancellottiChapel.dds"
-	};
-
-	for (int i = 0; i < (int)ddsTexNames.size(); ++i)
-	{
-		auto texMap = std::make_shared<GTexture>();
-		texMap->Name = ddsTexNames[i];
-		texMap->Filename = ddsTexFilenames[i];
-		texMap->descriptorHeapIndex = i + (int)texNames.size();
-		ThrowIfFailed(DirectX::CreateDDSTextureFromFile12(md3dDevice.Get(),
-			mCommandList.Get(), texMap->Filename.c_str(),
-			texMap->Resource, texMap->UploadHeap));
-
-		std::shared_ptr<GTexture> texListPtr(texMap);
-		mTextureList.push_back(texListPtr);
-		mTextures[texMap->Name] = std::move(texMap);
-	}
-}
-
-#pragma endregion
-*/
-
-
-/*
-bool GRenderer::InitMainWindow()
-{
-	WNDCLASS wc;
-	wc.style = CS_HREDRAW | CS_VREDRAW;
-	wc.lpfnWndProc = MainWndProc;
-	wc.cbClsExtra = 0;
-	wc.cbWndExtra = 0;
-	wc.hInstance = mhAppInst;
-	wc.hIcon = LoadIcon(0, IDI_APPLICATION);
-	wc.hCursor = LoadCursor(0, IDC_ARROW);
-	wc.hbrBackground = (HBRUSH)GetStockObject(NULL_BRUSH);
-	wc.lpszMenuName = 0;
-	wc.lpszClassName = L"MainWnd";
-
-	if (!RegisterClass(&wc))
-	{
-		MessageBox(0, L"RegisterClass Failed.", 0, 0);
-		return false;
-	}
-
-	// Compute window rectangle dimensions based on requested client area dimensions.
-	RECT R = { 0, 0, mClientWidth, mClientHeight };
-	AdjustWindowRect(&R, WS_OVERLAPPEDWINDOW, false);
-	int width = R.right - R.left;
-	int height = R.bottom - R.top;
-
-	mhMainWnd = CreateWindow(L"MainWnd", mMainWndCaption.c_str(),
-		WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, width, height, 0, 0, mhAppInst, 0);
-	if (!mhMainWnd)
-	{
-		MessageBox(0, L"CreateWindow Failed.", 0, 0);
-		return false;
-	}
-
-	ShowWindow(mhMainWnd, SW_SHOW);
-	UpdateWindow(mhMainWnd);
-
-	return true;
-}
-*/
-
-bool GDxRenderer::InitDirect3D()
-{
-	/*
-#if defined(DEBUG) || defined(_DEBUG) 
-	// Enable the D3D12 debug layer.
-	{
-		ComPtr<ID3D12Debug> debugController;
-		ThrowIfFailed(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController)));
-		debugController->EnableDebugLayer();
-	}
-#endif
-	*/
-	
-
-	ThrowIfFailed(CreateDXGIFactory1(IID_PPV_ARGS(&mdxgiFactory)));
-
-	// Try to create hardware device.
-	HRESULT hardwareResult = D3D12CreateDevice(
-		nullptr,             // default adapter
-		D3D_FEATURE_LEVEL_11_0,
-		IID_PPV_ARGS(&md3dDevice));
-
-	// Fallback to WARP device.
-	if (FAILED(hardwareResult))
-	{
-		ComPtr<IDXGIAdapter> pWarpAdapter;
-		ThrowIfFailed(mdxgiFactory->EnumWarpAdapter(IID_PPV_ARGS(&pWarpAdapter)));
-
-		ThrowIfFailed(D3D12CreateDevice(
-			pWarpAdapter.Get(),
-			D3D_FEATURE_LEVEL_11_0,
-			IID_PPV_ARGS(&md3dDevice)));
-	}
-
-	ThrowIfFailed(md3dDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE,
-		IID_PPV_ARGS(&mFence)));
-
-	mRtvDescriptorSize = md3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-	mDsvDescriptorSize = md3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
-	mCbvSrvUavDescriptorSize = md3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-
-	// Check 4X MSAA quality support for our back buffer format.
-	// All Direct3D 11 capable devices support 4X MSAA for all render 
-	// target formats, so we only need to check quality support.
-
-	D3D12_FEATURE_DATA_MULTISAMPLE_QUALITY_LEVELS msQualityLevels;
-	msQualityLevels.Format = mBackBufferFormat;
-	msQualityLevels.SampleCount = 4;
-	msQualityLevels.Flags = D3D12_MULTISAMPLE_QUALITY_LEVELS_FLAG_NONE;
-	msQualityLevels.NumQualityLevels = 0;
-	ThrowIfFailed(md3dDevice->CheckFeatureSupport(
-		D3D12_FEATURE_MULTISAMPLE_QUALITY_LEVELS,
-		&msQualityLevels,
-		sizeof(msQualityLevels)));
-
-	//m4xMsaaQuality = msQualityLevels.NumQualityLevels;
-	//assert(m4xMsaaQuality > 0 && "Unexpected MSAA quality level.");
-
-#ifdef _DEBUG
-	LogAdapters();
-#endif
-
-	CreateCommandObjects();
-	CreateSwapChain();
-	CreateRtvAndDsvDescriptorHeaps();
-
-	return true;
-}
-
 void GDxRenderer::CreateRendererFactory()
 {
-	//GDxRendererFactory* fac = new GDxRendererFactory(md3dDevice.Get(), mCommandList.Get(), mCommandQueue.Get());
 	GDxRendererFactory fac(md3dDevice.Get(), mCommandList.Get(), mCommandQueue.Get());
 	mFactory = std::make_unique<GDxRendererFactory>(fac);
 }
@@ -3332,28 +1887,80 @@ void GDxRenderer::CreateSwapChain()
 		mSwapChain.GetAddressOf()));
 }
 
-void GDxRenderer::FlushCommandQueue()
+void GDxRenderer::CreateRtvAndDsvDescriptorHeaps()
 {
-	// Advance the fence value to mark commands up to this fence point.
-	mCurrentFence++;
+	// Add +1 for screen normal map, +2 for ambient maps.
+	D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc;
+	rtvHeapDesc.NumDescriptors = SwapChainBufferCount + 3;
+	rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
+	rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+	rtvHeapDesc.NodeMask = 0;
+	ThrowIfFailed(md3dDevice->CreateDescriptorHeap(
+		&rtvHeapDesc, IID_PPV_ARGS(mRtvHeap.GetAddressOf())));
 
-	// Add an instruction to the command queue to set a new fence point.  Because we 
-	// are on the GPU timeline, the new fence point won't be set until the GPU finishes
-	// processing all the commands prior to this Signal().
-	ThrowIfFailed(mCommandQueue->Signal(mFence.Get(), mCurrentFence));
+	// Add +1 DSV for shadow map.
+	D3D12_DESCRIPTOR_HEAP_DESC dsvHeapDesc;
+	dsvHeapDesc.NumDescriptors = 2;
+	dsvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
+	dsvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+	dsvHeapDesc.NodeMask = 0;
+	ThrowIfFailed(md3dDevice->CreateDescriptorHeap(
+		&dsvHeapDesc, IID_PPV_ARGS(mDsvHeap.GetAddressOf())));
+}
 
-	// Wait until the GPU has completed commands up to this fence point.
-	if (mFence->GetCompletedValue() < mCurrentFence)
+#pragma endregion
+
+#pragma region Draw
+
+void GDxRenderer::DrawSceneObjects(ID3D12GraphicsCommandList* cmdList, const RenderLayer layer, bool bSetCBV)
+{
+	// For each render item...
+	for (size_t i = 0; i < pSceneObjectLayer[((int)layer)].size(); ++i)
 	{
-		HANDLE eventHandle = CreateEventEx(nullptr, false, false, EVENT_ALL_ACCESS);
-
-		// Fire event when GPU hits current fence.  
-		ThrowIfFailed(mFence->SetEventOnCompletion(mCurrentFence, eventHandle));
-
-		// Wait until the GPU hits current fence event is fired.
-		WaitForSingleObject(eventHandle, INFINITE);
-		CloseHandle(eventHandle);
+		auto sObject = pSceneObjectLayer[((int)layer)][i];
+		DrawSceneObject(cmdList, sObject, bSetCBV);
 	}
+}
+
+void GDxRenderer::DrawSceneObject(ID3D12GraphicsCommandList* cmdList, GRiSceneObject* sObject, bool bSetCBV)
+{
+	GDxSceneObject* dxSO = dynamic_cast<GDxSceneObject*>(sObject);
+	if (dxSO == NULL)
+	{
+		ThrowGGiException("Cast failed : from GRiSceneObject* to GDxSceneObject*.")
+	}
+
+	GDxMesh* dxMesh = dynamic_cast<GDxMesh*>(sObject->Mesh);
+	if (dxMesh == NULL)
+	{
+		ThrowGGiException("Cast failed : from GRiMesh* to GDxMesh*.")
+	}
+
+	cmdList->IASetVertexBuffers(0, 1, &dxMesh->mVIBuffer->VertexBufferView());
+	cmdList->IASetIndexBuffer(&dxMesh->mVIBuffer->IndexBufferView());
+	cmdList->IASetPrimitiveTopology(dxSO->PrimitiveType);
+
+	if (bSetCBV)
+	{
+		UINT objCBByteSize = GDxUtil::CalcConstantBufferByteSize(sizeof(ObjectConstants));
+		auto objectCB = mCurrFrameResource->ObjectCB->Resource();
+		D3D12_GPU_VIRTUAL_ADDRESS objCBAddress = objectCB->GetGPUVirtualAddress() + sObject->ObjIndex * objCBByteSize;
+		cmdList->SetGraphicsRootConstantBufferView(0, objCBAddress);
+	}
+
+	cmdList->DrawIndexedInstanced(dxMesh->mVIBuffer->IndexCount, 1, 0, 0, 0);
+}
+
+#pragma endregion
+
+#pragma region Util
+
+bool GDxRenderer::IsRunning()
+{
+	if (md3dDevice)
+		return true;
+	else
+		return false;
 }
 
 ID3D12Resource* GDxRenderer::CurrentBackBuffer()const
@@ -3373,42 +1980,6 @@ D3D12_CPU_DESCRIPTOR_HANDLE GDxRenderer::DepthStencilView()const
 {
 	return mDsvHeap->GetCPUDescriptorHandleForHeapStart();
 }
-
-/*
-void GDxRenderer::CalculateFrameStats()
-{
-	// Code computes the average frames per second, and also the 
-	// average time it takes to render one frame.  These stats 
-	// are appended to the window caption bar.
-
-	static int frameCnt = 0;
-	static float timeElapsed = 0.0f;
-
-	frameCnt++;
-
-	// Compute averages over one second period.
-	if ((pTimer->TotalTime() - timeElapsed) >= 1.0f)
-	{
-		float fps = (float)frameCnt; // fps = frameCnt / 1
-		float mspf = 1000.0f / fps;
-
-		wstring fpsStr = to_wstring(fps);
-		wstring mspfStr = to_wstring(mspf);
-
-		wstring windowText = mMainWndCaption +
-			L"Width : " + to_wstring(mClientWidth) +
-			L"Height" + to_wstring(mClientHeight);
-			//L"    fps: " + fpsStr +
-			//L"   mspf: " + mspfStr;
-
-		SetWindowText(mhMainWnd, windowText.c_str());
-
-		// Reset for next average.
-		frameCnt = 0;
-		timeElapsed += 1.0f;
-	}
-}
-*/
 
 void GDxRenderer::LogAdapters()
 {
@@ -3485,68 +2056,56 @@ void GDxRenderer::LogOutputDisplayModes(IDXGIOutput* output, DXGI_FORMAT format)
 	}
 }
 
-void GDxRenderer::SyncTextures(std::unordered_map<std::wstring, std::unique_ptr<GRiTexture>>& mTextures)
+void GDxRenderer::FlushCommandQueue()
 {
-	pTextures.clear();
-	std::unordered_map<std::wstring, std::unique_ptr<GRiTexture>>::iterator i;
-	for (i = mTextures.begin(); i != mTextures.end(); i++)
+	// Advance the fence value to mark commands up to this fence point.
+	mCurrentFence++;
+
+	// Add an instruction to the command queue to set a new fence point.  Because we 
+	// are on the GPU timeline, the new fence point won't be set until the GPU finishes
+	// processing all the commands prior to this Signal().
+	ThrowIfFailed(mCommandQueue->Signal(mFence.Get(), mCurrentFence));
+
+	// Wait until the GPU has completed commands up to this fence point.
+	if (mFence->GetCompletedValue() < mCurrentFence)
 	{
-		pTextures[i->first] = i->second.get();
+		HANDLE eventHandle = CreateEventEx(nullptr, false, false, EVENT_ALL_ACCESS);
+
+		// Fire event when GPU hits current fence.  
+		ThrowIfFailed(mFence->SetEventOnCompletion(mCurrentFence, eventHandle));
+
+		// Wait until the GPU hits current fence event is fired.
+		WaitForSingleObject(eventHandle, INFINITE);
+		CloseHandle(eventHandle);
 	}
 }
 
-void GDxRenderer::SyncMaterials(std::unordered_map<std::wstring, std::unique_ptr<GRiMaterial>>& mMaterials)
+CD3DX12_CPU_DESCRIPTOR_HANDLE GDxRenderer::GetCpuSrv(int index)const
 {
-	pMaterials.clear();
-	std::unordered_map<std::wstring, std::unique_ptr<GRiMaterial>>::iterator i;
-	for (i = mMaterials.begin(); i != mMaterials.end(); i++)
-	{
-		pMaterials[i->first] = i->second.get();
-	}
+	auto srv = CD3DX12_CPU_DESCRIPTOR_HANDLE(mSrvDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
+	srv.Offset(index, mCbvSrvUavDescriptorSize);
+	return srv;
 }
 
-void GDxRenderer::SyncMeshes(std::unordered_map<std::wstring, std::unique_ptr<GRiMesh>>& mMeshes)
+CD3DX12_GPU_DESCRIPTOR_HANDLE GDxRenderer::GetGpuSrv(int index)const
 {
-	pMeshes.clear();
-	std::unordered_map<std::wstring, std::unique_ptr<GRiMesh>>::iterator i;
-	for (i = mMeshes.begin(); i != mMeshes.end(); i++)
-	{
-		pMeshes[i->first] = i->second.get();
-	}
+	auto srv = CD3DX12_GPU_DESCRIPTOR_HANDLE(mSrvDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
+	srv.Offset(index, mCbvSrvUavDescriptorSize);
+	return srv;
 }
 
-void GDxRenderer::SyncSceneObjects(std::unordered_map<std::wstring, std::unique_ptr<GRiSceneObject>>& mSceneObjects, std::vector<GRiSceneObject*>* mSceneObjectLayer)
+CD3DX12_CPU_DESCRIPTOR_HANDLE GDxRenderer::GetDsv(int index)const
 {
-	pSceneObjects.clear();
-	std::unordered_map<std::wstring, std::unique_ptr<GRiSceneObject>>::iterator i;
-	for (i = mSceneObjects.begin(); i != mSceneObjects.end(); i++)
-	{
-		pSceneObjects[i->first] = i->second.get();
-	}
-	for (size_t layer = 0; layer != (size_t)(RenderLayer::Count); layer++)
-	{
-		for (auto pSObj : mSceneObjectLayer[layer])
-		{
-			pSceneObjectLayer[layer].push_back(pSObj);
-		}
-	}
+	auto dsv = CD3DX12_CPU_DESCRIPTOR_HANDLE(mDsvHeap->GetCPUDescriptorHandleForHeapStart());
+	dsv.Offset(index, mDsvDescriptorSize);
+	return dsv;
 }
 
-void GDxRenderer::SyncCameras(std::vector<GRiCamera*> mCameras)
+CD3DX12_CPU_DESCRIPTOR_HANDLE GDxRenderer::GetRtv(int index)const
 {
-	pCamera = mCameras[0];
-	for (auto i = 0u; i < 6; i++)
-		pCubemapSampleCamera[i] = mCameras[i + 1];
-}
-
-#pragma region Util
-
-bool GDxRenderer::IsRunning()
-{
-	if (md3dDevice)
-		return true;
-	else
-		return false;
+	auto rtv = CD3DX12_CPU_DESCRIPTOR_HANDLE(mRtvHeap->GetCPUDescriptorHandleForHeapStart());
+	rtv.Offset(index, mRtvDescriptorSize);
+	return rtv;
 }
 
 #pragma endregion

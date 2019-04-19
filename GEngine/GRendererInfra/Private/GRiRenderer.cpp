@@ -11,6 +11,11 @@ GRiRenderer::~GRiRenderer()
 {
 }
 
+HWND GRiRenderer::MainWnd()const
+{
+	return mhMainWnd;
+}
+
 void GRiRenderer::SetTimer(GGiGameTimer* timer)
 {
 	pTimer = timer;
@@ -70,16 +75,59 @@ float GRiRenderer::AspectRatio() const
 	return static_cast<float>(mClientWidth) / mClientHeight;
 }
 
-/*
-void GRiRenderer::Set4xMsaaState(bool state)
+void GRiRenderer::SyncTextures(std::unordered_map<std::wstring, std::unique_ptr<GRiTexture>>& mTextures)
 {
-	if (m4xMsaaState != state)
+	pTextures.clear();
+	std::unordered_map<std::wstring, std::unique_ptr<GRiTexture>>::iterator i;
+	for (i = mTextures.begin(); i != mTextures.end(); i++)
 	{
-		m4xMsaaState = state;
-
-		// Recreate the swapchain and buffers with new multisample settings.
-		CreateSwapChain();
-		OnResize();
+		pTextures[i->first] = i->second.get();
 	}
 }
-*/
+
+void GRiRenderer::SyncMaterials(std::unordered_map<std::wstring, std::unique_ptr<GRiMaterial>>& mMaterials)
+{
+	pMaterials.clear();
+	std::unordered_map<std::wstring, std::unique_ptr<GRiMaterial>>::iterator i;
+	for (i = mMaterials.begin(); i != mMaterials.end(); i++)
+	{
+		pMaterials[i->first] = i->second.get();
+	}
+}
+
+void GRiRenderer::SyncMeshes(std::unordered_map<std::wstring, std::unique_ptr<GRiMesh>>& mMeshes)
+{
+	pMeshes.clear();
+	std::unordered_map<std::wstring, std::unique_ptr<GRiMesh>>::iterator i;
+	for (i = mMeshes.begin(); i != mMeshes.end(); i++)
+	{
+		pMeshes[i->first] = i->second.get();
+	}
+}
+
+void GRiRenderer::SyncSceneObjects(std::unordered_map<std::wstring, std::unique_ptr<GRiSceneObject>>& mSceneObjects, std::vector<GRiSceneObject*>* mSceneObjectLayer)
+{
+	pSceneObjects.clear();
+	std::unordered_map<std::wstring, std::unique_ptr<GRiSceneObject>>::iterator i;
+	for (i = mSceneObjects.begin(); i != mSceneObjects.end(); i++)
+	{
+		pSceneObjects[i->first] = i->second.get();
+	}
+	for (size_t layer = 0; layer != (size_t)(RenderLayer::Count); layer++)
+	{
+		for (auto pSObj : mSceneObjectLayer[layer])
+		{
+			pSceneObjectLayer[layer].push_back(pSObj);
+		}
+	}
+}
+
+void GRiRenderer::SyncCameras(std::vector<GRiCamera*> mCameras)
+{
+	pCamera = mCameras[0];
+	for (auto i = 0u; i < 6; i++)
+		pCubemapSampleCamera[i] = mCameras[i + 1];
+}
+
+
+

@@ -6,6 +6,9 @@
 #include "GDxFloat4x4.h"
 
 
+
+#pragma region Class
+
 GCore::GCore()
 {
 	mTimer = std::make_unique<GGiGameTimer>();
@@ -23,6 +26,10 @@ GCore& GCore::GetCore()
 	static GCore *instance = new GCore();
 	return *instance;
 }
+
+#pragma endregion
+
+#pragma region Main
 
 void GCore::Run()
 {
@@ -128,68 +135,9 @@ void GCore::Initialize(HWND OutputWindow, double width, double height)
 
 void GCore::Update()
 {
+	OnKeyboardInput(mTimer.get());
 	mRenderer->Update(mTimer.get());
 }
-
-/*
-#pragma region Initialize
-
-bool GCore::Initialize(HWND OutputWindow, double width, double height)
-{
-	// Enable run-time memory check for debug builds.
-#if defined(DEBUG) | defined(_DEBUG)
-	_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
-#endif
-
-	try
-	{
-		if (!GRenderer::Initialize(OutputWindow, width, height))
-			return false;
-
-		SetWorkDirectory();
-
-		// Reset the command list to prep for initialization commands.
-		ThrowIfFailed(mCommandList->Reset(mDirectCmdListAlloc.Get(), nullptr));
-
-		mCamera.SetPosition(0.0f, 2.0f, -5.0f);
-		BuildCubemapSampleCameras();
-		LoadTextures();
-		BuildDescriptorHeaps();
-		BuildRootSignature();
-		BuildShadersAndInputLayout();
-		LoadMeshes();
-		BuildMaterials();
-		BuildSceneObjects();
-		BuildFrameResources();
-		BuildPSOs();
-
-		CubemapPreIntegration();
-
-		//mSsao->SetPSOs(mPSOs["ssao"].Get(), mPSOs["ssaoBlur"].Get());
-		// Execute the initialization commands.
-		ThrowIfFailed(mCommandList->Close());
-		ID3D12CommandList* cmdsLists[] = { mCommandList.Get() };
-		mCommandQueue->ExecuteCommandLists(_countof(cmdsLists), cmdsLists);
-
-		// Wait until initialization is complete.
-		FlushCommandQueue();
-
-		SetSceneObjectsCallback();
-
-		return true;
-	}
-	catch (DxException& e)
-	{
-		MessageBox(nullptr, e.ToString().c_str(), L"HR Failed", MB_OK);
-		return 0;
-	}
-}
-
-#pragma endregion
-*/
-
-//MsgProc
-#pragma region MsgProc
 
 void GCore::MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
@@ -229,7 +177,7 @@ void GCore::MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 				mAppPaused = false;
 				mMinimized = false;
 				mMaximized = true;
-				mRenderer->OnResize();
+				OnResize();
 			}
 			else if (wParam == SIZE_RESTORED)
 			{
@@ -239,7 +187,7 @@ void GCore::MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 				{
 					mAppPaused = false;
 					mMinimized = false;
-					mRenderer->OnResize();
+					OnResize();
 				}
 
 				// Restoring from maximized state?
@@ -247,7 +195,7 @@ void GCore::MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 				{
 					mAppPaused = false;
 					mMaximized = false;
-					mRenderer->OnResize();
+					OnResize();
 				}
 				else if (mResizing)
 				{
@@ -262,7 +210,7 @@ void GCore::MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 				}
 				else // API call such as SetWindowPos or mSwapChain->SetFullscreenState.
 				{
-					mRenderer->OnResize();
+					OnResize();
 				}
 			}
 		}
@@ -281,7 +229,7 @@ void GCore::MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		mAppPaused = false;
 		mResizing = false;
 		mTimer->Start();
-		mRenderer->OnResize();
+		OnResize();
 		return; 0;
 
 		// WM_DESTROY is sent when the window is being destroyed.
@@ -304,23 +252,21 @@ void GCore::MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	case WM_LBUTTONDOWN:
 	case WM_MBUTTONDOWN:
 	case WM_RBUTTONDOWN:
-		mRenderer->OnMouseDown(wParam, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+		OnMouseDown(wParam, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
 		return; 0;
 	case WM_LBUTTONUP:
 	case WM_MBUTTONUP:
 	case WM_RBUTTONUP:
-		mRenderer->OnMouseUp(wParam, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+		OnMouseUp(wParam, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
 		return; 0;
 	case WM_MOUSEMOVE:
-		mRenderer->OnMouseMove(wParam, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+		OnMouseMove(wParam, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
 		return; 0;
 	case WM_KEYUP:
 		if (wParam == VK_ESCAPE)
 		{
 			PostQuitMessage(0);
 		}
-		//else if ((int)wParam == VK_F2)
-			//Set4xMsaaState(!m4xMsaaState);
 
 		return; 0;
 	}
@@ -328,57 +274,71 @@ void GCore::MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
 #pragma endregion
 
-//Update
-/*
-#pragma region Update
+#pragma region Input
 
-void GCore::Update(const GameTimer& gt)
+void GCore::OnKeyboardInput(const GGiGameTimer* gt)
 {
-	OnKeyboardInput(gt);
+	const float dt = gt->DeltaTime();
 
-	// Cycle through the circular frame resource array.
-	mCurrFrameResourceIndex = (mCurrFrameResourceIndex + 1) % NUM_FRAME_RESOURCES;
-	mCurrFrameResource = mFrameResources[mCurrFrameResourceIndex].get();
+	if (GetAsyncKeyState('W') & 0x8000)
+		mCamera->Walk(150.0f*dt);
 
-	// Has the GPU finished processing the commands of the current frame resource?
-	// If not, wait until the GPU has completed commands up to this fence point.
-	if (mCurrFrameResource->Fence != 0 && mFence->GetCompletedValue() < mCurrFrameResource->Fence)
+	if (GetAsyncKeyState('S') & 0x8000)
+		mCamera->Walk(-150.0f*dt);
+
+	if (GetAsyncKeyState('A') & 0x8000)
+		mCamera->Strafe(-150.0f*dt);
+
+	if (GetAsyncKeyState('D') & 0x8000)
+		mCamera->Strafe(150.0f*dt);
+
+	if (GetAsyncKeyState('E') & 0x8000)
+		mCamera->Ascend(150.0f*dt);
+
+	if (GetAsyncKeyState('Q') & 0x8000)
+		mCamera->Ascend(-150.0f*dt);
+
+	mCamera->UpdateViewMatrix();
+}
+
+void GCore::OnResize()
+{
+	mCamera->SetLens(0.25f * GGiEngineUtil::PI, mRenderer->AspectRatio(), 1.0f, 1000.0f);
+	mRenderer->OnResize();
+}
+
+void GCore::OnMouseDown(WPARAM btnState, int x, int y)
+{
+	mLastMousePos.x = x;
+	mLastMousePos.y = y;
+
+	SetCapture(mRenderer->MainWnd());
+}
+
+void GCore::OnMouseUp(WPARAM btnState, int x, int y)
+{
+	ReleaseCapture();
+}
+
+void GCore::OnMouseMove(WPARAM btnState, int x, int y)
+{
+	if ((btnState & MK_RBUTTON) != 0)
 	{
-		HANDLE eventHandle = CreateEventEx(nullptr, false, false, EVENT_ALL_ACCESS);
-		ThrowIfFailed(mFence->SetEventOnCompletion(mCurrFrameResource->Fence, eventHandle));
-		WaitForSingleObject(eventHandle, INFINITE);
-		CloseHandle(eventHandle);
+		// Make each pixel correspond to a quarter of a degree.
+		float dx = 0.25f*static_cast<float>(x - mLastMousePos.x) * GGiEngineUtil::PI / 180.0f;
+		float dy = 0.25f*static_cast<float>(y - mLastMousePos.y) * GGiEngineUtil::PI / 180.0f;
+
+		mCamera->Pitch(dy);
+		mCamera->RotateY(dx);
 	}
 
-	//
-	// Animate the lights (and hence shadows).
-	//
-
-	mLightRotationAngle += 0.1f*gt.DeltaTime();
-
-	XMMATRIX R = XMMatrixRotationY(mLightRotationAngle);
-	for (int i = 0; i < 3; ++i)
-	{
-		XMVECTOR lightDir = XMLoadFloat3(&mBaseLightDirections[i]);
-		lightDir = XMVector3TransformNormal(lightDir, R);
-		XMStoreFloat3(&mRotatedLightDirections[i], lightDir);
-	}
-
-	AnimateMaterials(gt);
-	UpdateObjectCBs(gt);
-	UpdateMaterialBuffer(gt);
-	UpdateShadowTransform(gt);
-	UpdateMainPassCB(gt);
-	UpdateSkyPassCB(gt);
-	//UpdateShadowPassCB(gt);
-	//UpdateSsaoCB(gt);
-	UpdateLightCB(gt);
+	mLastMousePos.x = x;
+	mLastMousePos.y = y;
 }
 
 #pragma endregion
-*/
 
-#pragma region Init
+#pragma region Initialization
 
 void GCore::LoadTextures()
 {
@@ -398,6 +358,16 @@ void GCore::LoadTextures()
 	}
 
 	LoadSkyTexture(L"Content\\Textures\\Cubemap_LancellottiChapel.dds");
+}
+
+void GCore::LoadSkyTexture(std::wstring path)
+{
+	std::unique_ptr<GRiTextureLoader> textureLoader(pRendererFactory->CreateTextureLoader());
+
+	GRiTexture* tex = textureLoader->LoadTexture(WorkDirectory, path, (int)mTextures.size());
+	std::wstring texName = L"skyCubeMap";
+	std::unique_ptr<GRiTexture> temp(tex);
+	mTextures[texName] = std::move(temp);
 }
 
 void GCore::LoadMaterials()
@@ -480,9 +450,6 @@ void GCore::LoadMaterials()
 	sky->MatIndex = index++;
 	sky->pTextures.push_back(mTextures[L"Content\\Textures\\sphere_1_BaseColor.png"].get());//Diffuse
 	sky->pTextures.push_back(mTextures[L"Content\\Textures\\sphere_1_BaseColor.png"].get());//Normal
-	//sky->VectorParams.push_back(XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f));//DiffuseAlbedo
-	//sky->VectorParams.push_back(XMFLOAT4(0.1f, 0.1f, 0.1f, 0.f));//FresnelR0
-	//sky->ScalarParams.push_back(1.0f);//Roughness
 	mMaterials[L"sky"] = std::move(sky);
 
 	auto greasyPanMat = std::make_unique<GRiMaterial>(*pRendererFactory->CreateMaterial());
@@ -757,16 +724,6 @@ void GCore::LoadCameras()
 	}
 }
 
-void GCore::LoadSkyTexture(std::wstring path)
-{
-	std::unique_ptr<GRiTextureLoader> textureLoader(pRendererFactory->CreateTextureLoader());
-
-	GRiTexture* tex = textureLoader->LoadTexture(WorkDirectory, path, (int)mTextures.size());
-	std::wstring texName = L"skyCubeMap";
-	std::unique_ptr<GRiTexture> temp(tex);
-	mTextures[texName] = std::move(temp);
-}
-
 void GCore::SetWorkDirectory()
 {
 	TCHAR exeFullPath[MAX_PATH];
@@ -877,7 +834,7 @@ std::vector<std::wstring> GCore::GetAllFilesUnderFolder(std::wstring relPath, bo
 
 #pragma endregion
 
-#pragma region export
+#pragma region Export
 
 int GCore::GetSceneObjectNum()
 {
