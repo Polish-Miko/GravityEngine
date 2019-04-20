@@ -31,7 +31,6 @@ GRiTexture* GDxTextureLoader::LoadTexture(std::wstring workdir, std::wstring pat
 	{
 		DirectX::ResourceUploadBatch resourceUpload(pDevice);
 		resourceUpload.Begin();
-		//ThrowIfFailed(DirectX::CreateDDSTextureFromFile(pDevice, resourceUpload, filename.c_str(), tex->Resource.ReleaseAndGetAddressOf()));
 
 		unsigned int srgbFlag;
 		if (bSrgb)
@@ -51,7 +50,6 @@ GRiTexture* GDxTextureLoader::LoadTexture(std::wstring workdir, std::wstring pat
 	{
 		DirectX::ResourceUploadBatch resourceUpload(pDevice);
 		resourceUpload.Begin();
-		//ThrowIfFailed(CreateWICTextureFromFile(pDevice, resourceUpload, filename.c_str(), tex->Resource.ReleaseAndGetAddressOf()));
 
 		unsigned int srgbFlag;
 		if (bSrgb)

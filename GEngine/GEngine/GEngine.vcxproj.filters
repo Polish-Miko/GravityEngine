@@ -30,6 +30,12 @@
     <ClInclude Include="Public\GCore.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="Private\GProject.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Private\GScene.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -42,6 +48,12 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="Private\GCore.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Private\GProject.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Private\GScene.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

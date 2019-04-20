@@ -46,6 +46,12 @@ namespace GEditor
 
         [DllImport(@"Build\GEngineDll.dll")]
         public static extern void SetTextureSrgb([MarshalAs(UnmanagedType.LPWStr)] string txtName, bool bSrgb);
-        
+
+        [DllImport(@"Build\GEngineDll.dll")]
+        public static extern void SetProjectName([MarshalAs(UnmanagedType.LPWStr)] string projName);
+
+        [DllImport(@"Build\GEngineDll.dll")]
+        public static extern void SaveProject();
+
     }
 }

@@ -62,4 +62,14 @@ void __stdcall SetTextureSrgb(wchar_t* txtName, bool bSrgb)
 	GCore::GetCore().SetTextureSrgb(txtName, bSrgb);
 }
 
+void __stdcall SetProjectName(wchar_t* projName)
+{
+	return GCore::GetCore().SetProjectName(projName);
+}
+
+void __stdcall SaveProject()
+{
+	return GCore::GetCore().SaveProject();
+}
+
 

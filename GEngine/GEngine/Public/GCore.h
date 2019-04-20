@@ -2,6 +2,9 @@
 
 #include "GDxRenderer.h"
 
+#include "GProject.h"
+#include "GScene.h"
+
 
 
 using Microsoft::WRL::ComPtr;
@@ -27,6 +30,8 @@ public:
 
 #pragma region export
 
+	void SaveProject();
+
 	int GetSceneObjectNum();
 
 	const wchar_t* GetSceneObjectName(int index);
@@ -38,6 +43,8 @@ public:
 	void SetSceneObjectTransform(wchar_t* objName, float* trans);
 
 	void SetWorkDirectory(wchar_t* dir);
+
+	void SetProjectName(wchar_t* projName);
 
 	bool GetTextureSrgb(wchar_t* txtName);
 
@@ -54,6 +61,8 @@ private:
 	bool      mFullscreenState = false;// fullscreen enabled
 
 	std::wstring WorkDirectory;
+
+	std::wstring ProjectName;
 
 	GRiRenderer* mRenderer;
 
@@ -72,6 +81,8 @@ private:
 	std::unique_ptr<GRiCamera> mCubemapSampleCamera[6];
 
 	POINT mLastMousePos;
+
+	GProject* mProject;
 
 private:
 
@@ -92,6 +103,8 @@ private:
 	void LoadMeshes();
 	void LoadSceneObjects();
 	void LoadCameras();
+
+	void LoadProject();
 
 	//Util
 	std::vector<std::wstring> GetAllFilesInFolder(std::wstring path, bool bCheckFormat, std::vector<std::wstring> format);

@@ -14,6 +14,7 @@ GCore::GCore()
 	mTimer = std::make_unique<GGiGameTimer>();
 	mRenderer = &GDxRenderer::GetRenderer();
 	mRenderer->SetTimer(mTimer.get());
+	mProject = new GProject();
 }
 
 GCore::~GCore()
@@ -41,44 +42,52 @@ void GCore::Run()
 	{
 		try
 		{
-			MSG msg = { 0 };
-
-			mTimer->Reset();
-
-			while (msg.message != WM_QUIT)
+			try
 			{
-				// If there are Window messages then process them.
-				if (PeekMessage(&msg, 0, 0, 0, PM_REMOVE))
-				{
-					TranslateMessage(&msg);
-					DispatchMessage(&msg);
-				}
-				// Otherwise, do animation/game stuff.
-				else
-				{
-					mTimer->Tick();
+				MSG msg = { 0 };
 
-					if (!mAppPaused)
+				mTimer->Reset();
+
+				while (msg.message != WM_QUIT)
+				{
+					// If there are Window messages then process them.
+					if (PeekMessage(&msg, 0, 0, 0, PM_REMOVE))
 					{
-						mRenderer->CalculateFrameStats();
-						Update();
-						mRenderer->Draw(mTimer.get());
+						TranslateMessage(&msg);
+						DispatchMessage(&msg);
 					}
+					// Otherwise, do animation/game stuff.
 					else
 					{
-						Sleep(100);
+						mTimer->Tick();
+
+						if (!mAppPaused)
+						{
+							mRenderer->CalculateFrameStats();
+							Update();
+							mRenderer->Draw(mTimer.get());
+						}
+						else
+						{
+							Sleep(100);
+						}
 					}
 				}
 			}
+			catch (DxException& e)
+			{
+				MessageBox(nullptr, e.ToString().c_str(), L"HR Failed", MB_OK);
+			}
 		}
-		catch (DxException& e)
+		catch (GGiException& e)
 		{
-			MessageBox(nullptr, e.ToString().c_str(), L"HR Failed", MB_OK);
+			MessageBox(nullptr, e.GetErrorMessage().c_str(), L"Engine-defined Exception", MB_OK);
 		}
 	}
-	catch (GGiException& e)
+	catch (std::exception& e)
 	{
-		MessageBox(nullptr, e.GetErrorMessage().c_str(), L"Engine-defined Exception", MB_OK);
+		std::string msg(e.what());
+		MessageBox(nullptr, GGiEngineUtil::StringToWString(msg).c_str(), L"Other Exception", MB_OK);
 	}
 }
 
@@ -92,44 +101,54 @@ void GCore::Initialize(HWND OutputWindow, double width, double height)
 	{
 		try
 		{
+			try
+			{
 
-			mRenderer->PreInitialize(OutputWindow, width, height);
+				mRenderer->PreInitialize(OutputWindow, width, height);
 
-			pRendererFactory = mRenderer->GetFactory();
-			//SetWorkDirectory();
-			LoadTextures();
-			mRenderer->SyncTextures(mTextures);
-			LoadMaterials();
-			mRenderer->SyncMaterials(mMaterials);
-			LoadMeshes();
-			mRenderer->SyncMeshes(mMeshes);
-			LoadSceneObjects();
-			mRenderer->SyncSceneObjects(mSceneObjects, mSceneObjectLayer);
-			LoadCameras();
-			std::vector<GRiCamera*> cam = {
-				mCamera.get(), 
-				mCubemapSampleCamera[0].get(),
-				mCubemapSampleCamera[1].get(),
-				mCubemapSampleCamera[2].get(),
-				mCubemapSampleCamera[3].get(),
-				mCubemapSampleCamera[4].get(),
-				mCubemapSampleCamera[5].get() 
-			};
-			mRenderer->SyncCameras(cam);
+				LoadProject();
 
-			mRenderer->Initialize(OutputWindow, width, height);
+				pRendererFactory = mRenderer->GetFactory();
+				//SetWorkDirectory();
+				LoadTextures();
+				mRenderer->SyncTextures(mTextures);
+				LoadMaterials();
+				mRenderer->SyncMaterials(mMaterials);
+				LoadMeshes();
+				mRenderer->SyncMeshes(mMeshes);
+				LoadSceneObjects();
+				mRenderer->SyncSceneObjects(mSceneObjects, mSceneObjectLayer);
+				LoadCameras();
+				std::vector<GRiCamera*> cam = {
+					mCamera.get(),
+					mCubemapSampleCamera[0].get(),
+					mCubemapSampleCamera[1].get(),
+					mCubemapSampleCamera[2].get(),
+					mCubemapSampleCamera[3].get(),
+					mCubemapSampleCamera[4].get(),
+					mCubemapSampleCamera[5].get()
+				};
+				mRenderer->SyncCameras(cam);
 
-			SetSceneObjectsCallback();
+				mRenderer->Initialize(OutputWindow, width, height);
 
+				SetSceneObjectsCallback();
+
+			}
+			catch (DxException& e)
+			{
+				MessageBox(nullptr, e.ToString().c_str(), L"HR Failed", MB_OK);
+			}
 		}
-		catch (DxException& e)
+		catch (GGiException& e)
 		{
-			MessageBox(nullptr, e.ToString().c_str(), L"HR Failed", MB_OK);
+			MessageBox(nullptr, e.GetErrorMessage().c_str(), L"Engine-defined Exception", MB_OK);
 		}
 	}
-	catch (GGiException& e)
+	catch (std::exception& e)
 	{
-		MessageBox(nullptr, e.GetErrorMessage().c_str(), L"Engine-defined Exception", MB_OK);
+		std::string msg(e.what());
+		MessageBox(nullptr, GGiEngineUtil::StringToWString(msg).c_str(), L"Other Exception", MB_OK);
 	}
 }
 
@@ -351,7 +370,16 @@ void GCore::LoadTextures()
 
 	for (auto file : files)
 	{
-		GRiTexture* tex = textureLoader->LoadTexture(WorkDirectory, file, false);
+		bool bSrgb = false;
+		for (auto texInfo : mProject->mTextureInfo)
+		{
+			if (file == texInfo.UniqueFileName)
+			{
+				bSrgb = texInfo.bSrgb;
+				break;
+			}
+		}
+		GRiTexture* tex = textureLoader->LoadTexture(WorkDirectory, file, bSrgb);
 		std::wstring texName = tex->UniqueFileName;
 		std::unique_ptr<GRiTexture> temp(tex);
 		mTextures[texName] = std::move(temp);
@@ -717,23 +745,6 @@ void GCore::LoadCameras()
 	}
 }
 
-void GCore::SetWorkDirectory(wchar_t* dir)
-{
-	std::wstring path(dir);
-	WorkDirectory = path;
-	/*
-	TCHAR exeFullPath[MAX_PATH];
-	memset(exeFullPath, 0, MAX_PATH);
-
-	GetModuleFileName(NULL, exeFullPath, MAX_PATH);
-	WCHAR *p = wcsrchr(exeFullPath, '\\');
-	*p = 0x00;
-
-	WorkDirectory = std::wstring(exeFullPath);
-	WorkDirectory += L"\\";
-	*/
-}
-
 #pragma endregion
 
 #pragma region Util
@@ -896,6 +907,39 @@ void GCore::SetTextureSrgb(wchar_t* txtName, bool bSrgb)
 	tex->texIndex = mTextures[textureName]->texIndex;
 	mTextures[textureName].reset(tex);
 	mRenderer->RegisterTexture(mTextures[textureName].get());
+}
+
+void GCore::SetWorkDirectory(wchar_t* dir)
+{
+	std::wstring path(dir);
+	WorkDirectory = path;
+	/*
+	TCHAR exeFullPath[MAX_PATH];
+	memset(exeFullPath, 0, MAX_PATH);
+
+	GetModuleFileName(NULL, exeFullPath, MAX_PATH);
+	WCHAR *p = wcsrchr(exeFullPath, '\\');
+	*p = 0x00;
+
+	WorkDirectory = std::wstring(exeFullPath);
+	WorkDirectory += L"\\";
+	*/
+}
+
+void GCore::SetProjectName(wchar_t* projName)
+{
+	std::wstring pjName(projName);
+	ProjectName = pjName;
+}
+
+void GCore::SaveProject()
+{
+	mProject->SaveProject(WorkDirectory + ProjectName + L".gproj", mTextures);
+}
+
+void GCore::LoadProject()
+{
+	mProject->LoadProject(WorkDirectory + ProjectName + L".gproj");
 }
 
 #pragma endregion

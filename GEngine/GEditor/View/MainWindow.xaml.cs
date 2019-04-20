@@ -105,7 +105,9 @@ namespace GEditor
                 fileBrowser.SetWorkDirectory(System.IO.Path.GetDirectoryName(filename) + @"\");
                 fileBrowser.LoadBrowser();
 
+
                 IGCore.SetWorkDirectory(System.IO.Path.GetDirectoryName(filename) + @"\");
+                IGCore.SetProjectName(System.IO.Path.GetFileNameWithoutExtension(filename));
                 IntPtr hwnd = viewport.Handle;
                 double h = viewport.Height;
                 double w = viewport.Width;
@@ -113,6 +115,11 @@ namespace GEditor
                 IGCore.Run();
             }
 
+        }
+
+        private void SaveProject(object sender, RoutedEventArgs e)
+        {
+            IGCore.SaveProject();
         }
 
         private void Button_Click(object sender, RoutedEventArgs e)

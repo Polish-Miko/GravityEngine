@@ -61,6 +61,16 @@ extern "C"
 	__declspec(dllexport) void __stdcall SetTextureSrgb(wchar_t* txtName, bool bSrgb);
 }
 
+extern "C"
+{
+	__declspec(dllexport) void __stdcall SetProjectName(wchar_t* projName);
+}
+
+extern "C"
+{
+	__declspec(dllexport) void __stdcall SaveProject();
+}
+
 /*
 class EGCore
 {

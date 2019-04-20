@@ -100,7 +100,7 @@
                 <MenuItem Header="File">
                     <MenuItem Header="New"></MenuItem>
                     <MenuItem Name="menuOpen" Header="Open" Click="OpenProject"></MenuItem>
-                    <MenuItem Header="Save"></MenuItem>
+                    <MenuItem Header="Save" Click="SaveProject"></MenuItem>
                     <MenuItem Header="Close"></MenuItem>
                 </MenuItem>
                 <MenuItem Header="Edit">
