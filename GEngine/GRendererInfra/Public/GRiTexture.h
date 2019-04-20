@@ -14,6 +14,8 @@ public:
 
 	bool bSrgb;
 
+	int texIndex = -1;
+
 	virtual void AllowDynamicCast() = 0;
 };
 

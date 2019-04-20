@@ -37,6 +37,8 @@ public:
 
 	void SetSceneObjectTransform(wchar_t* objName, float* trans);
 
+	void SetWorkDirectory(wchar_t* dir);
+
 #pragma endregion
 
 private:
@@ -86,8 +88,6 @@ private:
 	void LoadMeshes();
 	void LoadSceneObjects();
 	void LoadCameras();
-
-	void SetWorkDirectory();
 
 	//Util
 	std::vector<std::wstring> GetAllFilesInFolder(std::wstring path, bool bCheckFormat, std::vector<std::wstring> format);

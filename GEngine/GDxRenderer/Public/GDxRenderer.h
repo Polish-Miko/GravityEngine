@@ -45,6 +45,8 @@ public:
 	
 	virtual void OnResize() override;
 
+	virtual void LoadTexture(GRiTexture* text) override;
+
 	virtual void CreateRendererFactory() override;
 	virtual void CreateFilmboxManager() override;
 

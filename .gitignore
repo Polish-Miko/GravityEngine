@@ -5,8 +5,6 @@
 /GEngine/GWinformLib/obj
 /GEngine/ThirdParty
 /GEngine/packages
-!/GEngine/Debug/Textures
-!/GEngine/Debug/Models
-!/GEngine/Debug/Content
+!/GEngine/Debug/Project
 !/GEngine/Debug/WPF.Themes.dll
 !/GEngine/.vs/GravityEngine/v15/.suo

@@ -24,6 +24,7 @@ namespace GEditor.View
     /// </summary>
     public partial class FileBrowser : UserControl
     {
+        private string workDirectory = string.Empty;
         private string strDirectory = string.Empty;
         Dictionary<string, BitmapImage> treeViewIcons = new Dictionary<string, BitmapImage>();
         Dictionary<string, BitmapImage> listBoxIcons = new Dictionary<string, BitmapImage>();
@@ -37,7 +38,7 @@ namespace GEditor.View
 
             LoadImages();
 
-            OnBrowserLoaded(); 
+            //OnBrowserLoaded(); 
         }
 
         void LoadImages()
@@ -148,9 +149,9 @@ namespace GEditor.View
             }
         }
         
-        private void OnBrowserLoaded()
+        public void LoadBrowser()
         {
-            String ContentFolder = @"Content\";
+            String ContentFolder = workDirectory + @"Content\";
             if (ContentFolder == null)
             {
                 MessageBox.Show("ContentFolder is null");
@@ -163,7 +164,8 @@ namespace GEditor.View
             BrowserTreeViewItemModel content = new BrowserTreeViewItemModel();
             content.Text = "Content";
             content.Icon = treeViewIcons["folder"];
-            content.Path = AppDomain.CurrentDomain.BaseDirectory + @"Content\";
+            //content.Path = AppDomain.CurrentDomain.BaseDirectory + @"Content\";
+            content.Path = workDirectory + @"Content\";
             content.IsFolder = true;
             content.Children = GetChildrenByPath(content.Path);
             
@@ -256,6 +258,11 @@ namespace GEditor.View
         public void SetMainWindow(MainWindow mwRef)
         {
             mainWindow = mwRef;
+        }
+
+        public void SetWorkDirectory(string dir)
+        {
+            workDirectory = dir;
         }
     }
 }

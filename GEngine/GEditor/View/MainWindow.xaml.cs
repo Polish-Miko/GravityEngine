@@ -27,6 +27,8 @@ namespace GEditor
     /// </summary>
     public partial class MainWindow : Window
     {
+        private string mProjectName;
+
         private GWinformLib.Viewport viewport = new GWinformLib.Viewport();
 
         private Outliner outliner = new Outliner();
@@ -79,19 +81,52 @@ namespace GEditor
             return IntPtr.Zero;
         }
 
+        private void OpenProject(object sender, RoutedEventArgs e)
+        { 
+            // Create OpenFileDialog 
+            Microsoft.Win32.OpenFileDialog dlg = new Microsoft.Win32.OpenFileDialog();
+            
+            // Set filter for file extension and default file extension 
+            dlg.DefaultExt = ".gproj";
+            dlg.Filter = "GE Project Files (*.gproj)|*.gproj";
+            
+            // Display OpenFileDialog by calling ShowDialog method 
+            Nullable<bool> result = dlg.ShowDialog();
+            
+            // Get the selected file name and display in a TextBox 
+            if (result == true)
+            {
+                // Open document 
+                string filename = dlg.FileName;
+
+                mProjectName = System.IO.Path.GetFileNameWithoutExtension(filename);
+
+                fileBrowser.SetWorkDirectory(System.IO.Path.GetDirectoryName(filename) + @"\");
+                fileBrowser.LoadBrowser();
+
+                IGCore.SetWorkDirectory(System.IO.Path.GetDirectoryName(filename) + @"\");
+                IntPtr hwnd = viewport.Handle;
+                double h = viewport.Height;
+                double w = viewport.Width;
+                IGCore.InitD3D(hwnd, w, h);
+                IGCore.Run();
+            }
+
+        }
+
         private void Button_Click(object sender, RoutedEventArgs e)
         {
-            IntPtr hwnd = viewport.Handle;
-            double h = viewport.Height;
-            double w = viewport.Width;
-            IGRenderer.InitD3D(hwnd, w, h);
+            //IntPtr hwnd = viewport.Handle;
+            //double h = viewport.Height;
+            //double w = viewport.Width;
+            //IGCore.InitD3D(hwnd, w, h);
+            //IGRenderer.Run();
 
             //HwndSource hwndSource = HwndSource.FromHwnd(hwnd);
             //HwndSource hwndSource = PresentationSource.FromVisual(this) as HwndSource;
             //if (hwndSource != null)
-                //hwndSource.AddHook(new HwndSourceHook(WndProc));
+            //hwndSource.AddHook(new HwndSourceHook(WndProc));
 
-            IGRenderer.Run();
         }
 
         void StartMainWindorMessageLoop()

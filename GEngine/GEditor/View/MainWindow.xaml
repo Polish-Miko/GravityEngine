@@ -99,7 +99,7 @@
             <Menu DockPanel.Dock="Top" d:IsHidden="True">
                 <MenuItem Header="File">
                     <MenuItem Header="New"></MenuItem>
-                    <MenuItem Name="menuOpen" Header="Open"></MenuItem>
+                    <MenuItem Name="menuOpen" Header="Open" Click="OpenProject"></MenuItem>
                     <MenuItem Header="Save"></MenuItem>
                     <MenuItem Header="Close"></MenuItem>
                 </MenuItem>

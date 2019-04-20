@@ -23,6 +23,11 @@ extern "C"
 
 extern "C"
 {
+	__declspec(dllexport) void __stdcall SetWorkDirectory(wchar_t* dir);
+}
+
+extern "C"
+{
 	__declspec(dllexport) int __stdcall GetSceneObjectNum(void);
 }
 

@@ -12,6 +12,18 @@ namespace GEditor
         public delegate void VoidFuncPointerType();
 
         [DllImport(@"Build\GEngineDll.dll")]
+        public static extern void Init();
+
+        [DllImport(@"Build\GEngineDll.dll")]
+        public static extern void InitD3D(IntPtr hwnd, double width, double height);
+
+        [DllImport(@"Build\GEngineDll.dll")]
+        public static extern int Run();
+
+        [DllImport(@"Build\GEngineDll.dll")]
+        public static extern void SetWorkDirectory([MarshalAs(UnmanagedType.LPWStr)] string dir);
+
+        [DllImport(@"Build\GEngineDll.dll")]
         public static extern void MsgProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam);
 
         [DllImport(@"Build\GEngineDll.dll")]

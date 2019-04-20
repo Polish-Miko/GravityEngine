@@ -9,13 +9,6 @@ namespace GEditor
 {
     class IGRenderer
     {
-        [DllImport(@"Build\GEngineDll.dll")]
-        public static extern void Init();
 
-        [DllImport(@"Build\GEngineDll.dll")]
-        public static extern void InitD3D(IntPtr hwnd, double width, double height);
-
-        [DllImport(@"Build\GEngineDll.dll")]
-        public static extern int Run();
     }
 }

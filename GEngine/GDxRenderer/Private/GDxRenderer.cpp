@@ -1306,15 +1306,13 @@ void GDxRenderer::BuildDescriptorHeaps()
 	// Build SRV for ordinary textures.
 	{
 		mTextrueHeapIndex = mIblIndex + 2 + mPrefilterLevels;
+
+		for (auto i = 0u; i < MAX_TEXTURE_NUM; i++)
+			mTexturePoolFreeIndex.push_back(mTextrueHeapIndex + i);
+
 		for (auto tex : pTextures)
 		{
-			GDxTexture* dxTex = dynamic_cast<GDxTexture*>(tex.second);
-			if (dxTex == nullptr)
-				ThrowDxException(L"Dynamic cast from GRiTexture to GDxTexture failed.");
-
-			srvDesc.Format = dxTex->Resource->GetDesc().Format;
-			srvDesc.Texture2D.MipLevels = dxTex->Resource->GetDesc().MipLevels;
-			md3dDevice->CreateShaderResourceView(dxTex->Resource.Get(), &srvDesc, GetCpuSrv(mTextrueHeapIndex + dxTex->texIndex));
+			LoadTexture(tex.second);
 		}
 	}
 }
@@ -1927,6 +1925,39 @@ void GDxRenderer::DrawSceneObject(ID3D12GraphicsCommandList* cmdList, GRiSceneOb
 	}
 
 	cmdList->DrawIndexedInstanced(dxMesh->mVIBuffer->IndexCount, 1, 0, 0, 0);
+}
+
+#pragma endregion
+
+#pragma region Runtime
+
+void GDxRenderer::LoadTexture(GRiTexture* text)
+{
+	GDxTexture* dxTex = dynamic_cast<GDxTexture*>(text);
+	if (dxTex == nullptr)
+		ThrowDxException(L"Dynamic cast from GRiTexture to GDxTexture failed.");
+
+	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+	srvDesc.Texture2D.MostDetailedMip = 0;
+	srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
+	srvDesc.Format = dxTex->Resource->GetDesc().Format;
+	srvDesc.Texture2D.MipLevels = dxTex->Resource->GetDesc().MipLevels;
+
+	// if srv is previously created
+	if (dxTex->texIndex != -1)
+	{
+		md3dDevice->CreateShaderResourceView(dxTex->Resource.Get(), &srvDesc, GetCpuSrv(mTextrueHeapIndex + dxTex->texIndex));
+	}
+	else
+	{
+		if (mTexturePoolFreeIndex.empty())
+			ThrowGGiException("Texture pool has run out.");
+		auto it = mTexturePoolFreeIndex.begin();
+		md3dDevice->CreateShaderResourceView(dxTex->Resource.Get(), &srvDesc, GetCpuSrv(*it));
+		mTexturePoolFreeIndex.erase(it);
+	}
 }
 
 #pragma endregion

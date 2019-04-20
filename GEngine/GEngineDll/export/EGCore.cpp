@@ -22,6 +22,11 @@ void __stdcall MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	GCore::GetCore().MsgProc(hwnd, msg, wParam, lParam);
 }
 
+void __stdcall SetWorkDirectory(wchar_t* dir)
+{
+	GCore::GetCore().SetWorkDirectory(dir);
+}
+
 int __stdcall GetSceneObjectNum(void)
 {
 	return GCore::GetCore().GetSceneObjectNum();

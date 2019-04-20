@@ -96,7 +96,7 @@ void GCore::Initialize(HWND OutputWindow, double width, double height)
 			mRenderer->PreInitialize(OutputWindow, width, height);
 
 			pRendererFactory = mRenderer->GetFactory();
-			SetWorkDirectory();
+			//SetWorkDirectory();
 			LoadTextures();
 			mRenderer->SyncTextures(mTextures);
 			LoadMaterials();
@@ -724,8 +724,11 @@ void GCore::LoadCameras()
 	}
 }
 
-void GCore::SetWorkDirectory()
+void GCore::SetWorkDirectory(wchar_t* dir)
 {
+	std::wstring path(dir);
+	WorkDirectory = path;
+	/*
 	TCHAR exeFullPath[MAX_PATH];
 	memset(exeFullPath, 0, MAX_PATH);
 
@@ -735,6 +738,7 @@ void GCore::SetWorkDirectory()
 
 	WorkDirectory = std::wstring(exeFullPath);
 	WorkDirectory += L"\\";
+	*/
 }
 
 #pragma endregion
