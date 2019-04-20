@@ -13,7 +13,7 @@ GDxTextureLoader::GDxTextureLoader(ID3D12Device* device, ID3D12CommandQueue* cmd
 	pCommandQueue = cmdQueue;
 }
 
-GRiTexture* GDxTextureLoader::LoadTexture(std::wstring workdir, std::wstring path, int texIndex)
+GRiTexture* GDxTextureLoader::LoadTexture(std::wstring workdir, std::wstring path, bool bSrgb)
 {
 	std::wstring lpath = path;
 	std::transform(lpath.begin(), lpath.end(), lpath.begin(), ::tolower);
@@ -24,16 +24,26 @@ GRiTexture* GDxTextureLoader::LoadTexture(std::wstring workdir, std::wstring pat
 	GDxTexture* tex = new GDxTexture();
 	tex->UniqueFileName = path;
 	tex->Name = name;
-	tex->texIndex = texIndex;
-	tex->bSrgb = false;
+	//tex->texIndex = texIndex;
+	tex->bSrgb = bSrgb;
 
 	if (ext == L"dds")
 	{
 		DirectX::ResourceUploadBatch resourceUpload(pDevice);
 		resourceUpload.Begin();
-		ThrowIfFailed(DirectX::CreateDDSTextureFromFile(pDevice,
-			resourceUpload, filename.c_str(),
-			tex->Resource.ReleaseAndGetAddressOf()));
+		//ThrowIfFailed(DirectX::CreateDDSTextureFromFile(pDevice, resourceUpload, filename.c_str(), tex->Resource.ReleaseAndGetAddressOf()));
+
+		unsigned int srgbFlag;
+		if (bSrgb)
+		{
+			srgbFlag = DirectX::WIC_LOADER_FORCE_SRGB;
+		}
+		else
+		{
+			srgbFlag = DirectX::WIC_LOADER_IGNORE_SRGB;
+		}
+		ThrowIfFailed(DirectX::CreateDDSTextureFromFileEx(pDevice, resourceUpload, filename.c_str(), 0u, D3D12_RESOURCE_FLAG_NONE, srgbFlag, tex->Resource.ReleaseAndGetAddressOf()));
+
 		auto uploadResourcesFinished = resourceUpload.End(pCommandQueue);
 		uploadResourcesFinished.wait();
 	}
@@ -41,9 +51,19 @@ GRiTexture* GDxTextureLoader::LoadTexture(std::wstring workdir, std::wstring pat
 	{
 		DirectX::ResourceUploadBatch resourceUpload(pDevice);
 		resourceUpload.Begin();
-		ThrowIfFailed(CreateWICTextureFromFile(pDevice,
-			resourceUpload, filename.c_str(),
-			tex->Resource.ReleaseAndGetAddressOf()));
+		//ThrowIfFailed(CreateWICTextureFromFile(pDevice, resourceUpload, filename.c_str(), tex->Resource.ReleaseAndGetAddressOf()));
+
+		unsigned int srgbFlag;
+		if (bSrgb)
+		{
+			srgbFlag = DirectX::WIC_LOADER_FORCE_SRGB;
+		}
+		else
+		{
+			srgbFlag = DirectX::WIC_LOADER_IGNORE_SRGB;
+		}
+		ThrowIfFailed(CreateWICTextureFromFileEx(pDevice, resourceUpload, filename.c_str(), 0u, D3D12_RESOURCE_FLAG_NONE, srgbFlag, tex->Resource.ReleaseAndGetAddressOf()));
+
 		auto uploadResourcesFinished = resourceUpload.End(pCommandQueue);
 		uploadResourcesFinished.wait();
 	}

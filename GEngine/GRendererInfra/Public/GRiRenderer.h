@@ -47,7 +47,7 @@ public:
 	std::unordered_map<std::wstring, GRiSceneObject*> pSceneObjects;
 	std::vector<GRiSceneObject*> pSceneObjectLayer[(int)RenderLayer::Count];
 
-	virtual void LoadTexture(GRiTexture* text) = 0;
+	virtual void RegisterTexture(GRiTexture* text) = 0;
 	std::vector<int> mTexturePoolFreeIndex;
 
 	GRiCamera* pCamera = nullptr;

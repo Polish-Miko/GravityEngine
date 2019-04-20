@@ -83,12 +83,16 @@
     <Compile Include="Model\FileBrowser\BrowserListBoxItemModel.cs" />
     <Compile Include="Model\FileBrowser\BrowserTreeViewItemModel.cs" />
     <Compile Include="Model\Outliner\OutlinerItemModel.cs" />
+    <Compile Include="Model\Properties\PropertiesModel_Texture.cs" />
     <Compile Include="Model\Properties\PropertiesModel_SceneObject.cs" />
     <Compile Include="View\FileBrowser.xaml.cs">
       <DependentUpon>FileBrowser.xaml</DependentUpon>
     </Compile>
     <Compile Include="View\Outliner.xaml.cs">
       <DependentUpon>Outliner.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="View\Properties_Texture.xaml.cs">
+      <DependentUpon>Properties_Texture.xaml</DependentUpon>
     </Compile>
     <Compile Include="View\Properties_SceneObject.xaml.cs">
       <DependentUpon>Properties_SceneObject.xaml</DependentUpon>
@@ -118,6 +122,10 @@
     <Page Include="View\Outliner.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="View\Properties_Texture.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
     </Page>
     <Page Include="View\Properties_SceneObject.xaml">
       <SubType>Designer</SubType>

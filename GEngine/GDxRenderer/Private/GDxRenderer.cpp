@@ -1308,11 +1308,11 @@ void GDxRenderer::BuildDescriptorHeaps()
 		mTextrueHeapIndex = mIblIndex + 2 + mPrefilterLevels;
 
 		for (auto i = 0u; i < MAX_TEXTURE_NUM; i++)
-			mTexturePoolFreeIndex.push_back(mTextrueHeapIndex + i);
+			mTexturePoolFreeIndex.push_back(i);
 
 		for (auto tex : pTextures)
 		{
-			LoadTexture(tex.second);
+			RegisterTexture(tex.second);
 		}
 	}
 }
@@ -1931,7 +1931,7 @@ void GDxRenderer::DrawSceneObject(ID3D12GraphicsCommandList* cmdList, GRiSceneOb
 
 #pragma region Runtime
 
-void GDxRenderer::LoadTexture(GRiTexture* text)
+void GDxRenderer::RegisterTexture(GRiTexture* text)
 {
 	GDxTexture* dxTex = dynamic_cast<GDxTexture*>(text);
 	if (dxTex == nullptr)
@@ -1955,7 +1955,8 @@ void GDxRenderer::LoadTexture(GRiTexture* text)
 		if (mTexturePoolFreeIndex.empty())
 			ThrowGGiException("Texture pool has run out.");
 		auto it = mTexturePoolFreeIndex.begin();
-		md3dDevice->CreateShaderResourceView(dxTex->Resource.Get(), &srvDesc, GetCpuSrv(*it));
+		dxTex->texIndex = *it;
+		md3dDevice->CreateShaderResourceView(dxTex->Resource.Get(), &srvDesc, GetCpuSrv(mTextrueHeapIndex + *it));
 		mTexturePoolFreeIndex.erase(it);
 	}
 }

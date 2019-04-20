@@ -9,7 +9,7 @@ public:
 	GRiTextureLoader();
 	~GRiTextureLoader();
 
-	virtual GRiTexture* LoadTexture(std::wstring workdir, std::wstring path, int texIndex) = 0;
+	virtual GRiTexture* LoadTexture(std::wstring workdir, std::wstring path, bool bSrgb) = 0;
 
 protected:
 

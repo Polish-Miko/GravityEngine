@@ -351,7 +351,7 @@ void GCore::LoadTextures()
 
 	for (auto file : files)
 	{
-		GRiTexture* tex = textureLoader->LoadTexture(WorkDirectory, file, (int)mTextures.size());
+		GRiTexture* tex = textureLoader->LoadTexture(WorkDirectory, file, false);
 		std::wstring texName = tex->UniqueFileName;
 		std::unique_ptr<GRiTexture> temp(tex);
 		mTextures[texName] = std::move(temp);
@@ -364,7 +364,7 @@ void GCore::LoadSkyTexture(std::wstring path)
 {
 	std::unique_ptr<GRiTextureLoader> textureLoader(pRendererFactory->CreateTextureLoader());
 
-	GRiTexture* tex = textureLoader->LoadTexture(WorkDirectory, path, (int)mTextures.size());
+	GRiTexture* tex = textureLoader->LoadTexture(WorkDirectory, path, false);
 	std::wstring texName = L"skyCubeMap";
 	std::unique_ptr<GRiTexture> temp(tex);
 	mTextures[texName] = std::move(temp);
@@ -378,7 +378,6 @@ void GCore::LoadMaterials()
 	defaultMat->UniqueName = L"default";
 	defaultMat->Name = L"default";
 	defaultMat->MatIndex = index++;
-	mTextures[L"Content\\Textures\\sphere_1_BaseColor.png"]->bSrgb = true;
 	defaultMat->pTextures.push_back(mTextures[L"Content\\Textures\\sphere_1_BaseColor.png"].get());
 	defaultMat->pTextures.push_back(mTextures[L"Content\\Textures\\sphere_1_Normal.png"].get());
 	defaultMat->pTextures.push_back(mTextures[L"Content\\Textures\\sphere_1_OcclusionRoughnessMetallic.png"].get());
@@ -428,7 +427,6 @@ void GCore::LoadMaterials()
 	sphere_1->UniqueName = L"sphere_1";
 	sphere_1->Name = L"sphere_1";
 	sphere_1->MatIndex = index++;
-	mTextures[L"Content\\Textures\\sphere_1_BaseColor.png"]->bSrgb = true;
 	sphere_1->pTextures.push_back(mTextures[L"Content\\Textures\\sphere_1_BaseColor.png"].get());
 	sphere_1->pTextures.push_back(mTextures[L"Content\\Textures\\sphere_1_Normal.png"].get());
 	sphere_1->pTextures.push_back(mTextures[L"Content\\Textures\\sphere_1_OcclusionRoughnessMetallic.png"].get());
@@ -438,7 +436,6 @@ void GCore::LoadMaterials()
 	sphere_2->UniqueName = L"sphere_2";
 	sphere_2->Name = L"sphere_2";
 	sphere_2->MatIndex = index++;
-	mTextures[L"Content\\Textures\\sphere_2_BaseColor.png"]->bSrgb = true;
 	sphere_2->pTextures.push_back(mTextures[L"Content\\Textures\\sphere_2_BaseColor.png"].get());
 	sphere_2->pTextures.push_back(mTextures[L"Content\\Textures\\sphere_2_Normal.png"].get());
 	sphere_2->pTextures.push_back(mTextures[L"Content\\Textures\\sphere_2_OcclusionRoughnessMetallic.png"].get());
@@ -456,7 +453,6 @@ void GCore::LoadMaterials()
 	greasyPanMat->UniqueName = L"GreasyPan";
 	greasyPanMat->Name = L"GreasyPan";
 	greasyPanMat->MatIndex = index++;
-	mTextures[L"Content\\Textures\\Greasy_Pan_Albedo.png"]->bSrgb = true;
 	greasyPanMat->pTextures.push_back(mTextures[L"Content\\Textures\\Greasy_Pan_Albedo.png"].get());
 	greasyPanMat->pTextures.push_back(mTextures[L"Content\\Textures\\Greasy_Pan_Normal.png"].get());
 	greasyPanMat->pTextures.push_back(mTextures[L"Content\\Textures\\Greasy_Pan_Orm.png"].get());
@@ -466,7 +462,6 @@ void GCore::LoadMaterials()
 	rustedIronMat->UniqueName = L"RustedIron";
 	rustedIronMat->Name = L"RustedIron";
 	rustedIronMat->MatIndex = index++;
-	mTextures[L"Content\\Textures\\Rusted_Iron_Albedo.png"]->bSrgb = true;
 	rustedIronMat->pTextures.push_back(mTextures[L"Content\\Textures\\Rusted_Iron_Albedo.png"].get());
 	rustedIronMat->pTextures.push_back(mTextures[L"Content\\Textures\\Rusted_Iron_Normal.png"].get());
 	rustedIronMat->pTextures.push_back(mTextures[L"Content\\Textures\\Rusted_Iron_Orm.png"].get());
@@ -476,7 +471,6 @@ void GCore::LoadMaterials()
 	cerberusMat->UniqueName = L"Cerberus";
 	cerberusMat->Name = L"Cerberus";
 	cerberusMat->MatIndex = index++;
-	mTextures[L"Content\\Textures\\Cerberus_Albedo.png"]->bSrgb = true;
 	cerberusMat->pTextures.push_back(mTextures[L"Content\\Textures\\Cerberus_Albedo.png"].get());
 	cerberusMat->pTextures.push_back(mTextures[L"Content\\Textures\\Cerberus_Normal.png"].get());
 	cerberusMat->pTextures.push_back(mTextures[L"Content\\Textures\\Cerberus_Orm.png"].get());
@@ -486,7 +480,6 @@ void GCore::LoadMaterials()
 	fireplaceMat->UniqueName = L"Fireplace";
 	fireplaceMat->Name = L"Fireplace";
 	fireplaceMat->MatIndex = index++;
-	mTextures[L"Content\\Textures\\Fireplace_Albedo.png"]->bSrgb = true;
 	fireplaceMat->pTextures.push_back(mTextures[L"Content\\Textures\\Fireplace_Albedo.png"].get());
 	fireplaceMat->pTextures.push_back(mTextures[L"Content\\Textures\\Fireplace_Normal.png"].get());
 	fireplaceMat->pTextures.push_back(mTextures[L"Content\\Textures\\Fireplace_Orm.png"].get());
@@ -886,6 +879,23 @@ void GCore::SetSceneObjectTransform(wchar_t* objName, float* trans)
 	mSceneObjects[sObjectName]->SetLocation(trans[0], trans[1], trans[2]);
 	mSceneObjects[sObjectName]->SetRotation(trans[3], trans[4], trans[5]);
 	mSceneObjects[sObjectName]->SetScale(trans[6], trans[7], trans[8]);
+}
+
+bool GCore::GetTextureSrgb(wchar_t* txtName)
+{
+	std::wstring textureName(txtName);
+	return mTextures[textureName]->bSrgb;
+}
+
+void GCore::SetTextureSrgb(wchar_t* txtName, bool bSrgb)
+{
+	std::wstring textureName(txtName);
+	mTextures[textureName]->bSrgb = bSrgb;
+	std::unique_ptr<GRiTextureLoader> textureLoader(pRendererFactory->CreateTextureLoader());
+	GRiTexture* tex = textureLoader->LoadTexture(WorkDirectory, textureName, bSrgb);
+	tex->texIndex = mTextures[textureName]->texIndex;
+	mTextures[textureName].reset(tex);
+	mRenderer->RegisterTexture(mTextures[textureName].get());
 }
 
 #pragma endregion

@@ -264,5 +264,20 @@ namespace GEditor.View
         {
             workDirectory = dir;
         }
+
+        private void listBoxItem_Selected(object sender, RoutedEventArgs e)
+        {
+            BrowserListBoxItemModel selected = (BrowserListBoxItemModel)browserListBox.SelectedItem;
+            if (selected == null)
+                return;
+            string ftype = selected.FileType.ToLower();
+            if (ftype != ".dds" && ftype != ".png")
+                return;
+            if (selected.FilePath.IndexOf(workDirectory) != -1)
+            {
+                string txtName = selected.FilePath.Substring(selected.FilePath.IndexOf(workDirectory) + workDirectory.Length);
+                mainWindow.GetTextureProperties(txtName);
+            }
+        }
     }
 }

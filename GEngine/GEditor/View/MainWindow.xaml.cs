@@ -35,7 +35,8 @@ namespace GEditor
 
         private FileBrowser fileBrowser = new FileBrowser();
 
-        Properties_SceneObject properties;
+        Properties_SceneObject properties_SceneObject;
+        Properties_Texture properties_Texture;
 
         public object WinInterop { get; private set; }
 
@@ -161,11 +162,21 @@ namespace GEditor
         public void GetSceneObjectProperties(string objName)
         {
             PropertiesPanel.Children.Clear();
-            properties = new Properties_SceneObject();
-            properties.SetMainWindow(this);
-            properties.SetObjectName(objName);
-            PropertiesPanel.Children.Add(properties);
-            properties.GetSceneObjectProperties();
+            properties_SceneObject = new Properties_SceneObject();
+            properties_SceneObject.SetMainWindow(this);
+            properties_SceneObject.SetObjectName(objName);
+            PropertiesPanel.Children.Add(properties_SceneObject);
+            properties_SceneObject.GetSceneObjectProperties();
+        }
+
+        public void GetTextureProperties(string txtName)
+        {
+            PropertiesPanel.Children.Clear();
+            properties_Texture = new Properties_Texture();
+            properties_Texture.SetMainWindow(this);
+            properties_Texture.SetTextureName(txtName);
+            PropertiesPanel.Children.Add(properties_Texture);
+            properties_Texture.GetTextureProperties();
         }
     }
 }

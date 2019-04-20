@@ -51,6 +51,16 @@ extern "C"
 	__declspec(dllexport) void __stdcall SetSceneObjectTransform(wchar_t* objName, float* trans);
 }
 
+extern "C"
+{
+	__declspec(dllexport) bool __stdcall GetTextureSrgb(wchar_t* txtName);
+}
+
+extern "C"
+{
+	__declspec(dllexport) void __stdcall SetTextureSrgb(wchar_t* txtName, bool bSrgb);
+}
+
 /*
 class EGCore
 {

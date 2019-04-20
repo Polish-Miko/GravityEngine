@@ -41,5 +41,11 @@ namespace GEditor
         [DllImport(@"Build\GEngineDll.dll")]
         public static extern void SetSceneObjectTransform([MarshalAs(UnmanagedType.LPWStr)] string objName, [In, Out] float[] trans);
 
+        [DllImport(@"Build\GEngineDll.dll")]
+        public static extern bool GetTextureSrgb([MarshalAs(UnmanagedType.LPWStr)] string txtName);
+
+        [DllImport(@"Build\GEngineDll.dll")]
+        public static extern void SetTextureSrgb([MarshalAs(UnmanagedType.LPWStr)] string txtName, bool bSrgb);
+        
     }
 }

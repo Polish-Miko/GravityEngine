@@ -39,6 +39,10 @@ public:
 
 	void SetWorkDirectory(wchar_t* dir);
 
+	bool GetTextureSrgb(wchar_t* txtName);
+
+	void SetTextureSrgb(wchar_t* txtName, bool bSrgb);
+
 #pragma endregion
 
 private:

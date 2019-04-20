@@ -51,3 +51,15 @@ void __stdcall SetSceneObjectTransform(wchar_t* objName, float* trans)
 {
 	GCore::GetCore().SetSceneObjectTransform(objName, trans);
 }
+
+bool __stdcall GetTextureSrgb(wchar_t* txtName)
+{
+	return GCore::GetCore().GetTextureSrgb(txtName);
+}
+
+void __stdcall SetTextureSrgb(wchar_t* txtName, bool bSrgb)
+{
+	GCore::GetCore().SetTextureSrgb(txtName, bSrgb);
+}
+
+
