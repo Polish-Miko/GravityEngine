@@ -153,6 +153,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="Private\GMaterial.h" />
     <ClInclude Include="Private\GProject.h" />
     <ClInclude Include="Private\GScene.h" />
     <ClInclude Include="Public\GCore.h" />
@@ -160,6 +161,7 @@
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Private\GMaterial.cpp" />
     <ClCompile Include="Private\GProject.cpp" />
     <ClCompile Include="Private\GScene.cpp" />
     <ClCompile Include="Private\GCore.cpp" />

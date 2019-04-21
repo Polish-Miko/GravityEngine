@@ -80,6 +80,7 @@ public:
 					}
 					catch (boost::archive::archive_exception const& e)
 					{
+						e.what();
 						MessageBox(nullptr, L"Fail to load project file.", L"Other Exception", MB_OK);
 						ifs.close();
 						return;
@@ -87,6 +88,7 @@ public:
 				}
 				catch (std::exception& e)
 				{
+					e.what();
 					MessageBox(nullptr, L"Fail to create archive. Project file may be empty or out of date.", L"Other Exception", MB_OK);
 					ifs.close();
 					return;

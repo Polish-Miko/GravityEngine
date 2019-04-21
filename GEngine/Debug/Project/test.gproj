@@ -3,7 +3,7 @@
 <boost_serialization signature="serialization::archive" version="17">
 <Project class_id="0" tracking_level="0" version="0">
 	<mTextureInfo class_id="1" tracking_level="0" version="0">
-		<count>62</count>
+		<count>65</count>
 		<item_version>0</item_version>
 		<item class_id="2" tracking_level="0" version="0">
 			<UniqueFileName>Content\Textures\pants_diff.dds</UniqueFileName>
@@ -46,20 +46,24 @@
 			<bSrgb>0</bSrgb>
 		</item>
 		<item>
+			<UniqueFileName>Content\Textures\bricks_nmap.dds</UniqueFileName>
+			<bSrgb>0</bSrgb>
+		</item>
+		<item>
 			<UniqueFileName>Content\Textures\Greasy_Pan_Albedo.png</UniqueFileName>
 			<bSrgb>1</bSrgb>
 		</item>
 		<item>
-			<UniqueFileName>Content\Textures\bricks_nmap.dds</UniqueFileName>
+			<UniqueFileName>Content\Textures\Cerberus_Albedo.png</UniqueFileName>
+			<bSrgb>1</bSrgb>
+		</item>
+		<item>
+			<UniqueFileName>Content\Textures\GE_Default_Orm.png</UniqueFileName>
 			<bSrgb>0</bSrgb>
 		</item>
 		<item>
 			<UniqueFileName>Content\Textures\WoodCrate01.dds</UniqueFileName>
 			<bSrgb>0</bSrgb>
-		</item>
-		<item>
-			<UniqueFileName>Content\Textures\Cerberus_Albedo.png</UniqueFileName>
-			<bSrgb>1</bSrgb>
 		</item>
 		<item>
 			<UniqueFileName>Content\Textures\checkboard.dds</UniqueFileName>
@@ -86,23 +90,7 @@
 			<bSrgb>0</bSrgb>
 		</item>
 		<item>
-			<UniqueFileName>Content\Textures\default_albedo.png</UniqueFileName>
-			<bSrgb>0</bSrgb>
-		</item>
-		<item>
 			<UniqueFileName>Content\Textures\default_nmap.dds</UniqueFileName>
-			<bSrgb>0</bSrgb>
-		</item>
-		<item>
-			<UniqueFileName>Content\Textures\default_normal.png</UniqueFileName>
-			<bSrgb>0</bSrgb>
-		</item>
-		<item>
-			<UniqueFileName>Content\Textures\jacket_norm.dds</UniqueFileName>
-			<bSrgb>0</bSrgb>
-		</item>
-		<item>
-			<UniqueFileName>Content\Textures\default_OcclussionRoughnessMetallic.png</UniqueFileName>
 			<bSrgb>0</bSrgb>
 		</item>
 		<item>
@@ -123,6 +111,42 @@
 		</item>
 		<item>
 			<UniqueFileName>Content\Textures\Fireplace_Orm.png</UniqueFileName>
+			<bSrgb>0</bSrgb>
+		</item>
+		<item>
+			<UniqueFileName>Content\Textures\GE_DefaultTexture_Albedo.png</UniqueFileName>
+			<bSrgb>0</bSrgb>
+		</item>
+		<item>
+			<UniqueFileName>Content\Textures\upBody_diff.dds</UniqueFileName>
+			<bSrgb>0</bSrgb>
+		</item>
+		<item>
+			<UniqueFileName>Content\Textures\ice.dds</UniqueFileName>
+			<bSrgb>0</bSrgb>
+		</item>
+		<item>
+			<UniqueFileName>Content\Textures\GE_DefaultTexture_Normal.png</UniqueFileName>
+			<bSrgb>0</bSrgb>
+		</item>
+		<item>
+			<UniqueFileName>Content\Textures\GE_DefaultTexture_Orm.png</UniqueFileName>
+			<bSrgb>0</bSrgb>
+		</item>
+		<item>
+			<UniqueFileName>Content\Textures\Cubemap_LancellottiChapel.dds</UniqueFileName>
+			<bSrgb>0</bSrgb>
+		</item>
+		<item>
+			<UniqueFileName>Content\Textures\water1.dds</UniqueFileName>
+			<bSrgb>0</bSrgb>
+		</item>
+		<item>
+			<UniqueFileName>Content\Textures\GE_Default_Albedo.png</UniqueFileName>
+			<bSrgb>1</bSrgb>
+		</item>
+		<item>
+			<UniqueFileName>Content\Textures\GE_Default_Normal.png</UniqueFileName>
 			<bSrgb>0</bSrgb>
 		</item>
 		<item>
@@ -162,11 +186,7 @@
 			<bSrgb>0</bSrgb>
 		</item>
 		<item>
-			<UniqueFileName>Content\Textures\upBody_diff.dds</UniqueFileName>
-			<bSrgb>0</bSrgb>
-		</item>
-		<item>
-			<UniqueFileName>Content\Textures\ice.dds</UniqueFileName>
+			<UniqueFileName>Content\Textures\jacket_norm.dds</UniqueFileName>
 			<bSrgb>0</bSrgb>
 		</item>
 		<item>
@@ -186,16 +206,16 @@
 			<bSrgb>0</bSrgb>
 		</item>
 		<item>
+			<UniqueFileName>Content\Textures\Rusted_Iron_Normal.png</UniqueFileName>
+			<bSrgb>0</bSrgb>
+		</item>
+		<item>
 			<UniqueFileName>Content\Textures\WireFence.dds</UniqueFileName>
 			<bSrgb>0</bSrgb>
 		</item>
 		<item>
 			<UniqueFileName>Content\Textures\sphere_1_BaseColor.png</UniqueFileName>
 			<bSrgb>1</bSrgb>
-		</item>
-		<item>
-			<UniqueFileName>Content\Textures\Rusted_Iron_Normal.png</UniqueFileName>
-			<bSrgb>0</bSrgb>
 		</item>
 		<item>
 			<UniqueFileName>Content\Textures\snowcube1024.dds</UniqueFileName>
@@ -235,14 +255,6 @@
 		</item>
 		<item>
 			<UniqueFileName>Content\Textures\tree35S.dds</UniqueFileName>
-			<bSrgb>0</bSrgb>
-		</item>
-		<item>
-			<UniqueFileName>Content\Textures\Cubemap_LancellottiChapel.dds</UniqueFileName>
-			<bSrgb>0</bSrgb>
-		</item>
-		<item>
-			<UniqueFileName>Content\Textures\water1.dds</UniqueFileName>
 			<bSrgb>0</bSrgb>
 		</item>
 		<item>

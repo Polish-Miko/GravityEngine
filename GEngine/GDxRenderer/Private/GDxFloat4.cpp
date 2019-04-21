@@ -21,6 +21,31 @@ GDxFloat4::~GDxFloat4()
 {
 }
 
+float GDxFloat4::GetElement(int i)
+{
+	if (i == 0)
+		return value.x;
+	else if (i == 1)
+		return value.y;
+	else if (i == 2)
+		return value.z;
+	else if (i == 3)
+		return value.w;
+	else
+		return -99999.0f;
+}
+
+void GDxFloat4::SetElement(int i, float setValue)
+{
+	if (i == 0)
+		value.x = setValue;
+	else if (i==1)
+		value.y = setValue;
+	else if (i == 2)
+		value.z = setValue;
+	else if (i == 3)
+		value.w = setValue;
+}
 
 GGiFloat4* GDxFloat4::ZeroVector()
 {

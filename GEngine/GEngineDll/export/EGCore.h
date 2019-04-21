@@ -71,6 +71,16 @@ extern "C"
 	__declspec(dllexport) void __stdcall SaveProject();
 }
 
+extern "C"
+{
+	__declspec(dllexport) void __stdcall SaveProject();
+}
+
+extern "C"
+{
+	__declspec(dllexport) void __stdcall CreateMaterial(wchar_t* cUniqueName);
+}
+
 /*
 class EGCore
 {

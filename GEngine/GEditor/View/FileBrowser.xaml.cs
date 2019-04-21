@@ -25,7 +25,7 @@ namespace GEditor.View
     public partial class FileBrowser : UserControl
     {
         private string workDirectory = string.Empty;
-        private string strDirectory = string.Empty;
+        private string currentDirectory = string.Empty;
         Dictionary<string, BitmapImage> treeViewIcons = new Dictionary<string, BitmapImage>();
         Dictionary<string, BitmapImage> listBoxIcons = new Dictionary<string, BitmapImage>();
         ObservableCollection<BrowserListBoxItemModel> listBoxData = new ObservableCollection<BrowserListBoxItemModel>();
@@ -83,10 +83,22 @@ namespace GEditor.View
             }
         }
 
+        private BrowserListBoxItemModel GetListBoxItemByName(string itemName)
+        {
+            foreach(object item in browserListBox.Items)
+            {
+                BrowserListBoxItemModel model = item as BrowserListBoxItemModel;
+                if (model.FileName == itemName)
+                    return model;
+            }
+            return null;
+        }
+
         private void GetFiles(string FilePath)
         {
             listBoxData.Clear();
-            
+            currentDirectory = FilePath;
+
             foreach (var path in Directory.GetDirectories(FilePath))
             {
 
@@ -234,7 +246,6 @@ namespace GEditor.View
                     return;
                 if (model.FileType.Equals("Folder"))
                 {
-                    strDirectory = model.FilePath;
                     GetFiles(model.FilePath);
                 }
             }
@@ -244,15 +255,15 @@ namespace GEditor.View
         // return to last directory
         private void GoToParentFolder(object sender, MouseButtonEventArgs e)
         {
-            if (strDirectory.LastIndexOf(@"\") > 0)
+            if (currentDirectory.LastIndexOf(@"\") > 0)
             {
-                strDirectory = strDirectory.Substring(0, strDirectory.LastIndexOf(@"\"));
+                currentDirectory = currentDirectory.Substring(0, currentDirectory.LastIndexOf(@"\"));
             }
             else
             {
-                strDirectory = strDirectory = strDirectory.Substring(0, strDirectory.IndexOf("/") + 1);
+                currentDirectory = currentDirectory = currentDirectory.Substring(0, currentDirectory.IndexOf("/") + 1);
             }
-            GetFiles(strDirectory);
+            GetFiles(currentDirectory);
         }
 
         public void SetMainWindow(MainWindow mwRef)
@@ -278,6 +289,29 @@ namespace GEditor.View
                 string txtName = selected.FilePath.Substring(selected.FilePath.IndexOf(workDirectory) + workDirectory.Length);
                 mainWindow.GetTextureProperties(txtName);
             }
+        }
+
+        private void CreateMaterial(object sender, RoutedEventArgs e)
+        {
+            string materialName = string.Empty;
+            for (int i = 0; ; i++)
+            {
+                string tryName = "NewMaterial";
+                if (i > 0)
+                    tryName = tryName + "_" + Convert.ToString(i);
+                if (!File.Exists(currentDirectory + @"\" + tryName + ".gmat"))
+                {
+                    materialName = currentDirectory + @"\" + tryName + ".gmat";
+                    break;
+                }
+            }
+            string UniqueName = materialName.Substring(workDirectory.Length);
+            string fileName = System.IO.Path.GetFileName(materialName);
+
+            IGCore.CreateMaterial(UniqueName);
+
+            GetFiles(currentDirectory);
+            browserListBox.SelectedItem = GetListBoxItemByName(fileName);
         }
     }
 }

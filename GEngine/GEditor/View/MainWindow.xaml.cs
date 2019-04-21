@@ -104,8 +104,7 @@ namespace GEditor
 
                 fileBrowser.SetWorkDirectory(System.IO.Path.GetDirectoryName(filename) + @"\");
                 fileBrowser.LoadBrowser();
-
-
+                
                 IGCore.SetWorkDirectory(System.IO.Path.GetDirectoryName(filename) + @"\");
                 IGCore.SetProjectName(System.IO.Path.GetFileNameWithoutExtension(filename));
                 IntPtr hwnd = viewport.Handle;
@@ -185,5 +184,6 @@ namespace GEditor
             PropertiesPanel.Children.Add(properties_Texture);
             properties_Texture.GetTextureProperties();
         }
+
     }
 }

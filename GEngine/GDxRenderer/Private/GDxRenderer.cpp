@@ -1654,7 +1654,7 @@ void GDxRenderer::BuildFrameResources()
 	for (int i = 0; i < NUM_FRAME_RESOURCES; ++i)
 	{
 		mFrameResources.push_back(std::make_unique<GDxFrameResource>(md3dDevice.Get(),
-			2, (UINT)pSceneObjects.size(), (UINT)pMaterials.size()));
+			2, MAX_SCENE_OBJECT_NUM, MAX_MATERIAL_NUM));//(UINT)pSceneObjects.size(), (UINT)pMaterials.size()));
 	}
 }
 

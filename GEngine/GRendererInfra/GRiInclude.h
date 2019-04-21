@@ -20,3 +20,5 @@
 #include "Public/GRiSpotlight.h"
 
 #define MAX_TEXTURE_NUM 1024
+#define MAX_MATERIAL_NUM 1024
+#define MAX_SCENE_OBJECT_NUM 1024

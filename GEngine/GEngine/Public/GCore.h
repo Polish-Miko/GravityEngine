@@ -4,6 +4,7 @@
 
 #include "GProject.h"
 #include "GScene.h"
+#include "GMaterial.h"
 
 
 
@@ -50,6 +51,8 @@ public:
 
 	void SetTextureSrgb(wchar_t* txtName, bool bSrgb);
 
+	void CreateMaterial(wchar_t* cUniqueName);
+
 #pragma endregion
 
 private:
@@ -75,6 +78,7 @@ private:
 	std::unordered_map<std::wstring, std::unique_ptr<GRiMesh>> mMeshes;
 	std::unordered_map<std::wstring, std::unique_ptr<GRiSceneObject>> mSceneObjects;
 	std::vector<GRiSceneObject*> mSceneObjectLayer[(int)RenderLayer::Count];
+	std::unordered_map<std::wstring, std::unique_ptr<GMaterial>> mMaterialFiles;
 
 	std::unique_ptr<GRiCamera> mCamera;
 
@@ -83,6 +87,8 @@ private:
 	POINT mLastMousePos;
 
 	GProject* mProject;
+
+	UINT mMaterialIndex = 0;
 
 private:
 

@@ -53,5 +53,8 @@ namespace GEditor
         [DllImport(@"Build\GEngineDll.dll")]
         public static extern void SaveProject();
 
+        [DllImport(@"Build\GEngineDll.dll")]
+        public static extern void CreateMaterial([MarshalAs(UnmanagedType.LPWStr)] string UniqueName);
+
     }
 }

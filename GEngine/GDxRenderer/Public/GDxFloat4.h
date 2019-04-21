@@ -9,6 +9,10 @@ public:
 
 	GDxFloat4(float x, float y, float z, float w);
 
+	virtual float GetElement(int i) override;
+
+	virtual void SetElement(int i, float setValue) override;
+
 	virtual GGiFloat4& operator =(GGiFloat4& vec) override;
 
 	virtual GGiFloat4& operator *(GGiFloat4& vec) override;

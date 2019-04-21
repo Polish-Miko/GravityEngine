@@ -72,4 +72,9 @@ void __stdcall SaveProject()
 	return GCore::GetCore().SaveProject();
 }
 
+void __stdcall CreateMaterial(wchar_t* cUniqueName)
+{
+	GCore::GetCore().CreateMaterial(cUniqueName);
+}
+
 

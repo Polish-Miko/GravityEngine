@@ -100,7 +100,7 @@ public:
 			(slash != (path.length() - 1)) &&
 			(dot != std::wstring::npos) &&
 			(dot > slash))
-			return path.substr(path.rfind('\\') + 1, dot - slash);
+			return path.substr(path.rfind('\\') + 1, dot - slash - 1);
 		else
 			return L"";
 	}

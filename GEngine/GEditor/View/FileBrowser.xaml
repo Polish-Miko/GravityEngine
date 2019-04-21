@@ -26,6 +26,14 @@
         </TreeView>
         <ListBox x:Name="browserListBox" Grid.Column="1" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"  ItemTemplate="{StaticResource FileBrowserItem}"
                  MouseDoubleClick="Border_MouseDown" SelectionChanged="listBoxItem_Selected">
+            <ListBox.ContextMenu>
+                <ContextMenu>
+                    <MenuItem Name="Create" Header="Create">
+                        <MenuItem Name="CreateSceneItem" Header="Scene"/>
+                        <MenuItem Name="CreateMaterialItem" Header="Material" Click="CreateMaterial"/>
+                    </MenuItem>
+                </ContextMenu>
+            </ListBox.ContextMenu>
             <ListBox.Template>
                 <ControlTemplate TargetType="{x:Type ListBox}">
                     <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
