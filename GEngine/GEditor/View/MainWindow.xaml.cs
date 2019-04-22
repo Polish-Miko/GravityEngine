@@ -121,6 +121,11 @@ namespace GEditor
             IGCore.SaveProject();
         }
 
+        private void NewProject(object sender, RoutedEventArgs e)
+        {
+            ;
+        }
+        
         private void Button_Click(object sender, RoutedEventArgs e)
         {
             //IntPtr hwnd = viewport.Handle;
@@ -183,6 +188,21 @@ namespace GEditor
             properties_Texture.SetTextureName(txtName);
             PropertiesPanel.Children.Add(properties_Texture);
             properties_Texture.GetTextureProperties();
+        }
+
+        public string GetBrowserSelectedFilePath()
+        {
+            return fileBrowser.GetSelectedFilePath();
+        }
+
+        public string GetBrowserSelectedFileUniqueName()
+        {
+            return fileBrowser.GetSelectedFileUniqueName();
+        }
+
+        public string GetWorkDirectory()
+        {
+            return fileBrowser.GetWorkDirectory();
         }
 
     }

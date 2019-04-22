@@ -1,3 +1,5 @@
+#include "Material.hlsli"
+
 struct Light
 {
 	float3 Strength;
@@ -88,9 +90,13 @@ VertexOutput main(VertexInput input)
 {
 	VertexOutput output;
 
+	MaterialData matData = gMaterialData[gMaterialIndex];
+
 	float4 worldPos = mul(float4(input.pos, 1.0f), gWorld);
 	output.pos = mul(worldPos, gViewProj);
-	output.uv = input.uv;
+	float4 texC = float4(input.uv, 0.0f, 1.0f);
+	output.uv = mul(texC, matData.MatTransform).xy;
+	//output.uv = input.uv;
 	output.normal = normalize(mul(input.normal, (float3x3)gWorld));
 	output.tangent = normalize(mul(input.tangent, (float3x3)gWorld));
 	output.worldPos = mul(float4(input.pos, 1.0f), gWorld).xyz;

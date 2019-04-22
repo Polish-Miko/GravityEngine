@@ -98,7 +98,7 @@
         <DockPanel Grid.Column="0" Grid.Row="0" Grid.RowSpan="1" Grid.ColumnSpan="3">
             <Menu DockPanel.Dock="Top" d:IsHidden="True">
                 <MenuItem Header="File">
-                    <MenuItem Header="New"></MenuItem>
+                    <MenuItem Header="New" Click="NewProject"></MenuItem>
                     <MenuItem Name="menuOpen" Header="Open" Click="OpenProject"></MenuItem>
                     <MenuItem Header="Save" Click="SaveProject"></MenuItem>
                     <MenuItem Header="Close"></MenuItem>
@@ -171,6 +171,7 @@
                 </TabControl>
             </Grid>
         </Grid>
+        <Image x:Name="testImage" Grid.Column="2" HorizontalAlignment="Left" Height="100" Margin="65.667,274,0,0" Grid.Row="1" VerticalAlignment="Top" Width="100"/>
 
     </Grid>
 </Window>

@@ -248,6 +248,21 @@ namespace GEditor.View
                 {
                     GetFiles(model.FilePath);
                 }
+
+                string ftype = model.FileType.ToLower();
+                if (ftype == ".dds" || ftype == ".png")
+                {
+                    if (model.FilePath.IndexOf(workDirectory) != -1)
+                    {
+                        string txtName = model.FilePath.Substring(model.FilePath.IndexOf(workDirectory) + workDirectory.Length);
+                        mainWindow.GetTextureProperties(txtName);
+                    }
+                }
+                else if (ftype == ".gmat")
+                {
+                    ;
+                }
+
             }
 
         }
@@ -276,8 +291,14 @@ namespace GEditor.View
             workDirectory = dir;
         }
 
+        public string GetWorkDirectory()
+        {
+            return workDirectory;
+        }
+
         private void listBoxItem_Selected(object sender, RoutedEventArgs e)
         {
+            /*
             BrowserListBoxItemModel selected = (BrowserListBoxItemModel)browserListBox.SelectedItem;
             if (selected == null)
                 return;
@@ -289,6 +310,7 @@ namespace GEditor.View
                 string txtName = selected.FilePath.Substring(selected.FilePath.IndexOf(workDirectory) + workDirectory.Length);
                 mainWindow.GetTextureProperties(txtName);
             }
+            */
         }
 
         private void CreateMaterial(object sender, RoutedEventArgs e)
@@ -312,6 +334,24 @@ namespace GEditor.View
 
             GetFiles(currentDirectory);
             browserListBox.SelectedItem = GetListBoxItemByName(fileName);
+        }
+
+        public string GetSelectedFilePath()
+        {
+            BrowserListBoxItemModel selected = browserListBox.SelectedItem as BrowserListBoxItemModel;
+            if(selected!=null)
+                return selected.FilePath;
+            else
+                return string.Empty;
+        }
+
+        public string GetSelectedFileUniqueName()
+        {
+            BrowserListBoxItemModel selected = browserListBox.SelectedItem as BrowserListBoxItemModel;
+            if (selected != null)
+                return selected.FilePath.Substring(workDirectory.Length);
+            else
+                return string.Empty;
         }
     }
 }
