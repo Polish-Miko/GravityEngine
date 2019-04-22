@@ -14,6 +14,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using System.Runtime.InteropServices;
 
 namespace GEditor.View
 {
@@ -40,24 +41,39 @@ namespace GEditor.View
             mainWindow = mwRef;
         }
 
-        public void SetMaterialName(string matUniqueName)
+        public void SetMaterialUniqueName(string matUniqueName)
         {
             sMaterialUniqueName = matUniqueName;
         }
 
         public void GetMaterialProperties()
         {
-            model.Name = System.IO.Path.GetFileNameWithoutExtension(sMaterialUniqueName);
+            //model.Name = System.IO.Path.GetFileNameWithoutExtension(sMaterialUniqueName);
+            model.InitName(System.IO.Path.GetFileNameWithoutExtension(sMaterialUniqueName));
             float[] scale = new float[2];
             IGCore.GetMaterialScale(sMaterialUniqueName, scale);
             model.MatScaleX = scale[0].ToString();
             model.MatScaleY = scale[1].ToString();
-            model.AlbedoTextureName = IGCore.GetMaterialTextureName(sMaterialUniqueName, 0);
-            model.NormalTextureName = IGCore.GetMaterialTextureName(sMaterialUniqueName, 1);
-            model.OrmTextureName = IGCore.GetMaterialTextureName(sMaterialUniqueName, 2);
+            model.AlbedoTextureName = Marshal.PtrToStringUni(IGCore.GetMaterialTextureUniqueName(sMaterialUniqueName, 0));
+            model.NormalTextureName = Marshal.PtrToStringUni(IGCore.GetMaterialTextureUniqueName(sMaterialUniqueName, 1));
+            model.OrmTextureName = Marshal.PtrToStringUni(IGCore.GetMaterialTextureUniqueName(sMaterialUniqueName, 2));
 
             MaterialCommonControl.DataContext = model;
             MaterialTextureControl.DataContext = model;
+        }
+
+        private void RefreshTextureNames()
+        {
+            model.SetTexNameWithoutTriggeringPropertyChangedEvent(Marshal.PtrToStringUni(IGCore.GetMaterialTextureUniqueName(sMaterialUniqueName, 0)), 0);
+            model.SetTexNameWithoutTriggeringPropertyChangedEvent(Marshal.PtrToStringUni(IGCore.GetMaterialTextureUniqueName(sMaterialUniqueName, 1)), 1);
+            model.SetTexNameWithoutTriggeringPropertyChangedEvent(Marshal.PtrToStringUni(IGCore.GetMaterialTextureUniqueName(sMaterialUniqueName, 2)), 2);
+        }
+
+        public bool NameAvailable(string matName)
+        {
+            string newUniqueName = System.IO.Path.GetDirectoryName(sMaterialUniqueName) + @"\" + matName + ".gmat";
+            string newPath = mainWindow.GetWorkDirectory() + newUniqueName;
+            return (!System.IO.File.Exists(newPath));
         }
 
         public void SetName(string matName)
@@ -74,6 +90,7 @@ namespace GEditor.View
                 IGCore.RenameMaterial(sMaterialUniqueName, newUniqueName);
                 sMaterialUniqueName = newUniqueName;
             }
+            mainWindow.RefreshBrowser();
         }
 
         /*
@@ -105,7 +122,7 @@ namespace GEditor.View
                 return;
             if (!System.IO.File.Exists(selectedPath))
                 return;
-            if (System.IO.Path.GetExtension(selectedPath) == "dds" || System.IO.Path.GetExtension(selectedPath) == "png")
+            if (System.IO.Path.GetExtension(selectedPath).ToLower() == ".dds" || System.IO.Path.GetExtension(selectedPath).ToLower() == ".png")
             {
                 if (IGCore.SetMaterialTexture(sMaterialUniqueName, index, selectedUniqueName))
                 {
@@ -121,37 +138,43 @@ namespace GEditor.View
 
         private void ClearTextureByIndex(int index)
         {
-            string defaultTexture = IGCore.SetMaterialTextureToDefaultValue(index);
+            IGCore.SetMaterialTextureToDefaultValue(sMaterialUniqueName, index);
         }
 
         private void LoadAlbedo(object sender, RoutedEventArgs e)
         {
             SetTextureBySelectedFile(0);
+            RefreshTextureNames();
         }
 
         private void ClearAlbedo(object sender, RoutedEventArgs e)
         {
             ClearTextureByIndex(0);
+            RefreshTextureNames();
         }
 
         private void LoadNormal(object sender, RoutedEventArgs e)
         {
             SetTextureBySelectedFile(1);
+            RefreshTextureNames();
         }
 
         private void ClearNormal(object sender, RoutedEventArgs e)
         {
             ClearTextureByIndex(1);
+            RefreshTextureNames();
         }
 
         private void LoadOrm(object sender, RoutedEventArgs e)
         {
             SetTextureBySelectedFile(2);
+            RefreshTextureNames();
         }
 
         private void ClearOrm(object sender, RoutedEventArgs e)
         {
             ClearTextureByIndex(2);
+            RefreshTextureNames();
         }
 
     }

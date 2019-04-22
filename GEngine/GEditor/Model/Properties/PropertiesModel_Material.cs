@@ -30,8 +30,11 @@ namespace GEditor.Model.Properties
             get => _name;
             set
             {
-                _name = value;
-                OnPropertyChanged("Name");
+                if(PropertiesPanel.NameAvailable(value))
+                {
+                    _name = value;
+                    OnPropertyChanged("Name");
+                }
             }
         }
 
@@ -93,6 +96,23 @@ namespace GEditor.Model.Properties
             }
         }
 
+        public void SetTexNameWithoutTriggeringPropertyChangedEvent(string newName, int index)
+        {
+            if (index == 0)
+                _albedoTextureName = newName;
+            else if (index == 1)
+                _normalTextureName = newName;
+            else if (index == 2)
+                _ormTextureName = newName;
+            OnPropertyChanged();
+        }
+
+        public void InitName(string initName)
+        {
+            _name = initName;
+            OnPropertyChanged();
+        }
+
         public void SetName(object sender, PropertyChangedEventArgs e)
         {
             PropertiesPanel.SetName(Name);
@@ -104,9 +124,9 @@ namespace GEditor.Model.Properties
             float scaleY;
             if (float.TryParse(MatScaleX, out scaleX))
             {
-                if (float.TryParse(MatScaleX, out scaleX))
+                if (float.TryParse(MatScaleY, out scaleY))
                 {
-                    PropertiesPanel.SetScale(scaleX, scaleX);
+                    PropertiesPanel.SetScale(scaleX, scaleY);
                 }
             }
         }

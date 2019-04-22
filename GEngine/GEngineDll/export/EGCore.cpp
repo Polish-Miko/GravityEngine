@@ -77,4 +77,37 @@ void __stdcall CreateMaterial(wchar_t* cUniqueName)
 	GCore::GetCore().CreateMaterial(cUniqueName);
 }
 
+void __stdcall GetMaterialScale(wchar_t* matUniqueName, float* scale)
+{
+	GCore::GetCore().GetMaterialScale(matUniqueName, scale);
+}
+
+void __stdcall SetMaterialScale(wchar_t* matUniqueName, float* scale)
+{
+	GCore::GetCore().SetMaterialScale(matUniqueName, scale);
+}
+
+const wchar_t* __stdcall GetMaterialTextureUniqueName(wchar_t* matUniqueName, int index)
+{
+	return GCore::GetCore().GetMaterialTextureUniqueName(matUniqueName, index);
+}
+
+bool __stdcall SetMaterialTexture(wchar_t* matUniqueName, int index, wchar_t* texUniqueName)
+{
+	return GCore::GetCore().SetMaterialTexture(matUniqueName, index, texUniqueName);
+}
+
+void __stdcall SetMaterialTextureToDefaultValue(wchar_t* matUniqueName, int index)
+{
+	GCore::GetCore().SetMaterialTextureToDefaultValue(matUniqueName, index);
+}
+
+void __stdcall RenameMaterial(wchar_t* oldUniqueName, wchar_t* newUniqueName)
+{
+	GCore::GetCore().RenameMaterial(oldUniqueName, newUniqueName);
+}
+
+
+
+
 

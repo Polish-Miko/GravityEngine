@@ -642,39 +642,38 @@ void GDxRenderer::UpdateMaterialBuffer(const GGiGameTimer* gt)
 		{
 			MaterialData matData;
 			int i;
-			GDxFloat4x4* dxVec = dynamic_cast<GDxFloat4x4*>(mat->MatTransform);
-			if (dxVec == nullptr)
-				ThrowDxException(L"Dynamic cast from GRiFloat4x4 to GDxFloat4x4 failed.");
-			XMMATRIX matTransform = XMLoadFloat4x4(&dxVec->GetValue());
+			XMMATRIX matTransform = DirectX::XMMatrixScaling(mat->GetScaleX(), mat->GetScaleY(), 1.0f);
+			//GGiFloat4x4* ggiMat = mat->MatTransform.get();
+			//GDxFloat4x4* dxMat = dynamic_cast<GDxFloat4x4*>(ggiMat);
+			//if (dxMat == nullptr)
+				//ThrowDxException(L"Dynamic cast from GRiFloat4x4 to GDxFloat4x4 failed.");
+			//XMMATRIX matTransform = XMLoadFloat4x4(&dxMat->GetValue());
 			XMStoreFloat4x4(&matData.MatTransform, XMMatrixTranspose(matTransform));
 
-			if (mat->pTextures.size() > MATERIAL_MAX_TEXTURE_NUM)
+			size_t texNum = mat->GetTextureNum();
+			if (texNum > MATERIAL_MAX_TEXTURE_NUM)
 				ThrowDxException(L"Material (CBIndex : " + std::to_wstring(mat->MatIndex) + L" ) texture number exceeds MATERIAL_MAX_TEXTURE_NUM.");
-			i = 0;
-			for (auto tex : mat->pTextures)
+			for (i = 0; i < texNum; i++)
 			{
-				GDxTexture* dxTex = dynamic_cast<GDxTexture*>(tex);
-				if (dxTex == nullptr)
-					ThrowDxException(L"Dynamic cast from GRiTexture to GDxTexture failed.");
-				matData.TextureIndex[i] = dxTex->texIndex;
-				//matData.TextureSrgb[i] = (UINT)dxTex->bSrgb;
-				i++;
+				matData.TextureIndex[i] = mat->GetTextureIndex(i);
 			}
-			if (mat->ScalarParams.size() > MATERIAL_MAX_SCALAR_NUM)
+
+			size_t scalarNum = mat->GetScalarNum();
+			if (scalarNum > MATERIAL_MAX_SCALAR_NUM)
 				ThrowDxException(L"Material (CBIndex : " + std::to_wstring(mat->MatIndex) + L" ) scalar number exceeds MATERIAL_MAX_SCALAR_NUM.");
-			i = 0;
-			for (auto scalar : mat->ScalarParams)
+			for (i = 0; i < scalarNum; i++)
 			{
-				matData.ScalarParams[i] = scalar;
-				i++;
+				matData.ScalarParams[i] = mat->GetScalar(i);
 			}
-			if (mat->VectorParams.size() > MATERIAL_MAX_VECTOR_NUM)
+
+			size_t vectorNum = mat->GetVectorNum();
+			if (vectorNum > MATERIAL_MAX_VECTOR_NUM)
 				ThrowDxException(L"Material (CBIndex : " + std::to_wstring(mat->MatIndex) + L" ) vector number exceeds MATERIAL_MAX_VECTOR_NUM.");
-			for (i = 0; i < mat->VectorParams.size(); i++)
+			for (i = 0; i < vectorNum; i++)
 			{
-				GDxFloat4 dxVec = dynamic_cast<GDxFloat4&>(mat->VectorParams[i]);
+				GGiFloat4 ggiVec = mat->GetVector(i);
+				GDxFloat4 dxVec = dynamic_cast<GDxFloat4&>(ggiVec);
 				matData.VectorParams[i] = dxVec.GetValue();
-				i++;
 			}
 			//matData.DiffuseMapIndex = mat->DiffuseSrvHeapIndex;
 			//matData.NormalMapIndex = mat->NormalSrvHeapIndex;

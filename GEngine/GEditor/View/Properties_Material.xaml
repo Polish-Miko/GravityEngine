@@ -55,19 +55,19 @@
         <Expander Name="MaterialTextureControl" Header="Texture" IsExpanded="True">
             <StackPanel>
                 <Label Content=" Albedo : " VerticalAlignment="Center"/>
-                <TextBox Text="{Binding Path=AlbedoTextureName, Mode=TwoWay}" HorizontalAlignment="Stretch" Margin="5,0,5,0"/>
+                <TextBox Text="{Binding Path=AlbedoTextureName, Mode=TwoWay}" HorizontalAlignment="Stretch" Margin="5,0,5,0" IsReadOnly="True"/>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Stretch" Margin="0,5,0,0">
                     <Button Content="Load" Width="80" Margin="25,0,15,0" Click="LoadAlbedo"/>
                     <Button Content="Clear" Width="80" Margin="15,0,30,0" Click="ClearAlbedo"/>
                 </StackPanel>
                 <Label Content=" Normal : " VerticalAlignment="Center"/>
-                <TextBox Text="{Binding Path=NormalTextureName, Mode=TwoWay}" HorizontalAlignment="Stretch" Margin="5,0,5,0"/>
+                <TextBox Text="{Binding Path=NormalTextureName, Mode=TwoWay}" HorizontalAlignment="Stretch" Margin="5,0,5,0" IsReadOnly="True"/>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Stretch" Margin="0,5,0,0">
                     <Button Content="Load" Width="80" Margin="25,0,15,0" Click="LoadNormal"/>
                     <Button Content="Clear" Width="80" Margin="15,0,30,0" Click="ClearNormal"/>
                 </StackPanel>
                 <Label Content=" Orm : " VerticalAlignment="Center"/>
-                <TextBox Text="{Binding Path=OrmTextureName, Mode=TwoWay}" HorizontalAlignment="Stretch" Margin="5,0,5,0"/>
+                <TextBox Text="{Binding Path=OrmTextureName, Mode=TwoWay}" HorizontalAlignment="Stretch" Margin="5,0,5,0" IsReadOnly="True"/>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Stretch" Margin="0,5,0,0">
                     <Button Content="Load" Width="80" Margin="25,0,15,0" Click="LoadOrm"/>
                     <Button Content="Clear" Width="80" Margin="15,0,30,0" Click="ClearOrm"/>

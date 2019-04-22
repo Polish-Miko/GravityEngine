@@ -16,6 +16,7 @@ public:
 
 	std::wstring UniqueName;
 	std::wstring Name;
+	float MaterialScale[2];
 	std::list<std::wstring> TextureNames;
 	std::list<float> ScalarParams;
 	std::list<float> VectorParams;
@@ -34,6 +35,29 @@ public:
 
 		UniqueName = pMaterial->UniqueName;
 		Name = pMaterial->Name;
+		MaterialScale[0] = pMaterial->GetScaleX();
+		MaterialScale[1] = pMaterial->GetScaleY();
+		auto texNum = pMaterial->GetTextureNum();
+		auto scalarNum = pMaterial->GetScalarNum();
+		auto vectorNum = pMaterial->GetVectorNum();
+		size_t i;
+		for (i = 0; i < texNum; i++)
+		{
+			TextureNames.push_back(pMaterial->GetTextureUniqueName((int)i));
+		}
+		for (i = 0; i < scalarNum; i++)
+		{
+			ScalarParams.push_back(pMaterial->GetScalar((int)i));
+		}
+		for (i = 0; i < vectorNum; i++)
+		{
+			GGiFloat4 vector = pMaterial->GetVector((int)i);
+			VectorParams.push_back(vector.GetX());
+			VectorParams.push_back(vector.GetY());
+			VectorParams.push_back(vector.GetZ());
+			VectorParams.push_back(vector.GetW());
+		}
+		/*
 		for (auto tex : pMaterial->pTextures)
 		{
 			TextureNames.push_back(tex->UniqueFileName);
@@ -49,6 +73,7 @@ public:
 			VectorParams.push_back(vector.GetZ());
 			VectorParams.push_back(vector.GetW());
 		}
+		*/
 	}
 
 	void SaveMaterial(std::wstring workDir)
@@ -112,6 +137,7 @@ private:
 	{
 		ar & BOOST_SERIALIZATION_NVP(UniqueName);
 		ar & BOOST_SERIALIZATION_NVP(Name);
+		ar & BOOST_SERIALIZATION_NVP(MaterialScale);
 		ar & BOOST_SERIALIZATION_NVP(TextureNames);
 		ar & BOOST_SERIALIZATION_NVP(ScalarParams);
 		ar & BOOST_SERIALIZATION_NVP(VectorParams);

@@ -94,6 +94,11 @@ namespace GEditor.View
             return null;
         }
 
+        public void RefreshListBox()
+        {
+            GetFiles(currentDirectory);
+        }
+
         private void GetFiles(string FilePath)
         {
             listBoxData.Clear();
@@ -260,7 +265,11 @@ namespace GEditor.View
                 }
                 else if (ftype == ".gmat")
                 {
-                    ;
+                    if (model.FilePath.IndexOf(workDirectory) != -1)
+                    {
+                        string matName = model.FilePath.Substring(workDirectory.Length);
+                        mainWindow.GetMaterialPropertiesByUniqueName(matName);
+                    }
                 }
 
             }
@@ -334,6 +343,7 @@ namespace GEditor.View
 
             GetFiles(currentDirectory);
             browserListBox.SelectedItem = GetListBoxItemByName(fileName);
+            mainWindow.GetMaterialPropertiesByUniqueName(UniqueName);
         }
 
         public string GetSelectedFilePath()

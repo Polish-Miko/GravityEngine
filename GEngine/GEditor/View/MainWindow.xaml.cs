@@ -15,7 +15,7 @@ using System.Windows.Navigation;
 using System.Windows.Shapes;
 using System.Windows.Forms;
 using System.Threading;
-using System.Windows.Interop;
+//using System.Windows.Interop;
 using Microsoft.Win32;
 using GWinformLib;
 using GEditor.View;
@@ -37,6 +37,7 @@ namespace GEditor
 
         Properties_SceneObject properties_SceneObject;
         Properties_Texture properties_Texture;
+        Properties_Material properties_Material;
 
         public object WinInterop { get; private set; }
 
@@ -190,6 +191,16 @@ namespace GEditor
             properties_Texture.GetTextureProperties();
         }
 
+        public void GetMaterialPropertiesByUniqueName(string matUniqueName)
+        {
+            PropertiesPanel.Children.Clear();
+            properties_Material = new Properties_Material();
+            properties_Material.SetMainWindow(this);
+            properties_Material.SetMaterialUniqueName(matUniqueName);
+            PropertiesPanel.Children.Add(properties_Material);
+            properties_Material.GetMaterialProperties();
+        }
+
         public string GetBrowserSelectedFilePath()
         {
             return fileBrowser.GetSelectedFilePath();
@@ -203,6 +214,11 @@ namespace GEditor
         public string GetWorkDirectory()
         {
             return fileBrowser.GetWorkDirectory();
+        }
+
+        public void RefreshBrowser()
+        {
+            fileBrowser.RefreshListBox();
         }
 
     }

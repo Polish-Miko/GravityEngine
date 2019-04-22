@@ -18,15 +18,6 @@ public:
 	// Name displayed in the engine.
 	std::wstring Name;
 
-	// Textures used in this material.
-	std::vector<GRiTexture*> pTextures;
-
-	// Material constants.
-	std::vector<float> ScalarParams;
-	std::vector<GGiFloat4> VectorParams;
-
-	GGiFloat4x4* MatTransform;// = MathHelper::Identity4x4();
-
 	// Dirty flag indicating the material has changed and we need to update the constant buffer.
 	// Because we have a material constant buffer for each FrameResource, we have to apply the
 	// update to each FrameResource.  Thus, when we modify a material we should set 
@@ -35,5 +26,51 @@ public:
 
 	// Index into constant buffer corresponding to this material.
 	int MatIndex = -1;
+
+	void SetScale(float x, float y);
+
+	std::vector<float> GetScale();
+
+	float GetScaleX();
+
+	float GetScaleY();
+
+	void MarkDirty();
+
+	size_t GetTextureNum();
+
+	size_t GetScalarNum();
+
+	size_t GetVectorNum();
+
+	int GetTextureIndex(int index);
+
+	float GetScalar(int index);
+
+	GGiFloat4 GetVector(int index);
+
+	void AddTexture(GRiTexture* tex);
+
+	void AddScalar(float scalar);
+
+	void AddVector(GGiFloat4 vector);
+
+	std::wstring GetTextureUniqueName(int index);
+
+	std::wstring* GetTextureUniqueNamePtr(int index);
+
+	void SetTextureByIndex(int index, GRiTexture* tex);
+
+protected:
+
+	float MaterialScale[2] = { 1.0f,1.0f };
+
+	// Textures used in this material.
+	std::vector<GRiTexture*> pTextures;
+
+	// Material constants.
+	std::vector<float> ScalarParams;
+	std::vector<GGiFloat4> VectorParams;
+
 };
 

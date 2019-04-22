@@ -406,111 +406,111 @@ void GCore::LoadMaterials()
 	defaultMat->UniqueName = L"default";
 	defaultMat->Name = L"default";
 	defaultMat->MatIndex = mMaterialIndex++;
-	defaultMat->pTextures.push_back(mTextures[L"Content\\Textures\\GE_Default_Albedo.png"].get());
-	defaultMat->pTextures.push_back(mTextures[L"Content\\Textures\\GE_Default_Normal.png"].get());
-	defaultMat->pTextures.push_back(mTextures[L"Content\\Textures\\GE_Default_Orm.png"].get());
+	defaultMat->AddTexture(mTextures[L"Content\\Textures\\GE_Default_Albedo.png"].get());
+	defaultMat->AddTexture(mTextures[L"Content\\Textures\\GE_Default_Normal.png"].get());
+	defaultMat->AddTexture(mTextures[L"Content\\Textures\\GE_Default_Orm.png"].get());
 	mMaterials[L"default"] = std::move(defaultMat);
 
 	auto debug_albedo = std::make_unique<GRiMaterial>(*pRendererFactory->CreateMaterial());
 	debug_albedo->UniqueName = L"debug_albedo";
 	debug_albedo->Name = L"debug_albedo";
 	debug_albedo->MatIndex = mMaterialIndex++;
-	debug_albedo->ScalarParams.push_back(0.01f);//Albedo
-	debug_albedo->ScalarParams.push_back(0.01f);//RGB
+	debug_albedo->AddScalar(0.01f);//Albedo
+	debug_albedo->AddScalar(0.01f);//RGB
 	mMaterials[L"debug_albedo"] = std::move(debug_albedo);
 
 	auto debug_normal = std::make_unique<GRiMaterial>(*pRendererFactory->CreateMaterial());
 	debug_normal->UniqueName = L"debug_normal";
 	debug_normal->Name = L"debug_normal";
 	debug_normal->MatIndex = mMaterialIndex++;
-	debug_normal->ScalarParams.push_back(1.01f);//Normal
-	debug_normal->ScalarParams.push_back(0.01f);//RGB
+	debug_normal->AddScalar(1.01f);//Normal
+	debug_normal->AddScalar(0.01f);//RGB
 	mMaterials[L"debug_normal"] = std::move(debug_normal);
 
 	auto debug_worldpos = std::make_unique<GRiMaterial>(*pRendererFactory->CreateMaterial());
 	debug_worldpos->UniqueName = L"debug_worldpos";
 	debug_worldpos->Name = L"debug_worldpos";
 	debug_worldpos->MatIndex = mMaterialIndex++;
-	debug_worldpos->ScalarParams.push_back(2.01f);//WorldPos
-	debug_worldpos->ScalarParams.push_back(0.01f);//RGB
+	debug_worldpos->AddScalar(2.01f);//WorldPos
+	debug_worldpos->AddScalar(0.01f);//RGB
 	mMaterials[L"debug_worldpos"] = std::move(debug_worldpos);
 
 	auto debug_roughness = std::make_unique<GRiMaterial>(*pRendererFactory->CreateMaterial());
 	debug_roughness->UniqueName = L"debug_roughness";
 	debug_roughness->Name = L"debug_roughness";
 	debug_roughness->MatIndex = mMaterialIndex++;
-	debug_roughness->ScalarParams.push_back(3.01f);//OcclusionRoughnessMetallic
-	debug_roughness->ScalarParams.push_back(2.01f);//Green
+	debug_roughness->AddScalar(3.01f);//OcclusionRoughnessMetallic
+	debug_roughness->AddScalar(2.01f);//Green
 	mMaterials[L"debug_roughness"] = std::move(debug_roughness);
 
 	auto debug_metallic = std::make_unique<GRiMaterial>(*pRendererFactory->CreateMaterial());
 	debug_metallic->UniqueName = L"debug_metallic";
 	debug_metallic->Name = L"debug_metallic";
 	debug_metallic->MatIndex = mMaterialIndex++;
-	debug_metallic->ScalarParams.push_back(3.01f);//OcclusionRoughnessMetallic
-	debug_metallic->ScalarParams.push_back(3.01f);//Blue
+	debug_metallic->AddScalar(3.01f);//OcclusionRoughnessMetallic
+	debug_metallic->AddScalar(3.01f);//Blue
 	mMaterials[L"debug_metallic"] = std::move(debug_metallic);
 
 	auto sphere_1 = std::make_unique<GRiMaterial>(*pRendererFactory->CreateMaterial());
 	sphere_1->UniqueName = L"sphere_1";
 	sphere_1->Name = L"sphere_1";
 	sphere_1->MatIndex = mMaterialIndex++;
-	sphere_1->pTextures.push_back(mTextures[L"Content\\Textures\\sphere_1_BaseColor.png"].get());
-	sphere_1->pTextures.push_back(mTextures[L"Content\\Textures\\sphere_1_Normal.png"].get());
-	sphere_1->pTextures.push_back(mTextures[L"Content\\Textures\\sphere_1_OcclusionRoughnessMetallic.png"].get());
+	sphere_1->AddTexture(mTextures[L"Content\\Textures\\sphere_1_BaseColor.png"].get());
+	sphere_1->AddTexture(mTextures[L"Content\\Textures\\sphere_1_Normal.png"].get());
+	sphere_1->AddTexture(mTextures[L"Content\\Textures\\sphere_1_OcclusionRoughnessMetallic.png"].get());
 	mMaterials[L"sphere_1"] = std::move(sphere_1);
 
 	auto sphere_2 = std::make_unique<GRiMaterial>(*pRendererFactory->CreateMaterial());
 	sphere_2->UniqueName = L"sphere_2";
 	sphere_2->Name = L"sphere_2";
 	sphere_2->MatIndex = mMaterialIndex++;
-	sphere_2->pTextures.push_back(mTextures[L"Content\\Textures\\sphere_2_BaseColor.png"].get());
-	sphere_2->pTextures.push_back(mTextures[L"Content\\Textures\\sphere_2_Normal.png"].get());
-	sphere_2->pTextures.push_back(mTextures[L"Content\\Textures\\sphere_2_OcclusionRoughnessMetallic.png"].get());
+	sphere_2->AddTexture(mTextures[L"Content\\Textures\\sphere_2_BaseColor.png"].get());
+	sphere_2->AddTexture(mTextures[L"Content\\Textures\\sphere_2_Normal.png"].get());
+	sphere_2->AddTexture(mTextures[L"Content\\Textures\\sphere_2_OcclusionRoughnessMetallic.png"].get());
 	mMaterials[L"sphere_2"] = std::move(sphere_2);
 
 	auto sky = std::make_unique<GRiMaterial>(*pRendererFactory->CreateMaterial());
 	sky->UniqueName = L"sky";
 	sky->Name = L"sky";
 	sky->MatIndex = mMaterialIndex++;
-	sky->pTextures.push_back(mTextures[L"Content\\Textures\\sphere_1_BaseColor.png"].get());//Diffuse
-	sky->pTextures.push_back(mTextures[L"Content\\Textures\\sphere_1_BaseColor.png"].get());//Normal
+	sky->AddTexture(mTextures[L"Content\\Textures\\sphere_1_BaseColor.png"].get());//Diffuse
+	sky->AddTexture(mTextures[L"Content\\Textures\\sphere_1_BaseColor.png"].get());//Normal
 	mMaterials[L"sky"] = std::move(sky);
 
 	auto greasyPanMat = std::make_unique<GRiMaterial>(*pRendererFactory->CreateMaterial());
 	greasyPanMat->UniqueName = L"GreasyPan";
 	greasyPanMat->Name = L"GreasyPan";
 	greasyPanMat->MatIndex = mMaterialIndex++;
-	greasyPanMat->pTextures.push_back(mTextures[L"Content\\Textures\\Greasy_Pan_Albedo.png"].get());
-	greasyPanMat->pTextures.push_back(mTextures[L"Content\\Textures\\Greasy_Pan_Normal.png"].get());
-	greasyPanMat->pTextures.push_back(mTextures[L"Content\\Textures\\Greasy_Pan_Orm.png"].get());
+	greasyPanMat->AddTexture(mTextures[L"Content\\Textures\\Greasy_Pan_Albedo.png"].get());
+	greasyPanMat->AddTexture(mTextures[L"Content\\Textures\\Greasy_Pan_Normal.png"].get());
+	greasyPanMat->AddTexture(mTextures[L"Content\\Textures\\Greasy_Pan_Orm.png"].get());
 	mMaterials[L"GreasyPan"] = std::move(greasyPanMat);
 
 	auto rustedIronMat = std::make_unique<GRiMaterial>(*pRendererFactory->CreateMaterial());
 	rustedIronMat->UniqueName = L"RustedIron";
 	rustedIronMat->Name = L"RustedIron";
 	rustedIronMat->MatIndex = mMaterialIndex++;
-	rustedIronMat->pTextures.push_back(mTextures[L"Content\\Textures\\Rusted_Iron_Albedo.png"].get());
-	rustedIronMat->pTextures.push_back(mTextures[L"Content\\Textures\\Rusted_Iron_Normal.png"].get());
-	rustedIronMat->pTextures.push_back(mTextures[L"Content\\Textures\\Rusted_Iron_Orm.png"].get());
+	rustedIronMat->AddTexture(mTextures[L"Content\\Textures\\Rusted_Iron_Albedo.png"].get());
+	rustedIronMat->AddTexture(mTextures[L"Content\\Textures\\Rusted_Iron_Normal.png"].get());
+	rustedIronMat->AddTexture(mTextures[L"Content\\Textures\\Rusted_Iron_Orm.png"].get());
 	mMaterials[L"RustedIron"] = std::move(rustedIronMat);
 
 	auto cerberusMat = std::make_unique<GRiMaterial>(*pRendererFactory->CreateMaterial());
 	cerberusMat->UniqueName = L"Cerberus";
 	cerberusMat->Name = L"Cerberus";
 	cerberusMat->MatIndex = mMaterialIndex++;
-	cerberusMat->pTextures.push_back(mTextures[L"Content\\Textures\\Cerberus_Albedo.png"].get());
-	cerberusMat->pTextures.push_back(mTextures[L"Content\\Textures\\Cerberus_Normal.png"].get());
-	cerberusMat->pTextures.push_back(mTextures[L"Content\\Textures\\Cerberus_Orm.png"].get());
+	cerberusMat->AddTexture(mTextures[L"Content\\Textures\\Cerberus_Albedo.png"].get());
+	cerberusMat->AddTexture(mTextures[L"Content\\Textures\\Cerberus_Normal.png"].get());
+	cerberusMat->AddTexture(mTextures[L"Content\\Textures\\Cerberus_Orm.png"].get());
 	mMaterials[L"Cerberus"] = std::move(cerberusMat);
 
 	auto fireplaceMat = std::make_unique<GRiMaterial>(*pRendererFactory->CreateMaterial());
 	fireplaceMat->UniqueName = L"Fireplace";
 	fireplaceMat->Name = L"Fireplace";
 	fireplaceMat->MatIndex = mMaterialIndex++;
-	fireplaceMat->pTextures.push_back(mTextures[L"Content\\Textures\\Fireplace_Albedo.png"].get());
-	fireplaceMat->pTextures.push_back(mTextures[L"Content\\Textures\\Fireplace_Normal.png"].get());
-	fireplaceMat->pTextures.push_back(mTextures[L"Content\\Textures\\Fireplace_Orm.png"].get());
+	fireplaceMat->AddTexture(mTextures[L"Content\\Textures\\Fireplace_Albedo.png"].get());
+	fireplaceMat->AddTexture(mTextures[L"Content\\Textures\\Fireplace_Normal.png"].get());
+	fireplaceMat->AddTexture(mTextures[L"Content\\Textures\\Fireplace_Orm.png"].get());
 	mMaterials[L"Fireplace"] = std::move(fireplaceMat);
 
 	// Load materials from file.
@@ -530,23 +530,24 @@ void GCore::LoadMaterials()
 
 			newMat->UniqueName = file;
 			newMat->Name = GGiEngineUtil::GetFileName(file);
+			newMat->SetScale(mMaterialFiles[file]->MaterialScale[0], mMaterialFiles[file]->MaterialScale[1]);
 			newMat->MatIndex = mMaterialIndex++;
 
 			for (auto txtName : mMaterialFiles[file]->TextureNames)
 			{
 				if (mTextures.find(txtName) != mTextures.end())
 				{
-					newMat->pTextures.push_back(mTextures[txtName].get());
+					newMat->AddTexture(mTextures[txtName].get());
 				}
 				else
 				{
-					newMat->pTextures.push_back(mTextures[L"Content\\Textures\\GE_Default_Albedo.png"].get());
+					newMat->AddTexture(mTextures[L"Content\\Textures\\GE_Default_Albedo.png"].get());
 				}
 			}
 
 			for (auto scalar : mMaterialFiles[file]->ScalarParams)
 			{
-				newMat->ScalarParams.push_back(scalar);
+				newMat->AddScalar(scalar);
 			}
 
 			std::list<float>::iterator iter = mMaterialFiles[file]->VectorParams.begin();
@@ -565,7 +566,7 @@ void GCore::LoadMaterials()
 				vec->SetElement(1, y);
 				vec->SetElement(2, z);
 				vec->SetElement(3, w);
-				newMat->VectorParams.push_back(*vec);
+				newMat->AddVector(*vec);
 			}
 
 			mMaterialFiles[file]->LoadMaterialData();
@@ -1015,13 +1016,103 @@ void GCore::CreateMaterial(wchar_t* cUniqueName)
 	newMat->UniqueName = UniqueName;
 	newMat->Name = GGiEngineUtil::GetFileName(UniqueName);
 	newMat->MatIndex = mMaterialIndex++;
-	newMat->pTextures.push_back(mTextures[L"Content\\Textures\\GE_DefaultTexture_Albedo.png"].get());
-	newMat->pTextures.push_back(mTextures[L"Content\\Textures\\GE_DefaultTexture_Normal.png"].get());
-	newMat->pTextures.push_back(mTextures[L"Content\\Textures\\GE_DefaultTexture_Orm.png"].get());
+	newMat->AddTexture(mTextures[L"Content\\Textures\\GE_DefaultTexture_Albedo.png"].get());
+	newMat->AddTexture(mTextures[L"Content\\Textures\\GE_DefaultTexture_Normal.png"].get());
+	newMat->AddTexture(mTextures[L"Content\\Textures\\GE_DefaultTexture_Orm.png"].get());
 	mMaterials[UniqueName] = std::move(newMat);
 	auto matFile = std::make_unique<GMaterial>(mMaterials[UniqueName].get());
 	matFile->SaveMaterial(WorkDirectory);
 	mMaterialFiles[UniqueName] = std::move(matFile);
+	mRenderer->SyncMaterials(mMaterials);
+}
+
+void GCore::GetMaterialScale(wchar_t* matUniqueName, float* scale)
+{
+	std::wstring UniqueName(matUniqueName);
+	if (mMaterials.find(UniqueName) == mMaterials.end())
+	{
+		scale[0] = -1.0f;
+		scale[1] = -1.0f;
+		return;
+	}
+	scale[0] = mMaterials[UniqueName]->GetScaleX();
+	scale[1] = mMaterials[UniqueName]->GetScaleY();
+}
+
+void GCore::SetMaterialScale(wchar_t* matUniqueName, float* scale)
+{
+	std::wstring UniqueName(matUniqueName);
+	if (mMaterials.find(UniqueName) == mMaterials.end())
+	{
+		scale[0] = -1.0f;
+		scale[1] = -1.0f;
+		return;
+	}
+	mMaterials[UniqueName]->SetScale(scale[0], scale[1]);
+}
+
+const wchar_t* GCore::GetMaterialTextureUniqueName(wchar_t* matUniqueName, int index)
+{
+	std::wstring UniqueName(matUniqueName);
+	if (mMaterials.find(UniqueName) == mMaterials.end())
+	{
+		return L"none";
+	}
+	std::wstring* txtName = mMaterials[UniqueName]->GetTextureUniqueNamePtr(index);
+	return txtName->c_str();
+}
+
+bool GCore::SetMaterialTexture(wchar_t* matUniqueName, int index, wchar_t* texUniqueName)
+{
+	std::wstring materialUniqueName(matUniqueName);
+	std::wstring textureUniqueName(texUniqueName);
+	if (mMaterials.find(materialUniqueName) == mMaterials.end())
+	{
+		return false;
+	}
+	if (mTextures.find(textureUniqueName) == mTextures.end())
+	{
+		return false;
+	}
+	mMaterials[materialUniqueName]->SetTextureByIndex(index, mTextures[texUniqueName].get());
+	return true;
+}
+
+void GCore::SetMaterialTextureToDefaultValue(wchar_t* matUniqueName, int index)
+{
+	std::wstring UniqueName(matUniqueName);
+	if (mMaterials.find(UniqueName) == mMaterials.end())
+	{
+		return;
+	}
+	std::wstring texName;
+	if (index == 0)
+		texName = L"Content\\Textures\\GE_DefaultTexture_Albedo.png";
+	else if (index == 1)
+		texName = L"Content\\Textures\\GE_DefaultTexture_Normal.png";
+	else if (index == 2)
+		texName = L"Content\\Textures\\GE_DefaultTexture_Orm.png";
+	else
+		ThrowGGiException("Texture index overflow.");
+	mMaterials[UniqueName]->SetTextureByIndex(index, mTextures[texName].get());
+}
+
+void GCore::RenameMaterial(wchar_t* oldUniqueName, wchar_t* newUniqueName)
+{
+	std::wstring oldUniqueNameStr(oldUniqueName);
+	std::wstring newUniqueNameStr(newUniqueName);
+	if (mMaterials.find(oldUniqueNameStr) == mMaterials.end())
+	{
+		return;
+	}
+	if (mMaterials.find(newUniqueNameStr) != mMaterials.end())
+	{
+		return;
+	}
+	std::unique_ptr<GRiMaterial> toMove = std::move(mMaterials[oldUniqueNameStr]);
+	toMove->UniqueName = newUniqueNameStr;
+	toMove->Name = GGiEngineUtil::GetFileName(newUniqueNameStr);
+	mMaterials[newUniqueNameStr] = std::move(toMove);
 }
 
 #pragma endregion

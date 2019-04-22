@@ -73,13 +73,39 @@ extern "C"
 
 extern "C"
 {
-	__declspec(dllexport) void __stdcall SaveProject();
+	__declspec(dllexport) void __stdcall CreateMaterial(wchar_t* cUniqueName);
 }
 
 extern "C"
 {
-	__declspec(dllexport) void __stdcall CreateMaterial(wchar_t* cUniqueName);
+	__declspec(dllexport) void __stdcall GetMaterialScale(wchar_t* matUniqueName, float* scale);
 }
+
+extern "C"
+{
+	__declspec(dllexport) void __stdcall SetMaterialScale(wchar_t* matUniqueName, float* scale);
+}
+
+extern "C"
+{
+	__declspec(dllexport) const wchar_t* __stdcall GetMaterialTextureUniqueName(wchar_t* matUniqueName, int index);
+}
+
+extern "C"
+{
+	__declspec(dllexport) bool __stdcall SetMaterialTexture(wchar_t* matUniqueName, int index, wchar_t* texUniqueName);
+}
+
+extern "C"
+{
+	__declspec(dllexport) void __stdcall SetMaterialTextureToDefaultValue(wchar_t* matUniqueName, int index);
+}
+
+extern "C"
+{
+	__declspec(dllexport) void __stdcall RenameMaterial(wchar_t* oldUniqueName, wchar_t* newUniqueName);
+}
+
 
 /*
 class EGCore

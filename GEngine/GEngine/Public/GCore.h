@@ -53,6 +53,18 @@ public:
 
 	void CreateMaterial(wchar_t* cUniqueName);
 
+	void GetMaterialScale(wchar_t* matUniqueName, float* scale);
+
+	void SetMaterialScale(wchar_t* matUniqueName, float* scale);
+
+	const wchar_t*  GetMaterialTextureUniqueName(wchar_t* matUniqueName, int index);
+
+	bool SetMaterialTexture(wchar_t* matUniqueName, int index, wchar_t* texUniqueName);
+
+	void SetMaterialTextureToDefaultValue(wchar_t* matUniqueName, int index);
+
+	void RenameMaterial(wchar_t* oldUniqueName, wchar_t* newUniqueName);
+
 #pragma endregion
 
 private:

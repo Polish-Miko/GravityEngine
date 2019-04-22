@@ -56,5 +56,23 @@ namespace GEditor
         [DllImport(@"Build\GEngineDll.dll")]
         public static extern void CreateMaterial([MarshalAs(UnmanagedType.LPWStr)] string UniqueName);
 
+        [DllImport(@"Build\GEngineDll.dll")]
+        public static extern void GetMaterialScale([MarshalAs(UnmanagedType.LPWStr)] string matUniqueName, [In, Out] float[] scale);
+
+        [DllImport(@"Build\GEngineDll.dll")]
+        public static extern void SetMaterialScale([MarshalAs(UnmanagedType.LPWStr)] string matUniqueName, [In, Out] float[] scale);
+
+        [DllImport(@"Build\GEngineDll.dll")]
+        public static extern IntPtr GetMaterialTextureUniqueName([MarshalAs(UnmanagedType.LPWStr)] string matUniqueName, int index);
+
+        [DllImport(@"Build\GEngineDll.dll")]
+        public static extern bool SetMaterialTexture([MarshalAs(UnmanagedType.LPWStr)] string matUniqueName, int index, [MarshalAs(UnmanagedType.LPWStr)] string texUniqueName);
+
+        [DllImport(@"Build\GEngineDll.dll")]
+        public static extern void SetMaterialTextureToDefaultValue([MarshalAs(UnmanagedType.LPWStr)] string matUniqueName, int index);
+
+        [DllImport(@"Build\GEngineDll.dll")]
+        public static extern void RenameMaterial([MarshalAs(UnmanagedType.LPWStr)] string oldUniqueName, [MarshalAs(UnmanagedType.LPWStr)] string newUniqueName);
+
     }
 }
