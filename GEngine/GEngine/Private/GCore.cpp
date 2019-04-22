@@ -403,13 +403,13 @@ void GCore::LoadMaterials()
 	mMaterialIndex = 0;
 
 	auto defaultMat = std::make_unique<GRiMaterial>(*pRendererFactory->CreateMaterial());
-	defaultMat->UniqueName = L"default";
-	defaultMat->Name = L"default";
+	defaultMat->UniqueName = L"Default";
+	defaultMat->Name = L"Default";
 	defaultMat->MatIndex = mMaterialIndex++;
 	defaultMat->AddTexture(mTextures[L"Content\\Textures\\GE_Default_Albedo.png"].get());
 	defaultMat->AddTexture(mTextures[L"Content\\Textures\\GE_Default_Normal.png"].get());
 	defaultMat->AddTexture(mTextures[L"Content\\Textures\\GE_Default_Orm.png"].get());
-	mMaterials[L"default"] = std::move(defaultMat);
+	mMaterials[L"Default"] = std::move(defaultMat);
 
 	auto debug_albedo = std::make_unique<GRiMaterial>(*pRendererFactory->CreateMaterial());
 	debug_albedo->UniqueName = L"debug_albedo";
@@ -650,7 +650,7 @@ void GCore::LoadSceneObjects()
 	fullScreenQuadSO->UniqueName = L"FullScreenQuad";
 	fullScreenQuadSO->TexTransform = pRendererFactory->CreateFloat4x4();
 	fullScreenQuadSO->ObjIndex = index;
-	fullScreenQuadSO->Mat = mMaterials[L"default"].get();
+	fullScreenQuadSO->Mat = mMaterials[L"Default"].get();
 	fullScreenQuadSO->Mesh = mMeshes[L"Quad"].get();
 	mSceneObjectLayer[(int)RenderLayer::ScreenQuad].push_back(fullScreenQuadSO.get());
 	mSceneObjects[fullScreenQuadSO->UniqueName] = std::move(fullScreenQuadSO);
@@ -746,7 +746,7 @@ void GCore::LoadSceneObjects()
 	sphereSO_1->UniqueName = L"Sphere";
 	sphereSO_1->TexTransform = pRendererFactory->CreateFloat4x4();
 	sphereSO_1->ObjIndex = index;
-	sphereSO_1->Mat = mMaterials[L"default"].get();
+	sphereSO_1->Mat = mMaterials[L"Default"].get();
 	sphereSO_1->Mesh = mMeshes[L"Sphere"].get();
 	mSceneObjectLayer[(int)RenderLayer::Deferred].push_back(sphereSO_1.get());
 	mSceneObjects[sphereSO_1->UniqueName] = std::move(sphereSO_1);
@@ -1113,6 +1113,58 @@ void GCore::RenameMaterial(wchar_t* oldUniqueName, wchar_t* newUniqueName)
 	toMove->UniqueName = newUniqueNameStr;
 	toMove->Name = GGiEngineUtil::GetFileName(newUniqueNameStr);
 	mMaterials[newUniqueNameStr] = std::move(toMove);
+}
+
+void GCore::SetSceneObjectMesh(wchar_t* sceneObjectName, wchar_t* meshUniqueName)
+{
+	std::wstring SceneObjectNameStr(sceneObjectName);
+	std::wstring MeshNameStr(meshUniqueName);
+	if (mSceneObjects.find(SceneObjectNameStr) == mSceneObjects.end())
+	{
+		return;
+	}
+	if (mMeshes.find(MeshNameStr) == mMeshes.end())
+	{
+		return;
+	}
+	mSceneObjects[SceneObjectNameStr]->Mesh = mMeshes[MeshNameStr].get();
+	mSceneObjects[SceneObjectNameStr]->MarkDirty();
+}
+
+void GCore::SetSceneObjectMaterial(wchar_t* sceneObjectName, wchar_t* matUniqueName)
+{
+	std::wstring SceneObjectNameStr(sceneObjectName);
+	std::wstring MatNameStr(matUniqueName);
+	if (mSceneObjects.find(SceneObjectNameStr) == mSceneObjects.end())
+	{
+		return;
+	}
+	if (mMaterials.find(MatNameStr) == mMaterials.end())
+	{
+		return;
+	}
+	mSceneObjects[SceneObjectNameStr]->Mat = mMaterials[MatNameStr].get();
+	mSceneObjects[SceneObjectNameStr]->MarkDirty();
+}
+
+const wchar_t* GCore::GetSceneObjectMeshName(wchar_t* sceneObjectName)
+{
+	std::wstring SceneObjectNameStr(sceneObjectName);
+	if (mSceneObjects.find(SceneObjectNameStr) == mSceneObjects.end())
+	{
+		return L"None";
+	}
+	return mSceneObjects[SceneObjectNameStr]->Mesh->UniqueName.c_str();
+}
+
+const wchar_t* GCore::GetSceneObjectMaterialName(wchar_t* sceneObjectName)
+{
+	std::wstring SceneObjectNameStr(sceneObjectName);
+	if (mSceneObjects.find(SceneObjectNameStr) == mSceneObjects.end())
+	{
+		return L"None";
+	}
+	return mSceneObjects[SceneObjectNameStr]->Mat->UniqueName.c_str();
 }
 
 #pragma endregion

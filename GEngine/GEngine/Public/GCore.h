@@ -57,13 +57,21 @@ public:
 
 	void SetMaterialScale(wchar_t* matUniqueName, float* scale);
 
-	const wchar_t*  GetMaterialTextureUniqueName(wchar_t* matUniqueName, int index);
+	const wchar_t* GetMaterialTextureUniqueName(wchar_t* matUniqueName, int index);
 
 	bool SetMaterialTexture(wchar_t* matUniqueName, int index, wchar_t* texUniqueName);
 
 	void SetMaterialTextureToDefaultValue(wchar_t* matUniqueName, int index);
 
 	void RenameMaterial(wchar_t* oldUniqueName, wchar_t* newUniqueName);
+
+	void SetSceneObjectMesh(wchar_t* sceneObjectName, wchar_t* meshUniqueName);
+
+	void SetSceneObjectMaterial(wchar_t* sceneObjectName, wchar_t* matUniqueName);
+
+	const wchar_t* GetSceneObjectMeshName(wchar_t* sceneObjectName);
+
+	const wchar_t* GetSceneObjectMaterialName(wchar_t* sceneObjectName);
 
 #pragma endregion
 

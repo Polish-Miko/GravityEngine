@@ -2,12 +2,12 @@
 <!DOCTYPE boost_serialization>
 <boost_serialization signature="serialization::archive" version="17">
 <Material class_id="0" tracking_level="0" version="0">
-	<UniqueName>Content\Material\test.gmat</UniqueName>
-	<Name>test</Name>
+	<UniqueName>Content\Material\NewMaterial.gmat</UniqueName>
+	<Name>NewMaterial</Name>
 	<MaterialScale>
 		<count>2</count>
-		<item>1.500000000e+00</item>
-		<item>3.000000000e+00</item>
+		<item>1.000000000e+00</item>
+		<item>1.000000000e+00</item>
 	</MaterialScale>
 	<TextureNames class_id="1" tracking_level="0" version="0">
 		<count>3</count>

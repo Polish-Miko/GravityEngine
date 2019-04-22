@@ -2,17 +2,17 @@
 <!DOCTYPE boost_serialization>
 <boost_serialization signature="serialization::archive" version="17">
 <Material class_id="0" tracking_level="0" version="0">
-	<UniqueName>Content\Material\test123.gmat</UniqueName>
-	<Name>test123</Name>
+	<UniqueName>Content\Material\NewMaterial.gmat</UniqueName>
+	<Name>NewMaterial</Name>
 	<MaterialScale>
 		<count>2</count>
-		<item>3.000000000e+00</item>
-		<item>3.000000000e+00</item>
+		<item>1.000000000e+00</item>
+		<item>1.000000000e+00</item>
 	</MaterialScale>
 	<TextureNames class_id="1" tracking_level="0" version="0">
 		<count>3</count>
 		<item_version>0</item_version>
-		<item>Content\Textures\bricks.dds</item>
+		<item>Content\Textures\GE_DefaultTexture_Albedo.png</item>
 		<item>Content\Textures\GE_DefaultTexture_Normal.png</item>
 		<item>Content\Textures\GE_DefaultTexture_Orm.png</item>
 	</TextureNames>

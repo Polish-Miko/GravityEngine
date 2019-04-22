@@ -106,6 +106,26 @@ extern "C"
 	__declspec(dllexport) void __stdcall RenameMaterial(wchar_t* oldUniqueName, wchar_t* newUniqueName);
 }
 
+extern "C"
+{
+	__declspec(dllexport) void __stdcall SetSceneObjectMesh(wchar_t* sceneObjectName, wchar_t* meshUniqueName);
+}
+
+extern "C"
+{
+	__declspec(dllexport) void __stdcall SetSceneObjectMaterial(wchar_t* sceneObjectName, wchar_t* matUniqueName);
+}
+
+extern "C"
+{
+	__declspec(dllexport) const wchar_t* __stdcall GetSceneObjectMeshName(wchar_t* sceneObjectName);
+}
+
+extern "C"
+{
+	__declspec(dllexport) const wchar_t* __stdcall GetSceneObjectMaterialName(wchar_t* sceneObjectName);
+}
+
 
 /*
 class EGCore

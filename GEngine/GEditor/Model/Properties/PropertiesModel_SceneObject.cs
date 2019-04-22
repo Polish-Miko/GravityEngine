@@ -20,6 +20,8 @@ namespace GEditor.Model.Properties
         private string _scaleX;
         private string _scaleY;
         private string _scaleZ;
+        private string _meshUniqueName;
+        private string _materialUniqueName;
 
         private Properties_SceneObject PropertiesPanel;
 
@@ -32,7 +34,7 @@ namespace GEditor.Model.Properties
                 if (float.TryParse(value, out f))
                 {
                     _locX = value;
-                    OnPropertyChanged("transform");
+                    OnPropertyChanged("Transform");
                 }
             }
         }
@@ -46,7 +48,7 @@ namespace GEditor.Model.Properties
                 if (float.TryParse(value, out f))
                 {
                     _locY = value;
-                    OnPropertyChanged("transform");
+                    OnPropertyChanged("Transform");
                 }
             }
         }
@@ -60,7 +62,7 @@ namespace GEditor.Model.Properties
                 if (float.TryParse(value, out f))
                 {
                     _locZ = value;
-                    OnPropertyChanged("transform");
+                    OnPropertyChanged("Transform");
                 }
             }
         }
@@ -74,7 +76,7 @@ namespace GEditor.Model.Properties
                 if (float.TryParse(value, out f))
                 {
                     _rotX = value;
-                    OnPropertyChanged("transform");
+                    OnPropertyChanged("Transform");
                 }
             }
         }
@@ -88,7 +90,7 @@ namespace GEditor.Model.Properties
                 if (float.TryParse(value, out f))
                 {
                     _rotY = value;
-                    OnPropertyChanged("transform");
+                    OnPropertyChanged("Transform");
                 }
             }
         }
@@ -102,7 +104,7 @@ namespace GEditor.Model.Properties
                 if (float.TryParse(value, out f))
                 {
                     _rotZ = value;
-                    OnPropertyChanged("transform");
+                    OnPropertyChanged("Transform");
                 }
             }
         }
@@ -116,7 +118,7 @@ namespace GEditor.Model.Properties
                 if (float.TryParse(value, out f))
                 {
                     _scaleX = value;
-                    OnPropertyChanged("transform");
+                    OnPropertyChanged("Transform");
                 }
             }
         }
@@ -130,7 +132,7 @@ namespace GEditor.Model.Properties
                 if (float.TryParse(value, out f))
                 {
                     _scaleY = value;
-                    OnPropertyChanged("transform");
+                    OnPropertyChanged("Transform");
                 }
             }
         }
@@ -144,21 +146,70 @@ namespace GEditor.Model.Properties
                 if (float.TryParse(value, out f))
                 {
                     _scaleZ = value;
-                    OnPropertyChanged("transform");
+                    OnPropertyChanged("Transform");
                 }
             }
         }
 
-        public void SetProperties(object sender, PropertyChangedEventArgs e)
+        public string MeshUniqueName
         {
-            PropertiesPanel.SetSceneObjectProperties();
+            get => _meshUniqueName;
+            set
+            {
+                _meshUniqueName = value;
+                OnPropertyChanged("Mesh");
+            }
+        }
+
+        public string MaterialUniqueName
+        {
+            get => _materialUniqueName;
+            set
+            {
+                _materialUniqueName = value;
+                OnPropertyChanged("Material");
+            }
+        }
+
+        public void InitMeshName(string meshName)
+        {
+            _meshUniqueName = meshName;
+            OnPropertyChanged();
+        }
+
+        public void InitMaterialName(string matName)
+        {
+            _materialUniqueName = matName;
+            OnPropertyChanged();
+        }
+
+        public void SetTransform(object sender, PropertyChangedEventArgs e)
+        {
+            PropertiesPanel.SetSceneObjectTransform();
+        }
+
+        public void SetMesh(object sender, PropertyChangedEventArgs e)
+        {
+            PropertiesPanel.SetSceneObjectMesh();
+            OnPropertyChanged();
+        }
+
+        public void SetMaterial(object sender, PropertyChangedEventArgs e)
+        {
+            PropertiesPanel.SetSceneObjectMaterial();
+            OnPropertyChanged();
         }
 
         public event PropertyChangedEventHandler PropertyChanged;
         protected void OnPropertyChanged(string propertyName = "")
         {
             PropertyChangedEventHandler handler = PropertyChanged;
-            handler += SetProperties;
+            if (propertyName == "Transform")
+                handler += SetTransform;
+            else if (propertyName == "Mesh")
+                handler += SetMesh;
+            else if (propertyName == "Material")
+                handler += SetMaterial;
             if (handler != null)
             {
                 handler(this, new PropertyChangedEventArgs(propertyName));

@@ -107,6 +107,26 @@ void __stdcall RenameMaterial(wchar_t* oldUniqueName, wchar_t* newUniqueName)
 	GCore::GetCore().RenameMaterial(oldUniqueName, newUniqueName);
 }
 
+void __stdcall SetSceneObjectMesh(wchar_t* sceneObjectName, wchar_t* meshUniqueName)
+{
+	GCore::GetCore().SetSceneObjectMesh(sceneObjectName, meshUniqueName);
+}
+
+void __stdcall SetSceneObjectMaterial(wchar_t* sceneObjectName, wchar_t* matUniqueName)
+{
+	GCore::GetCore().SetSceneObjectMaterial(sceneObjectName, matUniqueName);
+}
+
+const wchar_t* __stdcall GetSceneObjectMeshName(wchar_t* sceneObjectName)
+{
+	return GCore::GetCore().GetSceneObjectMeshName(sceneObjectName);
+}
+
+const wchar_t* __stdcall GetSceneObjectMaterialName(wchar_t* sceneObjectName)
+{
+	return GCore::GetCore().GetSceneObjectMaterialName(sceneObjectName);
+}
+
 
 
 
