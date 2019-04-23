@@ -58,10 +58,6 @@
 			<bSrgb>1</bSrgb>
 		</item>
 		<item>
-			<UniqueFileName>Content\Textures\GE_Default_Orm.png</UniqueFileName>
-			<bSrgb>0</bSrgb>
-		</item>
-		<item>
 			<UniqueFileName>Content\Textures\WoodCrate01.dds</UniqueFileName>
 			<bSrgb>0</bSrgb>
 		</item>
@@ -114,39 +110,7 @@
 			<bSrgb>0</bSrgb>
 		</item>
 		<item>
-			<UniqueFileName>Content\Textures\GE_DefaultTexture_Albedo.png</UniqueFileName>
-			<bSrgb>0</bSrgb>
-		</item>
-		<item>
-			<UniqueFileName>Content\Textures\upBody_diff.dds</UniqueFileName>
-			<bSrgb>0</bSrgb>
-		</item>
-		<item>
-			<UniqueFileName>Content\Textures\ice.dds</UniqueFileName>
-			<bSrgb>0</bSrgb>
-		</item>
-		<item>
-			<UniqueFileName>Content\Textures\GE_DefaultTexture_Normal.png</UniqueFileName>
-			<bSrgb>0</bSrgb>
-		</item>
-		<item>
-			<UniqueFileName>Content\Textures\GE_DefaultTexture_Orm.png</UniqueFileName>
-			<bSrgb>0</bSrgb>
-		</item>
-		<item>
-			<UniqueFileName>Content\Textures\Cubemap_LancellottiChapel.dds</UniqueFileName>
-			<bSrgb>0</bSrgb>
-		</item>
-		<item>
-			<UniqueFileName>Content\Textures\water1.dds</UniqueFileName>
-			<bSrgb>0</bSrgb>
-		</item>
-		<item>
-			<UniqueFileName>Content\Textures\GE_Default_Albedo.png</UniqueFileName>
-			<bSrgb>1</bSrgb>
-		</item>
-		<item>
-			<UniqueFileName>Content\Textures\GE_Default_Normal.png</UniqueFileName>
+			<UniqueFileName>Resource\Textures\GE_DefaultTexture_Normal.png</UniqueFileName>
 			<bSrgb>0</bSrgb>
 		</item>
 		<item>
@@ -155,10 +119,6 @@
 		</item>
 		<item>
 			<UniqueFileName>Content\Textures\sphere_2_Normal.png</UniqueFileName>
-			<bSrgb>0</bSrgb>
-		</item>
-		<item>
-			<UniqueFileName>Content\Textures\IBL_BRDF_LUT.png</UniqueFileName>
 			<bSrgb>0</bSrgb>
 		</item>
 		<item>
@@ -174,6 +134,10 @@
 			<bSrgb>0</bSrgb>
 		</item>
 		<item>
+			<UniqueFileName>Resource\Textures\GE_DefaultTexture_Albedo.png</UniqueFileName>
+			<bSrgb>1</bSrgb>
+		</item>
+		<item>
 			<UniqueFileName>Content\Textures\Greasy_Pan_Orm.png</UniqueFileName>
 			<bSrgb>0</bSrgb>
 		</item>
@@ -183,6 +147,14 @@
 		</item>
 		<item>
 			<UniqueFileName>Content\Textures\head_norm.dds</UniqueFileName>
+			<bSrgb>0</bSrgb>
+		</item>
+		<item>
+			<UniqueFileName>Content\Textures\upBody_diff.dds</UniqueFileName>
+			<bSrgb>0</bSrgb>
+		</item>
+		<item>
+			<UniqueFileName>Content\Textures\ice.dds</UniqueFileName>
 			<bSrgb>0</bSrgb>
 		</item>
 		<item>
@@ -238,6 +210,10 @@
 			<bSrgb>1</bSrgb>
 		</item>
 		<item>
+			<UniqueFileName>Resource\Textures\IBL_BRDF_LUT.png</UniqueFileName>
+			<bSrgb>0</bSrgb>
+		</item>
+		<item>
 			<UniqueFileName>Content\Textures\stone.dds</UniqueFileName>
 			<bSrgb>0</bSrgb>
 		</item>
@@ -254,7 +230,19 @@
 			<bSrgb>0</bSrgb>
 		</item>
 		<item>
+			<UniqueFileName>Resource\Textures\GE_DefaultTexture_Orm.png</UniqueFileName>
+			<bSrgb>0</bSrgb>
+		</item>
+		<item>
 			<UniqueFileName>Content\Textures\tree35S.dds</UniqueFileName>
+			<bSrgb>0</bSrgb>
+		</item>
+		<item>
+			<UniqueFileName>Content\Textures\Cubemap_LancellottiChapel.dds</UniqueFileName>
+			<bSrgb>0</bSrgb>
+		</item>
+		<item>
+			<UniqueFileName>Content\Textures\water1.dds</UniqueFileName>
 			<bSrgb>0</bSrgb>
 		</item>
 		<item>
@@ -265,7 +253,115 @@
 			<UniqueFileName>Content\Textures\WoodCrate02.dds</UniqueFileName>
 			<bSrgb>0</bSrgb>
 		</item>
+		<item>
+			<UniqueFileName>Resource\Textures\GE_Default_Albedo.png</UniqueFileName>
+			<bSrgb>1</bSrgb>
+		</item>
+		<item>
+			<UniqueFileName>Resource\Textures\GE_Default_Normal.png</UniqueFileName>
+			<bSrgb>0</bSrgb>
+		</item>
+		<item>
+			<UniqueFileName>Resource\Textures\GE_Default_Orm.png</UniqueFileName>
+			<bSrgb>0</bSrgb>
+		</item>
 	</mTextureInfo>
+	<mSceneObjectInfo class_id="3" tracking_level="0" version="0">
+		<count>4</count>
+		<item_version>0</item_version>
+		<item class_id="4" tracking_level="0" version="0">
+			<UniqueName>Sphere</UniqueName>
+			<MaterialUniqueName>Default</MaterialUniqueName>
+			<MeshUniqueName>Sphere</MeshUniqueName>
+			<Location>
+				<count>3</count>
+				<item>0.000000000e+00</item>
+				<item>0.000000000e+00</item>
+				<item>0.000000000e+00</item>
+			</Location>
+			<Rotation>
+				<count>3</count>
+				<item>0.000000000e+00</item>
+				<item>0.000000000e+00</item>
+				<item>0.000000000e+00</item>
+			</Rotation>
+			<Scale>
+				<count>3</count>
+				<item>1.000000000e+00</item>
+				<item>1.000000000e+00</item>
+				<item>1.000000000e+00</item>
+			</Scale>
+		</item>
+		<item>
+			<UniqueName>Box</UniqueName>
+			<MaterialUniqueName>Default</MaterialUniqueName>
+			<MeshUniqueName>Box</MeshUniqueName>
+			<Location>
+				<count>3</count>
+				<item>5.000000000e+01</item>
+				<item>0.000000000e+00</item>
+				<item>0.000000000e+00</item>
+			</Location>
+			<Rotation>
+				<count>3</count>
+				<item>0.000000000e+00</item>
+				<item>0.000000000e+00</item>
+				<item>0.000000000e+00</item>
+			</Rotation>
+			<Scale>
+				<count>3</count>
+				<item>1.000000000e+00</item>
+				<item>1.000000000e+00</item>
+				<item>1.000000000e+00</item>
+			</Scale>
+		</item>
+		<item>
+			<UniqueName>Plane</UniqueName>
+			<MaterialUniqueName>Default</MaterialUniqueName>
+			<MeshUniqueName>Grid</MeshUniqueName>
+			<Location>
+				<count>3</count>
+				<item>0.000000000e+00</item>
+				<item>-2.000000000e+01</item>
+				<item>0.000000000e+00</item>
+			</Location>
+			<Rotation>
+				<count>3</count>
+				<item>0.000000000e+00</item>
+				<item>0.000000000e+00</item>
+				<item>0.000000000e+00</item>
+			</Rotation>
+			<Scale>
+				<count>3</count>
+				<item>1.500000000e+01</item>
+				<item>1.000000000e+00</item>
+				<item>1.500000000e+01</item>
+			</Scale>
+		</item>
+		<item>
+			<UniqueName>Cylinder</UniqueName>
+			<MaterialUniqueName>Default</MaterialUniqueName>
+			<MeshUniqueName>Cylinder</MeshUniqueName>
+			<Location>
+				<count>3</count>
+				<item>-4.000000000e+01</item>
+				<item>0.000000000e+00</item>
+				<item>0.000000000e+00</item>
+			</Location>
+			<Rotation>
+				<count>3</count>
+				<item>0.000000000e+00</item>
+				<item>0.000000000e+00</item>
+				<item>0.000000000e+00</item>
+			</Rotation>
+			<Scale>
+				<count>3</count>
+				<item>1.000000000e+00</item>
+				<item>1.000000000e+00</item>
+				<item>1.000000000e+00</item>
+			</Scale>
+		</item>
+	</mSceneObjectInfo>
 </Project>
 </boost_serialization>
 

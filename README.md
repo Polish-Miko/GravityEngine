@@ -35,6 +35,8 @@ to
 - [x] deferred pipeline
 - [x] physically based rendering
 - [ ] scene editing
+  - [x] scene serialization
+  - [ ] manipulation gizmo
 - [ ] shadow
 - [ ] AO
 - [ ] AA

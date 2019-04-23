@@ -1279,7 +1279,7 @@ void GDxRenderer::BuildDescriptorHeaps()
 		srvDesc.Texture2D.MostDetailedMip = 0;
 		srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
 
-		GDxTexture* tex = dynamic_cast<GDxTexture*>(pTextures[L"Content\\Textures\\IBL_BRDF_LUT.png"]);
+		GDxTexture* tex = dynamic_cast<GDxTexture*>(pTextures[L"Resource\\Textures\\IBL_BRDF_LUT.png"]);
 		if (tex == nullptr)
 			ThrowDxException(L"Dynamic cast from GRiTexture to GDxTexture failed.");
 

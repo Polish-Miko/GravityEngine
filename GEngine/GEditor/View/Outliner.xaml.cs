@@ -66,7 +66,7 @@ namespace GEditor.View
             List<OutlinerItemModel> root = new List<OutlinerItemModel>();
 
             OutlinerItemModel scene = new OutlinerItemModel();
-            scene.Name = "Test_Scene";
+            scene.Name = "Scene";
             scene.Icon = outlinerIcons["Scene"];
             scene.Children = GetAllSceneObjectsInScene();
             scene.ObjectType = "Scene";

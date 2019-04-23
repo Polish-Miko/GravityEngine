@@ -6,5 +6,6 @@
 /GEngine/ThirdParty
 /GEngine/packages
 !/GEngine/Debug/Project
+!/GEngine/Debug/Resource
 !/GEngine/Debug/WPF.Themes.dll
 !/GEngine/.vs/GravityEngine/v15/.suo

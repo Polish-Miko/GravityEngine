@@ -93,6 +93,8 @@ private:
 
 	std::wstring WorkDirectory;
 
+	std::wstring EngineDirectory;
+
 	std::wstring ProjectName;
 
 	GRiRenderer* mRenderer;

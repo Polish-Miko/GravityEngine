@@ -18,8 +18,31 @@ private:
 	{
 		ar & BOOST_SERIALIZATION_NVP(UniqueFileName);
 		ar & BOOST_SERIALIZATION_NVP(bSrgb);
-		//ar & UniqueFileName;
-		//ar & bSrgb;
+	}
+};
+
+struct GProjectSceneObjectInfo
+{
+	std::wstring UniqueName = L"none";
+	std::wstring MaterialUniqueName = L"none";
+	std::wstring MeshUniqueName = L"none";
+	float Location[3] = { 0.0f, 0.0f, 0.0f };
+	float Rotation[3] = { 0.0f, 0.0f, 0.0f };
+	float Scale[3] = { 1.0f, 1.0f, 1.0f };
+
+private:
+
+	friend class boost::serialization::access;
+
+	template<class Archive>
+	void serialize(Archive & ar, const unsigned int version)
+	{
+		ar & BOOST_SERIALIZATION_NVP(UniqueName);
+		ar & BOOST_SERIALIZATION_NVP(MaterialUniqueName);
+		ar & BOOST_SERIALIZATION_NVP(MeshUniqueName);
+		ar & BOOST_SERIALIZATION_NVP(Location);
+		ar & BOOST_SERIALIZATION_NVP(Rotation);
+		ar & BOOST_SERIALIZATION_NVP(Scale);
 	}
 };
 
@@ -32,8 +55,9 @@ public:
 	~GProject();
 
 	std::list<GProjectTextureInfo> mTextureInfo;
+	std::list<GProjectSceneObjectInfo> mSceneObjectInfo;
 
-	void SaveProject(std::wstring filename, std::unordered_map<std::wstring, std::unique_ptr<GRiTexture>>& pTextures)
+	void SaveProject(std::wstring filename, std::unordered_map<std::wstring, std::unique_ptr<GRiTexture>>& pTextures, std::vector<GRiSceneObject*>& pSceneObjects)
 	{
 		mTextureInfo.clear();
 
@@ -44,6 +68,29 @@ public:
 			tInfo.UniqueFileName = (*it).second->UniqueFileName;
 			tInfo.bSrgb = (*it).second->bSrgb;
 			mTextureInfo.push_back(tInfo);
+		}
+
+		mSceneObjectInfo.clear();
+
+		for (auto i = 0u; i < pSceneObjects.size(); i++)
+		{
+			GProjectSceneObjectInfo soInfo;
+			soInfo.UniqueName = pSceneObjects[i]->UniqueName;
+			soInfo.MeshUniqueName = pSceneObjects[i]->Mesh->UniqueName;
+			soInfo.MaterialUniqueName = pSceneObjects[i]->Mat->UniqueName;
+			std::vector<float> loc = pSceneObjects[i]->GetLocation();
+			soInfo.Location[0] = loc[0];
+			soInfo.Location[1] = loc[1];
+			soInfo.Location[2] = loc[2];
+			std::vector<float> rot = pSceneObjects[i]->GetRotation();
+			soInfo.Rotation[0] = rot[0];
+			soInfo.Rotation[1] = rot[1];
+			soInfo.Rotation[2] = rot[2];
+			std::vector<float> scale = pSceneObjects[i]->GetScale();
+			soInfo.Scale[0] = scale[0];
+			soInfo.Scale[1] = scale[1];
+			soInfo.Scale[2] = scale[2];
+			mSceneObjectInfo.push_back(soInfo);
 		}
 
 		std::ofstream ofs;
@@ -106,6 +153,7 @@ private:
 	void serialize(Archive & ar, const unsigned int version)
 	{
 		ar & BOOST_SERIALIZATION_NVP(mTextureInfo);
+		ar & BOOST_SERIALIZATION_NVP(mSceneObjectInfo);
 	}
 
 };

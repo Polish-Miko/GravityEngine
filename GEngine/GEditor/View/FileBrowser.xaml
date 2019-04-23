@@ -29,7 +29,6 @@
             <ListBox.ContextMenu>
                 <ContextMenu>
                     <MenuItem Name="Create" Header="Create">
-                        <MenuItem Name="CreateSceneItem" Header="Scene"/>
                         <MenuItem Name="CreateMaterialItem" Header="Material" Click="CreateMaterial"/>
                     </MenuItem>
                 </ContextMenu>

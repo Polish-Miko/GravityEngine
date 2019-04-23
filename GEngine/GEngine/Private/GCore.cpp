@@ -385,6 +385,25 @@ void GCore::LoadTextures()
 		mTextures[texName] = std::move(temp);
 	}
 
+	files.clear();
+	files.push_back(L"Resource\\Textures\\GE_Default_Albedo.png");
+	files.push_back(L"Resource\\Textures\\GE_Default_Normal.png");
+	files.push_back(L"Resource\\Textures\\GE_Default_Orm.png");
+	files.push_back(L"Resource\\Textures\\GE_DefaultTexture_Albedo.png");
+	files.push_back(L"Resource\\Textures\\GE_DefaultTexture_Normal.png");
+	files.push_back(L"Resource\\Textures\\GE_DefaultTexture_Orm.png");
+	files.push_back(L"Resource\\Textures\\IBL_BRDF_LUT.png");
+	for (auto file : files)
+	{
+		bool bSrgb = false;
+		if (file == L"Resource\\Textures\\GE_Default_Albedo.png" || file == L"Resource\\Textures\\GE_DefaultTexture_Albedo.png")
+			bSrgb = true;
+		GRiTexture* tex = textureLoader->LoadTexture(EngineDirectory, file, bSrgb);
+		std::wstring texName = tex->UniqueFileName;
+		std::unique_ptr<GRiTexture> temp(tex);
+		mTextures[texName] = std::move(temp);
+	}
+
 	LoadSkyTexture(L"Content\\Textures\\Cubemap_LancellottiChapel.dds");
 }
 
@@ -406,9 +425,9 @@ void GCore::LoadMaterials()
 	defaultMat->UniqueName = L"Default";
 	defaultMat->Name = L"Default";
 	defaultMat->MatIndex = mMaterialIndex++;
-	defaultMat->AddTexture(mTextures[L"Content\\Textures\\GE_Default_Albedo.png"].get());
-	defaultMat->AddTexture(mTextures[L"Content\\Textures\\GE_Default_Normal.png"].get());
-	defaultMat->AddTexture(mTextures[L"Content\\Textures\\GE_Default_Orm.png"].get());
+	defaultMat->AddTexture(mTextures[L"Resource\\Textures\\GE_Default_Albedo.png"].get());
+	defaultMat->AddTexture(mTextures[L"Resource\\Textures\\GE_Default_Normal.png"].get());
+	defaultMat->AddTexture(mTextures[L"Resource\\Textures\\GE_Default_Orm.png"].get());
 	mMaterials[L"Default"] = std::move(defaultMat);
 
 	auto debug_albedo = std::make_unique<GRiMaterial>(*pRendererFactory->CreateMaterial());
@@ -541,7 +560,7 @@ void GCore::LoadMaterials()
 				}
 				else
 				{
-					newMat->AddTexture(mTextures[L"Content\\Textures\\GE_Default_Albedo.png"].get());
+					newMat->AddTexture(mTextures[L"Resource\\Textures\\GE_Default_Albedo.png"].get());
 				}
 			}
 
@@ -582,7 +601,7 @@ void GCore::LoadMeshes()
 	GRiGeometryGenerator* geoGen = pRendererFactory->CreateGeometryGenerator();
 
 	std::vector<GRiMeshData> meshData;
-	GRiMeshData boxMeshData = geoGen->CreateBox(1.0f, 1.0f, 1.0f, 3);
+	GRiMeshData boxMeshData = geoGen->CreateBox(40.0f, 40.0f, 40.0f, 3);
 	meshData.push_back(boxMeshData);
 	auto geo = pRendererFactory->CreateMesh(meshData);
 	geo->UniqueName = L"Box";
@@ -591,7 +610,7 @@ void GCore::LoadMeshes()
 	mMeshes[geo->UniqueName] = std::move(temp1);
 
 	meshData.clear();
-	GRiMeshData gridMeshData = geoGen->CreateGrid(20.0f, 30.0f, 60, 40);
+	GRiMeshData gridMeshData = geoGen->CreateGrid(40.0f, 40.0f, 40, 40);
 	meshData.push_back(gridMeshData);
 	geo = pRendererFactory->CreateMesh(meshData);
 	geo->UniqueName = L"Grid";
@@ -600,7 +619,7 @@ void GCore::LoadMeshes()
 	mMeshes[geo->UniqueName] = std::move(temp2);
 
 	meshData.clear();
-	GRiMeshData sphereMeshData = geoGen->CreateSphere(0.5f, 20, 20);
+	GRiMeshData sphereMeshData = geoGen->CreateSphere(20.0f, 20, 20);
 	meshData.push_back(sphereMeshData);
 	geo = pRendererFactory->CreateMesh(meshData);
 	geo->UniqueName = L"Sphere";
@@ -609,7 +628,7 @@ void GCore::LoadMeshes()
 	mMeshes[geo->UniqueName] = std::move(temp3);
 
 	meshData.clear();
-	GRiMeshData cylinderMeshData = geoGen->CreateCylinder(0.5f, 0.3f, 3.0f, 20, 20);
+	GRiMeshData cylinderMeshData = geoGen->CreateCylinder(15.0f, 15.0f, 40.0f, 20, 20);
 	meshData.push_back(cylinderMeshData);
 	geo = pRendererFactory->CreateMesh(meshData);
 	geo->UniqueName = L"Cylinder";
@@ -723,6 +742,39 @@ void GCore::LoadSceneObjects()
 		mSceneObjects[metallicQuadSO->UniqueName] = std::move(metallicQuadSO);
 	}
 
+	// Load scene objects from file.
+	{
+		for (auto info : mProject->mSceneObjectInfo)
+		{
+			std::unique_ptr<GRiSceneObject> newSO(pRendererFactory->CreateSceneObject());
+			newSO->UniqueName = info.UniqueName;
+			newSO->TexTransform = pRendererFactory->CreateFloat4x4();
+			newSO->ObjIndex = mSceneObjectIndex++;
+			if (mMaterials.find(info.MaterialUniqueName) != mMaterials.end())
+			{
+				newSO->Mat = mMaterials[info.MaterialUniqueName].get();
+			}
+			else
+			{
+				newSO->Mat = mMaterials[L"Default"].get();
+			}
+			if (mMeshes.find(info.MeshUniqueName) != mMeshes.end())
+			{
+				newSO->Mesh = mMeshes[info.MeshUniqueName].get();
+			}
+			else
+			{
+				newSO->Mesh = mMeshes[L"Sphere"].get();
+			}
+			newSO->SetLocation(info.Location[0], info.Location[1], info.Location[2]);
+			newSO->SetRotation(info.Rotation[0], info.Rotation[1], info.Rotation[2]);
+			newSO->SetScale(info.Scale[0], info.Scale[1], info.Scale[2]);
+			mSceneObjectLayer[(int)RenderLayer::Deferred].push_back(newSO.get());
+			mSceneObjects[newSO->UniqueName] = std::move(newSO);
+		}
+	}
+
+	/*
 	std::unique_ptr<GRiSceneObject> cerberusSO(pRendererFactory->CreateSceneObject());
 	cerberusSO->UniqueName = L"Cerberus";
 	cerberusSO->TexTransform = pRendererFactory->CreateFloat4x4();
@@ -753,6 +805,7 @@ void GCore::LoadSceneObjects()
 	sphereSO_2->Mesh = mMeshes[L"Sphere"].get();
 	mSceneObjectLayer[(int)RenderLayer::Deferred].push_back(sphereSO_2.get());
 	mSceneObjects[sphereSO_2->UniqueName] = std::move(sphereSO_2);
+	*/
 }
 
 void GCore::LoadCameras()
@@ -965,7 +1018,7 @@ void GCore::SetWorkDirectory(wchar_t* dir)
 {
 	std::wstring path(dir);
 	WorkDirectory = path;
-	/*
+
 	TCHAR exeFullPath[MAX_PATH];
 	memset(exeFullPath, 0, MAX_PATH);
 
@@ -973,9 +1026,8 @@ void GCore::SetWorkDirectory(wchar_t* dir)
 	WCHAR *p = wcsrchr(exeFullPath, '\\');
 	*p = 0x00;
 
-	WorkDirectory = std::wstring(exeFullPath);
-	WorkDirectory += L"\\";
-	*/
+	EngineDirectory = std::wstring(exeFullPath);
+	EngineDirectory += L"\\";
 }
 
 void GCore::SetProjectName(wchar_t* projName)
@@ -991,7 +1043,7 @@ void GCore::SaveProject()
 	{
 		(*it).second->SaveMaterial(WorkDirectory);
 	}
-	mProject->SaveProject(WorkDirectory + ProjectName + L".gproj", mTextures);
+	mProject->SaveProject(WorkDirectory + ProjectName + L".gproj", mTextures, mSceneObjectLayer[(int)RenderLayer::Deferred]);
 }
 
 void GCore::LoadProject()
@@ -1006,9 +1058,9 @@ void GCore::CreateMaterial(wchar_t* cUniqueName)
 	newMat->UniqueName = UniqueName;
 	newMat->Name = GGiEngineUtil::GetFileName(UniqueName);
 	newMat->MatIndex = mMaterialIndex++;
-	newMat->AddTexture(mTextures[L"Content\\Textures\\GE_DefaultTexture_Albedo.png"].get());
-	newMat->AddTexture(mTextures[L"Content\\Textures\\GE_DefaultTexture_Normal.png"].get());
-	newMat->AddTexture(mTextures[L"Content\\Textures\\GE_DefaultTexture_Orm.png"].get());
+	newMat->AddTexture(mTextures[L"Resource\\Textures\\GE_DefaultTexture_Albedo.png"].get());
+	newMat->AddTexture(mTextures[L"Resource\\Textures\\GE_DefaultTexture_Normal.png"].get());
+	newMat->AddTexture(mTextures[L"Resource\\Textures\\GE_DefaultTexture_Orm.png"].get());
 	mMaterials[UniqueName] = std::move(newMat);
 	auto matFile = std::make_unique<GMaterial>(mMaterials[UniqueName].get());
 	matFile->SaveMaterial(WorkDirectory);
@@ -1077,11 +1129,11 @@ void GCore::SetMaterialTextureToDefaultValue(wchar_t* matUniqueName, int index)
 	}
 	std::wstring texName;
 	if (index == 0)
-		texName = L"Content\\Textures\\GE_DefaultTexture_Albedo.png";
+		texName = L"Resource\\Textures\\GE_DefaultTexture_Albedo.png";
 	else if (index == 1)
-		texName = L"Content\\Textures\\GE_DefaultTexture_Normal.png";
+		texName = L"Resource\\Textures\\GE_DefaultTexture_Normal.png";
 	else if (index == 2)
-		texName = L"Content\\Textures\\GE_DefaultTexture_Orm.png";
+		texName = L"Resource\\Textures\\GE_DefaultTexture_Orm.png";
 	else
 		ThrowGGiException("Texture index overflow.");
 	mMaterials[UniqueName]->SetTextureByIndex(index, mTextures[texName].get());
