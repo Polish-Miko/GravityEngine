@@ -8,8 +8,19 @@
              d:DesignHeight="450" d:DesignWidth="800">
     <Grid>
         <TreeView x:Name="outlinerTreeView" Grid.Column="0" VerticalAlignment="Stretch" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
-                  TreeViewItem.Expanded="item_Expanded" TreeViewItem.Selected="item_Selected">
+                  TreeViewItem.Expanded="item_Expanded" TreeViewItem.Selected="item_Selected" KeyDown="OnKeyDown">
+            <TreeView.ContextMenu>
+                <ContextMenu>
+                    <MenuItem Name="Create" Header="Create">
+                        <MenuItem Name="CreateSceneObjectBoxItem" Header="Box" Click="CreateSceneObjectBox"/>
+                        <MenuItem Name="CreateSceneObjectSphereItem" Header="Sphere" Click="CreateSceneObjectSphere"/>
+                        <MenuItem Name="CreateSceneObjectPlaneItem" Header="Plane" Click="CreateSceneObjectPlane"/>
+                        <MenuItem Name="CreateSceneObjectCylinderItem" Header="Cylinder" Click="CreateSceneObjectCylinder"/>
+                    </MenuItem>
+                </ContextMenu>
+            </TreeView.ContextMenu>
             <TreeView.ItemTemplate>
+                
                 <HierarchicalDataTemplate ItemsSource="{Binding Path=Children}">
                     <StackPanel Orientation="Horizontal">
                         <Image Height="20" Width="20" Source="{Binding Path=Icon}"></Image>

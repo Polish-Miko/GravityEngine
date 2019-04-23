@@ -221,5 +221,10 @@ namespace GEditor
             fileBrowser.RefreshListBox();
         }
 
+        public void RefreshOutliner()
+        {
+            outliner.Refresh();
+        }
+
     }
 }

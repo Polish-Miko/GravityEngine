@@ -115,6 +115,7 @@ void GRiRenderer::SyncSceneObjects(std::unordered_map<std::wstring, std::unique_
 	}
 	for (size_t layer = 0; layer != (size_t)(RenderLayer::Count); layer++)
 	{
+		pSceneObjectLayer[layer].clear();
 		for (auto pSObj : mSceneObjectLayer[layer])
 		{
 			pSceneObjectLayer[layer].push_back(pSObj);

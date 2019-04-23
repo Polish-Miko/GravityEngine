@@ -174,7 +174,8 @@ namespace GEditor.View
                 MessageBox.Show("ContentFolder is null");
                 return;
             }
-            browserTreeView.Items.Clear();
+            browserTreeView.ItemsSource = null;
+            //browserTreeView.Items.Clear();
 
             List<BrowserTreeViewItemModel> root = new List<BrowserTreeViewItemModel>();
 

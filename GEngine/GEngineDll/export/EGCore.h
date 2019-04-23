@@ -126,6 +126,26 @@ extern "C"
 	__declspec(dllexport) const wchar_t* __stdcall GetSceneObjectMaterialName(wchar_t* sceneObjectName);
 }
 
+extern "C"
+{
+	__declspec(dllexport) bool __stdcall SceneObjectExists(wchar_t* sceneObjectName);
+}
+
+extern "C"
+{
+	__declspec(dllexport) void __stdcall CreateSceneObject(wchar_t* sceneObjectName, wchar_t* meshUniqueName);
+}
+
+extern "C"
+{
+	__declspec(dllexport) void __stdcall RenameSceneObject(wchar_t* oldName, wchar_t* newName);
+}
+
+extern "C"
+{
+	__declspec(dllexport) void __stdcall DeleteSceneObject(wchar_t* sceneObjectName);
+}
+
 
 /*
 class EGCore

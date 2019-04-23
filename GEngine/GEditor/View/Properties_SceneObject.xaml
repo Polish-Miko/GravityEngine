@@ -39,6 +39,12 @@
 
         </StackPanel.Resources>
 
+        <Expander Name="CommonControl" Header="Common" IsExpanded="True">
+            <StackPanel>
+                <Label Content=" Name : " VerticalAlignment="Center"/>
+                <TextBox Text="{Binding Path=Name, Mode=TwoWay}" HorizontalAlignment="Stretch" Margin="5,0,5,0" />
+            </StackPanel>
+        </Expander>
         <Expander Name="TransformControl" Header="Transform" IsExpanded="True">
             <StackPanel>
                 <Label Content="Location" Margin="5,0,0,0"/>

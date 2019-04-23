@@ -127,6 +127,26 @@ const wchar_t* __stdcall GetSceneObjectMaterialName(wchar_t* sceneObjectName)
 	return GCore::GetCore().GetSceneObjectMaterialName(sceneObjectName);
 }
 
+bool __stdcall SceneObjectExists(wchar_t* sceneObjectName)
+{
+	return GCore::GetCore().SceneObjectExists(sceneObjectName);
+}
+
+void __stdcall CreateSceneObject(wchar_t* sceneObjectName, wchar_t* meshUniqueName)
+{
+	return GCore::GetCore().CreateSceneObject(sceneObjectName, meshUniqueName);
+}
+
+void __stdcall RenameSceneObject(wchar_t* oldName, wchar_t* newName)
+{
+	GCore::GetCore().RenameSceneObject(oldName, newName);
+}
+
+void __stdcall DeleteSceneObject(wchar_t* sceneObjectName)
+{
+	GCore::GetCore().DeleteSceneObject(sceneObjectName);
+}
+
 
 
 

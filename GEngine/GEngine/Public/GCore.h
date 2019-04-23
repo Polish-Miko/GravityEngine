@@ -73,6 +73,14 @@ public:
 
 	const wchar_t* GetSceneObjectMaterialName(wchar_t* sceneObjectName);
 
+	bool SceneObjectExists(wchar_t* sceneObjectName);
+
+	void CreateSceneObject(wchar_t* sceneObjectName, wchar_t* meshUniqueName);
+
+	void RenameSceneObject(wchar_t* oldName, wchar_t* newName);
+
+	void DeleteSceneObject(wchar_t* sceneObjectName);
+
 #pragma endregion
 
 private:
@@ -109,6 +117,8 @@ private:
 	GProject* mProject;
 
 	UINT mMaterialIndex = 0;
+
+	UINT mSceneObjectIndex = 0;
 
 private:
 

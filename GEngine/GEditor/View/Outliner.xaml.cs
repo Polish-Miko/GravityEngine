@@ -60,7 +60,8 @@ namespace GEditor.View
 
         public void SetSceneObjects()
         {
-            outlinerTreeView.Items.Clear();
+            //outlinerTreeView.Items.Clear();
+            outlinerTreeView.ItemsSource = null;
 
             List<OutlinerItemModel> root = new List<OutlinerItemModel>();
 
@@ -73,6 +74,8 @@ namespace GEditor.View
             root.Add(scene);
 
             outlinerTreeView.ItemsSource = root;
+            TreeViewItem rootItem = (TreeViewItem)outlinerTreeView.ItemContainerGenerator.ContainerFromItem(scene);
+            rootItem.IsExpanded = true;
         }
 
         List<OutlinerItemModel> GetAllSceneObjectsInScene()
@@ -96,6 +99,11 @@ namespace GEditor.View
             return sObjects;
         }
 
+        public void Refresh()
+        {
+            SetSceneObjects();
+        }
+
         void item_Expanded(object sender, RoutedEventArgs e)
         {
             ;
@@ -113,6 +121,72 @@ namespace GEditor.View
         public void SetMainWindow(MainWindow mwRef)
         {
             mainWindow = mwRef;
+        }
+
+        private void CreateSceneObjectPlane(object sender, RoutedEventArgs e)
+        {
+            CreateSceneObject("Grid");
+        }
+
+        private void CreateSceneObjectCylinder(object sender, RoutedEventArgs e)
+        {
+            CreateSceneObject("Cylinder");
+        }
+
+        private void CreateSceneObjectBox(object sender, RoutedEventArgs e)
+        {
+            CreateSceneObject("Box");
+        }
+
+        private void CreateSceneObjectSphere(object sender, RoutedEventArgs e)
+        {
+            CreateSceneObject("Sphere");
+        }
+
+        private void CreateSceneObject(string meshUniqueName)
+        {
+            string sObjName = string.Empty;
+            for (int i = 0; ; i++)
+            {
+                string tryName = "NewSceneObject";
+                if (i > 0)
+                    tryName = tryName + "_" + Convert.ToString(i);
+                if (!IGCore.SceneObjectExists(tryName))
+                {
+                    sObjName = tryName;
+                    break;
+                }
+            }
+
+            IGCore.CreateSceneObject(sObjName, meshUniqueName);
+
+            SetSceneObjects();
+            OutlinerItemModel newModel = null;
+            foreach (object item in outlinerTreeView.Items)
+            {
+                OutlinerItemModel model = item as OutlinerItemModel;
+                if (model.Name == sObjName)
+                {
+                    newModel = model;
+                    break;
+                }
+            }
+            if (newModel != null)
+            {
+                TreeViewItem tvi = (TreeViewItem)outlinerTreeView.ItemContainerGenerator.ContainerFromItem(newModel);
+                tvi.Focus();
+            }
+            //mainWindow.GetSceneObjectProperties(sObjName);
+        }
+
+        private void OnKeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Delete)
+            {
+                OutlinerItemModel sObjModel = outlinerTreeView.SelectedItem as OutlinerItemModel;
+                IGCore.DeleteSceneObject(sObjModel.Name);
+                Refresh();
+            }
         }
     }
 }

@@ -11,6 +11,7 @@ namespace GEditor.Model.Properties
     class PropertiesModel_SceneObject : INotifyPropertyChanged
     {
 
+        private string _name;
         private string _locX;
         private string _locY;
         private string _locZ;
@@ -24,6 +25,19 @@ namespace GEditor.Model.Properties
         private string _materialUniqueName;
 
         private Properties_SceneObject PropertiesPanel;
+
+        public string Name
+        {
+            get => _name;
+            set
+            {
+                if (PropertiesPanel.NameAvailable(value))
+                {
+                    _name = value;
+                    OnPropertyChanged("Name");
+                }
+            }
+        }
 
         public string LocX
         {
@@ -171,6 +185,12 @@ namespace GEditor.Model.Properties
             }
         }
 
+        public void InitName(string sObjName)
+        {
+            _name = sObjName;
+            OnPropertyChanged();
+        }
+
         public void InitMeshName(string meshName)
         {
             _meshUniqueName = meshName;
@@ -181,6 +201,11 @@ namespace GEditor.Model.Properties
         {
             _materialUniqueName = matName;
             OnPropertyChanged();
+        }
+
+        public void SetName(object sender, PropertyChangedEventArgs e)
+        {
+            PropertiesPanel.SetSceneObjectName();
         }
 
         public void SetTransform(object sender, PropertyChangedEventArgs e)
@@ -210,6 +235,8 @@ namespace GEditor.Model.Properties
                 handler += SetMesh;
             else if (propertyName == "Material")
                 handler += SetMaterial;
+            else if (propertyName == "Name")
+                handler += SetName;
             if (handler != null)
             {
                 handler(this, new PropertyChangedEventArgs(propertyName));

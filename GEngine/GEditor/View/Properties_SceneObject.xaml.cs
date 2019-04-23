@@ -51,10 +51,24 @@ namespace GEditor.View
             float[] trans = new float[9];
             IGCore.GetSceneObjectTransform(sObjectName, trans);
             model.SetTransform(trans);
+            model.InitName(sObjectName);
             model.InitMeshName(Marshal.PtrToStringUni(IGCore.GetSceneObjectMeshName(sObjectName)));
             model.InitMaterialName(Marshal.PtrToStringUni(IGCore.GetSceneObjectMaterialName(sObjectName)));
+            CommonControl.DataContext = model;
             TransformControl.DataContext = model;
             RenderControl.DataContext = model;
+        }
+
+        public bool NameAvailable(string name)
+        {
+            return (!IGCore.SceneObjectExists(name));
+        }
+
+        public void SetSceneObjectName()
+        {
+            IGCore.RenameSceneObject(sObjectName, model.Name);
+            sObjectName = model.Name;
+            mainWindow.RefreshOutliner();
         }
 
         public void SetSceneObjectTransform()

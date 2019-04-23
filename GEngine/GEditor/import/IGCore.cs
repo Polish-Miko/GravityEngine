@@ -86,5 +86,17 @@ namespace GEditor
         [DllImport(@"Build\GEngineDll.dll")]
         public static extern IntPtr GetSceneObjectMaterialName([MarshalAs(UnmanagedType.LPWStr)] string sceneObjectName);
 
+        [DllImport(@"Build\GEngineDll.dll")]
+        public static extern bool SceneObjectExists([MarshalAs(UnmanagedType.LPWStr)] string sceneObjectName);
+
+        [DllImport(@"Build\GEngineDll.dll")]
+        public static extern void CreateSceneObject([MarshalAs(UnmanagedType.LPWStr)] string sceneObjectName, [MarshalAs(UnmanagedType.LPWStr)] string meshUniqueName);
+
+        [DllImport(@"Build\GEngineDll.dll")]
+        public static extern void RenameSceneObject([MarshalAs(UnmanagedType.LPWStr)] string oldName, [MarshalAs(UnmanagedType.LPWStr)] string newName);
+
+        [DllImport(@"Build\GEngineDll.dll")]
+        public static extern void DeleteSceneObject([MarshalAs(UnmanagedType.LPWStr)] string sceneObjectName);
+
     }
 }

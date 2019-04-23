@@ -643,29 +643,27 @@ void GCore::LoadMeshes()
 
 void GCore::LoadSceneObjects()
 {
-	UINT index = 0;
+	mSceneObjectIndex = 0;
 
 	// Create screen quads for light pass and post process.
 	std::unique_ptr<GRiSceneObject> fullScreenQuadSO(pRendererFactory->CreateSceneObject());
 	fullScreenQuadSO->UniqueName = L"FullScreenQuad";
 	fullScreenQuadSO->TexTransform = pRendererFactory->CreateFloat4x4();
-	fullScreenQuadSO->ObjIndex = index;
+	fullScreenQuadSO->ObjIndex = mSceneObjectIndex++;
 	fullScreenQuadSO->Mat = mMaterials[L"Default"].get();
 	fullScreenQuadSO->Mesh = mMeshes[L"Quad"].get();
 	mSceneObjectLayer[(int)RenderLayer::ScreenQuad].push_back(fullScreenQuadSO.get());
 	mSceneObjects[fullScreenQuadSO->UniqueName] = std::move(fullScreenQuadSO);
-	index++;
 
 	std::unique_ptr<GRiSceneObject> skySO(pRendererFactory->CreateSceneObject());
 	skySO->UniqueName = L"Sky";
 	skySO->SetScale(5000.f, 5000.f, 5000.f);
-	skySO->ObjIndex = index;
+	skySO->ObjIndex = mSceneObjectIndex++;
 	skySO->TexTransform = pRendererFactory->CreateFloat4x4();
 	skySO->Mat = mMaterials[L"sky"].get();
 	skySO->Mesh = mMeshes[L"Sphere"].get();
 	mSceneObjectLayer[(int)RenderLayer::Sky].push_back(skySO.get());
 	mSceneObjects[skySO->UniqueName] = std::move(skySO);
-	index++;
 
 	// Create debug quads.
 	{
@@ -674,95 +672,87 @@ void GCore::LoadSceneObjects()
 		albedoQuadSO->SetScale(.2f, .2f, .2f);
 		albedoQuadSO->SetLocation(0.f, 0.f, 0.f);
 		albedoQuadSO->TexTransform = pRendererFactory->CreateFloat4x4();
-		albedoQuadSO->ObjIndex = index;
+		albedoQuadSO->ObjIndex = mSceneObjectIndex++;
 		albedoQuadSO->Mat = mMaterials[L"debug_albedo"].get();
 		albedoQuadSO->Mesh = mMeshes[L"Quad"].get();
 		mSceneObjectLayer[(int)RenderLayer::Debug].push_back(albedoQuadSO.get());
 		mSceneObjects[albedoQuadSO->UniqueName] = std::move(albedoQuadSO);
-		index++;
 
 		std::unique_ptr<GRiSceneObject> normalQuadSO(pRendererFactory->CreateSceneObject());
 		normalQuadSO->UniqueName = L"NormalQuad";
 		normalQuadSO->SetScale(.2f, .2f, .2f);
 		normalQuadSO->SetLocation(.2f, 0.f, 0.f);
 		normalQuadSO->TexTransform = pRendererFactory->CreateFloat4x4();
-		normalQuadSO->ObjIndex = index;
+		normalQuadSO->ObjIndex = mSceneObjectIndex++;
 		normalQuadSO->Mat = mMaterials[L"debug_normal"].get();
 		normalQuadSO->Mesh = mMeshes[L"Quad"].get();
 		mSceneObjectLayer[(int)RenderLayer::Debug].push_back(normalQuadSO.get());
 		mSceneObjects[normalQuadSO->UniqueName] = std::move(normalQuadSO);
-		index++;
 
 		std::unique_ptr<GRiSceneObject> worldPosQuadSO(pRendererFactory->CreateSceneObject());
 		worldPosQuadSO->UniqueName = L"WorldPosQuad";
 		worldPosQuadSO->SetScale(.2f, .2f, .2f);
 		worldPosQuadSO->SetLocation(.4f, 0.f, 0.f);
 		worldPosQuadSO->TexTransform = pRendererFactory->CreateFloat4x4();
-		worldPosQuadSO->ObjIndex = index;
+		worldPosQuadSO->ObjIndex = mSceneObjectIndex++;
 		worldPosQuadSO->Mat = mMaterials[L"debug_worldpos"].get();
 		worldPosQuadSO->Mesh = mMeshes[L"Quad"].get();
 		mSceneObjectLayer[(int)RenderLayer::Debug].push_back(worldPosQuadSO.get());
 		mSceneObjects[worldPosQuadSO->UniqueName] = std::move(worldPosQuadSO);
-		index++;
 
 		std::unique_ptr<GRiSceneObject> roughnessQuadSO(pRendererFactory->CreateSceneObject());
 		roughnessQuadSO->UniqueName = L"RoughnessQuad";
 		roughnessQuadSO->SetScale(.2f, .2f, .2f);
 		roughnessQuadSO->SetLocation(.6f, 0.f, 0.f);
 		roughnessQuadSO->TexTransform = pRendererFactory->CreateFloat4x4();
-		roughnessQuadSO->ObjIndex = index;
+		roughnessQuadSO->ObjIndex = mSceneObjectIndex++;
 		roughnessQuadSO->Mat = mMaterials[L"debug_roughness"].get();
 		roughnessQuadSO->Mesh = mMeshes[L"Quad"].get();
 		mSceneObjectLayer[(int)RenderLayer::Debug].push_back(roughnessQuadSO.get());
 		mSceneObjects[roughnessQuadSO->UniqueName] = std::move(roughnessQuadSO);
-		index++;
 
 		std::unique_ptr<GRiSceneObject> metallicQuadSO(pRendererFactory->CreateSceneObject());
 		metallicQuadSO->UniqueName = L"MetallicQuad";
 		metallicQuadSO->SetScale(.2f, .2f, .2f);
 		metallicQuadSO->SetLocation(.8f, 0.f, 0.f);
 		metallicQuadSO->TexTransform = pRendererFactory->CreateFloat4x4();
-		metallicQuadSO->ObjIndex = index;
+		metallicQuadSO->ObjIndex = mSceneObjectIndex++;
 		metallicQuadSO->Mat = mMaterials[L"debug_metallic"].get();
 		metallicQuadSO->Mesh = mMeshes[L"Quad"].get();
 		mSceneObjectLayer[(int)RenderLayer::Debug].push_back(metallicQuadSO.get());
 		mSceneObjects[metallicQuadSO->UniqueName] = std::move(metallicQuadSO);
-		index++;
 	}
 
 	std::unique_ptr<GRiSceneObject> cerberusSO(pRendererFactory->CreateSceneObject());
 	cerberusSO->UniqueName = L"Cerberus";
 	cerberusSO->TexTransform = pRendererFactory->CreateFloat4x4();
-	cerberusSO->ObjIndex = index;
+	cerberusSO->ObjIndex = mSceneObjectIndex++;
 	cerberusSO->Mat = mMaterials[L"Cerberus"].get();
 	cerberusSO->Mesh = mMeshes[L"Content\\Models\\Cerberus.fbx"].get();
 	mSceneObjectLayer[(int)RenderLayer::Deferred].push_back(cerberusSO.get());
 	mSceneObjects[cerberusSO->UniqueName] = std::move(cerberusSO);
-	index++;
 
 	std::unique_ptr<GRiSceneObject> sphereSO_1(pRendererFactory->CreateSceneObject());
 	sphereSO_1->SetScale(20.f, 20.f, 20.f);
 	sphereSO_1->SetLocation(0.f, -100.f, 0.f);
 	sphereSO_1->UniqueName = L"Sphere";
 	sphereSO_1->TexTransform = pRendererFactory->CreateFloat4x4();
-	sphereSO_1->ObjIndex = index;
+	sphereSO_1->ObjIndex = mSceneObjectIndex++;
 	sphereSO_1->Mat = mMaterials[L"Default"].get();
 	sphereSO_1->Mesh = mMeshes[L"Sphere"].get();
 	mSceneObjectLayer[(int)RenderLayer::Deferred].push_back(sphereSO_1.get());
 	mSceneObjects[sphereSO_1->UniqueName] = std::move(sphereSO_1);
-	index++;
 
 	std::unique_ptr<GRiSceneObject> sphereSO_2(pRendererFactory->CreateSceneObject());
 	sphereSO_2->SetScale(20.f, 20.f, 20.f);
 	sphereSO_2->SetLocation(20.f, -100.f, 0.f);
 	sphereSO_2->UniqueName = L"Sphere_2";
 	sphereSO_2->TexTransform = pRendererFactory->CreateFloat4x4();
-	sphereSO_2->ObjIndex = index;
+	sphereSO_2->ObjIndex = mSceneObjectIndex++;
 	sphereSO_2->Mat = mMaterials[L"GreasyPan"].get();
 	sphereSO_2->Mesh = mMeshes[L"Sphere"].get();
 	mSceneObjectLayer[(int)RenderLayer::Deferred].push_back(sphereSO_2.get());
 	mSceneObjects[sphereSO_2->UniqueName] = std::move(sphereSO_2);
-	index++;
 }
 
 void GCore::LoadCameras()
@@ -1113,6 +1103,8 @@ void GCore::RenameMaterial(wchar_t* oldUniqueName, wchar_t* newUniqueName)
 	toMove->UniqueName = newUniqueNameStr;
 	toMove->Name = GGiEngineUtil::GetFileName(newUniqueNameStr);
 	mMaterials[newUniqueNameStr] = std::move(toMove);
+	mMaterials.erase(oldUniqueNameStr);
+	mRenderer->SyncMaterials(mMaterials);
 }
 
 void GCore::SetSceneObjectMesh(wchar_t* sceneObjectName, wchar_t* meshUniqueName)
@@ -1165,6 +1157,72 @@ const wchar_t* GCore::GetSceneObjectMaterialName(wchar_t* sceneObjectName)
 		return L"None";
 	}
 	return mSceneObjects[SceneObjectNameStr]->Mat->UniqueName.c_str();
+}
+
+bool GCore::SceneObjectExists(wchar_t* sceneObjectName)
+{
+	std::wstring SceneObjectNameStr(sceneObjectName);
+	return (mSceneObjects.find(SceneObjectNameStr) != mSceneObjects.end());
+}
+
+void GCore::CreateSceneObject(wchar_t* sceneObjectName, wchar_t* meshUniqueName)
+{
+	std::wstring SceneObjectNameStr(sceneObjectName);
+	std::wstring MeshUniqueNameStr(meshUniqueName);
+	if (mSceneObjects.find(SceneObjectNameStr) != mSceneObjects.end())
+	{
+		return;
+	}
+	if (mMeshes.find(MeshUniqueNameStr) == mMeshes.end())
+	{
+		return;
+	}
+	std::unique_ptr<GRiSceneObject> newSceneObject(pRendererFactory->CreateSceneObject());
+	newSceneObject->UniqueName = SceneObjectNameStr;
+	newSceneObject->TexTransform = pRendererFactory->CreateFloat4x4();
+	newSceneObject->ObjIndex = mSceneObjectIndex++;
+	newSceneObject->Mat = mMaterials[L"Default"].get();
+	newSceneObject->Mesh = mMeshes[MeshUniqueNameStr].get();
+	mSceneObjectLayer[(int)RenderLayer::Deferred].push_back(newSceneObject.get());
+	mSceneObjects[newSceneObject->UniqueName] = std::move(newSceneObject);
+	mRenderer->SyncSceneObjects(mSceneObjects, mSceneObjectLayer);
+}
+
+void GCore::RenameSceneObject(wchar_t* oldName, wchar_t* newName)
+{
+	std::wstring OldNameStr(oldName);
+	std::wstring NewNameStr(newName);
+	if (mSceneObjects.find(OldNameStr) == mSceneObjects.end())
+	{
+		return;
+	}
+	if (mSceneObjects.find(NewNameStr) != mSceneObjects.end())
+	{
+		return;
+	}
+	std::unique_ptr<GRiSceneObject> toMove = std::move(mSceneObjects[OldNameStr]);
+	toMove->UniqueName = NewNameStr;
+	mSceneObjects[NewNameStr] = std::move(toMove);
+	mSceneObjects.erase(OldNameStr);
+	mRenderer->SyncSceneObjects(mSceneObjects, mSceneObjectLayer);
+}
+
+void GCore::DeleteSceneObject(wchar_t* sceneObjectName)
+{
+	std::wstring SceneObjectNameStr(sceneObjectName);
+	if (mSceneObjects.find(SceneObjectNameStr) == mSceneObjects.end())
+	{
+		return;
+	}
+	auto it = std::find(mSceneObjectLayer[(int)RenderLayer::Deferred].begin(),
+		mSceneObjectLayer[(int)RenderLayer::Deferred].end(),
+		mSceneObjects[SceneObjectNameStr].get());
+	if (it != mSceneObjectLayer[(int)RenderLayer::Deferred].end())
+	{
+		mSceneObjectLayer[(int)RenderLayer::Deferred].erase(it);
+	}
+	mSceneObjects.erase(SceneObjectNameStr);
+	mRenderer->SyncSceneObjects(mSceneObjects, mSceneObjectLayer);
 }
 
 #pragma endregion
