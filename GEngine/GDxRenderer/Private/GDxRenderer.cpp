@@ -120,7 +120,7 @@ void GDxRenderer::PreInitialize(HWND OutputWindow, double width, double height)
 	ThrowIfFailed(mCommandList->Reset(mDirectCmdListAlloc.Get(), nullptr));
 }
 
-void GDxRenderer::Initialize(HWND OutputWindow, double width, double height)
+void GDxRenderer::Initialize()
 {
 	BuildDescriptorHeaps();
 	BuildRootSignature();
@@ -225,14 +225,14 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 		mCommandList->SetGraphicsRootSignature(mRootSignatures["LightPass"].Get());
 
 		mCommandList->SetPipelineState(mPSOs["DirectLightPass"].Get());
-
+		
 		auto lightCB = mCurrFrameResource->LightCB->Resource();
 		mCommandList->SetGraphicsRootConstantBufferView(0, lightCB->GetGPUVirtualAddress());
 
 		mCommandList->SetGraphicsRootDescriptorTable(1, mRtvHeaps["GBuffer"]->GetSrvGpuStart());
 
-		mCommandList->SetGraphicsRootDescriptorTable(2, mCubeRtvs["Irradiance"]->GetSrvGpu());
-
+		mCommandList->SetGraphicsRootDescriptorTable(2, GetGpuSrv(mIblIndex));
+		
 		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["LightPass"]->mRtv[0]->mResource.Get(),
 			D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_RENDER_TARGET));
 
@@ -266,14 +266,14 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 		mCommandList->SetGraphicsRootSignature(mRootSignatures["LightPass"].Get());
 
 		mCommandList->SetPipelineState(mPSOs["AmbientLightPass"].Get());
-
+		
 		auto lightCB = mCurrFrameResource->LightCB->Resource();
 		mCommandList->SetGraphicsRootConstantBufferView(0, lightCB->GetGPUVirtualAddress());
 
 		mCommandList->SetGraphicsRootDescriptorTable(1, mRtvHeaps["GBuffer"]->GetSrvGpuStart());
 
-		mCommandList->SetGraphicsRootDescriptorTable(2, mCubeRtvs["Irradiance"]->GetSrvGpu());
-
+		mCommandList->SetGraphicsRootDescriptorTable(2, GetGpuSrv(mIblIndex));
+		
 		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["LightPass"]->mRtv[1]->mResource.Get(),
 			D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_RENDER_TARGET));
 
@@ -362,10 +362,12 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 		mCommandList->SetGraphicsRootDescriptorTable(2, skyTexDescriptor);
 		//*/
 
+		/*
 		// Irradiance cubemap debug.
-		//CD3DX12_GPU_DESCRIPTOR_HANDLE skyTexDescriptor(mSrvDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
-		//skyTexDescriptor.Offset(mIblIndex + 1, mCbvSrvUavDescriptorSize);
-		//mCommandList->SetGraphicsRootDescriptorTable(2, GetGpuSrv(mIblIndex + 2));
+		CD3DX12_GPU_DESCRIPTOR_HANDLE skyTexDescriptor(mSrvDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
+		skyTexDescriptor.Offset(mIblIndex + 1, mCbvSrvUavDescriptorSize);
+		mCommandList->SetGraphicsRootDescriptorTable(2, GetGpuSrv(mIblIndex + 4));
+		*/
 
 		mCommandList->SetPipelineState(mPSOs["Sky"].Get());
 		DrawSceneObjects(mCommandList.Get(), RenderLayer::Sky, true);
@@ -905,7 +907,7 @@ void GDxRenderer::BuildRootSignature()
 
 		//IBL inputs
 		CD3DX12_DESCRIPTOR_RANGE rangeIBL;
-		rangeIBL.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, (UINT)mCubeRtvs.size() + (UINT)1, mRtvHeaps["GBuffer"]->mRtvHeap.HeapDesc.NumDescriptors);
+		rangeIBL.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, (UINT)mPrefilterLevels + (UINT)1 + (UINT)1, mRtvHeaps["GBuffer"]->mRtvHeap.HeapDesc.NumDescriptors);
 
 		CD3DX12_ROOT_PARAMETER gLightPassRootParameters[3];
 		gLightPassRootParameters[0].InitAsConstantBufferView(0);
@@ -1170,13 +1172,13 @@ void GDxRenderer::BuildDescriptorHeaps()
 	//
 	CD3DX12_CPU_DESCRIPTOR_HANDLE hDescriptor(mSrvDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
 
+	/*
 	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
 	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
 	srvDesc.Texture2D.MostDetailedMip = 0;
 	srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
-
-
+	*/
 
 	//auto skyCubeMap = mTextures["skyCubeMap"]->Resource;
 	D3D12_SHADER_RESOURCE_VIEW_DESC skySrvDesc = {};
@@ -1289,17 +1291,19 @@ void GDxRenderer::BuildDescriptorHeaps()
 	}
 
 	// Build cubemap SRV and RTVs for prefilter cubemap pre-integration.
-	for (auto i = 0u; i < mPrefilterLevels; i++)
 	{
-		GRtvProperties prop;
-		prop.mRtvFormat = DXGI_FORMAT_R32G32B32A32_FLOAT;
-		prop.mClearColor[0] = 0;
-		prop.mClearColor[1] = 0;
-		prop.mClearColor[2] = 0;
-		prop.mClearColor[3] = 1;
+		for (auto i = 0u; i < mPrefilterLevels; i++)
+		{
+			GRtvProperties prop;
+			prop.mRtvFormat = DXGI_FORMAT_R32G32B32A32_FLOAT;
+			prop.mClearColor[0] = 0;
+			prop.mClearColor[1] = 0;
+			prop.mClearColor[2] = 0;
+			prop.mClearColor[3] = 1;
 
-		auto gPrefilterCubemap = std::make_unique<GDxCubeRtv>(md3dDevice.Get(), (UINT)(2048 / pow(2, i)), GetCpuSrv(mIblIndex + 2 + i), GetGpuSrv(mIblIndex + 2 + i), prop);
-		mCubeRtvs["Prefilter_" + std::to_string(i)] = std::move(gPrefilterCubemap);
+			auto gPrefilterCubemap = std::make_unique<GDxCubeRtv>(md3dDevice.Get(), (UINT)(2048 / pow(2, i)), GetCpuSrv(mIblIndex + 2 + i), GetGpuSrv(mIblIndex + 2 + i), prop);
+			mCubeRtvs["Prefilter_" + std::to_string(i)] = std::move(gPrefilterCubemap);
+		}
 	}
 
 	// Build SRV for ordinary textures.
@@ -1385,7 +1389,7 @@ void GDxRenderer::BuildPSOs()
 	blendState.AlphaToCoverageEnable = false;
 	blendState.IndependentBlendEnable = false;
 
-	blendState.RenderTarget[0].BlendEnable = true;
+	blendState.RenderTarget[0].BlendEnable = false;
 	blendState.RenderTarget[0].BlendOp = D3D12_BLEND_OP_ADD;
 	blendState.RenderTarget[0].SrcBlend = D3D12_BLEND_SRC_ALPHA;
 	blendState.RenderTarget[0].DestBlend = D3D12_BLEND_ONE;
@@ -1438,7 +1442,7 @@ void GDxRenderer::BuildPSOs()
 	ambientBlendState.AlphaToCoverageEnable = false;
 	ambientBlendState.IndependentBlendEnable = false;
 
-	ambientBlendState.RenderTarget[0].BlendEnable = true;
+	ambientBlendState.RenderTarget[0].BlendEnable = false;
 	ambientBlendState.RenderTarget[0].BlendOp = D3D12_BLEND_OP_ADD;
 	ambientBlendState.RenderTarget[0].SrcBlend = D3D12_BLEND_SRC_ALPHA;
 	ambientBlendState.RenderTarget[0].DestBlend = D3D12_BLEND_ONE;
@@ -1596,7 +1600,7 @@ void GDxRenderer::BuildPSOs()
 	irradiancePsoDesc.SampleMask = UINT_MAX;
 	irradiancePsoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 	irradiancePsoDesc.NumRenderTargets = 1;
-	irradiancePsoDesc.RTVFormats[0] = mCubeRtvs["Irradiance"]->mFormat;
+	irradiancePsoDesc.RTVFormats[0] = DXGI_FORMAT_R32G32B32A32_FLOAT;
 	irradiancePsoDesc.SampleDesc.Count = 1;
 	irradiancePsoDesc.SampleDesc.Quality = 0;
 	irradiancePsoDesc.DSVFormat = mDepthStencilFormat;
@@ -1628,7 +1632,7 @@ void GDxRenderer::BuildPSOs()
 	prefilterPsoDesc.SampleMask = UINT_MAX;
 	prefilterPsoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 	prefilterPsoDesc.NumRenderTargets = 1;
-	prefilterPsoDesc.RTVFormats[0] = mCubeRtvs["Prefilter_0"]->mFormat;
+	prefilterPsoDesc.RTVFormats[0] = DXGI_FORMAT_R32G32B32A32_FLOAT;
 	prefilterPsoDesc.SampleDesc.Count = 1;
 	prefilterPsoDesc.SampleDesc.Quality = 0;
 	prefilterPsoDesc.DSVFormat = mDepthStencilFormat;
@@ -1794,8 +1798,42 @@ void GDxRenderer::CubemapPreIntegration()
 				D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ));
 		}
 	}
-
 }
+
+/*
+void GDxRenderer::SaveBakedCubemap(std::wstring workDir, std::wstring CubemapPath)
+{
+	std::wstring originalPath = workDir + CubemapPath;
+	std::wstring savePathPrefix = originalPath.substr(0, originalPath.rfind(L"."));
+
+	mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mCubeRtvs["Irradiance"]->mResource.Get(),
+		D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_COPY_SOURCE));
+	ThrowIfFailed(
+		DirectX::SaveDDSTextureToFile(mCommandQueue.Get(),
+			mCubeRtvs["Irradiance"]->mResource.Get(),
+			(savePathPrefix + L"_Irradiance.dds").c_str(),
+			D3D12_RESOURCE_STATE_COPY_SOURCE,
+			D3D12_RESOURCE_STATE_COPY_SOURCE)
+	);
+	mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mCubeRtvs["Irradiance"]->mResource.Get(),
+		D3D12_RESOURCE_STATE_COPY_SOURCE, D3D12_RESOURCE_STATE_GENERIC_READ));
+	
+	for (auto i = 0u; i < mPrefilterLevels; i++)
+	{
+		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mCubeRtvs["Prefilter_" + std::to_string(i)]->mResource.Get(),
+			D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_COPY_SOURCE));
+		ThrowIfFailed(
+			DirectX::SaveDDSTextureToFile(mCommandQueue.Get(),
+				mCubeRtvs["Prefilter_" + std::to_string(i)]->mResource.Get(),
+				(savePathPrefix + L"_Prefilter_" + std::to_wstring(i) + L".dds").c_str(),
+				D3D12_RESOURCE_STATE_COPY_SOURCE,
+				D3D12_RESOURCE_STATE_COPY_SOURCE)
+		);
+		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mCubeRtvs["Prefilter_" + std::to_string(i)]->mResource.Get(),
+			D3D12_RESOURCE_STATE_COPY_SOURCE, D3D12_RESOURCE_STATE_GENERIC_READ));
+	}
+}
+*/
 
 void GDxRenderer::CreateRendererFactory()
 {

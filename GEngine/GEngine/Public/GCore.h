@@ -8,6 +8,7 @@
 
 
 
+
 using Microsoft::WRL::ComPtr;
 using namespace DirectX;
 using namespace DirectX::PackedVector;
@@ -81,6 +82,14 @@ public:
 
 	void DeleteSceneObject(wchar_t* sceneObjectName);
 
+	const wchar_t* GetSkyCubemapUniqueName();
+
+	const wchar_t* GetDefaultSkyCubemapUniqueName();
+
+	void SetSkyCubemapUniqueName(wchar_t* newName);
+
+	bool SkyCubemapNameAvailable(wchar_t* cubemapName);
+
 #pragma endregion
 
 private:
@@ -122,6 +131,8 @@ private:
 
 	UINT mSceneObjectIndex = 0;
 
+	std::wstring mSkyCubemapUniqueName;
+
 private:
 
 	GCore();
@@ -137,7 +148,6 @@ private:
 
 	void LoadTextures();
 	void LoadMaterials();
-	void LoadSkyTexture(std::wstring path);
 	void LoadMeshes();
 	void LoadSceneObjects();
 	void LoadCameras();

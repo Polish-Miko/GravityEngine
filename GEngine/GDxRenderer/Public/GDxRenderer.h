@@ -11,6 +11,7 @@
 #endif
 
 #include "GRiInclude.h"
+#include "GDxPreInclude.h"
 #include "GDxUploadBuffer.h"
 #include "GDxFrameResource.h"
 #include "GDxCubeRtv.h"
@@ -39,7 +40,7 @@ public:
 
 	virtual void PreInitialize(HWND OutputWindow, double width, double height) override;
 
-	virtual void Initialize(HWND OutputWindow, double width, double height) override;
+	virtual void Initialize() override;
 
 	virtual bool IsRunning() override;
 	
@@ -68,6 +69,8 @@ protected:
 	void BuildFrameResources();
 
 	void CubemapPreIntegration();
+
+	//void SaveBakedCubemap(std::wstring workDir, std::wstring CubemapPath);
 
 	std::array<const CD3DX12_STATIC_SAMPLER_DESC, 7> GetStaticSamplers();
 
@@ -140,7 +143,6 @@ protected:
 
 	std::unordered_map<std::string, std::unique_ptr<GDxRtvHeap>> mRtvHeaps;
 	std::unordered_map<std::string, std::unique_ptr<GDxCubeRtv>> mCubeRtvs;
-	UINT mPrefilterLevels = 5u;
 	std::unordered_map<std::string, ComPtr<ID3DBlob>> mShaders;
 	std::unordered_map<std::string, ComPtr<ID3D12PipelineState>> mPSOs;
 	std::unordered_map<std::string, ComPtr<ID3D12RootSignature>> mRootSignatures;

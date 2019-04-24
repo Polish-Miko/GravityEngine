@@ -98,5 +98,17 @@ namespace GEditor
         [DllImport(@"Build\GEngineDll.dll")]
         public static extern void DeleteSceneObject([MarshalAs(UnmanagedType.LPWStr)] string sceneObjectName);
 
+        [DllImport(@"Build\GEngineDll.dll")]
+        public static extern IntPtr GetSkyCubemapUniqueName();
+
+        [DllImport(@"Build\GEngineDll.dll")]
+        public static extern IntPtr GetDefaultSkyCubemapUniqueName();
+
+        [DllImport(@"Build\GEngineDll.dll")]
+        public static extern void SetSkyCubemapUniqueName([MarshalAs(UnmanagedType.LPWStr)] string newName);
+
+        [DllImport(@"Build\GEngineDll.dll")]
+        public static extern bool SkyCubemapNameAvailable([MarshalAs(UnmanagedType.LPWStr)] string cubemapName);
+
     }
 }

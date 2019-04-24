@@ -130,5 +130,10 @@ void GRiRenderer::SyncCameras(std::vector<GRiCamera*> mCameras)
 		pCubemapSampleCamera[i] = mCameras[i + 1];
 }
 
+UINT GRiRenderer::GetPrefilterLevel()
+{
+	return mPrefilterLevels;
+}
+
 
 

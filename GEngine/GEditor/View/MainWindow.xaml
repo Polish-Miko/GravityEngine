@@ -13,7 +13,7 @@
         xmlns:wfi ="clr-namespace:System.Windows.Forms.Integration;assembly=WindowsFormsIntegration"
         xmlns:local="clr-namespace:GEditor"
         mc:Ignorable="d"
-        Title="GEditor" Height="886.667" Width="1422" Background="#FF2D2D2D">
+        Title="GEditor" Height="886.667" Width="1422" Background="#FF2D2D2D" WindowStyle="SingleBorderWindow">
 
     <Window.Resources>
         <Style x:Key="TreeViewItemExpandedStyle" TargetType="{x:Type TreeViewItem}">
@@ -112,7 +112,7 @@
                     <MenuItem Header="Properties"></MenuItem>
                     <MenuItem Header="File Browser"></MenuItem>
                     <MenuItem Header="Log"></MenuItem>
-                    <MenuItem Header="Settings"></MenuItem>
+                    <MenuItem Header="Settings" Click="ProjectSettings"></MenuItem>
                 </MenuItem>
                 <MenuItem Header="About">
                     <MenuItem Header="Gravity Engine"></MenuItem>

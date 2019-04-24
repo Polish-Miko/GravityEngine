@@ -14,7 +14,7 @@ public:
 
 	virtual void Update(const GGiGameTimer* gt) = 0;
 	virtual void Draw(const GGiGameTimer* gt) = 0;
-	virtual void Initialize(HWND OutputWindow, double width, double height) = 0;
+	virtual void Initialize() = 0;
 	virtual void PreInitialize(HWND OutputWindow, double width, double height) = 0;
 
 	virtual void OnResize() = 0;
@@ -53,6 +53,8 @@ public:
 	GRiCamera* pCamera = nullptr;
 	GRiCamera* pCubemapSampleCamera[6];
 
+	UINT GetPrefilterLevel();
+
 protected:
 
 	HWND mhMainWnd = nullptr; // main window handle
@@ -65,6 +67,8 @@ protected:
 	std::unique_ptr<GRiRendererFactory> mFactory;
 
 	std::unique_ptr<GRiFilmboxManager> mFilmboxManager;
+
+	UINT mPrefilterLevels = 5u;
 
 };
 

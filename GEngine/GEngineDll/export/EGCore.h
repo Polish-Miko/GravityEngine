@@ -6,6 +6,8 @@
 
 
 
+
+
 extern "C"
 {
 	__declspec(dllexport) void __stdcall InitD3D(HWND hWnd, double width, double height);
@@ -144,6 +146,26 @@ extern "C"
 extern "C"
 {
 	__declspec(dllexport) void __stdcall DeleteSceneObject(wchar_t* sceneObjectName);
+}
+
+extern "C"
+{
+	__declspec(dllexport) const wchar_t* __stdcall GetSkyCubemapUniqueName();
+}
+
+extern "C"
+{
+	__declspec(dllexport) const wchar_t* __stdcall GetDefaultSkyCubemapUniqueName();
+}
+
+extern "C"
+{
+	__declspec(dllexport) void __stdcall SetSkyCubemapUniqueName(wchar_t* newName);
+}
+
+extern "C"
+{
+	__declspec(dllexport) bool __stdcall SkyCubemapNameAvailable(wchar_t* cubemapName);
 }
 
 

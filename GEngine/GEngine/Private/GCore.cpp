@@ -7,6 +7,7 @@
 
 
 
+
 #pragma region Class
 
 GCore::GCore()
@@ -109,7 +110,6 @@ void GCore::Initialize(HWND OutputWindow, double width, double height)
 				LoadProject();
 
 				pRendererFactory = mRenderer->GetFactory();
-				//SetWorkDirectory();
 				LoadTextures();
 				mRenderer->SyncTextures(mTextures);
 				LoadMaterials();
@@ -130,7 +130,7 @@ void GCore::Initialize(HWND OutputWindow, double width, double height)
 				};
 				mRenderer->SyncCameras(cam);
 
-				mRenderer->Initialize(OutputWindow, width, height);
+				mRenderer->Initialize();
 
 				SetSceneObjectsCallback();
 
@@ -404,14 +404,18 @@ void GCore::LoadTextures()
 		mTextures[texName] = std::move(temp);
 	}
 
-	LoadSkyTexture(L"Content\\Textures\\Cubemap_LancellottiChapel.dds");
-}
+	//
+	// Load sky cubemap.
+	//
+	mSkyCubemapUniqueName = mProject->mSkyCubemapUniqueName;
+	if (mSkyCubemapUniqueName.find(L"Resource") != 0 && mTextures.find(mSkyCubemapUniqueName) == mTextures.end())
+		mSkyCubemapUniqueName = GetDefaultSkyCubemapUniqueName();
 
-void GCore::LoadSkyTexture(std::wstring path)
-{
-	std::unique_ptr<GRiTextureLoader> textureLoader(pRendererFactory->CreateTextureLoader());
-
-	GRiTexture* tex = textureLoader->LoadTexture(WorkDirectory, path, false);
+	GRiTexture* tex;
+	if (mSkyCubemapUniqueName.find(L"Resource") == 0)
+		tex = textureLoader->LoadTexture(EngineDirectory, mSkyCubemapUniqueName, true);
+	else
+		tex = textureLoader->LoadTexture(WorkDirectory, mSkyCubemapUniqueName, true);
 	std::wstring texName = L"skyCubeMap";
 	std::unique_ptr<GRiTexture> temp(tex);
 	mTextures[texName] = std::move(temp);
@@ -495,42 +499,6 @@ void GCore::LoadMaterials()
 	sky->AddTexture(mTextures[L"Content\\Textures\\sphere_1_BaseColor.png"].get());//Diffuse
 	sky->AddTexture(mTextures[L"Content\\Textures\\sphere_1_BaseColor.png"].get());//Normal
 	mMaterials[L"sky"] = std::move(sky);
-
-	auto greasyPanMat = std::make_unique<GRiMaterial>(*pRendererFactory->CreateMaterial());
-	greasyPanMat->UniqueName = L"GreasyPan";
-	greasyPanMat->Name = L"GreasyPan";
-	greasyPanMat->MatIndex = mMaterialIndex++;
-	greasyPanMat->AddTexture(mTextures[L"Content\\Textures\\Greasy_Pan_Albedo.png"].get());
-	greasyPanMat->AddTexture(mTextures[L"Content\\Textures\\Greasy_Pan_Normal.png"].get());
-	greasyPanMat->AddTexture(mTextures[L"Content\\Textures\\Greasy_Pan_Orm.png"].get());
-	mMaterials[L"GreasyPan"] = std::move(greasyPanMat);
-
-	auto rustedIronMat = std::make_unique<GRiMaterial>(*pRendererFactory->CreateMaterial());
-	rustedIronMat->UniqueName = L"RustedIron";
-	rustedIronMat->Name = L"RustedIron";
-	rustedIronMat->MatIndex = mMaterialIndex++;
-	rustedIronMat->AddTexture(mTextures[L"Content\\Textures\\Rusted_Iron_Albedo.png"].get());
-	rustedIronMat->AddTexture(mTextures[L"Content\\Textures\\Rusted_Iron_Normal.png"].get());
-	rustedIronMat->AddTexture(mTextures[L"Content\\Textures\\Rusted_Iron_Orm.png"].get());
-	mMaterials[L"RustedIron"] = std::move(rustedIronMat);
-
-	auto cerberusMat = std::make_unique<GRiMaterial>(*pRendererFactory->CreateMaterial());
-	cerberusMat->UniqueName = L"Cerberus";
-	cerberusMat->Name = L"Cerberus";
-	cerberusMat->MatIndex = mMaterialIndex++;
-	cerberusMat->AddTexture(mTextures[L"Content\\Textures\\Cerberus_Albedo.png"].get());
-	cerberusMat->AddTexture(mTextures[L"Content\\Textures\\Cerberus_Normal.png"].get());
-	cerberusMat->AddTexture(mTextures[L"Content\\Textures\\Cerberus_Orm.png"].get());
-	mMaterials[L"Cerberus"] = std::move(cerberusMat);
-
-	auto fireplaceMat = std::make_unique<GRiMaterial>(*pRendererFactory->CreateMaterial());
-	fireplaceMat->UniqueName = L"Fireplace";
-	fireplaceMat->Name = L"Fireplace";
-	fireplaceMat->MatIndex = mMaterialIndex++;
-	fireplaceMat->AddTexture(mTextures[L"Content\\Textures\\Fireplace_Albedo.png"].get());
-	fireplaceMat->AddTexture(mTextures[L"Content\\Textures\\Fireplace_Normal.png"].get());
-	fireplaceMat->AddTexture(mTextures[L"Content\\Textures\\Fireplace_Orm.png"].get());
-	mMaterials[L"Fireplace"] = std::move(fireplaceMat);
 
 	// Load materials from file.
 	{
@@ -773,39 +741,6 @@ void GCore::LoadSceneObjects()
 			mSceneObjects[newSO->UniqueName] = std::move(newSO);
 		}
 	}
-
-	/*
-	std::unique_ptr<GRiSceneObject> cerberusSO(pRendererFactory->CreateSceneObject());
-	cerberusSO->UniqueName = L"Cerberus";
-	cerberusSO->TexTransform = pRendererFactory->CreateFloat4x4();
-	cerberusSO->ObjIndex = mSceneObjectIndex++;
-	cerberusSO->Mat = mMaterials[L"Cerberus"].get();
-	cerberusSO->Mesh = mMeshes[L"Content\\Models\\Cerberus.fbx"].get();
-	mSceneObjectLayer[(int)RenderLayer::Deferred].push_back(cerberusSO.get());
-	mSceneObjects[cerberusSO->UniqueName] = std::move(cerberusSO);
-
-	std::unique_ptr<GRiSceneObject> sphereSO_1(pRendererFactory->CreateSceneObject());
-	sphereSO_1->SetScale(20.f, 20.f, 20.f);
-	sphereSO_1->SetLocation(0.f, -100.f, 0.f);
-	sphereSO_1->UniqueName = L"Sphere";
-	sphereSO_1->TexTransform = pRendererFactory->CreateFloat4x4();
-	sphereSO_1->ObjIndex = mSceneObjectIndex++;
-	sphereSO_1->Mat = mMaterials[L"Default"].get();
-	sphereSO_1->Mesh = mMeshes[L"Sphere"].get();
-	mSceneObjectLayer[(int)RenderLayer::Deferred].push_back(sphereSO_1.get());
-	mSceneObjects[sphereSO_1->UniqueName] = std::move(sphereSO_1);
-
-	std::unique_ptr<GRiSceneObject> sphereSO_2(pRendererFactory->CreateSceneObject());
-	sphereSO_2->SetScale(20.f, 20.f, 20.f);
-	sphereSO_2->SetLocation(20.f, -100.f, 0.f);
-	sphereSO_2->UniqueName = L"Sphere_2";
-	sphereSO_2->TexTransform = pRendererFactory->CreateFloat4x4();
-	sphereSO_2->ObjIndex = mSceneObjectIndex++;
-	sphereSO_2->Mat = mMaterials[L"GreasyPan"].get();
-	sphereSO_2->Mesh = mMeshes[L"Sphere"].get();
-	mSceneObjectLayer[(int)RenderLayer::Deferred].push_back(sphereSO_2.get());
-	mSceneObjects[sphereSO_2->UniqueName] = std::move(sphereSO_2);
-	*/
 }
 
 void GCore::LoadCameras()
@@ -1043,7 +978,7 @@ void GCore::SaveProject()
 	{
 		(*it).second->SaveMaterial(WorkDirectory);
 	}
-	mProject->SaveProject(WorkDirectory + ProjectName + L".gproj", mTextures, mSceneObjectLayer[(int)RenderLayer::Deferred]);
+	mProject->SaveProject(WorkDirectory + ProjectName + L".gproj", mSkyCubemapUniqueName, mTextures, mSceneObjectLayer[(int)RenderLayer::Deferred]);
 }
 
 void GCore::LoadProject()
@@ -1275,6 +1210,34 @@ void GCore::DeleteSceneObject(wchar_t* sceneObjectName)
 	}
 	mSceneObjects.erase(SceneObjectNameStr);
 	mRenderer->SyncSceneObjects(mSceneObjects, mSceneObjectLayer);
+}
+
+const wchar_t* GCore::GetSkyCubemapUniqueName()
+{
+	return mSkyCubemapUniqueName.c_str();
+}
+
+const wchar_t* GCore::GetDefaultSkyCubemapUniqueName()
+{
+	return L"Resource\\Textures\\GE_Default_Cubemap.dds";
+}
+
+void GCore::SetSkyCubemapUniqueName(wchar_t* newName)
+{
+	std::wstring newNameStr(newName);
+	mSkyCubemapUniqueName = newNameStr;
+}
+
+bool GCore::SkyCubemapNameAvailable(wchar_t* cubemapName)
+{
+	std::wstring cubemapNameStr(cubemapName);
+	std::wstring defaultNameStr(GetDefaultSkyCubemapUniqueName());
+	if (cubemapNameStr == defaultNameStr)
+		return true;
+	if (mTextures.find(cubemapNameStr) == mTextures.end())
+		return false;
+	else
+		return true;
 }
 
 #pragma endregion

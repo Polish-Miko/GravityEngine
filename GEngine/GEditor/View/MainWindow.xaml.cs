@@ -38,6 +38,7 @@ namespace GEditor
         Properties_SceneObject properties_SceneObject;
         Properties_Texture properties_Texture;
         Properties_Material properties_Material;
+        Properties_ProjectSettings properties_ProjectSettings;
 
         public object WinInterop { get; private set; }
 
@@ -224,6 +225,15 @@ namespace GEditor
         public void RefreshOutliner()
         {
             outliner.Refresh();
+        }
+
+        private void ProjectSettings(object sender, RoutedEventArgs e)
+        {
+            PropertiesPanel.Children.Clear();
+            properties_ProjectSettings = new Properties_ProjectSettings();
+            properties_ProjectSettings.SetMainWindow(this);
+            PropertiesPanel.Children.Add(properties_ProjectSettings);
+            properties_ProjectSettings.GetSettings();
         }
 
     }

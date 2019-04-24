@@ -54,11 +54,14 @@ public:
 	GProject();
 	~GProject();
 
+	std::wstring mSkyCubemapUniqueName;
 	std::list<GProjectTextureInfo> mTextureInfo;
 	std::list<GProjectSceneObjectInfo> mSceneObjectInfo;
 
-	void SaveProject(std::wstring filename, std::unordered_map<std::wstring, std::unique_ptr<GRiTexture>>& pTextures, std::vector<GRiSceneObject*>& pSceneObjects)
+	void SaveProject(std::wstring filename, std::wstring skyCubemapUniqueName, std::unordered_map<std::wstring, std::unique_ptr<GRiTexture>>& pTextures, std::vector<GRiSceneObject*>& pSceneObjects)
 	{
+		mSkyCubemapUniqueName = skyCubemapUniqueName;
+
 		mTextureInfo.clear();
 
 		std::unordered_map<std::wstring, std::unique_ptr<GRiTexture>>::iterator it;
@@ -152,6 +155,7 @@ private:
 	template<class Archive>
 	void serialize(Archive & ar, const unsigned int version)
 	{
+		ar & BOOST_SERIALIZATION_NVP(mSkyCubemapUniqueName);
 		ar & BOOST_SERIALIZATION_NVP(mTextureInfo);
 		ar & BOOST_SERIALIZATION_NVP(mSceneObjectInfo);
 	}

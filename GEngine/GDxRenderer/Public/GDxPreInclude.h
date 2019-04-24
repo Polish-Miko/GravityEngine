@@ -28,6 +28,8 @@
 #include <fbxsdk.h>
 #include "GRiInclude.h"
 #include "GGiInclude.h"
+//#include <wrl/wrappers/corewrappers.h>
+//#include <ScreenGrab.h>
 
 //extern const int gNumFrameResources;
 

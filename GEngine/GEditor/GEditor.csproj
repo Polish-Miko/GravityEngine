@@ -51,6 +51,9 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
+  <PropertyGroup>
+    <ApplicationIcon>icon_engine.ico</ApplicationIcon>
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Data" />
@@ -79,11 +82,11 @@
       <SubType>Designer</SubType>
     </ApplicationDefinition>
     <Compile Include="import\IGCore.cs" />
-    <Compile Include="import\IGRenderer.cs" />
     <Compile Include="Model\FileBrowser\BrowserListBoxItemModel.cs" />
     <Compile Include="Model\FileBrowser\BrowserTreeViewItemModel.cs" />
     <Compile Include="Model\Outliner\OutlinerItemModel.cs" />
     <Compile Include="Model\Properties\PropertiesModel_Material.cs" />
+    <Compile Include="Model\Properties\PropertiesModel_ProjectSettings.cs" />
     <Compile Include="Model\Properties\PropertiesModel_Texture.cs" />
     <Compile Include="Model\Properties\PropertiesModel_SceneObject.cs" />
     <Compile Include="View\FileBrowser.xaml.cs">
@@ -94,6 +97,9 @@
     </Compile>
     <Compile Include="View\Properties_Material.xaml.cs">
       <DependentUpon>Properties_Material.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="View\Properties_ProjectSettings.xaml.cs">
+      <DependentUpon>Properties_ProjectSettings.xaml</DependentUpon>
     </Compile>
     <Compile Include="View\Properties_Texture.xaml.cs">
       <DependentUpon>Properties_Texture.xaml</DependentUpon>
@@ -128,6 +134,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="View\Properties_Material.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="View\Properties_ProjectSettings.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
@@ -219,6 +229,9 @@
   </ItemGroup>
   <ItemGroup>
     <Resource Include="Resource\Image\icon_outliner_scene.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="icon_engine.ico" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

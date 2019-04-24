@@ -2,6 +2,7 @@
 <!DOCTYPE boost_serialization>
 <boost_serialization signature="serialization::archive" version="17">
 <Project class_id="0" tracking_level="0" version="0">
+	<mSkyCubemapUniqueName>Content\Textures\Cubemap_DallasW.dds</mSkyCubemapUniqueName>
 	<mTextureInfo class_id="1" tracking_level="0" version="0">
 		<count>65</count>
 		<item_version>0</item_version>
@@ -238,8 +239,8 @@
 			<bSrgb>0</bSrgb>
 		</item>
 		<item>
-			<UniqueFileName>Content\Textures\Cubemap_LancellottiChapel.dds</UniqueFileName>
-			<bSrgb>0</bSrgb>
+			<UniqueFileName>Resource\Textures\GE_Default_Cubemap.dds</UniqueFileName>
+			<bSrgb>1</bSrgb>
 		</item>
 		<item>
 			<UniqueFileName>Content\Textures\water1.dds</UniqueFileName>

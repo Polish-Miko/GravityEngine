@@ -147,6 +147,26 @@ void __stdcall DeleteSceneObject(wchar_t* sceneObjectName)
 	GCore::GetCore().DeleteSceneObject(sceneObjectName);
 }
 
+const wchar_t* __stdcall GetSkyCubemapUniqueName()
+{
+	return GCore::GetCore().GetSkyCubemapUniqueName();
+}
+
+const wchar_t* __stdcall GetDefaultSkyCubemapUniqueName()
+{
+	return GCore::GetCore().GetDefaultSkyCubemapUniqueName();
+}
+
+void __stdcall SetSkyCubemapUniqueName(wchar_t* newName)
+{
+	GCore::GetCore().SetSkyCubemapUniqueName(newName);
+}
+
+bool __stdcall SkyCubemapNameAvailable(wchar_t* cubemapName)
+{
+	return GCore::GetCore().SkyCubemapNameAvailable(cubemapName);
+}
+
 
 
 
