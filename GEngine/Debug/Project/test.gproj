@@ -2,36 +2,28 @@
 <!DOCTYPE boost_serialization>
 <boost_serialization signature="serialization::archive" version="17">
 <Project class_id="0" tracking_level="0" version="0">
-	<mSkyCubemapUniqueName>Content\Textures\Cubemap_DallasW.dds</mSkyCubemapUniqueName>
+	<mSkyCubemapUniqueName>Content\Textures\Cubemap\sunsetcube1024.dds</mSkyCubemapUniqueName>
 	<mTextureInfo class_id="1" tracking_level="0" version="0">
-		<count>65</count>
+		<count>33</count>
 		<item_version>0</item_version>
 		<item class_id="2" tracking_level="0" version="0">
-			<UniqueFileName>Content\Textures\pants_diff.dds</UniqueFileName>
+			<UniqueFileName>Content\Textures\Cubemap\Cubemap_DallasW.dds</UniqueFileName>
 			<bSrgb>0</bSrgb>
 		</item>
 		<item>
-			<UniqueFileName>Content\Textures\Cubemap_LancellottiChapel.dds</UniqueFileName>
+			<UniqueFileName>Content\Textures\Cubemap\Cubemap_LancellottiChapel.dds</UniqueFileName>
 			<bSrgb>0</bSrgb>
 		</item>
 		<item>
-			<UniqueFileName>Content\Textures\Cubemap_DallasW.dds</UniqueFileName>
-			<bSrgb>0</bSrgb>
+			<UniqueFileName>Content\Textures\Cerberus_Albedo.png</UniqueFileName>
+			<bSrgb>1</bSrgb>
 		</item>
 		<item>
-			<UniqueFileName>Content\Textures\bricks.dds</UniqueFileName>
-			<bSrgb>0</bSrgb>
+			<UniqueFileName>Resource\Textures\GE_Default_Albedo.png</UniqueFileName>
+			<bSrgb>1</bSrgb>
 		</item>
 		<item>
-			<UniqueFileName>Content\Textures\Cerberus_Orm.png</UniqueFileName>
-			<bSrgb>0</bSrgb>
-		</item>
-		<item>
-			<UniqueFileName>Content\Textures\bricks2.dds</UniqueFileName>
-			<bSrgb>0</bSrgb>
-		</item>
-		<item>
-			<UniqueFileName>Content\Textures\bricks2_nmap.dds</UniqueFileName>
+			<UniqueFileName>Content\Textures\Cubemap\Cubemap_SaintPetersBasilica.dds</UniqueFileName>
 			<bSrgb>0</bSrgb>
 		</item>
 		<item>
@@ -39,59 +31,23 @@
 			<bSrgb>0</bSrgb>
 		</item>
 		<item>
-			<UniqueFileName>Content\Textures\tile_nmap.dds</UniqueFileName>
+			<UniqueFileName>Content\Textures\Cubemap\Cubemap_SantaMariaDeiMiracoli.dds</UniqueFileName>
 			<bSrgb>0</bSrgb>
 		</item>
 		<item>
-			<UniqueFileName>Content\Textures\bricks3.dds</UniqueFileName>
+			<UniqueFileName>Content\Textures\Cubemap\snowcube1024.dds</UniqueFileName>
 			<bSrgb>0</bSrgb>
 		</item>
 		<item>
-			<UniqueFileName>Content\Textures\bricks_nmap.dds</UniqueFileName>
+			<UniqueFileName>Content\Textures\Cerberus_Orm.png</UniqueFileName>
 			<bSrgb>0</bSrgb>
 		</item>
 		<item>
-			<UniqueFileName>Content\Textures\Greasy_Pan_Albedo.png</UniqueFileName>
-			<bSrgb>1</bSrgb>
-		</item>
-		<item>
-			<UniqueFileName>Content\Textures\Cerberus_Albedo.png</UniqueFileName>
-			<bSrgb>1</bSrgb>
-		</item>
-		<item>
-			<UniqueFileName>Content\Textures\WoodCrate01.dds</UniqueFileName>
+			<UniqueFileName>Content\Textures\Cubemap\Cubemap_Vasa.dds</UniqueFileName>
 			<bSrgb>0</bSrgb>
 		</item>
 		<item>
-			<UniqueFileName>Content\Textures\checkboard.dds</UniqueFileName>
-			<bSrgb>0</bSrgb>
-		</item>
-		<item>
-			<UniqueFileName>Content\Textures\jacket_diff.dds</UniqueFileName>
-			<bSrgb>0</bSrgb>
-		</item>
-		<item>
-			<UniqueFileName>Content\Textures\Cubemap_SaintPetersBasilica.dds</UniqueFileName>
-			<bSrgb>0</bSrgb>
-		</item>
-		<item>
-			<UniqueFileName>Content\Textures\Cubemap_SantaMariaDeiMiracoli.dds</UniqueFileName>
-			<bSrgb>0</bSrgb>
-		</item>
-		<item>
-			<UniqueFileName>Content\Textures\desertcube1024.dds</UniqueFileName>
-			<bSrgb>0</bSrgb>
-		</item>
-		<item>
-			<UniqueFileName>Content\Textures\Cubemap_Vasa.dds</UniqueFileName>
-			<bSrgb>0</bSrgb>
-		</item>
-		<item>
-			<UniqueFileName>Content\Textures\default_nmap.dds</UniqueFileName>
-			<bSrgb>0</bSrgb>
-		</item>
-		<item>
-			<UniqueFileName>Content\Textures\treearray.dds</UniqueFileName>
+			<UniqueFileName>Content\Textures\Cubemap\sunsetcube1024.dds</UniqueFileName>
 			<bSrgb>0</bSrgb>
 		</item>
 		<item>
@@ -111,24 +67,8 @@
 			<bSrgb>0</bSrgb>
 		</item>
 		<item>
-			<UniqueFileName>Resource\Textures\GE_DefaultTexture_Normal.png</UniqueFileName>
-			<bSrgb>0</bSrgb>
-		</item>
-		<item>
-			<UniqueFileName>Content\Textures\grass.dds</UniqueFileName>
-			<bSrgb>0</bSrgb>
-		</item>
-		<item>
-			<UniqueFileName>Content\Textures\sphere_2_Normal.png</UniqueFileName>
-			<bSrgb>0</bSrgb>
-		</item>
-		<item>
-			<UniqueFileName>Content\Textures\grasscube1024.dds</UniqueFileName>
-			<bSrgb>0</bSrgb>
-		</item>
-		<item>
-			<UniqueFileName>Content\Textures\treeArray2.dds</UniqueFileName>
-			<bSrgb>0</bSrgb>
+			<UniqueFileName>Content\Textures\Greasy_Pan_Albedo.png</UniqueFileName>
+			<bSrgb>1</bSrgb>
 		</item>
 		<item>
 			<UniqueFileName>Content\Textures\Greasy_Pan_Normal.png</UniqueFileName>
@@ -143,23 +83,15 @@
 			<bSrgb>0</bSrgb>
 		</item>
 		<item>
-			<UniqueFileName>Content\Textures\head_diff.dds</UniqueFileName>
+			<UniqueFileName>Content\Textures\Rusted_Iron_Albedo.png</UniqueFileName>
 			<bSrgb>0</bSrgb>
 		</item>
 		<item>
-			<UniqueFileName>Content\Textures\head_norm.dds</UniqueFileName>
-			<bSrgb>0</bSrgb>
+			<UniqueFileName>Content\Textures\sphere_1_BaseColor.png</UniqueFileName>
+			<bSrgb>1</bSrgb>
 		</item>
 		<item>
-			<UniqueFileName>Content\Textures\upBody_diff.dds</UniqueFileName>
-			<bSrgb>0</bSrgb>
-		</item>
-		<item>
-			<UniqueFileName>Content\Textures\ice.dds</UniqueFileName>
-			<bSrgb>0</bSrgb>
-		</item>
-		<item>
-			<UniqueFileName>Content\Textures\jacket_norm.dds</UniqueFileName>
+			<UniqueFileName>Content\Textures\Rusted_Iron_Normal.png</UniqueFileName>
 			<bSrgb>0</bSrgb>
 		</item>
 		<item>
@@ -171,39 +103,11 @@
 			<bSrgb>0</bSrgb>
 		</item>
 		<item>
-			<UniqueFileName>Content\Textures\pants_norm.dds</UniqueFileName>
-			<bSrgb>0</bSrgb>
-		</item>
-		<item>
-			<UniqueFileName>Content\Textures\Rusted_Iron_Albedo.png</UniqueFileName>
-			<bSrgb>0</bSrgb>
-		</item>
-		<item>
-			<UniqueFileName>Content\Textures\Rusted_Iron_Normal.png</UniqueFileName>
-			<bSrgb>0</bSrgb>
-		</item>
-		<item>
-			<UniqueFileName>Content\Textures\WireFence.dds</UniqueFileName>
-			<bSrgb>0</bSrgb>
-		</item>
-		<item>
-			<UniqueFileName>Content\Textures\sphere_1_BaseColor.png</UniqueFileName>
-			<bSrgb>1</bSrgb>
-		</item>
-		<item>
-			<UniqueFileName>Content\Textures\snowcube1024.dds</UniqueFileName>
-			<bSrgb>0</bSrgb>
-		</item>
-		<item>
-			<UniqueFileName>Content\Textures\upbody_norm.dds</UniqueFileName>
-			<bSrgb>0</bSrgb>
-		</item>
-		<item>
-			<UniqueFileName>Content\Textures\tree01S.dds</UniqueFileName>
-			<bSrgb>0</bSrgb>
-		</item>
-		<item>
 			<UniqueFileName>Content\Textures\sphere_1_OcclusionRoughnessMetallic.png</UniqueFileName>
+			<bSrgb>0</bSrgb>
+		</item>
+		<item>
+			<UniqueFileName>Resource\Textures\IBL_BRDF_LUT.png</UniqueFileName>
 			<bSrgb>0</bSrgb>
 		</item>
 		<item>
@@ -211,52 +115,8 @@
 			<bSrgb>1</bSrgb>
 		</item>
 		<item>
-			<UniqueFileName>Resource\Textures\IBL_BRDF_LUT.png</UniqueFileName>
+			<UniqueFileName>Content\Textures\sphere_2_Normal.png</UniqueFileName>
 			<bSrgb>0</bSrgb>
-		</item>
-		<item>
-			<UniqueFileName>Content\Textures\stone.dds</UniqueFileName>
-			<bSrgb>0</bSrgb>
-		</item>
-		<item>
-			<UniqueFileName>Content\Textures\sunsetcube1024.dds</UniqueFileName>
-			<bSrgb>0</bSrgb>
-		</item>
-		<item>
-			<UniqueFileName>Content\Textures\tile.dds</UniqueFileName>
-			<bSrgb>0</bSrgb>
-		</item>
-		<item>
-			<UniqueFileName>Content\Textures\tree02S.dds</UniqueFileName>
-			<bSrgb>0</bSrgb>
-		</item>
-		<item>
-			<UniqueFileName>Resource\Textures\GE_DefaultTexture_Orm.png</UniqueFileName>
-			<bSrgb>0</bSrgb>
-		</item>
-		<item>
-			<UniqueFileName>Content\Textures\tree35S.dds</UniqueFileName>
-			<bSrgb>0</bSrgb>
-		</item>
-		<item>
-			<UniqueFileName>Resource\Textures\GE_Default_Cubemap.dds</UniqueFileName>
-			<bSrgb>1</bSrgb>
-		</item>
-		<item>
-			<UniqueFileName>Content\Textures\water1.dds</UniqueFileName>
-			<bSrgb>0</bSrgb>
-		</item>
-		<item>
-			<UniqueFileName>Content\Textures\white1x1.dds</UniqueFileName>
-			<bSrgb>0</bSrgb>
-		</item>
-		<item>
-			<UniqueFileName>Content\Textures\WoodCrate02.dds</UniqueFileName>
-			<bSrgb>0</bSrgb>
-		</item>
-		<item>
-			<UniqueFileName>Resource\Textures\GE_Default_Albedo.png</UniqueFileName>
-			<bSrgb>1</bSrgb>
 		</item>
 		<item>
 			<UniqueFileName>Resource\Textures\GE_Default_Normal.png</UniqueFileName>
@@ -266,19 +126,31 @@
 			<UniqueFileName>Resource\Textures\GE_Default_Orm.png</UniqueFileName>
 			<bSrgb>0</bSrgb>
 		</item>
+		<item>
+			<UniqueFileName>Resource\Textures\GE_DefaultTexture_Normal.png</UniqueFileName>
+			<bSrgb>0</bSrgb>
+		</item>
+		<item>
+			<UniqueFileName>Resource\Textures\GE_DefaultTexture_Orm.png</UniqueFileName>
+			<bSrgb>0</bSrgb>
+		</item>
+		<item>
+			<UniqueFileName>Content\Textures\Cubemap\sunsetcube1024.dds</UniqueFileName>
+			<bSrgb>1</bSrgb>
+		</item>
 	</mTextureInfo>
 	<mSceneObjectInfo class_id="3" tracking_level="0" version="0">
-		<count>4</count>
+		<count>7</count>
 		<item_version>0</item_version>
 		<item class_id="4" tracking_level="0" version="0">
-			<UniqueName>Sphere</UniqueName>
-			<MaterialUniqueName>Default</MaterialUniqueName>
+			<UniqueName>Sphere_1</UniqueName>
+			<MaterialUniqueName>Content\Material\GreasyPan.gmat</MaterialUniqueName>
 			<MeshUniqueName>Sphere</MeshUniqueName>
 			<Location>
 				<count>3</count>
+				<item>4.500000000e+01</item>
 				<item>0.000000000e+00</item>
-				<item>0.000000000e+00</item>
-				<item>0.000000000e+00</item>
+				<item>7.000000000e+01</item>
 			</Location>
 			<Rotation>
 				<count>3</count>
@@ -299,7 +171,7 @@
 			<MeshUniqueName>Box</MeshUniqueName>
 			<Location>
 				<count>3</count>
-				<item>5.000000000e+01</item>
+				<item>1.500000000e+02</item>
 				<item>0.000000000e+00</item>
 				<item>0.000000000e+00</item>
 			</Location>
@@ -318,7 +190,7 @@
 		</item>
 		<item>
 			<UniqueName>Plane</UniqueName>
-			<MaterialUniqueName>Default</MaterialUniqueName>
+			<MaterialUniqueName>Content\Material\Sphere_1.gmat</MaterialUniqueName>
 			<MeshUniqueName>Grid</MeshUniqueName>
 			<Location>
 				<count>3</count>
@@ -345,9 +217,78 @@
 			<MeshUniqueName>Cylinder</MeshUniqueName>
 			<Location>
 				<count>3</count>
-				<item>-4.000000000e+01</item>
+				<item>1.000000000e+02</item>
 				<item>0.000000000e+00</item>
 				<item>0.000000000e+00</item>
+			</Location>
+			<Rotation>
+				<count>3</count>
+				<item>0.000000000e+00</item>
+				<item>0.000000000e+00</item>
+				<item>0.000000000e+00</item>
+			</Rotation>
+			<Scale>
+				<count>3</count>
+				<item>1.000000000e+00</item>
+				<item>1.000000000e+00</item>
+				<item>1.000000000e+00</item>
+			</Scale>
+		</item>
+		<item>
+			<UniqueName>Sphere_2</UniqueName>
+			<MaterialUniqueName>Content\Material\RustedIron.gmat</MaterialUniqueName>
+			<MeshUniqueName>Sphere</MeshUniqueName>
+			<Location>
+				<count>3</count>
+				<item>0.000000000e+00</item>
+				<item>0.000000000e+00</item>
+				<item>7.000000000e+01</item>
+			</Location>
+			<Rotation>
+				<count>3</count>
+				<item>0.000000000e+00</item>
+				<item>0.000000000e+00</item>
+				<item>0.000000000e+00</item>
+			</Rotation>
+			<Scale>
+				<count>3</count>
+				<item>1.000000000e+00</item>
+				<item>1.000000000e+00</item>
+				<item>1.000000000e+00</item>
+			</Scale>
+		</item>
+		<item>
+			<UniqueName>Sphere_3</UniqueName>
+			<MaterialUniqueName>Content\Material\Sphere_2.gmat</MaterialUniqueName>
+			<MeshUniqueName>Sphere</MeshUniqueName>
+			<Location>
+				<count>3</count>
+				<item>-4.500000000e+01</item>
+				<item>0.000000000e+00</item>
+				<item>7.000000000e+01</item>
+			</Location>
+			<Rotation>
+				<count>3</count>
+				<item>0.000000000e+00</item>
+				<item>0.000000000e+00</item>
+				<item>0.000000000e+00</item>
+			</Rotation>
+			<Scale>
+				<count>3</count>
+				<item>1.000000000e+00</item>
+				<item>1.000000000e+00</item>
+				<item>1.000000000e+00</item>
+			</Scale>
+		</item>
+		<item>
+			<UniqueName>Cerberus</UniqueName>
+			<MaterialUniqueName>Content\Material\Cerberus.gmat</MaterialUniqueName>
+			<MeshUniqueName>Content\Models\Cerberus.fbx</MeshUniqueName>
+			<Location>
+				<count>3</count>
+				<item>-3.000000000e+01</item>
+				<item>5.000000000e+01</item>
+				<item>-1.250000000e+02</item>
 			</Location>
 			<Rotation>
 				<count>3</count>

@@ -474,24 +474,6 @@ void GCore::LoadMaterials()
 	debug_metallic->AddScalar(3.01f);//Blue
 	mMaterials[L"debug_metallic"] = std::move(debug_metallic);
 
-	auto sphere_1 = std::make_unique<GRiMaterial>(*pRendererFactory->CreateMaterial());
-	sphere_1->UniqueName = L"sphere_1";
-	sphere_1->Name = L"sphere_1";
-	sphere_1->MatIndex = mMaterialIndex++;
-	sphere_1->AddTexture(mTextures[L"Content\\Textures\\sphere_1_BaseColor.png"].get());
-	sphere_1->AddTexture(mTextures[L"Content\\Textures\\sphere_1_Normal.png"].get());
-	sphere_1->AddTexture(mTextures[L"Content\\Textures\\sphere_1_OcclusionRoughnessMetallic.png"].get());
-	mMaterials[L"sphere_1"] = std::move(sphere_1);
-
-	auto sphere_2 = std::make_unique<GRiMaterial>(*pRendererFactory->CreateMaterial());
-	sphere_2->UniqueName = L"sphere_2";
-	sphere_2->Name = L"sphere_2";
-	sphere_2->MatIndex = mMaterialIndex++;
-	sphere_2->AddTexture(mTextures[L"Content\\Textures\\sphere_2_BaseColor.png"].get());
-	sphere_2->AddTexture(mTextures[L"Content\\Textures\\sphere_2_Normal.png"].get());
-	sphere_2->AddTexture(mTextures[L"Content\\Textures\\sphere_2_OcclusionRoughnessMetallic.png"].get());
-	mMaterials[L"sphere_2"] = std::move(sphere_2);
-
 	auto sky = std::make_unique<GRiMaterial>(*pRendererFactory->CreateMaterial());
 	sky->UniqueName = L"sky";
 	sky->Name = L"sky";
