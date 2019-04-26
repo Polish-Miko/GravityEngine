@@ -16,6 +16,7 @@
 #include "GDxFrameResource.h"
 #include "GDxCubeRtv.h"
 #include "GDxRtvHeap.h"
+#include "GDxImgui.h"
 
 // Link necessary d3d12 libraries.
 #pragma comment(lib,"d3dcompiler.lib")
@@ -50,6 +51,8 @@ public:
 
 	virtual void CreateRendererFactory() override;
 	virtual void CreateFilmboxManager() override;
+
+	virtual void SetImgui(GRiImgui* imguiPtr) override;
 
 protected:
 	virtual void CreateRtvAndDsvDescriptorHeaps();
@@ -147,6 +150,8 @@ protected:
 	std::unordered_map<std::string, ComPtr<ID3D12PipelineState>> mPSOs;
 	std::unordered_map<std::string, ComPtr<ID3D12RootSignature>> mRootSignatures;
 
+	GDxImgui* pImgui = nullptr;
+
 	UINT mTextrueHeapIndex = 0;
 	UINT mSkyTexHeapIndex = 0;
 	UINT mShadowMapHeapIndex = 0;
@@ -159,6 +164,7 @@ protected:
 
 	UINT mGBufferSrvIndex = 0;
 	UINT mLightPassSrvIndex = 0;
+	UINT mSkyPassSrvIndex = 0;
 	UINT mIblIndex = 0;
 
 	CD3DX12_GPU_DESCRIPTOR_HANDLE mNullSrv;

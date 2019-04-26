@@ -92,7 +92,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_LIB;FBXSDK_SHARED;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>Private;Public;$(SolutionDir)ThirdParty\FBX SDK\2019.2\include;$(SolutionDir)GGenericInfra;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>Private;Public;$(SolutionDir)ThirdParty\FBX SDK\2019.2\include;$(SolutionDir)GGenericInfra;Public\imgui;Private\imgui;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -156,6 +156,13 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="Public\GRiImgui.h" />
+    <ClInclude Include="Private\imgui\imconfig.h" />
+    <ClInclude Include="Public\imgui\imgui.h" />
+    <ClInclude Include="Private\imgui\imgui_internal.h" />
+    <ClInclude Include="Private\imgui\imstb_rectpack.h" />
+    <ClInclude Include="Private\imgui\imstb_textedit.h" />
+    <ClInclude Include="Private\imgui\imstb_truetype.h" />
     <ClInclude Include="Public\GRiCamera.h" />
     <ClInclude Include="Public\GRiDirectionalLight.h" />
     <ClInclude Include="Public\GRiPointLight.h" />
@@ -178,6 +185,7 @@
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Private\GRiImgui.cpp" />
     <ClCompile Include="Private\GRiCamera.cpp" />
     <ClCompile Include="Private\GRiDirectionalLight.cpp" />
     <ClCompile Include="Private\GRiPointLight.cpp" />
@@ -194,6 +202,10 @@
     <ClCompile Include="Private\GRiRendererFactory.cpp" />
     <ClCompile Include="Private\GRiTextureLoader.cpp" />
     <ClCompile Include="Private\GRiTexture.cpp" />
+    <ClCompile Include="Private\imgui\imgui.cpp" />
+    <ClCompile Include="Private\imgui\imgui_demo.cpp" />
+    <ClCompile Include="Private\imgui\imgui_draw.cpp" />
+    <ClCompile Include="Private\imgui\imgui_widgets.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>

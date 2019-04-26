@@ -35,6 +35,8 @@ public:
 	virtual void CreateFilmboxManager() = 0;
 	GRiFilmboxManager* GetFilmboxManager();
 
+	virtual void SetImgui(GRiImgui* imguiPtr) = 0;
+
 	virtual void SyncTextures(std::unordered_map<std::wstring, std::unique_ptr<GRiTexture>>& mTextures);
 	virtual void SyncMaterials(std::unordered_map<std::wstring, std::unique_ptr<GRiMaterial>>& mMaterials);
 	virtual void SyncMeshes(std::unordered_map<std::wstring, std::unique_ptr<GRiMesh>>& mMeshes);

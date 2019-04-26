@@ -115,7 +115,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_LIB;FBXSDK_SHARED;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)ThirdParty\FBX SDK\2019.2\include\;Common\;Render\;Public;Private;$(SolutionDir)GRendererInfra;$(SolutionDir)GGenericInfra;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)ThirdParty\FBX SDK\2019.2\include\;Private\imgui;Public;Private;$(SolutionDir)GRendererInfra;$(SolutionDir)GGenericInfra;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
@@ -171,6 +171,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="Public\GDxImgui.h" />
     <ClInclude Include="Private\d3dx12.h" />
     <ClInclude Include="Private\GDxDescriptorHeap.h" />
     <ClInclude Include="Private\GDxMathHelper.h" />
@@ -183,6 +184,8 @@
     <ClInclude Include="Private\GDxCubeRtv.h" />
     <ClInclude Include="Private\GDxStaticVIBuffer.h" />
     <ClInclude Include="Private\GDxVertexIndexBuffer.h" />
+    <ClInclude Include="Private\imgui\imgui_impl_dx12.h" />
+    <ClInclude Include="Private\imgui\imgui_impl_win32.h" />
     <ClInclude Include="Public\GDxFilmboxManager.h" />
     <ClInclude Include="Public\GDxGeometryGenerator.h" />
     <ClInclude Include="Public\GDxMesh.h" />
@@ -204,6 +207,7 @@
     <ClInclude Include="Private\GDxUploadBuffer.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Private\GDxImgui.cpp" />
     <ClCompile Include="Private\GDxDescriptorHeap.cpp" />
     <ClCompile Include="Private\GDxMathHelper.cpp" />
     <ClCompile Include="Private\GDxFrameResource.cpp" />
@@ -228,6 +232,8 @@
     <ClCompile Include="Private\GDxTextureLoader.cpp" />
     <ClCompile Include="Private\GDxTexture.cpp" />
     <ClCompile Include="Private\GDxRenderer.cpp" />
+    <ClCompile Include="Private\imgui\imgui_impl_dx12.cpp" />
+    <ClCompile Include="Private\imgui\imgui_impl_win32.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>

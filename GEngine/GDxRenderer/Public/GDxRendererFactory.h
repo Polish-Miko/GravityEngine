@@ -31,6 +31,8 @@ public:
 
 	virtual GRiSceneObject* CreateSceneObject() override;
 
+	virtual GRiImgui* CreateImgui() override;
+
 private:
 
 	ID3D12Device* pDevice;

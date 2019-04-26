@@ -135,7 +135,7 @@
 			<bSrgb>0</bSrgb>
 		</item>
 		<item>
-			<UniqueFileName>Content\Textures\Cubemap\sunsetcube1024.dds</UniqueFileName>
+			<UniqueFileName>Resource\Textures\GE_Default_Cubemap.dds</UniqueFileName>
 			<bSrgb>1</bSrgb>
 		</item>
 	</mTextureInfo>

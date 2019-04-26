@@ -8,6 +8,7 @@
 #include "GDxMesh.h"
 #include "GDxGeometryGenerator.h"
 #include "GDxSceneObject.h"
+#include "GDxImgui.h"
 
 
 GDxRendererFactory::GDxRendererFactory(ID3D12Device* device,
@@ -75,5 +76,11 @@ GRiGeometryGenerator* GDxRendererFactory::CreateGeometryGenerator()
 GRiSceneObject* GDxRendererFactory::CreateSceneObject()
 {
 	GRiSceneObject* ret = new GDxSceneObject();
+	return ret;
+}
+
+GRiImgui* GDxRendererFactory::CreateImgui()
+{
+	GRiImgui* ret = new GDxImgui();
 	return ret;
 }

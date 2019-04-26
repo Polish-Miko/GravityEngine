@@ -18,6 +18,8 @@
 #include "Public/GRiPointLight.h"
 #include "Public/GRiDirectionalLight.h"
 #include "Public/GRiSpotlight.h"
+#include "Public/imgui/imgui.h"
+#include "Public/GRiImgui.h"
 
 #define MAX_TEXTURE_NUM 1024
 #define MAX_MATERIAL_NUM 1024

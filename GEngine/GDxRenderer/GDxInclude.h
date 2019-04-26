@@ -14,3 +14,4 @@
 #include "Public/GDxSceneObject.h"
 #include "Public/GDxGeometryGenerator.h"
 #include "Public/GDxFilmboxManager.h"
+#include "Public/GDxImgui.h"

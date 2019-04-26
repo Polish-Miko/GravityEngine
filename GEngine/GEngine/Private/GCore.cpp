@@ -20,7 +20,7 @@ GCore::GCore()
 
 GCore::~GCore()
 {
-
+	mImgui->ShutDown();
 }
 
 GCore& GCore::GetCore()
@@ -110,6 +110,7 @@ void GCore::Initialize(HWND OutputWindow, double width, double height)
 				LoadProject();
 
 				pRendererFactory = mRenderer->GetFactory();
+				CreateImgui();
 				LoadTextures();
 				mRenderer->SyncTextures(mTextures);
 				LoadMaterials();
@@ -155,11 +156,15 @@ void GCore::Initialize(HWND OutputWindow, double width, double height)
 void GCore::Update()
 {
 	OnKeyboardInput(mTimer.get());
+	mImgui->BeginFrame();
+	mImgui->SetGUIContent();
 	mRenderer->Update(mTimer.get());
 }
 
 void GCore::MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
+	ImGui_ImplWin32_WndProcHandler(hwnd, msg, wParam, lParam);
+
 	switch (msg)
 	{
 		// WM_ACTIVATE is sent when the window is activated or deactivated.
@@ -358,6 +363,13 @@ void GCore::OnMouseMove(WPARAM btnState, int x, int y)
 #pragma endregion
 
 #pragma region Initialization
+
+void GCore::CreateImgui()
+{
+	GRiImgui* pImgui = pRendererFactory->CreateImgui();
+	mImgui.reset(pImgui);
+	mRenderer->SetImgui(mImgui.get());
+}
 
 void GCore::LoadTextures()
 {

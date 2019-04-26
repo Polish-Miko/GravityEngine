@@ -45,6 +45,10 @@ float2 BrdfLUT(float3 normal, float3 viewDir, float roughness)
 float4 main(VertexToPixel pIn) : SV_TARGET
 {
 	float4 packedAlbedo = gAlbedoTexture.Sample(basicSampler, pIn.uv);
+
+	// if alpha channel is nearly zero, clip this pixel.
+	//clip(packedAlbedo.a - 0.05f);
+
 	float3 albedo = packedAlbedo.rgb;
 	float3 normal = gNormalTexture.Sample(basicSampler, pIn.uv).rgb;
 	float3 worldPos = gWorldPosTexture.Sample(basicSampler, pIn.uv).rgb;
@@ -60,6 +64,7 @@ float4 main(VertexToPixel pIn) : SV_TARGET
 	float3 finalColor = AmbientPBR(normalize(normal), worldPos,
 		cameraPosition, roughness, metal, albedo,
 		irradiance, prefilter, brdf, shadowAmount);
+
 
 	return float4(finalColor, 1.0f);
 }

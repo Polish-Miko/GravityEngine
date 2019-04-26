@@ -8,6 +8,7 @@
 #include "GRiMeshData.h"
 #include "GRiGeometryGenerator.h"
 #include "GRiSceneObject.h"
+#include "GRiImgui.h"
 
 class GRiRendererFactory
 {
@@ -33,6 +34,8 @@ public:
 	virtual GRiGeometryGenerator* CreateGeometryGenerator() = 0;
 
 	virtual GRiSceneObject* CreateSceneObject() = 0;
+
+	virtual GRiImgui* CreateImgui() = 0;
 
 };
 

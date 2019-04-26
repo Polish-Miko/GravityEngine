@@ -127,6 +127,8 @@ void GDxRenderer::Initialize()
 	BuildFrameResources();
 	BuildPSOs();
 
+	pImgui->Initialize(MainWnd(), md3dDevice.Get(), NUM_FRAME_RESOURCES, mSrvDescriptorHeap.Get());
+
 	CubemapPreIntegration();
 
 	// Execute the initialization commands.
@@ -254,14 +256,14 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 		// For each render item...
 		DrawSceneObjects(mCommandList.Get(), RenderLayer::ScreenQuad, false);
 
-		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["LightPass"]->mRtv[0]->mResource.Get(),
-			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ));
+		//mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["LightPass"]->mRtv[0]->mResource.Get(),
+			//D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ));
 	}
 
 	// Ambient Light Pass
 	{
-		mCommandList->RSSetViewports(1, &(mRtvHeaps["LightPass"]->mRtv[1]->mViewport));
-		mCommandList->RSSetScissorRects(1, &(mRtvHeaps["LightPass"]->mRtv[1]->mScissorRect));
+		mCommandList->RSSetViewports(1, &(mRtvHeaps["LightPass"]->mRtv[0]->mViewport));
+		mCommandList->RSSetScissorRects(1, &(mRtvHeaps["LightPass"]->mRtv[0]->mScissorRect));
 
 		mCommandList->SetGraphicsRootSignature(mRootSignatures["LightPass"].Get());
 
@@ -274,29 +276,59 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 
 		mCommandList->SetGraphicsRootDescriptorTable(2, GetGpuSrv(mIblIndex));
 		
-		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["LightPass"]->mRtv[1]->mResource.Get(),
-			D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_RENDER_TARGET));
+		//mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["LightPass"]->mRtv[0]->mResource.Get(),
+			//D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_RENDER_TARGET));
 
 		// Clear the back buffer.
-		DirectX::XMVECTORF32 clearColor = { mRtvHeaps["LightPass"]->mRtv[1]->mProperties.mClearColor[0],
-		mRtvHeaps["LightPass"]->mRtv[1]->mProperties.mClearColor[1],
-		mRtvHeaps["LightPass"]->mRtv[1]->mProperties.mClearColor[2],
-		mRtvHeaps["LightPass"]->mRtv[1]->mProperties.mClearColor[3]
+		DirectX::XMVECTORF32 clearColor = { mRtvHeaps["LightPass"]->mRtv[0]->mProperties.mClearColor[0],
+		mRtvHeaps["LightPass"]->mRtv[0]->mProperties.mClearColor[1],
+		mRtvHeaps["LightPass"]->mRtv[0]->mProperties.mClearColor[2],
+		mRtvHeaps["LightPass"]->mRtv[0]->mProperties.mClearColor[3]
 		};
 
 		// WE ALREADY WROTE THE DEPTH INFO TO THE DEPTH BUFFER IN DrawNormalsAndDepth,
 		// SO DO NOT CLEAR DEPTH.
-		mCommandList->ClearRenderTargetView(mRtvHeaps["LightPass"]->mRtvHeap.handleCPU(1), clearColor, 0, nullptr);
+		//mCommandList->ClearRenderTargetView(mRtvHeaps["LightPass"]->mRtvHeap.handleCPU(0), clearColor, 0, nullptr);
 
 		// Specify the buffers we are going to render to.
 		//mCommandList->OMSetRenderTargets(mRtvHeaps["GBuffer"]->mRtvHeap.HeapDesc.NumDescriptors, &(mRtvHeaps["GBuffer"]->mRtvHeap.hCPUHeapStart), true, &DepthStencilView());
-		mCommandList->OMSetRenderTargets(1, &(mRtvHeaps["LightPass"]->mRtvHeap.handleCPU(1)), true, &DepthStencilView());
+		mCommandList->OMSetRenderTargets(1, &(mRtvHeaps["LightPass"]->mRtvHeap.handleCPU(0)), true, &DepthStencilView());
 
 		// For each render item...
 		DrawSceneObjects(mCommandList.Get(), RenderLayer::ScreenQuad, false);
 
-		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["LightPass"]->mRtv[1]->mResource.Get(),
+		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["LightPass"]->mRtv[0]->mResource.Get(),
 			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ));
+	}
+
+	// Sky Pass
+	{
+		mCommandList->RSSetViewports(1, &mScreenViewport);
+		mCommandList->RSSetScissorRects(1, &mScissorRect);
+
+		mCommandList->SetGraphicsRootSignature(mRootSignatures["Sky"].Get());
+
+		// Clear the back buffer.
+		DirectX::XMVECTORF32 clearColor = { mRtvHeaps["SkyPass"]->mRtv[0]->mProperties.mClearColor[0],
+		mRtvHeaps["SkyPass"]->mRtv[0]->mProperties.mClearColor[1],
+		mRtvHeaps["SkyPass"]->mRtv[0]->mProperties.mClearColor[2],
+		mRtvHeaps["SkyPass"]->mRtv[0]->mProperties.mClearColor[3]
+		};
+		mCommandList->ClearRenderTargetView(mRtvHeaps["SkyPass"]->mRtvHeap.handleCPU(0), clearColor, 0, nullptr);
+
+		// Specify the buffers we are going to render to.
+		//mCommandList->OMSetRenderTargets(1, &CurrentBackBufferView(), true, &DepthStencilView());
+		mCommandList->OMSetRenderTargets(1, &(mRtvHeaps["SkyPass"]->mRtvHeap.handleCPU(0)), true, &DepthStencilView());
+
+		auto passCB = mCurrFrameResource->SkyCB->Resource();
+		mCommandList->SetGraphicsRootConstantBufferView(1, passCB->GetGPUVirtualAddress());
+
+		// Sky cubemap SRV.
+		mCommandList->SetGraphicsRootDescriptorTable(2, GetGpuSrv(mSkyTexHeapIndex));
+		//mCommandList->SetGraphicsRootDescriptorTable(2, GetGpuSrv(mIblIndex + 4)); //Irradiance cubemap debug.
+
+		mCommandList->SetPipelineState(mPSOs["Sky"].Get());
+		DrawSceneObjects(mCommandList.Get(), RenderLayer::Sky, true);
 	}
 
 	// Debug Pass
@@ -334,6 +366,7 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 		mCommandList->SetPipelineState(mPSOs["PostProcess"].Get());
 
 		mCommandList->SetGraphicsRootDescriptorTable(0, mRtvHeaps["LightPass"]->GetSrvGpuStart());
+		mCommandList->SetGraphicsRootDescriptorTable(1, mRtvHeaps["SkyPass"]->GetSrvGpuStart());
 
 		// Specify the buffers we are going to render to.
 		//mCommandList->OMSetRenderTargets(1, &CurrentBackBufferView(), true, &DepthStencilView());
@@ -343,34 +376,9 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 		DrawSceneObjects(mCommandList.Get(), RenderLayer::ScreenQuad, false);
 	}
 
-	// Sky Pass
+	// Immediate Mode GUI Pass
 	{
-		mCommandList->RSSetViewports(1, &mScreenViewport);
-		mCommandList->RSSetScissorRects(1, &mScissorRect);
-
-		mCommandList->SetGraphicsRootSignature(mRootSignatures["Sky"].Get());
-
-		// Specify the buffers we are going to render to.
-		mCommandList->OMSetRenderTargets(1, &CurrentBackBufferView(), true, &DepthStencilView());
-
-		auto passCB = mCurrFrameResource->SkyCB->Resource();
-		mCommandList->SetGraphicsRootConstantBufferView(1, passCB->GetGPUVirtualAddress());
-
-		///*
-		CD3DX12_GPU_DESCRIPTOR_HANDLE skyTexDescriptor(mSrvDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
-		skyTexDescriptor.Offset(mSkyTexHeapIndex, mCbvSrvUavDescriptorSize);
-		mCommandList->SetGraphicsRootDescriptorTable(2, skyTexDescriptor);
-		//*/
-
-		/*
-		// Irradiance cubemap debug.
-		CD3DX12_GPU_DESCRIPTOR_HANDLE skyTexDescriptor(mSrvDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
-		skyTexDescriptor.Offset(mIblIndex + 1, mCbvSrvUavDescriptorSize);
-		mCommandList->SetGraphicsRootDescriptorTable(2, GetGpuSrv(mIblIndex + 4));
-		*/
-
-		mCommandList->SetPipelineState(mPSOs["Sky"].Get());
-		DrawSceneObjects(mCommandList.Get(), RenderLayer::Sky, true);
+		pImgui->Render(mCommandList.Get());
 	}
 
 	// Indicate a state transition on the resource usage.
@@ -385,7 +393,8 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 	mCommandQueue->ExecuteCommandLists(_countof(cmdsLists), cmdsLists);
 
 	// Swap the back and front buffers
-	ThrowIfFailed(mSwapChain->Present(0, 0));
+	ThrowIfFailed(mSwapChain->Present(1, 0)); // Present with vsync
+	//ThrowIfFailed(mSwapChain->Present(0, 0)); // Present without vsync
 	mCurrBackBuffer = (mCurrBackBuffer + 1) % SwapChainBufferCount;
 
 	// Advance the fence value to mark commands up to this fence point.
@@ -807,6 +816,14 @@ void GDxRenderer::UpdateSkyPassCB(const GGiGameTimer* gt)
 
 #pragma region Initialization
 
+void GDxRenderer::SetImgui(GRiImgui* imguiPtr)
+{
+	GDxImgui* dxImgui = dynamic_cast<GDxImgui*>(imguiPtr);
+	if (dxImgui == nullptr)
+		ThrowGGiException("Cast failed from GRiImgui* to GDxImgui*.");
+	pImgui = dxImgui;
+}
+
 void GDxRenderer::BuildRootSignature()
 {
 	// GBuffer root signature
@@ -950,14 +967,17 @@ void GDxRenderer::BuildRootSignature()
 	// Post process signature
 	{
 		//G-Buffer inputs
-		CD3DX12_DESCRIPTOR_RANGE range;
-		range.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, mRtvHeaps["LightPass"]->mRtvHeap.HeapDesc.NumDescriptors, 0);
+		CD3DX12_DESCRIPTOR_RANGE lightRange;
+		lightRange.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, mRtvHeaps["LightPass"]->mRtvHeap.HeapDesc.NumDescriptors, 0);
+		CD3DX12_DESCRIPTOR_RANGE skyRange;
+		skyRange.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, mRtvHeaps["LightPass"]->mRtvHeap.HeapDesc.NumDescriptors, 1);
 
-		CD3DX12_ROOT_PARAMETER gPostProcessRootParameters[1];
-		gPostProcessRootParameters[0].InitAsDescriptorTable(1, &range, D3D12_SHADER_VISIBILITY_ALL);
+		CD3DX12_ROOT_PARAMETER gPostProcessRootParameters[2];
+		gPostProcessRootParameters[0].InitAsDescriptorTable(1, &lightRange, D3D12_SHADER_VISIBILITY_ALL);
+		gPostProcessRootParameters[1].InitAsDescriptorTable(1, &skyRange, D3D12_SHADER_VISIBILITY_ALL);
 
 		// A root signature is an array of root parameters.
-		CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(1, gPostProcessRootParameters,
+		CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(2, gPostProcessRootParameters,
 			0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
 		CD3DX12_STATIC_SAMPLER_DESC StaticSamplers[2];
@@ -1159,26 +1179,24 @@ void GDxRenderer::BuildDescriptorHeaps()
 	//
 	D3D12_DESCRIPTOR_HEAP_DESC srvHeapDesc = {};
 	srvHeapDesc.NumDescriptors = MAX_TEXTURE_NUM
+		+ 1 //imgui
 		+ 1 //sky
 		+ 4 //g-buffer
-		+ 2 //light pass
+		+ 1 //light pass
+		+ 1 //sky pass
 		+ (2 + mPrefilterLevels);//IBL
 	srvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 	srvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 	ThrowIfFailed(md3dDevice->CreateDescriptorHeap(&srvHeapDesc, IID_PPV_ARGS(&mSrvDescriptorHeap)));
 
+
 	//
 	// Fill out the heap with actual descriptors.
 	//
-	CD3DX12_CPU_DESCRIPTOR_HANDLE hDescriptor(mSrvDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
 
-	/*
-	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-	srvDesc.Texture2D.MostDetailedMip = 0;
-	srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
-	*/
+	mSkyTexHeapIndex = 1; // 0 is for imgui.
+
+	CD3DX12_CPU_DESCRIPTOR_HANDLE hDescriptor(mSrvDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
 
 	//auto skyCubeMap = mTextures["skyCubeMap"]->Resource;
 	D3D12_SHADER_RESOURCE_VIEW_DESC skySrvDesc = {};
@@ -1191,10 +1209,7 @@ void GDxRenderer::BuildDescriptorHeaps()
 	skySrvDesc.TextureCube.MipLevels = tex->Resource->GetDesc().MipLevels;
 	skySrvDesc.TextureCube.ResourceMinLODClamp = 0.0f;
 	skySrvDesc.Format = tex->Resource->GetDesc().Format;
-	md3dDevice->CreateShaderResourceView(tex->Resource.Get(), &skySrvDesc, GetCpuSrv(0));
-
-
-	mSkyTexHeapIndex = 0;
+	md3dDevice->CreateShaderResourceView(tex->Resource.Get(), &skySrvDesc, GetCpuSrv(mSkyTexHeapIndex));
 
 	// Build RTV heap and SRV for GBuffers.
 	{
@@ -1235,12 +1250,38 @@ void GDxRenderer::BuildDescriptorHeaps()
 
 		std::vector<DXGI_FORMAT> rtvFormats =
 		{
-			DXGI_FORMAT_R32G32B32A32_FLOAT,// Direct light
-			DXGI_FORMAT_R32G32B32A32_FLOAT// Ambient light
+			DXGI_FORMAT_R32G32B32A32_FLOAT// Direct light and ambient light
 		};
 		std::vector<std::vector<FLOAT>> rtvClearColor =
 		{
-			{ 0,0,0,0 },
+			{ 0,0,0,1 }
+		};
+		std::vector<GRtvProperties> propVec;
+		for (auto i = 0u; i < rtvFormats.size(); i++)
+		{
+			GRtvProperties prop;
+			prop.mRtvFormat = rtvFormats[i];
+			prop.mClearColor[0] = rtvClearColor[i][0];
+			prop.mClearColor[1] = rtvClearColor[i][1];
+			prop.mClearColor[2] = rtvClearColor[i][2];
+			prop.mClearColor[3] = rtvClearColor[i][3];
+			propVec.push_back(prop);
+		}
+		auto lightPassRtvHeap = std::make_unique<GDxRtvHeap>(md3dDevice.Get(), mClientWidth, mClientHeight, GetCpuSrv(mLightPassSrvIndex), GetGpuSrv(mLightPassSrvIndex), propVec);
+		mRtvHeaps["LightPass"] = std::move(lightPassRtvHeap);
+	}
+
+	// Build RTV heap and SRV for sky pass.
+	{
+		mSkyPassSrvIndex = mLightPassSrvIndex + mRtvHeaps["LightPass"]->mRtvHeap.HeapDesc.NumDescriptors;
+
+		std::vector<DXGI_FORMAT> rtvFormats =
+		{
+			//DXGI_FORMAT_R32G32B32A32_FLOAT
+			DXGI_FORMAT_R8G8B8A8_UNORM// sky
+		};
+		std::vector<std::vector<FLOAT>> rtvClearColor =
+		{
 			{ 0,0,0,0 }
 		};
 		std::vector<GRtvProperties> propVec;
@@ -1254,13 +1295,13 @@ void GDxRenderer::BuildDescriptorHeaps()
 			prop.mClearColor[3] = rtvClearColor[i][3];
 			propVec.push_back(prop);
 		}
-		auto gBufferRtvHeap = std::make_unique<GDxRtvHeap>(md3dDevice.Get(), mClientWidth, mClientHeight, GetCpuSrv(mLightPassSrvIndex), GetGpuSrv(mLightPassSrvIndex), propVec);
-		mRtvHeaps["LightPass"] = std::move(gBufferRtvHeap);
+		auto skyPassRtvHeap = std::make_unique<GDxRtvHeap>(md3dDevice.Get(), mClientWidth, mClientHeight, GetCpuSrv(mSkyPassSrvIndex), GetGpuSrv(mSkyPassSrvIndex), propVec);
+		mRtvHeaps["SkyPass"] = std::move(skyPassRtvHeap);
 	}
 
 	// Build cubemap SRV and RTVs for irradiance pre-integration.
 	{
-		mIblIndex = mLightPassSrvIndex + 2;
+		mIblIndex = mSkyPassSrvIndex + 1;
 
 		GRtvProperties prop;
 		prop.mRtvFormat = DXGI_FORMAT_R32G32B32A32_FLOAT;
@@ -1378,20 +1419,20 @@ void GDxRenderer::BuildPSOs()
 	lightPassDSD.FrontFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
 	lightPassDSD.FrontFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
 	lightPassDSD.FrontFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
-	lightPassDSD.FrontFace.StencilFunc = D3D12_COMPARISON_FUNC_GREATER_EQUAL;
+	lightPassDSD.FrontFace.StencilFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
 	// We are not rendering backfacing polygons, so these settings do not matter. 
 	lightPassDSD.BackFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
 	lightPassDSD.BackFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
 	lightPassDSD.BackFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
-	lightPassDSD.BackFace.StencilFunc = D3D12_COMPARISON_FUNC_GREATER_EQUAL;
+	lightPassDSD.BackFace.StencilFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
 
 	auto blendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
 	blendState.AlphaToCoverageEnable = false;
 	blendState.IndependentBlendEnable = false;
 
-	blendState.RenderTarget[0].BlendEnable = false;
+	blendState.RenderTarget[0].BlendEnable = true;
 	blendState.RenderTarget[0].BlendOp = D3D12_BLEND_OP_ADD;
-	blendState.RenderTarget[0].SrcBlend = D3D12_BLEND_SRC_ALPHA;
+	blendState.RenderTarget[0].SrcBlend = D3D12_BLEND_ONE;
 	blendState.RenderTarget[0].DestBlend = D3D12_BLEND_ONE;
 
 	auto rasterizer = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
@@ -1431,20 +1472,20 @@ void GDxRenderer::BuildPSOs()
 	ambientPassDSD.FrontFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
 	ambientPassDSD.FrontFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
 	ambientPassDSD.FrontFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
-	ambientPassDSD.FrontFace.StencilFunc = D3D12_COMPARISON_FUNC_GREATER_EQUAL;
+	ambientPassDSD.FrontFace.StencilFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
 	// We are not rendering backfacing polygons, so these settings do not matter. 
 	ambientPassDSD.BackFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
 	ambientPassDSD.BackFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
 	ambientPassDSD.BackFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
-	ambientPassDSD.BackFace.StencilFunc = D3D12_COMPARISON_FUNC_GREATER_EQUAL;
+	ambientPassDSD.BackFace.StencilFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
 
 	auto ambientBlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
 	ambientBlendState.AlphaToCoverageEnable = false;
 	ambientBlendState.IndependentBlendEnable = false;
 
-	ambientBlendState.RenderTarget[0].BlendEnable = false;
+	ambientBlendState.RenderTarget[0].BlendEnable = true;
 	ambientBlendState.RenderTarget[0].BlendOp = D3D12_BLEND_OP_ADD;
-	ambientBlendState.RenderTarget[0].SrcBlend = D3D12_BLEND_SRC_ALPHA;
+	ambientBlendState.RenderTarget[0].SrcBlend = D3D12_BLEND_ONE;
 	ambientBlendState.RenderTarget[0].DestBlend = D3D12_BLEND_ONE;
 
 	auto ambientRasterizer = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
@@ -1480,7 +1521,7 @@ void GDxRenderer::BuildPSOs()
 	postProcessDSD.DepthEnable = true;
 	postProcessDSD.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
 	postProcessDSD.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
-	postProcessDSD.StencilEnable = true;
+	postProcessDSD.StencilEnable = false;
 	postProcessDSD.StencilReadMask = 0xff;
 	postProcessDSD.StencilWriteMask = 0x0;
 	postProcessDSD.FrontFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
@@ -1557,6 +1598,23 @@ void GDxRenderer::BuildPSOs()
 	//
 	// PSO for sky.
 	//
+
+	D3D12_DEPTH_STENCIL_DESC gskyDSD;
+	gskyDSD.DepthEnable = true;
+	gskyDSD.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
+	gskyDSD.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
+	gskyDSD.StencilEnable = false;
+	gskyDSD.StencilReadMask = 0xff;
+	gskyDSD.StencilWriteMask = 0x0;
+	gskyDSD.FrontFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
+	gskyDSD.FrontFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
+	gskyDSD.FrontFace.StencilPassOp = D3D12_STENCIL_OP_REPLACE;
+	gskyDSD.FrontFace.StencilFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+	gskyDSD.BackFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
+	gskyDSD.BackFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
+	gskyDSD.BackFace.StencilPassOp = D3D12_STENCIL_OP_REPLACE;
+	gskyDSD.BackFace.StencilFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC skyPsoDesc;
 
 	ZeroMemory(&skyPsoDesc, sizeof(D3D12_GRAPHICS_PIPELINE_STATE_DESC));
@@ -1564,11 +1622,14 @@ void GDxRenderer::BuildPSOs()
 	skyPsoDesc.InputLayout.NumElements = _countof(GDxInputLayout::DefaultLayout);
 	skyPsoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
 	skyPsoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
-	skyPsoDesc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
+	//skyPsoDesc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
+	//skyPsoDesc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
+	//skyPsoDesc.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
+	skyPsoDesc.DepthStencilState = gskyDSD;
 	skyPsoDesc.SampleMask = UINT_MAX;
 	skyPsoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 	skyPsoDesc.NumRenderTargets = 1;
-	skyPsoDesc.RTVFormats[0] = mBackBufferFormat;
+	skyPsoDesc.RTVFormats[0] = mRtvHeaps["SkyPass"]->mRtv[0]->mProperties.mRtvFormat;;
 	skyPsoDesc.SampleDesc.Count = 1;
 	skyPsoDesc.SampleDesc.Quality = 0;
 	skyPsoDesc.DSVFormat = mDepthStencilFormat;
@@ -1579,8 +1640,6 @@ void GDxRenderer::BuildPSOs()
 	// Make sure the depth function is LESS_EQUAL and not just LESS.  
 	// Otherwise, the normalized depth values at z = 1 (NDC) will 
 	// fail the depth test if the depth buffer was cleared to 1.
-	skyPsoDesc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
-	skyPsoDesc.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
 	skyPsoDesc.pRootSignature = mRootSignatures["Sky"].Get();
 	skyPsoDesc.VS = GDxShaderManager::LoadShader(L"Shaders\\SkyVS.cso");
 	skyPsoDesc.PS = GDxShaderManager::LoadShader(L"Shaders\\SkyPS.cso");

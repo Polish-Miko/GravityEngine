@@ -30,7 +30,8 @@ float4 main(VertexOut pin) : SV_TARGET
 {
 	float3 color = gCubeMap.Sample(basicSampler, pin.PosL).rgb;
 	//color = color / (float3(1.0f, 1.0f, 1.0f) + color);
-	color = pow(color, (1 / 2.2f));
+	//color = pow(color, (1 / 2.2f));
 	return float4(color, 1.0f);
+	//return float4(1.0f, 0.0f, 0.0f, 1.0f);
 }
 

@@ -15,6 +15,9 @@ using namespace DirectX::PackedVector;
 
 typedef void(__stdcall * VoidFuncPointerType)(void);
 
+// Win32 message handler
+extern LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+
 class GCore
 {
 public:
@@ -127,6 +130,8 @@ private:
 
 	GProject* mProject;
 
+	std::unique_ptr<GRiImgui> mImgui;
+
 	UINT mMaterialIndex = 0;
 
 	UINT mSceneObjectIndex = 0;
@@ -146,6 +151,7 @@ private:
 	void OnMouseUp(WPARAM btnState, int x, int y);
 	void OnMouseMove(WPARAM btnState, int x, int y);
 
+	void CreateImgui();
 	void LoadTextures();
 	void LoadMaterials();
 	void LoadMeshes();
