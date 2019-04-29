@@ -1015,11 +1015,13 @@ void GCore::SetTextureSrgb(wchar_t* txtName, bool bSrgb)
 {
 	std::wstring textureName(txtName);
 	mTextures[textureName]->bSrgb = bSrgb;
+	/*
 	std::unique_ptr<GRiTextureLoader> textureLoader(pRendererFactory->CreateTextureLoader());
 	GRiTexture* tex = textureLoader->LoadTexture(WorkDirectory, textureName, bSrgb);
 	tex->texIndex = mTextures[textureName]->texIndex;
 	mTextures[textureName].reset(tex);
 	mRenderer->RegisterTexture(mTextures[textureName].get());
+	*/
 }
 
 void GCore::SetWorkDirectory(wchar_t* dir)

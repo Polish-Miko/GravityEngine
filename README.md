@@ -10,7 +10,10 @@ uses DirectX 12 exclusively for rendering.
 ## Showcase
 
 ![preview_1](https://github.com/MrySwk/GravityEngine/blob/master/screenshot/preview_1.png)
+
 ![preview_2](https://github.com/MrySwk/GravityEngine/blob/master/screenshot/preview_2.png)
+
+![preview_3](https://github.com/MrySwk/GravityEngine/blob/master/screenshot/preview_3.gif)
 
 ## Dependencies
 

@@ -2,9 +2,9 @@
 <!DOCTYPE boost_serialization>
 <boost_serialization signature="serialization::archive" version="17">
 <Project class_id="0" tracking_level="0" version="0">
-	<mSkyCubemapUniqueName>Content\Textures\Cubemap\sunsetcube1024.dds</mSkyCubemapUniqueName>
+	<mSkyCubemapUniqueName>Resource\Textures\GE_Default_Cubemap.dds</mSkyCubemapUniqueName>
 	<mTextureInfo class_id="1" tracking_level="0" version="0">
-		<count>33</count>
+		<count>70</count>
 		<item_version>0</item_version>
 		<item class_id="2" tracking_level="0" version="0">
 			<UniqueFileName>Content\Textures\Cubemap\Cubemap_DallasW.dds</UniqueFileName>
@@ -31,11 +31,15 @@
 			<bSrgb>0</bSrgb>
 		</item>
 		<item>
+			<UniqueFileName>Content\Textures\Cubemap\snowcube1024.dds</UniqueFileName>
+			<bSrgb>0</bSrgb>
+		</item>
+		<item>
 			<UniqueFileName>Content\Textures\Cubemap\Cubemap_SantaMariaDeiMiracoli.dds</UniqueFileName>
 			<bSrgb>0</bSrgb>
 		</item>
 		<item>
-			<UniqueFileName>Content\Textures\Cubemap\snowcube1024.dds</UniqueFileName>
+			<UniqueFileName>Content\Textures\Test2\SlateCliffRock_Normal.png</UniqueFileName>
 			<bSrgb>0</bSrgb>
 		</item>
 		<item>
@@ -47,8 +51,20 @@
 			<bSrgb>0</bSrgb>
 		</item>
 		<item>
+			<UniqueFileName>Content\Textures\Test2\RedBricks_Albedo.png</UniqueFileName>
+			<bSrgb>1</bSrgb>
+		</item>
+		<item>
+			<UniqueFileName>Content\Textures\Test2\MetalGird2_Normal.png</UniqueFileName>
+			<bSrgb>0</bSrgb>
+		</item>
+		<item>
 			<UniqueFileName>Content\Textures\Cubemap\sunsetcube1024.dds</UniqueFileName>
 			<bSrgb>0</bSrgb>
+		</item>
+		<item>
+			<UniqueFileName>Content\Textures\Test2\DarkTiles_Albedo.png</UniqueFileName>
+			<bSrgb>1</bSrgb>
 		</item>
 		<item>
 			<UniqueFileName>Content\Textures\sphere_2_OcclusionRoughnessMetallic.png</UniqueFileName>
@@ -59,7 +75,15 @@
 			<bSrgb>0</bSrgb>
 		</item>
 		<item>
+			<UniqueFileName>Content\Textures\Test2\DarkTiles_Normal.png</UniqueFileName>
+			<bSrgb>0</bSrgb>
+		</item>
+		<item>
 			<UniqueFileName>Content\Textures\Fireplace_Normal.png</UniqueFileName>
+			<bSrgb>0</bSrgb>
+		</item>
+		<item>
+			<UniqueFileName>Content\Textures\Test2\DarkTiles_Orm.png</UniqueFileName>
 			<bSrgb>0</bSrgb>
 		</item>
 		<item>
@@ -75,10 +99,6 @@
 			<bSrgb>0</bSrgb>
 		</item>
 		<item>
-			<UniqueFileName>Resource\Textures\GE_DefaultTexture_Albedo.png</UniqueFileName>
-			<bSrgb>1</bSrgb>
-		</item>
-		<item>
 			<UniqueFileName>Content\Textures\Greasy_Pan_Orm.png</UniqueFileName>
 			<bSrgb>0</bSrgb>
 		</item>
@@ -87,7 +107,7 @@
 			<bSrgb>0</bSrgb>
 		</item>
 		<item>
-			<UniqueFileName>Content\Textures\sphere_1_BaseColor.png</UniqueFileName>
+			<UniqueFileName>Content\Textures\Test2\BathroomTile_Albedo.png</UniqueFileName>
 			<bSrgb>1</bSrgb>
 		</item>
 		<item>
@@ -95,11 +115,23 @@
 			<bSrgb>0</bSrgb>
 		</item>
 		<item>
-			<UniqueFileName>Content\Textures\sphere_1_Normal.png</UniqueFileName>
+			<UniqueFileName>Content\Textures\Test2\BathroomTile_Normal.png</UniqueFileName>
 			<bSrgb>0</bSrgb>
 		</item>
 		<item>
+			<UniqueFileName>Content\Textures\sphere_1_BaseColor.png</UniqueFileName>
+			<bSrgb>1</bSrgb>
+		</item>
+		<item>
 			<UniqueFileName>Content\Textures\Rusted_Iron_Orm.png</UniqueFileName>
+			<bSrgb>0</bSrgb>
+		</item>
+		<item>
+			<UniqueFileName>Content\Textures\Test2\BathroomTile_Orm.png</UniqueFileName>
+			<bSrgb>0</bSrgb>
+		</item>
+		<item>
+			<UniqueFileName>Content\Textures\sphere_1_Normal.png</UniqueFileName>
 			<bSrgb>0</bSrgb>
 		</item>
 		<item>
@@ -115,8 +147,120 @@
 			<bSrgb>1</bSrgb>
 		</item>
 		<item>
+			<UniqueFileName>Content\Textures\Test2\LayeredRock_Orm.png</UniqueFileName>
+			<bSrgb>0</bSrgb>
+		</item>
+		<item>
 			<UniqueFileName>Content\Textures\sphere_2_Normal.png</UniqueFileName>
 			<bSrgb>0</bSrgb>
+		</item>
+		<item>
+			<UniqueFileName>Content\Textures\Test2\Grimy_Metal_Normal.png</UniqueFileName>
+			<bSrgb>0</bSrgb>
+		</item>
+		<item>
+			<UniqueFileName>Content\Textures\Test2\FloorTile_Albedo.png</UniqueFileName>
+			<bSrgb>1</bSrgb>
+		</item>
+		<item>
+			<UniqueFileName>Content\Textures\Test2\FloorTile_Normal.png</UniqueFileName>
+			<bSrgb>0</bSrgb>
+		</item>
+		<item>
+			<UniqueFileName>Content\Textures\Test2\Grimy_Metal_Albedo.png</UniqueFileName>
+			<bSrgb>1</bSrgb>
+		</item>
+		<item>
+			<UniqueFileName>Content\Textures\Test2\FloorTile_Orm.png</UniqueFileName>
+			<bSrgb>0</bSrgb>
+		</item>
+		<item>
+			<UniqueFileName>Content\Textures\Test2\MetalGrid_Normal.png</UniqueFileName>
+			<bSrgb>0</bSrgb>
+		</item>
+		<item>
+			<UniqueFileName>Content\Textures\Test2\Gold_Scuffed_Albedo.png</UniqueFileName>
+			<bSrgb>1</bSrgb>
+		</item>
+		<item>
+			<UniqueFileName>Content\Textures\Test2\RedBricks_Orm.png</UniqueFileName>
+			<bSrgb>0</bSrgb>
+		</item>
+		<item>
+			<UniqueFileName>Content\Textures\Test2\Gold_Scuffed_Albedo_boosted.png</UniqueFileName>
+			<bSrgb>1</bSrgb>
+		</item>
+		<item>
+			<UniqueFileName>Content\Textures\Test2\MetalGrid_Albedo.png</UniqueFileName>
+			<bSrgb>1</bSrgb>
+		</item>
+		<item>
+			<UniqueFileName>Content\Textures\Test2\Gold_Scuffed_Normal.png</UniqueFileName>
+			<bSrgb>0</bSrgb>
+		</item>
+		<item>
+			<UniqueFileName>Content\Textures\Test2\Gold_Scuffed_Orm.png</UniqueFileName>
+			<bSrgb>0</bSrgb>
+		</item>
+		<item>
+			<UniqueFileName>Content\Textures\Test2\Grimy_Metal_Orm.png</UniqueFileName>
+			<bSrgb>0</bSrgb>
+		</item>
+		<item>
+			<UniqueFileName>Content\Textures\Test2\HardWoodBrown_Albedo.png</UniqueFileName>
+			<bSrgb>1</bSrgb>
+		</item>
+		<item>
+			<UniqueFileName>Content\Textures\Test2\HardWoodBrown_Normal.png</UniqueFileName>
+			<bSrgb>0</bSrgb>
+		</item>
+		<item>
+			<UniqueFileName>Content\Textures\Test2\RedBricks_Normal.png</UniqueFileName>
+			<bSrgb>0</bSrgb>
+		</item>
+		<item>
+			<UniqueFileName>Content\Textures\Test2\MetalGird2_Albedo.png</UniqueFileName>
+			<bSrgb>1</bSrgb>
+		</item>
+		<item>
+			<UniqueFileName>Content\Textures\Test2\HardWoodBrown_Orm.png</UniqueFileName>
+			<bSrgb>0</bSrgb>
+		</item>
+		<item>
+			<UniqueFileName>Content\Textures\Test2\LayeredRock_Albedo.png</UniqueFileName>
+			<bSrgb>1</bSrgb>
+		</item>
+		<item>
+			<UniqueFileName>Content\Textures\Test2\LayeredRock_Normal.png</UniqueFileName>
+			<bSrgb>0</bSrgb>
+		</item>
+		<item>
+			<UniqueFileName>Content\Textures\Test2\SlateCliffRock_Orm.png</UniqueFileName>
+			<bSrgb>0</bSrgb>
+		</item>
+		<item>
+			<UniqueFileName>Content\Textures\Test2\MetalGird2_Orm.png</UniqueFileName>
+			<bSrgb>0</bSrgb>
+		</item>
+		<item>
+			<UniqueFileName>Content\Textures\Test2\MetalGrid_Orm.png</UniqueFileName>
+			<bSrgb>0</bSrgb>
+		</item>
+		<item>
+			<UniqueFileName>Content\Textures\Test2\RustedIron2_Albedo.png</UniqueFileName>
+			<bSrgb>1</bSrgb>
+		</item>
+		<item>
+			<UniqueFileName>Content\Textures\Test2\RustedIron2_Normal.png</UniqueFileName>
+			<bSrgb>0</bSrgb>
+		</item>
+		<item>
+			<UniqueFileName>Content\Textures\Test2\RustedIron2_Orm.png</UniqueFileName>
+			<bSrgb>0</bSrgb>
+		</item>
+		<item>
+			<UniqueFileName>Content\Textures\Test2\SlateCliffRock_Albedo.png</UniqueFileName>
+			<bSrgb>1</bSrgb>
 		</item>
 		<item>
 			<UniqueFileName>Resource\Textures\GE_Default_Normal.png</UniqueFileName>
@@ -125,6 +269,10 @@
 		<item>
 			<UniqueFileName>Resource\Textures\GE_Default_Orm.png</UniqueFileName>
 			<bSrgb>0</bSrgb>
+		</item>
+		<item>
+			<UniqueFileName>Resource\Textures\GE_DefaultTexture_Albedo.png</UniqueFileName>
+			<bSrgb>1</bSrgb>
 		</item>
 		<item>
 			<UniqueFileName>Resource\Textures\GE_DefaultTexture_Normal.png</UniqueFileName>
@@ -140,7 +288,7 @@
 		</item>
 	</mTextureInfo>
 	<mSceneObjectInfo class_id="3" tracking_level="0" version="0">
-		<count>7</count>
+		<count>13</count>
 		<item_version>0</item_version>
 		<item class_id="4" tracking_level="0" version="0">
 			<UniqueName>Sphere_1</UniqueName>
@@ -148,14 +296,14 @@
 			<MeshUniqueName>Sphere</MeshUniqueName>
 			<Location>
 				<count>3</count>
-				<item>4.500000000e+01</item>
+				<item>3.800000000e+01</item>
 				<item>0.000000000e+00</item>
 				<item>7.000000000e+01</item>
 			</Location>
 			<Rotation>
 				<count>3</count>
 				<item>0.000000000e+00</item>
-				<item>0.000000000e+00</item>
+				<item>-0.000000000e+00</item>
 				<item>0.000000000e+00</item>
 			</Rotation>
 			<Scale>
@@ -171,14 +319,14 @@
 			<MeshUniqueName>Box</MeshUniqueName>
 			<Location>
 				<count>3</count>
-				<item>1.500000000e+02</item>
-				<item>0.000000000e+00</item>
-				<item>0.000000000e+00</item>
+				<item>2.611479187e+02</item>
+				<item>-3.814697266e-06</item>
+				<item>4.669942474e+01</item>
 			</Location>
 			<Rotation>
 				<count>3</count>
 				<item>0.000000000e+00</item>
-				<item>0.000000000e+00</item>
+				<item>-0.000000000e+00</item>
 				<item>0.000000000e+00</item>
 			</Rotation>
 			<Scale>
@@ -190,7 +338,7 @@
 		</item>
 		<item>
 			<UniqueName>Plane</UniqueName>
-			<MaterialUniqueName>Content\Material\Sphere_1.gmat</MaterialUniqueName>
+			<MaterialUniqueName>Content\Material\DarkTiles.gmat</MaterialUniqueName>
 			<MeshUniqueName>Grid</MeshUniqueName>
 			<Location>
 				<count>3</count>
@@ -201,7 +349,7 @@
 			<Rotation>
 				<count>3</count>
 				<item>0.000000000e+00</item>
-				<item>0.000000000e+00</item>
+				<item>-0.000000000e+00</item>
 				<item>0.000000000e+00</item>
 			</Rotation>
 			<Scale>
@@ -217,14 +365,14 @@
 			<MeshUniqueName>Cylinder</MeshUniqueName>
 			<Location>
 				<count>3</count>
-				<item>1.000000000e+02</item>
+				<item>2.022414551e+02</item>
 				<item>0.000000000e+00</item>
-				<item>0.000000000e+00</item>
+				<item>4.142954254e+01</item>
 			</Location>
 			<Rotation>
 				<count>3</count>
 				<item>0.000000000e+00</item>
-				<item>0.000000000e+00</item>
+				<item>-0.000000000e+00</item>
 				<item>0.000000000e+00</item>
 			</Rotation>
 			<Scale>
@@ -236,18 +384,18 @@
 		</item>
 		<item>
 			<UniqueName>Sphere_2</UniqueName>
-			<MaterialUniqueName>Content\Material\RustedIron.gmat</MaterialUniqueName>
+			<MaterialUniqueName>Content\Material\GoldScuffed.gmat</MaterialUniqueName>
 			<MeshUniqueName>Sphere</MeshUniqueName>
 			<Location>
 				<count>3</count>
-				<item>0.000000000e+00</item>
+				<item>-9.000000000e+00</item>
 				<item>0.000000000e+00</item>
 				<item>7.000000000e+01</item>
 			</Location>
 			<Rotation>
 				<count>3</count>
 				<item>0.000000000e+00</item>
-				<item>0.000000000e+00</item>
+				<item>-0.000000000e+00</item>
 				<item>0.000000000e+00</item>
 			</Rotation>
 			<Scale>
@@ -259,18 +407,64 @@
 		</item>
 		<item>
 			<UniqueName>Sphere_3</UniqueName>
-			<MaterialUniqueName>Content\Material\Sphere_2.gmat</MaterialUniqueName>
+			<MaterialUniqueName>Content\Material\GrimyMetal.gmat</MaterialUniqueName>
 			<MeshUniqueName>Sphere</MeshUniqueName>
 			<Location>
 				<count>3</count>
-				<item>-4.500000000e+01</item>
+				<item>-5.784001541e+01</item>
 				<item>0.000000000e+00</item>
 				<item>7.000000000e+01</item>
 			</Location>
 			<Rotation>
 				<count>3</count>
+				<item>-6.373755750e-04</item>
+				<item>-6.105383682e+01</item>
+				<item>4.517728230e-04</item>
+			</Rotation>
+			<Scale>
+				<count>3</count>
+				<item>1.000000000e+00</item>
+				<item>9.999998808e-01</item>
+				<item>1.000000000e+00</item>
+			</Scale>
+		</item>
+		<item>
+			<UniqueName>Cerberus</UniqueName>
+			<MaterialUniqueName>Content\Material\Cerberus.gmat</MaterialUniqueName>
+			<MeshUniqueName>Content\Models\Cerberus.fbx</MeshUniqueName>
+			<Location>
+				<count>3</count>
+				<item>1.565023422e+00</item>
+				<item>4.999993896e+01</item>
+				<item>2.000233765e+02</item>
+			</Location>
+			<Rotation>
+				<count>3</count>
+				<item>-3.240155289e-03</item>
+				<item>-8.849428558e+01</item>
+				<item>3.361596260e-03</item>
+			</Rotation>
+			<Scale>
+				<count>3</count>
+				<item>1.000000000e+00</item>
+				<item>9.999999404e-01</item>
+				<item>9.999998808e-01</item>
+			</Scale>
+		</item>
+		<item>
+			<UniqueName>NewSceneObject</UniqueName>
+			<MaterialUniqueName>Content\Material\MetalGrid2.gmat</MaterialUniqueName>
+			<MeshUniqueName>Sphere</MeshUniqueName>
+			<Location>
+				<count>3</count>
+				<item>-5.832433319e+01</item>
 				<item>0.000000000e+00</item>
+				<item>1.204794922e+02</item>
+			</Location>
+			<Rotation>
+				<count>3</count>
 				<item>0.000000000e+00</item>
+				<item>-0.000000000e+00</item>
 				<item>0.000000000e+00</item>
 			</Rotation>
 			<Scale>
@@ -281,19 +475,111 @@
 			</Scale>
 		</item>
 		<item>
-			<UniqueName>Cerberus</UniqueName>
-			<MaterialUniqueName>Content\Material\Cerberus.gmat</MaterialUniqueName>
-			<MeshUniqueName>Content\Models\Cerberus.fbx</MeshUniqueName>
+			<UniqueName>NewSceneObject_1</UniqueName>
+			<MaterialUniqueName>Content\Material\RedBricks.gmat</MaterialUniqueName>
+			<MeshUniqueName>Sphere</MeshUniqueName>
 			<Location>
 				<count>3</count>
-				<item>-3.000000000e+01</item>
-				<item>5.000000000e+01</item>
-				<item>-1.250000000e+02</item>
+				<item>-5.873478699e+01</item>
+				<item>0.000000000e+00</item>
+				<item>1.710281830e+02</item>
 			</Location>
 			<Rotation>
 				<count>3</count>
 				<item>0.000000000e+00</item>
+				<item>-0.000000000e+00</item>
 				<item>0.000000000e+00</item>
+			</Rotation>
+			<Scale>
+				<count>3</count>
+				<item>1.000000000e+00</item>
+				<item>1.000000000e+00</item>
+				<item>1.000000000e+00</item>
+			</Scale>
+		</item>
+		<item>
+			<UniqueName>NewSceneObject_2</UniqueName>
+			<MaterialUniqueName>Content\Material\MetalGrid.gmat</MaterialUniqueName>
+			<MeshUniqueName>Sphere</MeshUniqueName>
+			<Location>
+				<count>3</count>
+				<item>-9.390702248e+00</item>
+				<item>0.000000000e+00</item>
+				<item>1.177572174e+02</item>
+			</Location>
+			<Rotation>
+				<count>3</count>
+				<item>0.000000000e+00</item>
+				<item>-0.000000000e+00</item>
+				<item>0.000000000e+00</item>
+			</Rotation>
+			<Scale>
+				<count>3</count>
+				<item>1.000000000e+00</item>
+				<item>1.000000000e+00</item>
+				<item>1.000000000e+00</item>
+			</Scale>
+		</item>
+		<item>
+			<UniqueName>NewSceneObject_3</UniqueName>
+			<MaterialUniqueName>Content\Material\RustedIron2.gmat</MaterialUniqueName>
+			<MeshUniqueName>Sphere</MeshUniqueName>
+			<Location>
+				<count>3</count>
+				<item>4.295300293e+01</item>
+				<item>0.000000000e+00</item>
+				<item>1.680000000e+02</item>
+			</Location>
+			<Rotation>
+				<count>3</count>
+				<item>0.000000000e+00</item>
+				<item>-0.000000000e+00</item>
+				<item>0.000000000e+00</item>
+			</Rotation>
+			<Scale>
+				<count>3</count>
+				<item>1.000000000e+00</item>
+				<item>1.000000000e+00</item>
+				<item>1.000000000e+00</item>
+			</Scale>
+		</item>
+		<item>
+			<UniqueName>NewSceneObject_4</UniqueName>
+			<MaterialUniqueName>Content\Material\SlateCliffRock.gmat</MaterialUniqueName>
+			<MeshUniqueName>Sphere</MeshUniqueName>
+			<Location>
+				<count>3</count>
+				<item>-1.265132618e+01</item>
+				<item>0.000000000e+00</item>
+				<item>1.693796692e+02</item>
+			</Location>
+			<Rotation>
+				<count>3</count>
+				<item>0.000000000e+00</item>
+				<item>-0.000000000e+00</item>
+				<item>0.000000000e+00</item>
+			</Rotation>
+			<Scale>
+				<count>3</count>
+				<item>1.000000000e+00</item>
+				<item>1.000000000e+00</item>
+				<item>1.000000000e+00</item>
+			</Scale>
+		</item>
+		<item>
+			<UniqueName>NewSceneObject_5</UniqueName>
+			<MaterialUniqueName>Content\Material\HardWoodBrown.gmat</MaterialUniqueName>
+			<MeshUniqueName>Sphere</MeshUniqueName>
+			<Location>
+				<count>3</count>
+				<item>4.075556564e+01</item>
+				<item>0.000000000e+00</item>
+				<item>1.176105423e+02</item>
+			</Location>
+			<Rotation>
+				<count>3</count>
+				<item>0.000000000e+00</item>
+				<item>-0.000000000e+00</item>
 				<item>0.000000000e+00</item>
 			</Rotation>
 			<Scale>
