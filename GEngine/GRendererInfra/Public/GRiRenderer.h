@@ -43,6 +43,8 @@ public:
 	virtual void SyncSceneObjects(std::unordered_map<std::wstring, std::unique_ptr<GRiSceneObject>>& mSceneObjects, std::vector<GRiSceneObject*>* mSceneObjectLayer);
 	virtual void SyncCameras(std::vector<GRiCamera*> mCameras);
 
+	virtual GRiSceneObject* SelectSceneObject(int sx, int sy) = 0;
+
 	std::unordered_map<std::wstring, GRiTexture*> pTextures;
 	std::unordered_map<std::wstring, GRiMaterial*> pMaterials;
 	std::unordered_map<std::wstring, GRiMesh*> pMeshes;

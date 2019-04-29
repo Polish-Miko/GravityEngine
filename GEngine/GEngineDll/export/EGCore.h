@@ -169,6 +169,17 @@ extern "C"
 }
 
 
+extern "C"
+{
+	__declspec(dllexport) void __stdcall SetSelectSceneObjectCallback(VoidWstringFuncPointerType pSelectSceneObjectCallback);
+}
+
+extern "C"
+{
+	__declspec(dllexport) void __stdcall SelectSceneObject(wchar_t* sceneObjectName);
+}
+
+
 /*
 class EGCore
 {

@@ -142,3 +142,13 @@ std::vector<float> GDxFloat4x4::TransformNormal(std::vector<float> vec)
 	out[2] = result.m128_f32[2];
 	return out;
 }
+
+GGiFloat4x4* GDxFloat4x4::GetInverse()
+{
+	GDxFloat4x4* ret = new GDxFloat4x4();
+	DirectX::XMMATRIX valueMat = DirectX::XMLoadFloat4x4(&value);
+	DirectX::XMStoreFloat4x4(&ret->value, DirectX::XMMatrixInverse(&DirectX::XMMatrixDeterminant(valueMat), valueMat));
+	return ret;
+}
+
+

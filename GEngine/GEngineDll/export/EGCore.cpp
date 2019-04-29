@@ -167,6 +167,16 @@ bool __stdcall SkyCubemapNameAvailable(wchar_t* cubemapName)
 	return GCore::GetCore().SkyCubemapNameAvailable(cubemapName);
 }
 
+void __stdcall SetSelectSceneObjectCallback(VoidWstringFuncPointerType pSelectSceneObjectCallback)
+{
+	GCore::GetCore().SetSelectSceneObjectCallback(pSelectSceneObjectCallback);
+}
+
+void __stdcall SelectSceneObject(wchar_t* sceneObjectName)
+{
+	GCore::GetCore().SelectSceneObject(sceneObjectName);
+}
+
 
 
 

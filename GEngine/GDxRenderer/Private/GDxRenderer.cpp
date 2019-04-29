@@ -9,6 +9,7 @@
 #include "GDxSceneObject.h"
 #include "GDxInputLayout.h"
 #include "GDxShaderManager.h"
+#include "GDxStaticVIBuffer.h"
 
 #include <WindowsX.h>
 
@@ -559,6 +560,8 @@ void GDxRenderer::UpdateObjectCBs(const GGiGameTimer* gt)
 				ThrowGGiException("Cast failed from GGiFloat4x4* to GDxFloat4x4*.");
 			
 			XMMATRIX renderObjectTrans = XMLoadFloat4x4(&(dxTrans->GetValue()));
+			XMMATRIX invWorld = XMMatrixInverse(&XMMatrixDeterminant(renderObjectTrans), renderObjectTrans);
+			XMMATRIX invTransWorld = XMMatrixTranspose(invWorld);
 			//auto tempSubTrans = e->GetSubmesh().Transform;
 			//XMMATRIX submeshTrans = XMLoadFloat4x4(&tempSubTrans);
 			XMMATRIX texTransform = XMLoadFloat4x4(&(dxTexTrans->GetValue()));
@@ -567,6 +570,7 @@ void GDxRenderer::UpdateObjectCBs(const GGiGameTimer* gt)
 
 			ObjectConstants objConstants;
 			XMStoreFloat4x4(&objConstants.World, XMMatrixTranspose(world));
+			XMStoreFloat4x4(&objConstants.InvTransWorld, XMMatrixTranspose(invTransWorld));
 			XMStoreFloat4x4(&objConstants.TexTransform, XMMatrixTranspose(texTransform));
 			objConstants.MaterialIndex = e.second->Mat->MatIndex;
 
@@ -2055,6 +2059,132 @@ void GDxRenderer::RegisterTexture(GRiTexture* text)
 		md3dDevice->CreateShaderResourceView(dxTex->Resource.Get(), &srvDesc, GetCpuSrv(mTextrueHeapIndex + *it));
 		mTexturePoolFreeIndex.erase(it);
 	}
+}
+
+GRiSceneObject* GDxRenderer::SelectSceneObject(int sx, int sy)
+{
+	GGiFloat4x4* P = pCamera->GetProj();
+
+	// Compute picking ray in view space.
+	float vx = (+2.0f*sx / mClientWidth - 1.0f) / P->GetElement(0, 0);
+	float vy = (-2.0f*sy / mClientHeight + 1.0f) / P->GetElement(1, 1);
+
+	// Ray definition in view space.
+	XMVECTOR viewRayOrigin = XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);
+	XMVECTOR viewRayDir = XMVectorSet(vx, vy, 1.0f, 0.0f);
+
+	GGiFloat4x4* V = pCamera->GetView();
+	GDxFloat4x4* dxV = dynamic_cast<GDxFloat4x4*>(V);
+	if (dxV == nullptr)
+	{
+		ThrowGGiException("cast fail.");
+	}
+	XMMATRIX dxView = XMLoadFloat4x4(&dxV->GetValue());
+	XMMATRIX invView = XMMatrixInverse(&XMMatrixDeterminant(dxView), dxView);
+
+	GRiSceneObject* pickedSceneObject = nullptr;
+	float tPicked = GGiEngineUtil::Infinity;
+
+	// Check if we picked an opaque render item.  A real app might keep a separate "picking list"
+	// of objects that can be selected.   
+	for (auto so : pSceneObjectLayer[(int)RenderLayer::Deferred])
+	{
+		auto mesh = so->Mesh;
+
+		GGiFloat4x4* soTrans = so->GetTransform();
+		GDxFloat4x4* dxSoTrans = dynamic_cast<GDxFloat4x4*>(soTrans);
+		if (dxSoTrans == nullptr)
+		{
+			ThrowGGiException("cast fail.");
+		}
+		XMMATRIX W = XMLoadFloat4x4(&dxSoTrans->GetValue());
+		XMMATRIX invWorld = XMMatrixInverse(&XMMatrixDeterminant(W), W);
+
+		// Tranform ray to vi space of Mesh.
+		XMMATRIX toLocal = XMMatrixMultiply(invView, invWorld);
+
+		XMVECTOR rayOrigin = XMVector3TransformCoord(viewRayOrigin, toLocal);
+		XMVECTOR rayDir = XMVector3TransformNormal(viewRayDir, toLocal);
+
+		// Make the ray direction unit length for the intersection tests.
+		rayDir = XMVector3Normalize(rayDir);
+
+		// If we hit the bounding box of the Mesh, then we might have picked a Mesh triangle,
+		// so do the ray/triangle tests.
+		//
+		// If we did not hit the bounding box, then it is impossible that we hit 
+		// the Mesh, so do not waste effort doing ray/triangle tests.
+		BoundingBox bBox;
+		bBox.Center.x = /*so->GetLocation()[0] +*/ so->Mesh->bounds.Center[0];
+		bBox.Center.y = /*so->GetLocation()[1] +*/ so->Mesh->bounds.Center[1];
+		bBox.Center.z = /*so->GetLocation()[2] +*/ so->Mesh->bounds.Center[2];
+		bBox.Extents.x = so->Mesh->bounds.Extents[0];
+		bBox.Extents.y = so->Mesh->bounds.Extents[1];
+		bBox.Extents.z = so->Mesh->bounds.Extents[2];
+		float tmin = 0.0f;
+		if (bBox.Intersects(rayOrigin, rayDir, tmin))
+		{
+			// NOTE: For the demo, we know what to cast the vertex/index data to.  If we were mixing
+			// formats, some metadata would be needed to figure out what to cast it to.
+			GDxMesh* dxMesh = dynamic_cast<GDxMesh*>(so->Mesh);
+			if (dxMesh == nullptr)
+				ThrowGGiException("cast failed from GRiMesh* to GDxMesh*.");
+			shared_ptr<GDxStaticVIBuffer> dxViBuffer = dynamic_pointer_cast<GDxStaticVIBuffer>(dxMesh->mVIBuffer);
+			if (dxViBuffer == nullptr)
+				ThrowGGiException("cast failed from shared_ptr<GDxStaticVIBuffer> to shared_ptr<GDxStaticVIBuffer>.");
+			
+			auto vertices = (GRiVertex*)dxViBuffer->VertexBufferCPU->GetBufferPointer();
+			auto indices = (std::uint32_t*)dxViBuffer->IndexBufferCPU->GetBufferPointer();
+			UINT triCount = dxMesh->mVIBuffer->IndexCount / 3;
+
+			// Find the nearest ray/triangle intersection.
+			tmin = GGiEngineUtil::Infinity;
+			for (UINT i = 0; i < triCount; ++i)
+			{
+				// Indices for this triangle.
+				UINT i0 = indices[i * 3 + 0];
+				UINT i1 = indices[i * 3 + 1];
+				UINT i2 = indices[i * 3 + 2];
+
+				// Vertices for this triangle.
+				XMFLOAT3 v0f;
+				XMFLOAT3 v1f;
+				XMFLOAT3 v2f;
+				v0f.x = vertices[i0].Position[0];
+				v0f.y = vertices[i0].Position[1];
+				v0f.z = vertices[i0].Position[2];
+				v1f.x = vertices[i1].Position[0];
+				v1f.y = vertices[i1].Position[1];
+				v1f.z = vertices[i1].Position[2];
+				v2f.x = vertices[i2].Position[0];
+				v2f.y = vertices[i2].Position[1];
+				v2f.z = vertices[i2].Position[2];
+				XMVECTOR v0 = XMLoadFloat3(&v0f);
+				XMVECTOR v1 = XMLoadFloat3(&v1f);
+				XMVECTOR v2 = XMLoadFloat3(&v2f);
+
+				// We have to iterate over all the triangles in order to find the nearest intersection.
+				float t = 0.0f;
+				if (TriangleTests::Intersects(rayOrigin, rayDir, v0, v1, v2, t))
+				{
+					if (t < tmin)
+					{
+						// This is the new nearest picked triangle.
+						tmin = t;
+					}
+				}
+			}
+			std::vector<float> soScale = so->GetScale();
+			float relSize = (float)pow(soScale[0] * soScale[0] + soScale[1] * soScale[1] + soScale[2] * soScale[2], 0.5);
+			tmin *= relSize;
+			if (tmin < tPicked)
+			{
+				tPicked = tmin;
+				pickedSceneObject = so;
+			}
+		}
+	}
+	return pickedSceneObject;
 }
 
 #pragma endregion

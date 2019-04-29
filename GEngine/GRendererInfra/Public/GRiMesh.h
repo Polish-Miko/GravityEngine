@@ -1,6 +1,7 @@
 #pragma once
 #include "GRiPreInclude.h"
 #include "GRiSubmesh.h"
+#include "GRiBoundingBox.h"
 
 
 class GRiMesh
@@ -20,7 +21,9 @@ public:
 
 	std::unordered_map<std::wstring, GRiSubmesh> Submeshes;
 
-	virtual void AllowDynamicCast() {}
+	virtual void AllowDynamicCast() {};
+
+	GRiBoundingBox bounds;
 
 };
 

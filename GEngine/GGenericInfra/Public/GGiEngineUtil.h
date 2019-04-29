@@ -10,6 +10,7 @@ public:
 	~GGiEngineUtil();
 
 	static const float PI;
+	static const float Infinity;
 
 	static std::wstring StringToWString(const std::string& str)
 	{

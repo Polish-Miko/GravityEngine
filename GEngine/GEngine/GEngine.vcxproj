@@ -153,6 +153,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="Private\GGuiCallback.h" />
     <ClInclude Include="Private\GMaterial.h" />
     <ClInclude Include="Private\GProject.h" />
     <ClInclude Include="Private\GScene.h" />
@@ -161,6 +162,7 @@
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Private\GGuiCallback.cpp" />
     <ClCompile Include="Private\GMaterial.cpp" />
     <ClCompile Include="Private\GProject.cpp" />
     <ClCompile Include="Private\GScene.cpp" />

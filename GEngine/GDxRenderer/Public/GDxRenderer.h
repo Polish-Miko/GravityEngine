@@ -54,6 +54,8 @@ public:
 
 	virtual void SetImgui(GRiImgui* imguiPtr) override;
 
+	virtual GRiSceneObject* SelectSceneObject(int sx, int sy) override;
+
 protected:
 	virtual void CreateRtvAndDsvDescriptorHeaps();
 	virtual void Update(const GGiGameTimer* gt) override;

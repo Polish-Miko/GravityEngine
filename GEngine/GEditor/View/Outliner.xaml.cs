@@ -40,6 +40,36 @@ namespace GEditor.View
             IGCore.SetSetSceneObjectsCallback(mSetSceneObjectsCallback);
         }
 
+        private OutlinerItemModel GetItemModelByName(string itemName)
+        {
+            foreach (object item in outlinerTreeView.Items)
+            {
+                OutlinerItemModel model = item as OutlinerItemModel;
+                if (model.Name == itemName)
+                    return model;
+                OutlinerItemModel ret = GetItemModelInBranchByName(model, itemName);
+                if (ret != null)
+                    return ret;
+            }
+            return null;
+        }
+
+        private OutlinerItemModel GetItemModelInBranchByName(OutlinerItemModel branch, string itemName)
+        {
+            foreach (OutlinerItemModel item in branch.Children)
+            {
+                if (item.Name == itemName)
+                    return item;
+                foreach (OutlinerItemModel child in item.Children)
+                {
+                    OutlinerItemModel ret = GetItemModelInBranchByName(child, itemName);
+                    if (ret != null)
+                        return ret;
+                }
+            }
+            return null;
+        }
+
         void LoadImages()
         {
             BitmapImage img = new BitmapImage();
@@ -115,6 +145,7 @@ namespace GEditor.View
             if (selected.ObjectType == "Mesh")
             {
                 mainWindow.GetSceneObjectProperties(selected.Name);
+                IGCore.SelectSceneObject(selected.Name);
             }
         }
 
@@ -173,8 +204,8 @@ namespace GEditor.View
             }
             if (newModel != null)
             {
-                TreeViewItem tvi = (TreeViewItem)outlinerTreeView.ItemContainerGenerator.ContainerFromItem(newModel);
-                tvi.Focus();
+                //TreeViewItem tvi = (TreeViewItem)outlinerTreeView.ItemContainerGenerator.ContainerFromItem(newModel);
+                //tvi.Focus();
             }
             //mainWindow.GetSceneObjectProperties(sObjName);
         }

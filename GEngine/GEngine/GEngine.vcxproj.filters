@@ -39,6 +39,9 @@
     <ClInclude Include="Private\GMaterial.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="Private\GGuiCallback.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -60,6 +63,9 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="Private\GMaterial.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Private\GGuiCallback.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

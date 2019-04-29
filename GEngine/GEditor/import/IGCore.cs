@@ -10,6 +10,7 @@ namespace GEditor
     class IGCore
     {
         public delegate void VoidFuncPointerType();
+        public delegate void VoidWstringFuncPointerType([MarshalAs(UnmanagedType.LPWStr)] string param1);
 
         [DllImport(@"Build\GEngineDll.dll")]
         public static extern void Init();
@@ -109,6 +110,12 @@ namespace GEditor
 
         [DllImport(@"Build\GEngineDll.dll")]
         public static extern bool SkyCubemapNameAvailable([MarshalAs(UnmanagedType.LPWStr)] string cubemapName);
+
+        [DllImport(@"Build\GEngineDll.dll")]
+        public static extern void SetSelectSceneObjectCallback(VoidWstringFuncPointerType pSetSceneObjectsCallback);
+
+        [DllImport(@"Build\GEngineDll.dll")]
+        public static extern bool SelectSceneObject([MarshalAs(UnmanagedType.LPWStr)] string sceneObjectName);
 
     }
 }

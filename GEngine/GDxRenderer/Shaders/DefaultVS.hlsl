@@ -35,6 +35,7 @@ struct VertexOutput
 cbuffer cbPerObject : register(b0)
 {
 	float4x4 gWorld;
+	float4x4 gInvTransWorld;
 	float4x4 gTexTransform;
 	uint gMaterialIndex;
 	uint gObjPad0;
@@ -97,8 +98,10 @@ VertexOutput main(VertexInput input)
 	float4 texC = float4(input.uv, 0.0f, 1.0f);
 	output.uv = mul(texC, matData.MatTransform).xy;
 	//output.uv = input.uv;
-	output.normal = normalize(mul(input.normal, (float3x3)gWorld));
-	output.tangent = normalize(mul(input.tangent, (float3x3)gWorld));
+	//output.normal = normalize(mul(input.normal, (float3x3)gWorld));
+	//output.tangent = normalize(mul(input.tangent, (float3x3)gWorld));
+	output.normal = normalize(mul(input.normal, (float3x3)gInvTransWorld));
+	output.tangent = normalize(mul(input.tangent, (float3x3)gInvTransWorld));
 	output.worldPos = mul(float4(input.pos, 1.0f), gWorld).xyz;
 	output.linearZ = LinearZ(output.pos);
 	output.shadowPos = mul(float4(input.pos, 1.0f), gShadowTransform);

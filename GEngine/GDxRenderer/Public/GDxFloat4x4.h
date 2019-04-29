@@ -43,6 +43,8 @@ public:
 
 	virtual void Transpose() override;
 
+	virtual GGiFloat4x4* GetInverse() override;
+
 private:
 
 	DirectX::XMFLOAT4X4 value;

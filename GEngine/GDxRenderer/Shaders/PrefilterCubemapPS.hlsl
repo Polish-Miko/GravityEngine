@@ -7,6 +7,7 @@ SamplerState basicSampler	: register(s0);
 cbuffer cbPerObject : register(b0)
 {
 	float4x4 gWorld;
+	float4x4 gInvTransWorld;
 	float4x4 gTexTransform;
 	uint gMaterialIndex;
 	uint gObjPad0;

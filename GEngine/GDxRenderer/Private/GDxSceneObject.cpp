@@ -19,7 +19,7 @@ GGiFloat4x4* GDxSceneObject::GetTransform()
 	GDxFloat4x4* matLoc = new GDxFloat4x4();
 	matLoc->SetByTranslation(Location[0], Location[1], Location[2]);
 	GDxFloat4x4* matRot = new GDxFloat4x4();
-	matRot->SetByRotationPitchYawRoll(Rotation[0], Rotation[1], Rotation[2]);
+	matRot->SetByRotationPitchYawRoll(Rotation[0] * GGiEngineUtil::PI / 180.0f, Rotation[1] * GGiEngineUtil::PI / 180.0f, Rotation[2] * GGiEngineUtil::PI / 180.0f);
 	GDxFloat4x4* matScale = new GDxFloat4x4();
 	matScale->SetByScale(Scale[0], Scale[1], Scale[2]);
 	GGiFloat4x4* trans = &((*matLoc) * (*matRot) * (*matScale));

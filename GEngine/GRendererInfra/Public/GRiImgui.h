@@ -11,7 +11,7 @@ public:
 	~GRiImgui();
 
 	virtual void BeginFrame() = 0;
-	virtual void SetGUIContent() = 0;
+	virtual void SetGUIContent(bool bShowGizmo, const float *cameraView, float *cameraProjection, float* objectLocation, float* objectRotation, float* objectScale) = 0;
 	virtual void ShutDown() = 0;
 
 };

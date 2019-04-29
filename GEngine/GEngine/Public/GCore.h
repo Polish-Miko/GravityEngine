@@ -5,6 +5,7 @@
 #include "GProject.h"
 #include "GScene.h"
 #include "GMaterial.h"
+#include "GGuiCallback.h"
 
 
 
@@ -12,8 +13,6 @@
 using Microsoft::WRL::ComPtr;
 using namespace DirectX;
 using namespace DirectX::PackedVector;
-
-typedef void(__stdcall * VoidFuncPointerType)(void);
 
 // Win32 message handler
 extern LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
@@ -93,6 +92,10 @@ public:
 
 	bool SkyCubemapNameAvailable(wchar_t* cubemapName);
 
+	void SetSelectSceneObjectCallback(VoidWstringFuncPointerType callback);
+
+	void SelectSceneObject(wchar_t* sceneObjectName);
+
 #pragma endregion
 
 private:
@@ -138,6 +141,10 @@ private:
 
 	std::wstring mSkyCubemapUniqueName;
 
+	GRiSceneObject* mSelectedSceneObject = nullptr;
+
+	GGuiCallback* mGuiCallback;
+
 private:
 
 	GCore();
@@ -147,6 +154,7 @@ private:
 	void Update();
 
 	void OnKeyboardInput(const GGiGameTimer* gt);
+	void UpdateGui(const GGiGameTimer* gt);
 	void OnMouseDown(WPARAM btnState, int x, int y);
 	void OnMouseUp(WPARAM btnState, int x, int y);
 	void OnMouseMove(WPARAM btnState, int x, int y);
@@ -159,6 +167,8 @@ private:
 	void LoadCameras();
 
 	void LoadProject();
+
+	void Pick(int sx, int sy);
 
 	//Util
 	std::vector<std::wstring> GetAllFilesInFolder(std::wstring path, bool bCheckFormat, std::vector<std::wstring> format);

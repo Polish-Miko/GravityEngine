@@ -34,9 +34,9 @@ to
 ## todo
 - [x] deferred pipeline
 - [x] physically based rendering
-- [ ] scene editing
+- [x] scene editing
   - [x] scene serialization
-  - [ ] manipulation gizmo
+  - [x] manipulation gizmo
 - [ ] shadow
 - [ ] AO
 - [ ] AA

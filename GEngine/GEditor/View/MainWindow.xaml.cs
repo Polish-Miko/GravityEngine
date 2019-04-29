@@ -54,7 +54,7 @@ namespace GEditor
             OutlinerPanel.Children.Add(outliner);
             outliner.SetMainWindow(this);
         }
-        
+
         /*
         protected override void OnSourceInitialized(EventArgs e)
         {
@@ -69,7 +69,7 @@ namespace GEditor
                 hwndSource.AddHook(new HwndSourceHook(WndProc));
         }
         */
-        
+
         protected virtual IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
         {
             /*
@@ -85,17 +85,17 @@ namespace GEditor
         }
 
         private void OpenProject(object sender, RoutedEventArgs e)
-        { 
+        {
             // Create OpenFileDialog 
             Microsoft.Win32.OpenFileDialog dlg = new Microsoft.Win32.OpenFileDialog();
-            
+
             // Set filter for file extension and default file extension 
             dlg.DefaultExt = ".gproj";
             dlg.Filter = "GE Project Files (*.gproj)|*.gproj";
-            
+
             // Display OpenFileDialog by calling ShowDialog method 
             Nullable<bool> result = dlg.ShowDialog();
-            
+
             // Get the selected file name and display in a TextBox 
             if (result == true)
             {
@@ -106,13 +106,16 @@ namespace GEditor
 
                 fileBrowser.SetWorkDirectory(System.IO.Path.GetDirectoryName(filename) + @"\");
                 fileBrowser.LoadBrowser();
-                
+
                 IGCore.SetWorkDirectory(System.IO.Path.GetDirectoryName(filename) + @"\");
                 IGCore.SetProjectName(System.IO.Path.GetFileNameWithoutExtension(filename));
                 IntPtr hwnd = viewport.Handle;
                 double h = viewport.Height;
                 double w = viewport.Width;
                 IGCore.InitD3D(hwnd, w, h);
+
+                IGCore.SetSelectSceneObjectCallback(SelectSceneObject);
+
                 IGCore.Run();
             }
 
@@ -127,7 +130,7 @@ namespace GEditor
         {
             ;
         }
-        
+
         private void Button_Click(object sender, RoutedEventArgs e)
         {
             //IntPtr hwnd = viewport.Handle;
@@ -169,7 +172,7 @@ namespace GEditor
 
         void CreateViewport()
         {
-            
+
         }
 
         public void GetSceneObjectProperties(string objName)
@@ -234,6 +237,12 @@ namespace GEditor
             properties_ProjectSettings.SetMainWindow(this);
             PropertiesPanel.Children.Add(properties_ProjectSettings);
             properties_ProjectSettings.GetSettings();
+        }
+
+        public void SelectSceneObject(string sceneObjectName)
+        {
+            //outliner.SelectSceneObject(sceneObjectName);
+            GetSceneObjectProperties(sceneObjectName);
         }
 
     }

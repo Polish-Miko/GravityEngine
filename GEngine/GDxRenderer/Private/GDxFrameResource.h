@@ -12,6 +12,7 @@
 struct ObjectConstants
 {
 	DirectX::XMFLOAT4X4 World = GDxMathHelper::Identity4x4();
+	DirectX::XMFLOAT4X4 InvTransWorld = GDxMathHelper::Identity4x4();
 	DirectX::XMFLOAT4X4 TexTransform = GDxMathHelper::Identity4x4();
 	UINT     MaterialIndex;
 	UINT     ObjPad0;

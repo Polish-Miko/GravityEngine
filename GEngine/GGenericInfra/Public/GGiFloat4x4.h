@@ -80,5 +80,11 @@ public:
 		ThrowGGiException("Instantiating GGiFloat4x4 will cause troubles.");
 	}
 
+	virtual GGiFloat4x4* GetInverse()
+	{
+		ThrowGGiException("Instantiating GGiFloat4x4 will cause troubles.");
+		return nullptr;
+	}
+
 };
 

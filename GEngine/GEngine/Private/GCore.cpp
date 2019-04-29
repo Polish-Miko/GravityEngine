@@ -16,6 +16,7 @@ GCore::GCore()
 	mRenderer = &GDxRenderer::GetRenderer();
 	mRenderer->SetTimer(mTimer.get());
 	mProject = new GProject();
+	mGuiCallback = new GGuiCallback();
 }
 
 GCore::~GCore()
@@ -156,9 +157,10 @@ void GCore::Initialize(HWND OutputWindow, double width, double height)
 void GCore::Update()
 {
 	OnKeyboardInput(mTimer.get());
-	mImgui->BeginFrame();
-	mImgui->SetGUIContent();
+
 	mRenderer->Update(mTimer.get());
+
+	UpdateGui(mTimer.get());
 }
 
 void GCore::MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
@@ -289,7 +291,7 @@ void GCore::MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	case WM_KEYUP:
 		if (wParam == VK_ESCAPE)
 		{
-			PostQuitMessage(0);
+			;//PostQuitMessage(0);
 		}
 
 		return; 0;
@@ -304,22 +306,22 @@ void GCore::OnKeyboardInput(const GGiGameTimer* gt)
 {
 	const float dt = gt->DeltaTime();
 
-	if (GetAsyncKeyState('W') & 0x8000)
+	if ((GetAsyncKeyState('W') & 0x8000) && (GetAsyncKeyState(VK_RBUTTON) & 0x8000))
 		mCamera->Walk(150.0f*dt);
 
-	if (GetAsyncKeyState('S') & 0x8000)
+	if ((GetAsyncKeyState('S') & 0x8000) && (GetAsyncKeyState(VK_RBUTTON) & 0x8000))
 		mCamera->Walk(-150.0f*dt);
 
-	if (GetAsyncKeyState('A') & 0x8000)
+	if ((GetAsyncKeyState('A') & 0x8000) && (GetAsyncKeyState(VK_RBUTTON) & 0x8000))
 		mCamera->Strafe(-150.0f*dt);
 
-	if (GetAsyncKeyState('D') & 0x8000)
+	if ((GetAsyncKeyState('D') & 0x8000) && (GetAsyncKeyState(VK_RBUTTON) & 0x8000))
 		mCamera->Strafe(150.0f*dt);
 
-	if (GetAsyncKeyState('E') & 0x8000)
+	if ((GetAsyncKeyState('E') & 0x8000) && (GetAsyncKeyState(VK_RBUTTON) & 0x8000))
 		mCamera->Ascend(150.0f*dt);
 
-	if (GetAsyncKeyState('Q') & 0x8000)
+	if ((GetAsyncKeyState('Q') & 0x8000) && (GetAsyncKeyState(VK_RBUTTON) & 0x8000))
 		mCamera->Ascend(-150.0f*dt);
 
 	mCamera->UpdateViewMatrix();
@@ -337,11 +339,28 @@ void GCore::OnMouseDown(WPARAM btnState, int x, int y)
 	mLastMousePos.y = y;
 
 	SetCapture(mRenderer->MainWnd());
+
+	if ((btnState & MK_LBUTTON) != 0 && !ImGuizmo::IsOver())
+	{
+		Pick(x, y);
+	}
+
+	// Hide mouse cursor.
+	if ((btnState & MK_RBUTTON) != 0)
+	{
+		while (ShowCursor(false) >= 0);
+	}
 }
 
 void GCore::OnMouseUp(WPARAM btnState, int x, int y)
 {
 	ReleaseCapture();
+
+	// Show mouse cursor.
+	if (!(GetAsyncKeyState(VK_RBUTTON) & 0x8000))
+	{
+		while (ShowCursor(true) < 0);
+	}
 }
 
 void GCore::OnMouseMove(WPARAM btnState, int x, int y)
@@ -741,7 +760,7 @@ void GCore::LoadCameras()
 {
 	mCamera = std::make_unique<GRiCamera>();
 	mCamera->SetRendererFactory(pRendererFactory);
-	mCamera->SetPosition(0.0f, 2.0f, -5.0f);
+	mCamera->SetPosition(0.0f, 0.0f, 0.0f);
 	mCamera->SetLens(0.25f * GGiEngineUtil::PI, mRenderer->AspectRatio(), 1.0f, 1000.0f);
 
 	// Build cubemap sampler cameras.
@@ -776,6 +795,66 @@ void GCore::LoadCameras()
 		mCubemapSampleCamera[i]->LookAt(center, targets[i], ups[i]);
 		mCubemapSampleCamera[i]->SetLens(0.5f * GGiEngineUtil::PI, 1.0f, 0.1f, 1000.0f);
 		mCubemapSampleCamera[i]->UpdateViewMatrix();
+	}
+}
+
+#pragma endregion
+
+#pragma region Update
+
+void GCore::UpdateGui(const GGiGameTimer* gt)
+{
+	mImgui->BeginFrame();
+	ImGuizmo::Enable((mSelectedSceneObject != nullptr));
+	float view[16];
+	float proj[16];
+	float objLoc[3];
+	float objRot[3];
+	float objScale[3];
+	bool bSelectionNotNull = (mSelectedSceneObject != nullptr);
+	if (bSelectionNotNull)
+	{
+		for (auto i = 0u; i < 4; i++)
+		{
+			for (auto j = 0u; j < 4; j++)
+			{
+				view[i * 4 + j] = mCamera->GetView()->GetElement(i, j);
+				proj[i * 4 + j] = mCamera->GetProj()->GetElement(i, j);
+				std::vector<float> loc = mSelectedSceneObject->GetLocation();
+				objLoc[0] = loc[0];
+				objLoc[1] = loc[1];
+				objLoc[2] = loc[2];
+				std::vector<float> rot = mSelectedSceneObject->GetRotation();
+				objRot[0] = rot[0];
+				objRot[1] = rot[1];
+				objRot[2] = rot[2];
+				std::vector<float> sca = mSelectedSceneObject->GetScale();
+				objScale[0] = sca[0];
+				objScale[1] = sca[1];
+				objScale[2] = sca[2];
+			}
+		}
+	}
+	mImgui->SetGUIContent(bSelectionNotNull, view, proj, objLoc, objRot, objScale);
+	if (bSelectionNotNull)
+	{
+		mSelectedSceneObject->SetLocation(objLoc[0], objLoc[1], objLoc[2]);
+		mSelectedSceneObject->SetRotation(objRot[0], objRot[1], objRot[2]);
+		mSelectedSceneObject->SetScale(objScale[0], objScale[1], objScale[2]);
+	}
+}
+
+#pragma endregion
+
+#pragma region Runtime Activity
+
+void GCore::Pick(int sx, int sy)
+{
+	mSelectedSceneObject = mRenderer->SelectSceneObject(sx, sy);
+	if (mSelectedSceneObject != nullptr)
+	{
+		//call c# select function.
+		mGuiCallback->SelectSceneObjectCallback(mSelectedSceneObject->UniqueName.c_str());
 	}
 }
 
@@ -1232,6 +1311,21 @@ bool GCore::SkyCubemapNameAvailable(wchar_t* cubemapName)
 		return false;
 	else
 		return true;
+}
+
+void GCore::SetSelectSceneObjectCallback(VoidWstringFuncPointerType callback)
+{
+	mGuiCallback->SetSelectSceneObjectCallback(callback);
+}
+
+void GCore::SelectSceneObject(wchar_t* sceneObjectName)
+{
+	std::wstring SceneObjectNameStr(sceneObjectName);
+	if (mSceneObjects.find(SceneObjectNameStr) == mSceneObjects.end())
+	{
+		return;
+	}
+	mSelectedSceneObject = mSceneObjects[SceneObjectNameStr].get();
 }
 
 #pragma endregion
