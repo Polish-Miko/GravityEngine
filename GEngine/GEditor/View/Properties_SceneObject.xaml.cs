@@ -59,6 +59,13 @@ namespace GEditor.View
             RenderControl.DataContext = model;
         }
 
+        public void RefreshTransform()
+        {
+            float[] trans = new float[9];
+            IGCore.GetSceneObjectTransform(sObjectName, trans);
+            model.SetTransform(trans);
+        }
+
         public bool NameAvailable(string name)
         {
             return (!IGCore.SceneObjectExists(name));

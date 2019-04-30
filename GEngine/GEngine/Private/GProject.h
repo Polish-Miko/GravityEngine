@@ -79,8 +79,8 @@ public:
 		{
 			GProjectSceneObjectInfo soInfo;
 			soInfo.UniqueName = pSceneObjects[i]->UniqueName;
-			soInfo.MeshUniqueName = pSceneObjects[i]->Mesh->UniqueName;
-			soInfo.MaterialUniqueName = pSceneObjects[i]->Mat->UniqueName;
+			soInfo.MeshUniqueName = pSceneObjects[i]->GetMesh()->UniqueName;
+			soInfo.MaterialUniqueName = pSceneObjects[i]->GetMaterial()->UniqueName;
 			std::vector<float> loc = pSceneObjects[i]->GetLocation();
 			soInfo.Location[0] = loc[0];
 			soInfo.Location[1] = loc[1];

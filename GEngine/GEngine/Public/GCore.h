@@ -40,8 +40,6 @@ public:
 
 	const wchar_t* GetSceneObjectName(int index);
 
-	void SetSetSceneObjectsCallback(VoidFuncPointerType pSetSceneObjectsCallback);
-
 	void GetSceneObjectTransform(wchar_t* objName, float* trans);
 
 	void SetSceneObjectTransform(wchar_t* objName, float* trans);
@@ -96,6 +94,8 @@ public:
 
 	void SelectSceneObject(wchar_t* sceneObjectName);
 
+	void SetRefreshSceneObjectTransformCallback(VoidFuncPointerType pRefreshSceneObjectTransformCallback);
+
 #pragma endregion
 
 private:
@@ -145,6 +145,8 @@ private:
 
 	GGuiCallback* mGuiCallback;
 
+	float mCameraSpeed = 150.0f;
+
 private:
 
 	GCore();
@@ -173,13 +175,5 @@ private:
 	//Util
 	std::vector<std::wstring> GetAllFilesInFolder(std::wstring path, bool bCheckFormat, std::vector<std::wstring> format);
 	std::vector<std::wstring> GetAllFilesUnderFolder(std::wstring path, bool bCheckFormat, std::vector<std::wstring> format);
-
-#pragma region Export-Related
-
-	VoidFuncPointerType mSetSceneObjectsCallback;
-
-	void SetSceneObjectsCallback();
-
-#pragma endregion
 
 };

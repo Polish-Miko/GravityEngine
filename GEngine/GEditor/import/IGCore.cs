@@ -34,9 +34,6 @@ namespace GEditor
         public static extern IntPtr GetSceneObjectName(int index);
 
         [DllImport(@"Build\GEngineDll.dll")]
-        public static extern void SetSetSceneObjectsCallback(VoidFuncPointerType pSetSceneObjectsCallback);
-
-        [DllImport(@"Build\GEngineDll.dll")]
         public static extern void GetSceneObjectTransform([MarshalAs(UnmanagedType.LPWStr)] string objName, [In, Out] float[] trans);
 
         [DllImport(@"Build\GEngineDll.dll")]
@@ -116,6 +113,9 @@ namespace GEditor
 
         [DllImport(@"Build\GEngineDll.dll")]
         public static extern bool SelectSceneObject([MarshalAs(UnmanagedType.LPWStr)] string sceneObjectName);
+
+        [DllImport(@"Build\GEngineDll.dll")]
+        public static extern void SetRefreshSceneObjectTransformCallback(VoidFuncPointerType pRefreshSceneObjectTransformCallback);
 
     }
 }

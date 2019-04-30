@@ -13,6 +13,10 @@ GRiSceneObject::~GRiSceneObject()
 }
 */
 
+void GRiSceneObject::MarkDirty()
+{
+	NumFramesDirty = NUM_FRAME_RESOURCES;
+}
 
 std::vector<float> GRiSceneObject::GetLocation()
 {
@@ -56,7 +60,49 @@ void GRiSceneObject::SetScale(float x, float y, float z)
 	MarkDirty();
 }
 
-void GRiSceneObject::MarkDirty()
+void GRiSceneObject::SetTexTransform(GGiFloat4x4* texTrans)
 {
-	NumFramesDirty = NUM_FRAME_RESOURCES;
+	TexTransform = texTrans;
+	MarkDirty();
 }
+
+GGiFloat4x4* GRiSceneObject::GetTexTransform()
+{
+	return TexTransform;
+}
+
+void GRiSceneObject::SetMesh(GRiMesh* mesh)
+{
+	Mesh = mesh;
+	MarkDirty();
+}
+
+GRiMesh* GRiSceneObject::GetMesh()
+{
+	return Mesh;
+}
+
+void GRiSceneObject::SetMaterial(GRiMaterial* mat)
+{
+	Mat = mat;
+	MarkDirty();
+}
+
+GRiMaterial* GRiSceneObject::GetMaterial()
+{
+	return Mat;
+}
+
+void GRiSceneObject::SetObjIndex(UINT ind)
+{
+	ObjIndex = ind;
+	MarkDirty();
+}
+
+UINT GRiSceneObject::GetObjIndex()
+{
+	return ObjIndex;
+}
+
+
+

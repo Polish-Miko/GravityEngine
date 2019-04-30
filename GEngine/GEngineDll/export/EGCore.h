@@ -40,11 +40,6 @@ extern "C"
 
 extern "C"
 {
-	__declspec(dllexport) void __stdcall SetSetSceneObjectsCallback(VoidFuncPointerType pSetSceneObjectsCallback);
-}
-
-extern "C"
-{
 	__declspec(dllexport) void __stdcall GetSceneObjectTransform(wchar_t* objName, float* trans);
 }
 
@@ -168,7 +163,6 @@ extern "C"
 	__declspec(dllexport) bool __stdcall SkyCubemapNameAvailable(wchar_t* cubemapName);
 }
 
-
 extern "C"
 {
 	__declspec(dllexport) void __stdcall SetSelectSceneObjectCallback(VoidWstringFuncPointerType pSelectSceneObjectCallback);
@@ -177,6 +171,11 @@ extern "C"
 extern "C"
 {
 	__declspec(dllexport) void __stdcall SelectSceneObject(wchar_t* sceneObjectName);
+}
+
+extern "C"
+{
+	__declspec(dllexport) void __stdcall SetRefreshSceneObjectTransformCallback(VoidFuncPointerType pRefreshSceneObjectTransformCallback);
 }
 
 

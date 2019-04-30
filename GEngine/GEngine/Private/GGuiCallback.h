@@ -21,9 +21,15 @@ public:
 
 	void SelectSceneObjectCallback(const wchar_t* sceneObjectName);
 
+	void SetRefreshSceneObjectTransformCallback(VoidFuncPointerType pRefreshSceneObjectTransformCallback);
+
+	void RefreshSceneObjectTransformCallback();
+
 private:
 
 	VoidWstringFuncPointerType mSelectSceneObjectCallback;
+
+	VoidFuncPointerType mRefreshSceneObjectTransformCallback;
 
 };
 

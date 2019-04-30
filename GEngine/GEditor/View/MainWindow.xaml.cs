@@ -115,6 +115,8 @@ namespace GEditor
                 IGCore.InitD3D(hwnd, w, h);
 
                 IGCore.SetSelectSceneObjectCallback(SelectSceneObject);
+                IGCore.SetRefreshSceneObjectTransformCallback(RefreshTransform);
+                outliner.GetSceneObjects();
 
                 IGCore.Run();
             }
@@ -243,6 +245,12 @@ namespace GEditor
         {
             //outliner.SelectSceneObject(sceneObjectName);
             GetSceneObjectProperties(sceneObjectName);
+        }
+
+        public void RefreshTransform()
+        {
+            if (properties_SceneObject != null)
+                properties_SceneObject.RefreshTransform();
         }
 
     }

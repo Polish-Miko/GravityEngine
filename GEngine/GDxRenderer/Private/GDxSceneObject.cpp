@@ -14,6 +14,17 @@ GDxSceneObject::~GDxSceneObject()
 }
 */
 
+D3D12_PRIMITIVE_TOPOLOGY GDxSceneObject::GetPrimitiveTopology()
+{
+	return PrimitiveType;
+}
+
+void GDxSceneObject::SetPrimitiveTopology(D3D12_PRIMITIVE_TOPOLOGY topo)
+{
+	PrimitiveType = topo;
+	MarkDirty();
+}
+
 GGiFloat4x4* GDxSceneObject::GetTransform()
 {
 	GDxFloat4x4* matLoc = new GDxFloat4x4();
@@ -26,3 +37,5 @@ GGiFloat4x4* GDxSceneObject::GetTransform()
 	//GGiFloat4x4* trans = &((*matScale) * (*matRot) * (*matLoc));
 	return trans;
 }
+
+

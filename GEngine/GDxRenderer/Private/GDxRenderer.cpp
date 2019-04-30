@@ -555,7 +555,7 @@ void GDxRenderer::UpdateObjectCBs(const GGiGameTimer* gt)
 			if (dxTrans == nullptr)
 				ThrowGGiException("Cast failed from GGiFloat4x4* to GDxFloat4x4*.");
 
-			GDxFloat4x4* dxTexTrans = dynamic_cast<GDxFloat4x4*>(e.second->TexTransform);
+			GDxFloat4x4* dxTexTrans = dynamic_cast<GDxFloat4x4*>(e.second->GetTexTransform());
 			if (dxTexTrans == nullptr)
 				ThrowGGiException("Cast failed from GGiFloat4x4* to GDxFloat4x4*.");
 			
@@ -572,9 +572,9 @@ void GDxRenderer::UpdateObjectCBs(const GGiGameTimer* gt)
 			XMStoreFloat4x4(&objConstants.World, XMMatrixTranspose(world));
 			XMStoreFloat4x4(&objConstants.InvTransWorld, XMMatrixTranspose(invTransWorld));
 			XMStoreFloat4x4(&objConstants.TexTransform, XMMatrixTranspose(texTransform));
-			objConstants.MaterialIndex = e.second->Mat->MatIndex;
+			objConstants.MaterialIndex = e.second->GetMaterial()->MatIndex;
 
-			currObjectCB->CopyData(e.second->ObjIndex, objConstants);
+			currObjectCB->CopyData(e.second->GetObjIndex(), objConstants);
 
 			// Next FrameResource need to be updated too.
 			e.second->NumFramesDirty--;
@@ -1759,7 +1759,7 @@ void GDxRenderer::CubemapPreIntegration()
 		if (dxTrans == nullptr)
 			ThrowGGiException("Cast failed from GGiFloat4x4* to GDxFloat4x4*.");
 
-		GDxFloat4x4* dxTexTrans = dynamic_cast<GDxFloat4x4*>(e.second->TexTransform);
+		GDxFloat4x4* dxTexTrans = dynamic_cast<GDxFloat4x4*>(e.second->GetTexTransform());
 		if (dxTexTrans == nullptr)
 			ThrowGGiException("Cast failed from GGiFloat4x4* to GDxFloat4x4*.");
 
@@ -1771,9 +1771,9 @@ void GDxRenderer::CubemapPreIntegration()
 		ObjectConstants objConstants;
 		XMStoreFloat4x4(&objConstants.World, XMMatrixTranspose(world));
 		XMStoreFloat4x4(&objConstants.TexTransform, XMMatrixTranspose(texTransform));
-		objConstants.MaterialIndex = e.second->Mat->MatIndex;
+		objConstants.MaterialIndex = e.second->GetMaterial()->MatIndex;
 
-		currObjectCB->CopyData(e.second->ObjIndex, objConstants);
+		currObjectCB->CopyData(e.second->GetObjIndex(), objConstants);
 	}
 
 	// Load sky pass CB.
@@ -2006,7 +2006,7 @@ void GDxRenderer::DrawSceneObject(ID3D12GraphicsCommandList* cmdList, GRiSceneOb
 		ThrowGGiException("Cast failed : from GRiSceneObject* to GDxSceneObject*.")
 	}
 
-	GDxMesh* dxMesh = dynamic_cast<GDxMesh*>(sObject->Mesh);
+	GDxMesh* dxMesh = dynamic_cast<GDxMesh*>(sObject->GetMesh());
 	if (dxMesh == NULL)
 	{
 		ThrowGGiException("Cast failed : from GRiMesh* to GDxMesh*.")
@@ -2014,13 +2014,13 @@ void GDxRenderer::DrawSceneObject(ID3D12GraphicsCommandList* cmdList, GRiSceneOb
 
 	cmdList->IASetVertexBuffers(0, 1, &dxMesh->mVIBuffer->VertexBufferView());
 	cmdList->IASetIndexBuffer(&dxMesh->mVIBuffer->IndexBufferView());
-	cmdList->IASetPrimitiveTopology(dxSO->PrimitiveType);
+	cmdList->IASetPrimitiveTopology(dxSO->GetPrimitiveTopology());
 
 	if (bSetCBV)
 	{
 		UINT objCBByteSize = GDxUtil::CalcConstantBufferByteSize(sizeof(ObjectConstants));
 		auto objectCB = mCurrFrameResource->ObjectCB->Resource();
-		D3D12_GPU_VIRTUAL_ADDRESS objCBAddress = objectCB->GetGPUVirtualAddress() + sObject->ObjIndex * objCBByteSize;
+		D3D12_GPU_VIRTUAL_ADDRESS objCBAddress = objectCB->GetGPUVirtualAddress() + sObject->GetObjIndex() * objCBByteSize;
 		cmdList->SetGraphicsRootConstantBufferView(0, objCBAddress);
 	}
 
@@ -2089,7 +2089,7 @@ GRiSceneObject* GDxRenderer::SelectSceneObject(int sx, int sy)
 	// of objects that can be selected.   
 	for (auto so : pSceneObjectLayer[(int)RenderLayer::Deferred])
 	{
-		auto mesh = so->Mesh;
+		auto mesh = so->GetMesh();
 
 		GGiFloat4x4* soTrans = so->GetTransform();
 		GDxFloat4x4* dxSoTrans = dynamic_cast<GDxFloat4x4*>(soTrans);
@@ -2115,18 +2115,18 @@ GRiSceneObject* GDxRenderer::SelectSceneObject(int sx, int sy)
 		// If we did not hit the bounding box, then it is impossible that we hit 
 		// the Mesh, so do not waste effort doing ray/triangle tests.
 		BoundingBox bBox;
-		bBox.Center.x = /*so->GetLocation()[0] +*/ so->Mesh->bounds.Center[0];
-		bBox.Center.y = /*so->GetLocation()[1] +*/ so->Mesh->bounds.Center[1];
-		bBox.Center.z = /*so->GetLocation()[2] +*/ so->Mesh->bounds.Center[2];
-		bBox.Extents.x = so->Mesh->bounds.Extents[0];
-		bBox.Extents.y = so->Mesh->bounds.Extents[1];
-		bBox.Extents.z = so->Mesh->bounds.Extents[2];
+		bBox.Center.x = /*so->GetLocation()[0] +*/ so->GetMesh()->bounds.Center[0];
+		bBox.Center.y = /*so->GetLocation()[1] +*/ so->GetMesh()->bounds.Center[1];
+		bBox.Center.z = /*so->GetLocation()[2] +*/ so->GetMesh()->bounds.Center[2];
+		bBox.Extents.x = so->GetMesh()->bounds.Extents[0];
+		bBox.Extents.y = so->GetMesh()->bounds.Extents[1];
+		bBox.Extents.z = so->GetMesh()->bounds.Extents[2];
 		float tmin = 0.0f;
 		if (bBox.Intersects(rayOrigin, rayDir, tmin))
 		{
 			// NOTE: For the demo, we know what to cast the vertex/index data to.  If we were mixing
 			// formats, some metadata would be needed to figure out what to cast it to.
-			GDxMesh* dxMesh = dynamic_cast<GDxMesh*>(so->Mesh);
+			GDxMesh* dxMesh = dynamic_cast<GDxMesh*>(so->GetMesh());
 			if (dxMesh == nullptr)
 				ThrowGGiException("cast failed from GRiMesh* to GDxMesh*.");
 			shared_ptr<GDxStaticVIBuffer> dxViBuffer = dynamic_pointer_cast<GDxStaticVIBuffer>(dxMesh->mVIBuffer);

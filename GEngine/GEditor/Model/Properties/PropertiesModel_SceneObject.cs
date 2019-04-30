@@ -261,6 +261,7 @@ namespace GEditor.Model.Properties
             _scaleX = trans[6].ToString();
             _scaleY = trans[7].ToString();
             _scaleZ = trans[8].ToString();
+            OnPropertyChanged();
         }
 
         public void SetParent(Properties_SceneObject parent)

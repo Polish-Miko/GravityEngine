@@ -24,13 +24,29 @@ public:
 
 	virtual GGiFloat4x4* GetTransform() = 0;
 
-	GGiFloat4x4* TexTransform;
+	void SetTexTransform(GGiFloat4x4* texTrans);
+	GGiFloat4x4* GetTexTransform();
+
+	void SetMesh(GRiMesh* mesh);
+	GRiMesh* GetMesh();
+
+	void SetMaterial(GRiMaterial* mat);
+	GRiMaterial* GetMaterial();
+
+	void SetObjIndex(UINT ind);
+	UINT GetObjIndex();
 
 	// Dirty flag indicating the object data has changed and we need to update the constant buffer.
 	// Because we have an object cbuffer for each FrameResource, we have to apply the
 	// update to each FrameResource.  Thus, when we modify obect data we should set 
 	// NumFramesDirty = gNumFrameResources so that each frame resource gets the update.
 	int NumFramesDirty = NUM_FRAME_RESOURCES;
+
+protected:
+
+	float Location[3] = { 0.0f, 0.0f, 0.0f };
+	float Rotation[3] = { 0.0f, 0.0f, 0.0f };
+	float Scale[3] = { 1.0f, 1.0f, 1.0f };
 
 	// Index into GPU constant buffer corresponding to the ObjectCB for this render item.
 	UINT ObjIndex = -1;
@@ -39,11 +55,7 @@ public:
 
 	GRiMesh* Mesh;
 
-protected:
-
-	float Location[3] = { 0.0f, 0.0f, 0.0f };
-	float Rotation[3] = { 0.0f, 0.0f, 0.0f };
-	float Scale[3] = { 1.0f, 1.0f, 1.0f };
+	GGiFloat4x4* TexTransform;
 
 };
 

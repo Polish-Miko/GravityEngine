@@ -37,11 +37,6 @@ const wchar_t* __stdcall GetSceneObjectName(int index)
 	return GCore::GetCore().GetSceneObjectName(index);
 }
 
-void __stdcall SetSetSceneObjectsCallback(VoidFuncPointerType pSetSceneObjectsCallback)
-{
-	GCore::GetCore().SetSetSceneObjectsCallback(pSetSceneObjectsCallback);
-}
-
 void __stdcall GetSceneObjectTransform(wchar_t* objName, float* trans)
 {
 	GCore::GetCore().GetSceneObjectTransform(objName, trans);
@@ -175,6 +170,11 @@ void __stdcall SetSelectSceneObjectCallback(VoidWstringFuncPointerType pSelectSc
 void __stdcall SelectSceneObject(wchar_t* sceneObjectName)
 {
 	GCore::GetCore().SelectSceneObject(sceneObjectName);
+}
+
+void __stdcall SetRefreshSceneObjectTransformCallback(VoidFuncPointerType pRefreshSceneObjectTransformCallback)
+{
+	GCore::GetCore().SetRefreshSceneObjectTransformCallback(pRefreshSceneObjectTransformCallback);
 }
 
 

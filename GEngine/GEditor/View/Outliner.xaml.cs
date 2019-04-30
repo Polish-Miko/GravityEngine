@@ -25,7 +25,7 @@ namespace GEditor.View
     {
         Dictionary<string, BitmapImage> outlinerIcons = new Dictionary<string, BitmapImage>();
 
-        IGCore.VoidFuncPointerType mSetSceneObjectsCallback;
+        //IGCore.VoidFuncPointerType mSetSceneObjectsCallback;
 
         MainWindow mainWindow;
 
@@ -35,9 +35,9 @@ namespace GEditor.View
 
             LoadImages();
 
-            mSetSceneObjectsCallback = new IGCore.VoidFuncPointerType(SetSceneObjects);
+            //mSetSceneObjectsCallback = new IGCore.VoidFuncPointerType(SetSceneObjects);
 
-            IGCore.SetSetSceneObjectsCallback(mSetSceneObjectsCallback);
+            //IGCore.SetSetSceneObjectsCallback(mSetSceneObjectsCallback);
         }
 
         private OutlinerItemModel GetItemModelByName(string itemName)
@@ -88,7 +88,7 @@ namespace GEditor.View
             outlinerIcons.Add("Mesh", img);
         }
 
-        public void SetSceneObjects()
+        public void GetSceneObjects()
         {
             //outlinerTreeView.Items.Clear();
             outlinerTreeView.ItemsSource = null;
@@ -131,7 +131,7 @@ namespace GEditor.View
 
         public void Refresh()
         {
-            SetSceneObjects();
+            GetSceneObjects();
         }
 
         void item_Expanded(object sender, RoutedEventArgs e)
@@ -191,7 +191,7 @@ namespace GEditor.View
 
             IGCore.CreateSceneObject(sObjName, meshUniqueName);
 
-            SetSceneObjects();
+            GetSceneObjects();
             OutlinerItemModel newModel = null;
             foreach (object item in outlinerTreeView.Items)
             {

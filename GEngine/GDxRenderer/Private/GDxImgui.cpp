@@ -4,6 +4,15 @@
 #include "imgui_impl_win32.h"
 
 
+
+
+
+ImU8 GDxImgui::mCameraSpeedUpperBound = 10;
+ImU8 GDxImgui::mCameraSpeedLowerBound = 1;
+float GDxImgui::mInitialCameraSpeed = 150.0f;
+
+
+
 GDxImgui::GDxImgui()
 {
 }
@@ -58,7 +67,7 @@ void GDxImgui::BeginFrame()
 	ImGuizmo::BeginFrame();
 }
 
-void GDxImgui::SetGUIContent(bool bShowGizmo, const float *cameraView, float *cameraProjection, float* objectLocation, float* objectRotation, float* objectScale)
+void GDxImgui::SetGUIContent(bool bShowGizmo, const float *cameraView, float *cameraProjection, float* objectLocation, float* objectRotation, float* objectScale, float& cameraSpeed)
 {
 	static bool show_demo_window = false;
 
@@ -74,7 +83,7 @@ void GDxImgui::SetGUIContent(bool bShowGizmo, const float *cameraView, float *ca
 
 	{
 		ImGui::Begin("Manipulation");
-		EditTransform(bShowGizmo, cameraView, cameraProjection, objectLocation, objectRotation, objectScale);
+		Manipulation(bShowGizmo, cameraView, cameraProjection, objectLocation, objectRotation, objectScale, cameraSpeed);
 		ImGui::End();
 	}
 }
@@ -92,13 +101,17 @@ void GDxImgui::ShutDown()
 	ImGui::DestroyContext();
 }
 
-void GDxImgui::EditTransform(bool bShowGizmo, const float *cameraView, float *cameraProjection, float* objectLocation, float* objectRotation, float* objectScale)
+void GDxImgui::Manipulation(bool bShowGizmo, const float *cameraView, float *cameraProjection, float* objectLocation, float* objectRotation, float* objectScale, float& cameraSpeed)
 {
+	ImGuiIO& io = ImGui::GetIO();
+
 	static bool bSelectMode = false;
 	static ImGuizmo::OPERATION mCurrentGizmoOperation(ImGuizmo::TRANSLATE);
 	static ImGuizmo::MODE mCurrentGizmoMode(ImGuizmo::LOCAL);
 	static bool useSnap = false;
 	static float snap[3] = { 1.f, 1.f, 1.f };
+	static ImU8 initCameraSpeedExp = (mCameraSpeedUpperBound - mCameraSpeedLowerBound) / 2 + 1;
+	static ImU8 cameraSpeedExp = initCameraSpeedExp;
 
 	if (ImGui::IsKeyPressed(81) && !ImGui::IsMouseDown(1)) // Q Key
 	{
@@ -119,6 +132,16 @@ void GDxImgui::EditTransform(bool bShowGizmo, const float *cameraView, float *ca
 		mCurrentGizmoOperation = ImGuizmo::SCALE;
 		bSelectMode = false;
 	}
+
+	if (ImGui::IsMouseDown(1))
+		cameraSpeedExp += (ImU8)io.MouseWheel;
+	if (cameraSpeedExp > mCameraSpeedUpperBound)
+		cameraSpeedExp = mCameraSpeedUpperBound;
+	if (cameraSpeedExp < mCameraSpeedLowerBound)
+		cameraSpeedExp = mCameraSpeedLowerBound;
+	ImGui::SliderScalar("CameraSpeed", ImGuiDataType_U8, &cameraSpeedExp, &mCameraSpeedLowerBound, &mCameraSpeedUpperBound, "%u");
+	cameraSpeed = mInitialCameraSpeed * (float)pow(1.5f, cameraSpeedExp - initCameraSpeedExp);
+
 	if (ImGui::RadioButton("Translate", mCurrentGizmoOperation == ImGuizmo::TRANSLATE))
 		mCurrentGizmoOperation = ImGuizmo::TRANSLATE;
 	ImGui::SameLine();
@@ -136,8 +159,10 @@ void GDxImgui::EditTransform(bool bShowGizmo, const float *cameraView, float *ca
 		if (ImGui::RadioButton("World", mCurrentGizmoMode == ImGuizmo::WORLD))
 			mCurrentGizmoMode = ImGuizmo::WORLD;
 	}
+	/*
 	if (ImGui::IsKeyPressed(83))
 		useSnap = !useSnap;
+	*/
 	ImGui::Checkbox("", &useSnap);
 	ImGui::SameLine();
 
@@ -157,7 +182,6 @@ void GDxImgui::EditTransform(bool bShowGizmo, const float *cameraView, float *ca
 	float matrix[16];
 	ImGuizmo::RecomposeMatrixFromComponents(objectLocation, objectRotation, objectScale, matrix);
 
-	ImGuiIO& io = ImGui::GetIO();
 	ImGuizmo::SetRect(0, 0, io.DisplaySize.x, io.DisplaySize.y);
 	if (!bSelectMode && bShowGizmo)
 		ImGuizmo::Manipulate(cameraView, cameraProjection, mCurrentGizmoOperation, mCurrentGizmoMode, matrix, NULL, useSnap ? &snap[0] : NULL, NULL, NULL);
