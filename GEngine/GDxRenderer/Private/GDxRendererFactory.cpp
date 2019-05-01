@@ -33,7 +33,7 @@ GRiTexture* GDxRendererFactory::CreateTexture()
 
 GRiTextureLoader* GDxRendererFactory::CreateTextureLoader()
 {
-	GRiTextureLoader* ret = new GDxTextureLoader(pDevice, pCommandQueue);
+	GRiTextureLoader* ret = new GDxTextureLoader(pDevice, pCommandList, pCommandQueue);
 	return ret;
 }
 

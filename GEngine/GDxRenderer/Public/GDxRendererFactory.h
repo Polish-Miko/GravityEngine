@@ -36,7 +36,9 @@ public:
 private:
 
 	ID3D12Device* pDevice;
+
 	ID3D12GraphicsCommandList* pCommandList;
+
 	ID3D12CommandQueue* pCommandQueue;
 
 };

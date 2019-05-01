@@ -13,6 +13,8 @@ public:
 	Microsoft::WRL::ComPtr<ID3D12Resource> Resource = nullptr;
 	Microsoft::WRL::ComPtr<ID3D12Resource> UploadHeap = nullptr;
 
+	//std::vector<D3D12_SUBRESOURCE_DATA> Subresources;
+
 	virtual void AllowDynamicCast() override;
 };
 

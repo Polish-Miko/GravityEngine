@@ -29,6 +29,7 @@ namespace GEditor.View
         Dictionary<string, BitmapImage> treeViewIcons = new Dictionary<string, BitmapImage>();
         Dictionary<string, BitmapImage> listBoxIcons = new Dictionary<string, BitmapImage>();
         ObservableCollection<BrowserListBoxItemModel> listBoxData = new ObservableCollection<BrowserListBoxItemModel>();
+        //List<BrowserListBoxItemModel> listBoxData = new List<BrowserListBoxItemModel>();
 
         MainWindow mainWindow;
 
@@ -39,6 +40,7 @@ namespace GEditor.View
             LoadImages();
 
             //OnBrowserLoaded(); 
+            browserListBox.ItemsSource = listBoxData;
         }
 
         void LoadImages()
@@ -46,70 +48,70 @@ namespace GEditor.View
             BitmapImage img = new BitmapImage();
             img.BeginInit();
             img.CacheOption = BitmapCacheOption.OnLoad;
-            img.CreateOptions = BitmapCreateOptions.IgnoreImageCache;
+            img.CreateOptions = BitmapCreateOptions.None;
             img.UriSource = new Uri(AppDomain.CurrentDomain.BaseDirectory + "..\\GEditor\\Resource\\Image\\icon_tv_folder.png", UriKind.Absolute);
             img.EndInit();
             treeViewIcons.Add("folder", img);
             img = new BitmapImage();
             img.BeginInit();
             img.CacheOption = BitmapCacheOption.OnLoad;
-            img.CreateOptions = BitmapCreateOptions.IgnoreImageCache;
+            img.CreateOptions = BitmapCreateOptions.None;
             img.UriSource = new Uri(AppDomain.CurrentDomain.BaseDirectory + "..\\GEditor\\Resource\\Image\\icon_tv_document.png", UriKind.Absolute);
             img.EndInit();
             treeViewIcons.Add("document", img);
             img = new BitmapImage();
             img.BeginInit();
             img.CacheOption = BitmapCacheOption.OnLoad;
-            img.CreateOptions = BitmapCreateOptions.IgnoreImageCache;
+            img.CreateOptions = BitmapCreateOptions.None;
             img.UriSource = new Uri(AppDomain.CurrentDomain.BaseDirectory + "..\\GEditor\\Resource\\Image\\icon_tv_image.png", UriKind.Absolute);
             img.EndInit();
             treeViewIcons.Add("image", img);
             img = new BitmapImage();
             img.BeginInit();
             img.CacheOption = BitmapCacheOption.OnLoad;
-            img.CreateOptions = BitmapCreateOptions.IgnoreImageCache;
+            img.CreateOptions = BitmapCreateOptions.None;
             img.UriSource = new Uri(AppDomain.CurrentDomain.BaseDirectory + "..\\GEditor\\Resource\\Image\\icon_tv_material.png", UriKind.Absolute);
             img.EndInit();
             treeViewIcons.Add("material", img);
             img = new BitmapImage();
             img.BeginInit();
             img.CacheOption = BitmapCacheOption.OnLoad;
-            img.CreateOptions = BitmapCreateOptions.IgnoreImageCache;
+            img.CreateOptions = BitmapCreateOptions.None;
             img.UriSource = new Uri(AppDomain.CurrentDomain.BaseDirectory + "..\\GEditor\\Resource\\Image\\icon_tv_mesh.png", UriKind.Absolute);
             img.EndInit();
             treeViewIcons.Add("mesh", img);
             img = new BitmapImage();
             img.BeginInit();
             img.CacheOption = BitmapCacheOption.OnLoad;
-            img.CreateOptions = BitmapCreateOptions.IgnoreImageCache;
+            img.CreateOptions = BitmapCreateOptions.None;
             img.UriSource = new Uri(AppDomain.CurrentDomain.BaseDirectory + "..\\GEditor\\Resource\\Image\\icon_lb_folder.png", UriKind.Absolute);
             img.EndInit();
             listBoxIcons.Add("folder", img);
             img = new BitmapImage();
             img.BeginInit();
             img.CacheOption = BitmapCacheOption.OnLoad;
-            img.CreateOptions = BitmapCreateOptions.IgnoreImageCache;
+            img.CreateOptions = BitmapCreateOptions.None;
             img.UriSource = new Uri(AppDomain.CurrentDomain.BaseDirectory + "..\\GEditor\\Resource\\Image\\icon_lb_document.png", UriKind.Absolute);
             img.EndInit();
             listBoxIcons.Add("document", img);
             img = new BitmapImage();
             img.BeginInit();
             img.CacheOption = BitmapCacheOption.OnLoad;
-            img.CreateOptions = BitmapCreateOptions.IgnoreImageCache;
+            img.CreateOptions = BitmapCreateOptions.None;
             img.UriSource = new Uri(AppDomain.CurrentDomain.BaseDirectory + "..\\GEditor\\Resource\\Image\\icon_lb_image.png", UriKind.Absolute);
             img.EndInit();
             listBoxIcons.Add("image", img);
             img = new BitmapImage();
             img.BeginInit();
             img.CacheOption = BitmapCacheOption.OnLoad;
-            img.CreateOptions = BitmapCreateOptions.IgnoreImageCache;
+            img.CreateOptions = BitmapCreateOptions.None;
             img.UriSource = new Uri(AppDomain.CurrentDomain.BaseDirectory + "..\\GEditor\\Resource\\Image\\icon_lb_material.png", UriKind.Absolute);
             img.EndInit();
             listBoxIcons.Add("material", img);
             img = new BitmapImage();
             img.BeginInit();
             img.CacheOption = BitmapCacheOption.OnLoad;
-            img.CreateOptions = BitmapCreateOptions.IgnoreImageCache;
+            img.CreateOptions = BitmapCreateOptions.None;
             img.UriSource = new Uri(AppDomain.CurrentDomain.BaseDirectory + "..\\GEditor\\Resource\\Image\\icon_lb_mesh.png", UriKind.Absolute);
             img.EndInit();
             listBoxIcons.Add("mesh", img);
@@ -142,8 +144,9 @@ namespace GEditor.View
         }
 
         private void GetFiles(string FilePath)
-        {
+         {
             listBoxData.Clear();
+            //browserListBox.ItemsSource = null;
             currentDirectory = FilePath;
 
             foreach (var path in Directory.GetDirectories(FilePath))
@@ -177,7 +180,7 @@ namespace GEditor.View
                     
                     {
                         BrowserListBoxItemModel model = new BrowserListBoxItemModel();
-                        if (file.Extension.ToLower().Equals(".dds") || file.Extension.ToLower().Equals(".png"))
+                        if (file.Extension.ToLower().Equals(".dds") || file.Extension.ToLower().Equals(".png") || file.Extension.ToLower().Equals(".jpg") || file.Extension.ToLower().Equals(".tga"))
                             model.Icon = listBoxIcons["image"];
                         else if (file.Extension.ToLower().Equals(".fbx"))
                             model.Icon = listBoxIcons["mesh"];
@@ -197,7 +200,7 @@ namespace GEditor.View
 
             //if (listBoxData.Count > 0)
             {
-                browserListBox.ItemsSource = listBoxData;
+                //browserListBox.ItemsSource = listBoxData;
             }
         }
 
@@ -278,7 +281,7 @@ namespace GEditor.View
                     {
                         BrowserTreeViewItemModel model = new BrowserTreeViewItemModel();
                         model.Text = file.Name;
-                        if (file.Extension.ToLower().Equals(".dds") || file.Extension.ToLower().Equals(".png"))
+                        if (file.Extension.ToLower().Equals(".dds") || file.Extension.ToLower().Equals(".png") || file.Extension.ToLower().Equals(".jpg") || file.Extension.ToLower().Equals(".tga"))
                             model.Icon = treeViewIcons["image"];
                         else if (file.Extension.ToLower().Equals(".fbx"))
                             model.Icon = treeViewIcons["mesh"];
@@ -311,7 +314,7 @@ namespace GEditor.View
                 }
 
                 string ftype = model.FileType.ToLower();
-                if (ftype == ".dds" || ftype == ".png")
+                if (ftype == ".dds" || ftype == ".png" || ftype == ".jpg" || ftype == ".tga")
                 {
                     if (model.FilePath.IndexOf(workDirectory) != -1)
                     {
@@ -418,6 +421,11 @@ namespace GEditor.View
                 return selected.FilePath.Substring(workDirectory.Length);
             else
                 return string.Empty;
+        }
+
+        private void BrowserListBox_CleanUpVirtualizedItem(object sender, CleanUpVirtualizedItemEventArgs e)
+        {
+
         }
     }
 }

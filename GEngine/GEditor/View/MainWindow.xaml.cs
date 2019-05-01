@@ -253,5 +253,14 @@ namespace GEditor
                 properties_SceneObject.RefreshTransform();
         }
 
+        public void RemovePropertiesPanel()
+        {
+            properties_Material = null;
+            properties_ProjectSettings = null;
+            properties_SceneObject = null;
+            properties_Texture = null;
+            PropertiesPanel.Children.Clear();
+        }
+
     }
 }

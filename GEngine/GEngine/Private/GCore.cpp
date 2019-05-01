@@ -393,6 +393,8 @@ void GCore::LoadTextures()
 	std::vector<std::wstring> format;
 	format.emplace_back(L"dds");
 	format.emplace_back(L"png");
+	format.emplace_back(L"tga");
+	format.emplace_back(L"jpg");
 	std::vector<std::wstring> files = std::move(GetAllFilesInFolder(L"Content", true, format));
 	
 	std::unique_ptr<GRiTextureLoader> textureLoader(pRendererFactory->CreateTextureLoader());
@@ -1004,13 +1006,11 @@ void GCore::SetTextureSrgb(wchar_t* txtName, bool bSrgb)
 {
 	std::wstring textureName(txtName);
 	mTextures[textureName]->bSrgb = bSrgb;
-	/*
 	std::unique_ptr<GRiTextureLoader> textureLoader(pRendererFactory->CreateTextureLoader());
 	GRiTexture* tex = textureLoader->LoadTexture(WorkDirectory, textureName, bSrgb);
 	tex->texIndex = mTextures[textureName]->texIndex;
 	mTextures[textureName].reset(tex);
 	mRenderer->RegisterTexture(mTextures[textureName].get());
-	*/
 }
 
 void GCore::SetWorkDirectory(wchar_t* dir)
@@ -1099,7 +1099,7 @@ const wchar_t* GCore::GetMaterialTextureUniqueName(wchar_t* matUniqueName, int i
 	{
 		return L"none";
 	}
-	std::wstring* txtName = mMaterials[UniqueName]->GetTextureUniqueNamePtr(index);
+	std::wstring* txtName = &(mMaterials[UniqueName]->GetTextureUniqueNameByIndex(index));
 	return txtName->c_str();
 }
 

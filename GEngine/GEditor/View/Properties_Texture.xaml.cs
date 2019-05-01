@@ -48,7 +48,7 @@ namespace GEditor.View
         public void GetTextureProperties()
         {
             bool srgb = IGCore.GetTextureSrgb(sTextureName);
-            model.bSrgb = srgb;
+            model.InitSrgb(srgb);
             TextureControl.DataContext = model;
         }
 

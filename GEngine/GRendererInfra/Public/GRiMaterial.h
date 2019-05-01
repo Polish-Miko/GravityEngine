@@ -43,7 +43,7 @@ public:
 
 	size_t GetVectorNum();
 
-	int GetTextureIndex(int index);
+	//int GetTextureIndex(int index);
 
 	float GetScalar(int index);
 
@@ -51,22 +51,27 @@ public:
 
 	void AddTexture(GRiTexture* tex);
 
+	void AddTexture(std::wstring tex);
+
 	void AddScalar(float scalar);
 
 	void AddVector(GGiFloat4 vector);
 
-	std::wstring GetTextureUniqueName(int index);
+	//std::wstring GetTextureUniqueName(int index);
 
-	std::wstring* GetTextureUniqueNamePtr(int index);
+	//std::wstring* GetTextureUniqueNamePtr(int index);
 
 	void SetTextureByIndex(int index, GRiTexture* tex);
+
+	std::wstring& GetTextureUniqueNameByIndex(int index);
 
 protected:
 
 	float MaterialScale[2] = { 1.0f,1.0f };
 
 	// Textures used in this material.
-	std::vector<GRiTexture*> pTextures;
+	//std::vector<GRiTexture*> pTextures;
+	std::vector<std::wstring> pTextures;
 
 	// Material constants.
 	std::vector<float> ScalarParams;

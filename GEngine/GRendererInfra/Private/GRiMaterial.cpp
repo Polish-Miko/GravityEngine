@@ -58,10 +58,12 @@ size_t GRiMaterial::GetVectorNum()
 	return VectorParams.size();
 }
 
+/*
 int GRiMaterial::GetTextureIndex(int index)
 {
 	return pTextures[index]->texIndex;
 }
+*/
 
 float GRiMaterial::GetScalar(int index)
 {
@@ -74,6 +76,12 @@ GGiFloat4 GRiMaterial::GetVector(int index)
 }
 
 void GRiMaterial::AddTexture(GRiTexture* tex)
+{
+	pTextures.push_back(tex->UniqueFileName);
+	MarkDirty();
+}
+
+void GRiMaterial::AddTexture(std::wstring tex)
 {
 	pTextures.push_back(tex);
 	MarkDirty();
@@ -91,6 +99,7 @@ void GRiMaterial::AddVector(GGiFloat4 vector)
 	MarkDirty();
 }
 
+/*
 std::wstring GRiMaterial::GetTextureUniqueName(int index)
 {
 	return pTextures[index]->UniqueFileName;
@@ -100,10 +109,16 @@ std::wstring* GRiMaterial::GetTextureUniqueNamePtr(int index)
 {
 	return &(pTextures[index]->UniqueFileName);
 }
+*/
 
 void GRiMaterial::SetTextureByIndex(int index, GRiTexture* tex)
 {
-	pTextures[index] = tex;
+	pTextures[index] = tex->UniqueFileName;
 	MarkDirty();
+}
+
+std::wstring& GRiMaterial::GetTextureUniqueNameByIndex(int index)
+{
+	return pTextures[index];
 }
 

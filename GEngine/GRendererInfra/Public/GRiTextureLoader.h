@@ -11,6 +11,8 @@ public:
 
 	virtual GRiTexture* LoadTexture(std::wstring workdir, std::wstring path, bool bSrgb) = 0;
 
+	//virtual void LoadTexture(GRiTexture* pTexture, std::wstring workdir, std::wstring path, bool bSrgb) = 0;
+
 protected:
 
 	std::wstring GetExtension(std::wstring path);

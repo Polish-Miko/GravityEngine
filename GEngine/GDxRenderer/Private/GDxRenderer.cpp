@@ -670,7 +670,10 @@ void GDxRenderer::UpdateMaterialBuffer(const GGiGameTimer* gt)
 				ThrowDxException(L"Material (CBIndex : " + std::to_wstring(mat->MatIndex) + L" ) texture number exceeds MATERIAL_MAX_TEXTURE_NUM.");
 			for (i = 0; i < texNum; i++)
 			{
-				matData.TextureIndex[i] = mat->GetTextureIndex(i);
+				auto texName = mat->GetTextureUniqueNameByIndex(i);
+				if (pTextures.find(texName) == pTextures.end())
+					ThrowGGiException(L"Texture" + texName + L" not found.");
+				matData.TextureIndex[i] = pTextures[texName]->texIndex;
 			}
 
 			size_t scalarNum = mat->GetScalarNum();

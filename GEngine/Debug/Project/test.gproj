@@ -4,9 +4,13 @@
 <Project class_id="0" tracking_level="0" version="0">
 	<mSkyCubemapUniqueName>Resource\Textures\GE_Default_Cubemap.dds</mSkyCubemapUniqueName>
 	<mTextureInfo class_id="1" tracking_level="0" version="0">
-		<count>70</count>
+		<count>76</count>
 		<item_version>0</item_version>
 		<item class_id="2" tracking_level="0" version="0">
+			<UniqueFileName>Content\Textures\test\jpg\RustedIron2_Orm.jpg</UniqueFileName>
+			<bSrgb>0</bSrgb>
+		</item>
+		<item>
 			<UniqueFileName>Content\Textures\Cubemap\Cubemap_DallasW.dds</UniqueFileName>
 			<bSrgb>0</bSrgb>
 		</item>
@@ -15,11 +19,11 @@
 			<bSrgb>0</bSrgb>
 		</item>
 		<item>
-			<UniqueFileName>Content\Textures\Cerberus_Albedo.png</UniqueFileName>
-			<bSrgb>1</bSrgb>
+			<UniqueFileName>Content\Textures\test\tga\RustedIron2_Orm.tga</UniqueFileName>
+			<bSrgb>0</bSrgb>
 		</item>
 		<item>
-			<UniqueFileName>Resource\Textures\GE_Default_Albedo.png</UniqueFileName>
+			<UniqueFileName>Content\Textures\Cerberus_Albedo.png</UniqueFileName>
 			<bSrgb>1</bSrgb>
 		</item>
 		<item>
@@ -31,15 +35,15 @@
 			<bSrgb>0</bSrgb>
 		</item>
 		<item>
+			<UniqueFileName>Content\Textures\test\tga\RustedIron2_Albedo.tga</UniqueFileName>
+			<bSrgb>1</bSrgb>
+		</item>
+		<item>
 			<UniqueFileName>Content\Textures\Cubemap\snowcube1024.dds</UniqueFileName>
 			<bSrgb>0</bSrgb>
 		</item>
 		<item>
 			<UniqueFileName>Content\Textures\Cubemap\Cubemap_SantaMariaDeiMiracoli.dds</UniqueFileName>
-			<bSrgb>0</bSrgb>
-		</item>
-		<item>
-			<UniqueFileName>Content\Textures\Test2\SlateCliffRock_Normal.png</UniqueFileName>
 			<bSrgb>0</bSrgb>
 		</item>
 		<item>
@@ -155,6 +159,22 @@
 			<bSrgb>0</bSrgb>
 		</item>
 		<item>
+			<UniqueFileName>Content\Textures\test\jpg\RustedIron2_Albedo.jpg</UniqueFileName>
+			<bSrgb>1</bSrgb>
+		</item>
+		<item>
+			<UniqueFileName>Content\Textures\test\jpg\RustedIron2_Normal.jpg</UniqueFileName>
+			<bSrgb>0</bSrgb>
+		</item>
+		<item>
+			<UniqueFileName>Resource\Textures\GE_Default_Orm.png</UniqueFileName>
+			<bSrgb>0</bSrgb>
+		</item>
+		<item>
+			<UniqueFileName>Content\Textures\test\tga\RustedIron2_Normal.tga</UniqueFileName>
+			<bSrgb>0</bSrgb>
+		</item>
+		<item>
 			<UniqueFileName>Content\Textures\Test2\Grimy_Metal_Normal.png</UniqueFileName>
 			<bSrgb>0</bSrgb>
 		</item>
@@ -231,11 +251,11 @@
 			<bSrgb>1</bSrgb>
 		</item>
 		<item>
-			<UniqueFileName>Content\Textures\Test2\LayeredRock_Normal.png</UniqueFileName>
+			<UniqueFileName>Content\Textures\Test2\SlateCliffRock_Orm.png</UniqueFileName>
 			<bSrgb>0</bSrgb>
 		</item>
 		<item>
-			<UniqueFileName>Content\Textures\Test2\SlateCliffRock_Orm.png</UniqueFileName>
+			<UniqueFileName>Content\Textures\Test2\LayeredRock_Normal.png</UniqueFileName>
 			<bSrgb>0</bSrgb>
 		</item>
 		<item>
@@ -263,11 +283,15 @@
 			<bSrgb>1</bSrgb>
 		</item>
 		<item>
-			<UniqueFileName>Resource\Textures\GE_Default_Normal.png</UniqueFileName>
+			<UniqueFileName>Content\Textures\Test2\SlateCliffRock_Normal.png</UniqueFileName>
 			<bSrgb>0</bSrgb>
 		</item>
 		<item>
-			<UniqueFileName>Resource\Textures\GE_Default_Orm.png</UniqueFileName>
+			<UniqueFileName>Resource\Textures\GE_Default_Albedo.png</UniqueFileName>
+			<bSrgb>1</bSrgb>
+		</item>
+		<item>
+			<UniqueFileName>Resource\Textures\GE_Default_Normal.png</UniqueFileName>
 			<bSrgb>0</bSrgb>
 		</item>
 		<item>

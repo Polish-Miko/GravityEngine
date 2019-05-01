@@ -215,6 +215,7 @@ namespace GEditor.View
             if (e.Key == Key.Delete)
             {
                 OutlinerItemModel sObjModel = outlinerTreeView.SelectedItem as OutlinerItemModel;
+                mainWindow.RemovePropertiesPanel();
                 IGCore.DeleteSceneObject(sObjModel.Name);
                 Refresh();
             }

@@ -28,6 +28,7 @@
 #include <fbxsdk.h>
 #include "GRiInclude.h"
 #include "GGiInclude.h"
+#include "DirectXTex.h"
 //#include <wrl/wrappers/corewrappers.h>
 //#include <ScreenGrab.h>
 

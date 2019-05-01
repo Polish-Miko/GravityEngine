@@ -25,6 +25,12 @@ namespace GEditor.Model.Properties
             }
         }
 
+        public void InitSrgb(bool srgb)
+        {
+            _bSrgb = srgb;
+            OnPropertyChanged();
+        }
+
         public void SetProperties(object sender, PropertyChangedEventArgs e)
         {
             PropertiesPanel.SetTextureProperties();
@@ -34,7 +40,8 @@ namespace GEditor.Model.Properties
         protected void OnPropertyChanged(string propertyName = "")
         {
             PropertyChangedEventHandler handler = PropertyChanged;
-            handler += SetProperties;
+            if(propertyName=="srgb")
+                handler += SetProperties;
             if (handler != null)
             {
                 handler(this, new PropertyChangedEventArgs(propertyName));

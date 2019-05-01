@@ -122,7 +122,10 @@ namespace GEditor.View
                 return;
             if (!System.IO.File.Exists(selectedPath))
                 return;
-            if (System.IO.Path.GetExtension(selectedPath).ToLower() == ".dds" || System.IO.Path.GetExtension(selectedPath).ToLower() == ".png")
+            if (System.IO.Path.GetExtension(selectedPath).ToLower() == ".dds"
+                || System.IO.Path.GetExtension(selectedPath).ToLower() == ".png"
+                 || System.IO.Path.GetExtension(selectedPath).ToLower() == ".jpg"
+                  || System.IO.Path.GetExtension(selectedPath).ToLower() == ".tga")
             {
                 if (IGCore.SetMaterialTexture(sMaterialUniqueName, index, selectedUniqueName))
                 {
