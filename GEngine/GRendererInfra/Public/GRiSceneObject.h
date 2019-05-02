@@ -36,6 +36,10 @@ public:
 	void SetObjIndex(UINT ind);
 	UINT GetObjIndex();
 
+	GGiFloat4x4* GetPrevTransform();
+	void SetPrevTransform(GGiFloat4x4* trans);
+	void ResetPrevTransform();
+
 	// Dirty flag indicating the object data has changed and we need to update the constant buffer.
 	// Because we have an object cbuffer for each FrameResource, we have to apply the
 	// update to each FrameResource.  Thus, when we modify obect data we should set 
@@ -47,6 +51,8 @@ protected:
 	float Location[3] = { 0.0f, 0.0f, 0.0f };
 	float Rotation[3] = { 0.0f, 0.0f, 0.0f };
 	float Scale[3] = { 1.0f, 1.0f, 1.0f };
+
+	GGiFloat4x4* prevTransform;
 
 	// Index into GPU constant buffer corresponding to the ObjectCB for this render item.
 	UINT ObjIndex = -1;

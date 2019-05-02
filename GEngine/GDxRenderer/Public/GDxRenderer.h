@@ -61,6 +61,8 @@ protected:
 	virtual void Update(const GGiGameTimer* gt) override;
 	virtual void Draw(const GGiGameTimer* gt) override;
 
+	void ScriptUpdate(const GGiGameTimer* gt);
+
 	void UpdateObjectCBs(const GGiGameTimer* gt);
 	void UpdateMaterialBuffer(const GGiGameTimer* gt);
 	void UpdateShadowTransform(const GGiGameTimer* gt);
@@ -164,6 +166,7 @@ protected:
 	UINT mNullTexSrvIndex1 = 0;
 	UINT mNullTexSrvIndex2 = 0;
 
+	UINT mVelocityBufferSrvIndex = 0;
 	UINT mGBufferSrvIndex = 0;
 	UINT mLightPassSrvIndex = 0;
 	UINT mSkyPassSrvIndex = 0;

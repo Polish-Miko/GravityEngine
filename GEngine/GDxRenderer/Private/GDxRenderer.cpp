@@ -310,16 +310,24 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 		mCommandList->SetGraphicsRootSignature(mRootSignatures["Sky"].Get());
 
 		// Clear the back buffer.
-		DirectX::XMVECTORF32 clearColor = { mRtvHeaps["SkyPass"]->mRtv[0]->mProperties.mClearColor[0],
-		mRtvHeaps["SkyPass"]->mRtv[0]->mProperties.mClearColor[1],
-		mRtvHeaps["SkyPass"]->mRtv[0]->mProperties.mClearColor[2],
-		mRtvHeaps["SkyPass"]->mRtv[0]->mProperties.mClearColor[3]
+		/*
+		DirectX::XMVECTORF32 clearColor = { mRtvHeaps["LightPass"]->mRtv[0]->mProperties.mClearColor[0],
+		mRtvHeaps["LightPass"]->mRtv[0]->mProperties.mClearColor[1],
+		mRtvHeaps["LightPass"]->mRtv[0]->mProperties.mClearColor[2],
+		mRtvHeaps["LightPass"]->mRtv[0]->mProperties.mClearColor[3]
 		};
-		mCommandList->ClearRenderTargetView(mRtvHeaps["SkyPass"]->mRtvHeap.handleCPU(0), clearColor, 0, nullptr);
+		mCommandList->ClearRenderTargetView(mRtvHeaps["LightPass"]->mRtvHeap.handleCPU(0), clearColor, 0, nullptr);
+		*/
 
 		// Specify the buffers we are going to render to.
 		//mCommandList->OMSetRenderTargets(1, &CurrentBackBufferView(), true, &DepthStencilView());
-		mCommandList->OMSetRenderTargets(1, &(mRtvHeaps["SkyPass"]->mRtvHeap.handleCPU(0)), true, &DepthStencilView());
+		//mCommandList->OMSetRenderTargets(1, &(mRtvHeaps["SkyPass"]->mRtvHeap.handleCPU(0)), true, &DepthStencilView());
+		D3D12_CPU_DESCRIPTOR_HANDLE skyRtvs[2] =
+		{
+			mRtvHeaps["LightPass"]->mRtvHeap.handleCPU(0),
+			mRtvHeaps["GBuffer"]->mRtvHeap.handleCPU(mVelocityBufferSrvIndex - mGBufferSrvIndex)
+		};
+		mCommandList->OMSetRenderTargets(2, skyRtvs, false, &DepthStencilView());
 
 		auto passCB = mCurrFrameResource->SkyCB->Resource();
 		mCommandList->SetGraphicsRootConstantBufferView(1, passCB->GetGPUVirtualAddress());
@@ -367,7 +375,7 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 		mCommandList->SetPipelineState(mPSOs["PostProcess"].Get());
 
 		mCommandList->SetGraphicsRootDescriptorTable(0, mRtvHeaps["LightPass"]->GetSrvGpuStart());
-		mCommandList->SetGraphicsRootDescriptorTable(1, mRtvHeaps["SkyPass"]->GetSrvGpuStart());
+		//mCommandList->SetGraphicsRootDescriptorTable(1, mRtvHeaps["SkyPass"]->GetSrvGpuStart());
 
 		// Specify the buffers we are going to render to.
 		//mCommandList->OMSetRenderTargets(1, &CurrentBackBufferView(), true, &DepthStencilView());
@@ -436,6 +444,8 @@ void GDxRenderer::Update(const GGiGameTimer* gt)
 		lightDir = XMVector3TransformNormal(lightDir, R);
 		XMStoreFloat3(&mRotatedLightDirections[i], lightDir);
 	}
+
+	ScriptUpdate(gt);
 
 	UpdateObjectCBs(gt);
 	UpdateMaterialBuffer(gt);
@@ -542,6 +552,15 @@ void GDxRenderer::OnResize()
 
 #pragma region Update
 
+void GDxRenderer::ScriptUpdate(const GGiGameTimer* gt)
+{
+	if (pSceneObjects.find(L"MoveSphere") != pSceneObjects.end())
+	{
+		std::vector<float> loc = pSceneObjects[L"MoveSphere"]->GetLocation();
+		pSceneObjects[L"MoveSphere"]->SetLocation(70 * DirectX::XMScalarSin(gt->TotalTime()), loc[1], loc[2]);
+	}
+}
+
 void GDxRenderer::UpdateObjectCBs(const GGiGameTimer* gt)
 {
 	auto currObjectCB = mCurrFrameResource->ObjectCB.get();
@@ -554,6 +573,9 @@ void GDxRenderer::UpdateObjectCBs(const GGiGameTimer* gt)
 			GDxFloat4x4* dxTrans = dynamic_cast<GDxFloat4x4*>(e.second->GetTransform());
 			if (dxTrans == nullptr)
 				ThrowGGiException("Cast failed from GGiFloat4x4* to GDxFloat4x4*.");
+			GDxFloat4x4* dxPrevTrans = dynamic_cast<GDxFloat4x4*>(e.second->GetPrevTransform());
+			if (dxPrevTrans == nullptr)
+				ThrowGGiException("Cast failed from GGiFloat4x4* to GDxFloat4x4*.");
 
 			GDxFloat4x4* dxTexTrans = dynamic_cast<GDxFloat4x4*>(e.second->GetTexTransform());
 			if (dxTexTrans == nullptr)
@@ -562,6 +584,7 @@ void GDxRenderer::UpdateObjectCBs(const GGiGameTimer* gt)
 			XMMATRIX renderObjectTrans = XMLoadFloat4x4(&(dxTrans->GetValue()));
 			XMMATRIX invWorld = XMMatrixInverse(&XMMatrixDeterminant(renderObjectTrans), renderObjectTrans);
 			XMMATRIX invTransWorld = XMMatrixTranspose(invWorld);
+			XMMATRIX prevWorld = XMLoadFloat4x4(&(dxPrevTrans->GetValue()));
 			//auto tempSubTrans = e->GetSubmesh().Transform;
 			//XMMATRIX submeshTrans = XMLoadFloat4x4(&tempSubTrans);
 			XMMATRIX texTransform = XMLoadFloat4x4(&(dxTexTrans->GetValue()));
@@ -570,6 +593,7 @@ void GDxRenderer::UpdateObjectCBs(const GGiGameTimer* gt)
 
 			ObjectConstants objConstants;
 			XMStoreFloat4x4(&objConstants.World, XMMatrixTranspose(world));
+			XMStoreFloat4x4(&objConstants.PrevWorld, XMMatrixTranspose(prevWorld));
 			XMStoreFloat4x4(&objConstants.InvTransWorld, XMMatrixTranspose(invTransWorld));
 			XMStoreFloat4x4(&objConstants.TexTransform, XMMatrixTranspose(texTransform));
 			objConstants.MaterialIndex = e.second->GetMaterial()->MatIndex;
@@ -757,8 +781,14 @@ void GDxRenderer::UpdateMainPassCB(const GGiGameTimer* gt)
 	if (projMat == nullptr)
 		ThrowGGiException("Cast failed from GGiFloat4x4* to GDxFloat4x4*.");
 
+	auto prevViewProjMat = dynamic_cast<GDxFloat4x4*>(pCamera->GetPrevViewProj());
+	if (prevViewProjMat == nullptr)
+		ThrowGGiException("Cast failed from GGiFloat4x4* to GDxFloat4x4*.");
+
 	XMMATRIX view = DirectX::XMLoadFloat4x4(&(viewMat->GetValue()));
 	XMMATRIX proj = DirectX::XMLoadFloat4x4(&(projMat->GetValue()));
+
+	XMMATRIX prevViewProj = DirectX::XMLoadFloat4x4(&(prevViewProjMat->GetValue()));
 
 	XMMATRIX viewProj = XMMatrixMultiply(view, proj);
 	XMMATRIX invView = XMMatrixInverse(&XMMatrixDeterminant(view), view);
@@ -781,6 +811,7 @@ void GDxRenderer::UpdateMainPassCB(const GGiGameTimer* gt)
 	XMStoreFloat4x4(&mMainPassCB.InvProj, XMMatrixTranspose(invProj));
 	XMStoreFloat4x4(&mMainPassCB.ViewProj, XMMatrixTranspose(viewProj));
 	XMStoreFloat4x4(&mMainPassCB.InvViewProj, XMMatrixTranspose(invViewProj));
+	XMStoreFloat4x4(&mMainPassCB.PrevViewProj, XMMatrixTranspose(prevViewProj));
 	XMStoreFloat4x4(&mMainPassCB.ViewProjTex, XMMatrixTranspose(viewProjTex));
 	XMStoreFloat4x4(&mMainPassCB.ShadowTransform, XMMatrixTranspose(shadowTransform));
 	auto eyePos = pCamera->GetPosition();
@@ -807,12 +838,20 @@ void GDxRenderer::UpdateSkyPassCB(const GGiGameTimer* gt)
 	if (projMat == nullptr)
 		ThrowGGiException("Cast failed from GGiFloat4x4* to GDxFloat4x4*.");
 
+	auto prevViewProjMat = dynamic_cast<GDxFloat4x4*>(pCamera->GetPrevViewProj());
+	if (prevViewProjMat == nullptr)
+		ThrowGGiException("Cast failed from GGiFloat4x4* to GDxFloat4x4*.");
+
 	XMMATRIX view = DirectX::XMLoadFloat4x4(&(viewMat->GetValue()));
 	XMMATRIX proj = DirectX::XMLoadFloat4x4(&(projMat->GetValue()));
 	XMMATRIX viewProj = XMMatrixMultiply(view, proj);
+	XMMATRIX prevViewProj = DirectX::XMLoadFloat4x4(&(prevViewProjMat->GetValue()));
 	XMStoreFloat4x4(&mSkyPassCB.ViewProj, XMMatrixTranspose(viewProj));
+	XMStoreFloat4x4(&mSkyPassCB.PrevViewProj, XMMatrixTranspose(prevViewProj));
 	auto eyePos = pCamera->GetPosition();
 	mSkyPassCB.EyePosW = DirectX::XMFLOAT3(eyePos[0], eyePos[1], eyePos[2]);
+	auto prevPos = pCamera->GetPrevPosition();
+	mSkyPassCB.PrevPos = DirectX::XMFLOAT3(prevPos[0], prevPos[1], prevPos[2]);
 	mSkyPassCB.roughness = 0.3f; // doesn't matter
 
 	auto currPassCB = mCurrFrameResource->SkyCB.get();
@@ -976,15 +1015,15 @@ void GDxRenderer::BuildRootSignature()
 		//G-Buffer inputs
 		CD3DX12_DESCRIPTOR_RANGE lightRange;
 		lightRange.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, mRtvHeaps["LightPass"]->mRtvHeap.HeapDesc.NumDescriptors, 0);
-		CD3DX12_DESCRIPTOR_RANGE skyRange;
-		skyRange.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, mRtvHeaps["LightPass"]->mRtvHeap.HeapDesc.NumDescriptors, 1);
+		//CD3DX12_DESCRIPTOR_RANGE skyRange;
+		//skyRange.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, mRtvHeaps["LightPass"]->mRtvHeap.HeapDesc.NumDescriptors, 1);
 
-		CD3DX12_ROOT_PARAMETER gPostProcessRootParameters[2];
+		CD3DX12_ROOT_PARAMETER gPostProcessRootParameters[1];
 		gPostProcessRootParameters[0].InitAsDescriptorTable(1, &lightRange, D3D12_SHADER_VISIBILITY_ALL);
-		gPostProcessRootParameters[1].InitAsDescriptorTable(1, &skyRange, D3D12_SHADER_VISIBILITY_ALL);
+		//gPostProcessRootParameters[1].InitAsDescriptorTable(1, &skyRange, D3D12_SHADER_VISIBILITY_ALL);
 
 		// A root signature is an array of root parameters.
-		CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(2, gPostProcessRootParameters,
+		CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(1, gPostProcessRootParameters,
 			0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
 		CD3DX12_STATIC_SAMPLER_DESC StaticSamplers[2];
@@ -1188,9 +1227,8 @@ void GDxRenderer::BuildDescriptorHeaps()
 	srvHeapDesc.NumDescriptors = MAX_TEXTURE_NUM
 		+ 1 //imgui
 		+ 1 //sky
-		+ 4 //g-buffer
+		+ 5 //g-buffer
 		+ 1 //light pass
-		+ 1 //sky pass
 		+ (2 + mPrefilterLevels);//IBL
 	srvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 	srvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
@@ -1221,16 +1259,19 @@ void GDxRenderer::BuildDescriptorHeaps()
 	// Build RTV heap and SRV for GBuffers.
 	{
 		mGBufferSrvIndex = mSkyTexHeapIndex + 1;
+		mVelocityBufferSrvIndex = mGBufferSrvIndex + 3;
 
 		std::vector<DXGI_FORMAT> rtvFormats =
 		{
 			DXGI_FORMAT_R32G32B32A32_FLOAT,//Albedo
 			DXGI_FORMAT_R8G8B8A8_SNORM, //Normal
 			DXGI_FORMAT_R32G32B32A32_FLOAT, //WorldPos
-			DXGI_FORMAT_R8G8B8A8_UNORM, //OcclusionRoughnessMetallic
+			DXGI_FORMAT_R16G16_FLOAT, //Velocity
+			DXGI_FORMAT_R8G8B8A8_UNORM //OcclusionRoughnessMetallic
 		};
 		std::vector<std::vector<FLOAT>> rtvClearColor =
 		{
+			{ 0,0,0,0 },
 			{ 0,0,0,0 },
 			{ 0,0,0,0 },
 			{ 0,0,0,0 },
@@ -1279,6 +1320,7 @@ void GDxRenderer::BuildDescriptorHeaps()
 	}
 
 	// Build RTV heap and SRV for sky pass.
+	/*
 	{
 		mSkyPassSrvIndex = mLightPassSrvIndex + mRtvHeaps["LightPass"]->mRtvHeap.HeapDesc.NumDescriptors;
 
@@ -1305,10 +1347,11 @@ void GDxRenderer::BuildDescriptorHeaps()
 		auto skyPassRtvHeap = std::make_unique<GDxRtvHeap>(md3dDevice.Get(), mClientWidth, mClientHeight, GetCpuSrv(mSkyPassSrvIndex), GetGpuSrv(mSkyPassSrvIndex), propVec);
 		mRtvHeaps["SkyPass"] = std::move(skyPassRtvHeap);
 	}
+	*/
 
 	// Build cubemap SRV and RTVs for irradiance pre-integration.
 	{
-		mIblIndex = mSkyPassSrvIndex + 1;
+		mIblIndex = mLightPassSrvIndex + mRtvHeaps["LightPass"]->mRtvHeap.HeapDesc.NumDescriptors;
 
 		GRtvProperties prop;
 		prop.mRtvFormat = DXGI_FORMAT_R32G32B32A32_FLOAT;
@@ -1409,7 +1452,7 @@ void GDxRenderer::BuildPSOs()
 		gBufferPsoDesc.RTVFormats[i] = mRtvHeaps["GBuffer"]->mRtv[i]->mProperties.mRtvFormat;
 	}
 	gBufferPsoDesc.DSVFormat = mDepthStencilFormat;
-	gBufferPsoDesc.SampleDesc.Count = 1;//can't use msaa in deferred rendering.
+	gBufferPsoDesc.SampleDesc.Count = 1;// don't use msaa in deferred rendering.
 	//deferredPSO = sysRM->CreatePSO(StringID("deferredPSO"), descPipelineState);
 	ThrowIfFailed(md3dDevice->CreateGraphicsPipelineState(&gBufferPsoDesc, IID_PPV_ARGS(&mPSOs["GBuffer"])));
 
@@ -1622,27 +1665,38 @@ void GDxRenderer::BuildPSOs()
 	gskyDSD.BackFace.StencilPassOp = D3D12_STENCIL_OP_REPLACE;
 	gskyDSD.BackFace.StencilFunc = D3D12_COMPARISON_FUNC_ALWAYS;
 
+	auto skyBlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+	skyBlendState.AlphaToCoverageEnable = false;
+	skyBlendState.IndependentBlendEnable = false;
+	skyBlendState.RenderTarget[0].BlendEnable = true;
+	skyBlendState.RenderTarget[0].BlendOp = D3D12_BLEND_OP_ADD;
+	skyBlendState.RenderTarget[0].SrcBlend = D3D12_BLEND_ONE;
+	skyBlendState.RenderTarget[0].DestBlend = D3D12_BLEND_ONE;
+
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC skyPsoDesc;
 
 	ZeroMemory(&skyPsoDesc, sizeof(D3D12_GRAPHICS_PIPELINE_STATE_DESC));
 	skyPsoDesc.InputLayout.pInputElementDescs = GDxInputLayout::DefaultLayout;
 	skyPsoDesc.InputLayout.NumElements = _countof(GDxInputLayout::DefaultLayout);
 	skyPsoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
-	skyPsoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+	//skyPsoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+	skyPsoDesc.BlendState = skyBlendState;
 	//skyPsoDesc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
 	//skyPsoDesc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
 	//skyPsoDesc.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
 	skyPsoDesc.DepthStencilState = gskyDSD;
 	skyPsoDesc.SampleMask = UINT_MAX;
 	skyPsoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-	skyPsoDesc.NumRenderTargets = 1;
-	skyPsoDesc.RTVFormats[0] = mRtvHeaps["SkyPass"]->mRtv[0]->mProperties.mRtvFormat;;
+	skyPsoDesc.NumRenderTargets = 2;
+	skyPsoDesc.RTVFormats[0] = mRtvHeaps["LightPass"]->mRtv[0]->mProperties.mRtvFormat;
+	skyPsoDesc.RTVFormats[1] = mRtvHeaps["GBuffer"]->mRtv[mVelocityBufferSrvIndex - mGBufferSrvIndex]->mProperties.mRtvFormat;
 	skyPsoDesc.SampleDesc.Count = 1;
 	skyPsoDesc.SampleDesc.Quality = 0;
 	skyPsoDesc.DSVFormat = mDepthStencilFormat;
 
 	// The camera is inside the sky sphere, so just turn off culling.
-	skyPsoDesc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
+	//skyPsoDesc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
+	skyPsoDesc.RasterizerState.CullMode = D3D12_CULL_MODE_FRONT;
 
 	// Make sure the depth function is LESS_EQUAL and not just LESS.  
 	// Otherwise, the normalized depth values at z = 1 (NDC) will 
@@ -1786,7 +1840,7 @@ void GDxRenderer::CubemapPreIntegration()
 		{
 			auto view = pCubemapSampleCamera[j]->GetView();
 			auto proj = pCubemapSampleCamera[j]->GetProj();
-			GGiFloat4x4* viewProj = &((*proj) * (*view));
+			GGiFloat4x4* viewProj = &((*view) * (*proj));
 			GDxFloat4x4* dxVP = dynamic_cast<GDxFloat4x4*>(viewProj);
 			if (dxVP == nullptr)
 				ThrowGGiException("Cast fail from GGiFloat4x4* to GDxFloat4x4*.");

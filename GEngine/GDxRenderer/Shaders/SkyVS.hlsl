@@ -1,25 +1,11 @@
 
+#include "ObjectCB.hlsli"
+#include "SkyPassCB.hlsli"
+
+
+
 TextureCube gCubeMap : register(t0);
 SamplerState basicSampler	: register(s0);
-
-cbuffer cbPerObject : register(b0)
-{
-	float4x4 gWorld;
-	float4x4 gInvTransWorld;
-	float4x4 gTexTransform;
-	uint gMaterialIndex;
-	uint gObjPad0;
-	uint gObjPad1;
-	uint gObjPad2;
-};
-
-// Constant data that varies per material.
-cbuffer cbPass : register(b1)
-{
-	float4x4 gViewProj;
-	float3 gEyePosW;
-	float roughnessCb;
-};
 
 struct VertexIn
 {
@@ -30,8 +16,10 @@ struct VertexIn
 
 struct VertexOut
 {
-	float4 PosH : SV_POSITION;
-    float3 PosL : POSITION;
+	float4 PosH		:	SV_POSITION;
+    float3 PosL		:	POSITION0;
+	float4 curPos	:	POSITION1;
+	float4 prevPos	:	POSITION2;
 };
  
 VertexOut main(VertexIn vin)
@@ -43,12 +31,16 @@ VertexOut main(VertexIn vin)
 	
 	// Transform to world space.
 	float4 posW = mul(float4(vin.PosL, 1.0f), gWorld);
+	float4 prevPosW = mul(float4(vin.PosL, 1.0f), gWorld);
 
 	// Always center sky about camera.
 	posW.xyz += gEyePosW;
+	prevPosW.xyz += gPrevPos;
 
 	// Set z = w so that z/w = 1 (i.e., skydome always on far plane).
 	vout.PosH = mul(posW, gViewProj).xyww;
+	vout.curPos = mul(posW, gViewProj);
+	vout.prevPos = mul(prevPosW, gPrevViewProj);
 	
 	return vout;
 }

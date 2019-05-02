@@ -6,7 +6,15 @@
 #include "GDxFloat4x4.h"
 
 
-
+enum DebugLayerMask
+{
+	RGB,
+	sRGB,
+	R,
+	G,
+	B,
+	RG
+};
 
 #pragma region Class
 
@@ -68,6 +76,8 @@ void GCore::Run()
 							mRenderer->CalculateFrameStats();
 							Update();
 							mRenderer->Draw(mTimer.get());
+
+							RecordPrevFrame(mTimer.get());
 						}
 						else
 						{
@@ -156,9 +166,9 @@ void GCore::Update()
 {
 	OnKeyboardInput(mTimer.get());
 
-	mRenderer->Update(mTimer.get());
-
 	UpdateGui(mTimer.get());
+
+	mRenderer->Update(mTimer.get());
 }
 
 void GCore::MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
@@ -322,7 +332,7 @@ void GCore::OnKeyboardInput(const GGiGameTimer* gt)
 	if ((GetAsyncKeyState('Q') & 0x8000) && (GetAsyncKeyState(VK_RBUTTON) & 0x8000))
 		mCamera->Ascend(-mCameraSpeed * dt);
 
-	mCamera->UpdateViewMatrix();
+	//mCamera->UpdateViewMatrix();
 }
 
 void GCore::OnResize()
@@ -470,7 +480,7 @@ void GCore::LoadMaterials()
 	debug_albedo->Name = L"debug_albedo";
 	debug_albedo->MatIndex = mMaterialIndex++;
 	debug_albedo->AddScalar(0.01f);//Albedo
-	debug_albedo->AddScalar(0.01f);//RGB
+	debug_albedo->AddScalar((float)DebugLayerMask::sRGB);//RGB
 	mMaterials[L"debug_albedo"] = std::move(debug_albedo);
 
 	auto debug_normal = std::make_unique<GRiMaterial>(*pRendererFactory->CreateMaterial());
@@ -478,7 +488,7 @@ void GCore::LoadMaterials()
 	debug_normal->Name = L"debug_normal";
 	debug_normal->MatIndex = mMaterialIndex++;
 	debug_normal->AddScalar(1.01f);//Normal
-	debug_normal->AddScalar(0.01f);//RGB
+	debug_normal->AddScalar((float)DebugLayerMask::RGB);//RGB
 	mMaterials[L"debug_normal"] = std::move(debug_normal);
 
 	auto debug_worldpos = std::make_unique<GRiMaterial>(*pRendererFactory->CreateMaterial());
@@ -486,23 +496,31 @@ void GCore::LoadMaterials()
 	debug_worldpos->Name = L"debug_worldpos";
 	debug_worldpos->MatIndex = mMaterialIndex++;
 	debug_worldpos->AddScalar(2.01f);//WorldPos
-	debug_worldpos->AddScalar(0.01f);//RGB
+	debug_worldpos->AddScalar((float)DebugLayerMask::RGB);//RGB
 	mMaterials[L"debug_worldpos"] = std::move(debug_worldpos);
+
+	auto debug_velocity = std::make_unique<GRiMaterial>(*pRendererFactory->CreateMaterial());
+	debug_velocity->UniqueName = L"debug_velocity";
+	debug_velocity->Name = L"debug_velocity";
+	debug_velocity->MatIndex = mMaterialIndex++;
+	debug_velocity->AddScalar(3.01f);//Velocity
+	debug_velocity->AddScalar((float)DebugLayerMask::RG);//RedGreen
+	mMaterials[L"debug_velocity"] = std::move(debug_velocity);
 
 	auto debug_roughness = std::make_unique<GRiMaterial>(*pRendererFactory->CreateMaterial());
 	debug_roughness->UniqueName = L"debug_roughness";
 	debug_roughness->Name = L"debug_roughness";
 	debug_roughness->MatIndex = mMaterialIndex++;
-	debug_roughness->AddScalar(3.01f);//OcclusionRoughnessMetallic
-	debug_roughness->AddScalar(2.01f);//Green
+	debug_roughness->AddScalar(4.01f);//OcclusionRoughnessMetallic
+	debug_roughness->AddScalar((float)DebugLayerMask::G);//Green
 	mMaterials[L"debug_roughness"] = std::move(debug_roughness);
 
 	auto debug_metallic = std::make_unique<GRiMaterial>(*pRendererFactory->CreateMaterial());
 	debug_metallic->UniqueName = L"debug_metallic";
 	debug_metallic->Name = L"debug_metallic";
 	debug_metallic->MatIndex = mMaterialIndex++;
-	debug_metallic->AddScalar(3.01f);//OcclusionRoughnessMetallic
-	debug_metallic->AddScalar(3.01f);//Blue
+	debug_metallic->AddScalar(4.01f);//OcclusionRoughnessMetallic
+	debug_metallic->AddScalar((float)DebugLayerMask::B);//Blue
 	mMaterials[L"debug_metallic"] = std::move(debug_metallic);
 
 	auto sky = std::make_unique<GRiMaterial>(*pRendererFactory->CreateMaterial());
@@ -648,6 +666,7 @@ void GCore::LoadSceneObjects()
 	// Create screen quads for light pass and post process.
 	std::unique_ptr<GRiSceneObject> fullScreenQuadSO(pRendererFactory->CreateSceneObject());
 	fullScreenQuadSO->UniqueName = L"FullScreenQuad";
+	fullScreenQuadSO->ResetPrevTransform();
 	fullScreenQuadSO->SetTexTransform(pRendererFactory->CreateFloat4x4());
 	fullScreenQuadSO->SetObjIndex(mSceneObjectIndex++);
 	fullScreenQuadSO->SetMaterial(mMaterials[L"Default"].get());
@@ -658,6 +677,7 @@ void GCore::LoadSceneObjects()
 	std::unique_ptr<GRiSceneObject> skySO(pRendererFactory->CreateSceneObject());
 	skySO->UniqueName = L"Sky";
 	skySO->SetScale(5000.f, 5000.f, 5000.f);
+	skySO->ResetPrevTransform();
 	skySO->SetTexTransform(pRendererFactory->CreateFloat4x4());
 	skySO->SetObjIndex(mSceneObjectIndex++);
 	skySO->SetMaterial(mMaterials[L"sky"].get());
@@ -671,6 +691,7 @@ void GCore::LoadSceneObjects()
 		albedoQuadSO->UniqueName = L"AlbedoQuad";
 		albedoQuadSO->SetScale(.2f, .2f, .2f);
 		albedoQuadSO->SetLocation(0.f, 0.f, 0.f);
+		albedoQuadSO->ResetPrevTransform();
 		albedoQuadSO->SetTexTransform(pRendererFactory->CreateFloat4x4());
 		albedoQuadSO->SetObjIndex(mSceneObjectIndex++);
 		albedoQuadSO->SetMaterial(mMaterials[L"debug_albedo"].get());
@@ -682,6 +703,7 @@ void GCore::LoadSceneObjects()
 		normalQuadSO->UniqueName = L"NormalQuad";
 		normalQuadSO->SetScale(.2f, .2f, .2f);
 		normalQuadSO->SetLocation(.2f, 0.f, 0.f);
+		normalQuadSO->ResetPrevTransform();
 		normalQuadSO->SetTexTransform(pRendererFactory->CreateFloat4x4());
 		normalQuadSO->SetObjIndex(mSceneObjectIndex++);
 		normalQuadSO->SetMaterial(mMaterials[L"debug_normal"].get());
@@ -693,9 +715,10 @@ void GCore::LoadSceneObjects()
 		worldPosQuadSO->UniqueName = L"WorldPosQuad";
 		worldPosQuadSO->SetScale(.2f, .2f, .2f);
 		worldPosQuadSO->SetLocation(.4f, 0.f, 0.f);
+		worldPosQuadSO->ResetPrevTransform();
 		worldPosQuadSO->SetTexTransform(pRendererFactory->CreateFloat4x4());
 		worldPosQuadSO->SetObjIndex(mSceneObjectIndex++);
-		worldPosQuadSO->SetMaterial(mMaterials[L"debug_worldpos"].get());
+		worldPosQuadSO->SetMaterial(mMaterials[L"debug_velocity"].get());
 		worldPosQuadSO->SetMesh(mMeshes[L"Quad"].get());
 		mSceneObjectLayer[(int)RenderLayer::Debug].push_back(worldPosQuadSO.get());
 		mSceneObjects[worldPosQuadSO->UniqueName] = std::move(worldPosQuadSO);
@@ -704,6 +727,7 @@ void GCore::LoadSceneObjects()
 		roughnessQuadSO->UniqueName = L"RoughnessQuad";
 		roughnessQuadSO->SetScale(.2f, .2f, .2f);
 		roughnessQuadSO->SetLocation(.6f, 0.f, 0.f);
+		roughnessQuadSO->ResetPrevTransform();
 		roughnessQuadSO->SetTexTransform(pRendererFactory->CreateFloat4x4());
 		roughnessQuadSO->SetObjIndex(mSceneObjectIndex++);
 		roughnessQuadSO->SetMaterial(mMaterials[L"debug_roughness"].get());
@@ -715,6 +739,7 @@ void GCore::LoadSceneObjects()
 		metallicQuadSO->UniqueName = L"MetallicQuad";
 		metallicQuadSO->SetScale(.2f, .2f, .2f);
 		metallicQuadSO->SetLocation(.8f, 0.f, 0.f);
+		metallicQuadSO->ResetPrevTransform();
 		metallicQuadSO->SetTexTransform(pRendererFactory->CreateFloat4x4());
 		metallicQuadSO->SetObjIndex(mSceneObjectIndex++);
 		metallicQuadSO->SetMaterial(mMaterials[L"debug_metallic"].get());
@@ -750,6 +775,7 @@ void GCore::LoadSceneObjects()
 			newSO->SetLocation(info.Location[0], info.Location[1], info.Location[2]);
 			newSO->SetRotation(info.Rotation[0], info.Rotation[1], info.Rotation[2]);
 			newSO->SetScale(info.Scale[0], info.Scale[1], info.Scale[2]);
+			newSO->ResetPrevTransform();
 			mSceneObjectLayer[(int)RenderLayer::Deferred].push_back(newSO.get());
 			mSceneObjects[newSO->UniqueName] = std::move(newSO);
 		}
@@ -762,6 +788,8 @@ void GCore::LoadCameras()
 	mCamera->SetRendererFactory(pRendererFactory);
 	mCamera->SetPosition(0.0f, 0.0f, 0.0f);
 	mCamera->SetLens(0.25f * GGiEngineUtil::PI, mRenderer->AspectRatio(), 1.0f, 1000.0f);
+	mCamera->InitPrevViewProj();
+	mCamera->InitPrevPosition();
 
 	// Build cubemap sampler cameras.
 	std::vector<float> center = { 0.0f, 0.0f, 0.0f };
@@ -795,12 +823,25 @@ void GCore::LoadCameras()
 		mCubemapSampleCamera[i]->LookAt(center, targets[i], ups[i]);
 		mCubemapSampleCamera[i]->SetLens(0.5f * GGiEngineUtil::PI, 1.0f, 0.1f, 1000.0f);
 		mCubemapSampleCamera[i]->UpdateViewMatrix();
+		mCubemapSampleCamera[i]->InitPrevViewProj();
+		mCubemapSampleCamera[i]->InitPrevPosition();
 	}
 }
 
 #pragma endregion
 
 #pragma region Update
+
+void GCore::RecordPrevFrame(const GGiGameTimer* gt)
+{
+	GGiFloat4x4* prevVP = &(*(mCamera->GetView()) * (*mCamera->GetProj()));
+	mCamera->SetPrevViewProj(prevVP);
+	mCamera->SetPrevPosition(mCamera->GetPosition());
+	for (auto so : mSceneObjectLayer[(int)RenderLayer::Deferred])
+	{
+		so->SetPrevTransform(so->GetTransform());
+	}
+}
 
 void GCore::UpdateGui(const GGiGameTimer* gt)
 {
@@ -811,6 +852,9 @@ void GCore::UpdateGui(const GGiGameTimer* gt)
 	float objLoc[3];
 	float objRot[3];
 	float objScale[3];
+	std::vector<float> prevLoc;
+	std::vector<float> prevRot;
+	std::vector<float> prevScale;
 	bool bSelectionNotNull = (mSelectedSceneObject != nullptr);
 	if (bSelectionNotNull)
 	{
@@ -820,23 +864,27 @@ void GCore::UpdateGui(const GGiGameTimer* gt)
 			{
 				view[i * 4 + j] = mCamera->GetView()->GetElement(i, j);
 				proj[i * 4 + j] = mCamera->GetProj()->GetElement(i, j);
-				std::vector<float> loc = mSelectedSceneObject->GetLocation();
-				objLoc[0] = loc[0];
-				objLoc[1] = loc[1];
-				objLoc[2] = loc[2];
-				std::vector<float> rot = mSelectedSceneObject->GetRotation();
-				objRot[0] = rot[0];
-				objRot[1] = rot[1];
-				objRot[2] = rot[2];
-				std::vector<float> sca = mSelectedSceneObject->GetScale();
-				objScale[0] = sca[0];
-				objScale[1] = sca[1];
-				objScale[2] = sca[2];
+				prevLoc = mSelectedSceneObject->GetLocation();
+				objLoc[0] = prevLoc[0];
+				objLoc[1] = prevLoc[1];
+				objLoc[2] = prevLoc[2];
+				prevRot = mSelectedSceneObject->GetRotation();
+				objRot[0] = prevRot[0];
+				objRot[1] = prevRot[1];
+				objRot[2] = prevRot[2];
+				prevScale = mSelectedSceneObject->GetScale();
+				objScale[0] = prevScale[0];
+				objScale[1] = prevScale[1];
+				objScale[2] = prevScale[2];
 			}
 		}
 	}
 	mImgui->SetGUIContent(bSelectionNotNull, view, proj, objLoc, objRot, objScale, mCameraSpeed);
-	if (bSelectionNotNull)
+	bool bDirty = bSelectionNotNull && (objLoc[0] != prevLoc[0] || objLoc[1] != prevLoc[1] || objLoc[2] != prevLoc[2] ||
+		objRot[0] != prevRot[0] || objRot[1] != prevRot[1] || objRot[2] != prevRot[2] ||
+		objScale[0] != prevScale[0] || objScale[1] != prevScale[1] || objScale[2] != prevScale[2]
+		);
+	if (bDirty)
 	{
 		mSelectedSceneObject->SetLocation(objLoc[0], objLoc[1], objLoc[2]);
 		mSelectedSceneObject->SetRotation(objRot[0], objRot[1], objRot[2]);
@@ -1228,6 +1276,7 @@ void GCore::CreateSceneObject(wchar_t* sceneObjectName, wchar_t* meshUniqueName)
 	}
 	std::unique_ptr<GRiSceneObject> newSceneObject(pRendererFactory->CreateSceneObject());
 	newSceneObject->UniqueName = SceneObjectNameStr;
+	newSceneObject->ResetPrevTransform();
 	newSceneObject->SetTexTransform(pRendererFactory->CreateFloat4x4());
 	newSceneObject->SetObjIndex(mSceneObjectIndex++);
 	newSceneObject->SetMaterial(mMaterials[L"Default"].get());

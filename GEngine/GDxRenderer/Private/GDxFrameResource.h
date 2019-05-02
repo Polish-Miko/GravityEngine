@@ -12,6 +12,7 @@
 struct ObjectConstants
 {
 	DirectX::XMFLOAT4X4 World = GDxMathHelper::Identity4x4();
+	DirectX::XMFLOAT4X4 PrevWorld = GDxMathHelper::Identity4x4();
 	DirectX::XMFLOAT4X4 InvTransWorld = GDxMathHelper::Identity4x4();
 	DirectX::XMFLOAT4X4 TexTransform = GDxMathHelper::Identity4x4();
 	UINT     MaterialIndex;
@@ -28,6 +29,7 @@ struct PassConstants
 	DirectX::XMFLOAT4X4 InvProj = GDxMathHelper::Identity4x4();
 	DirectX::XMFLOAT4X4 ViewProj = GDxMathHelper::Identity4x4();
 	DirectX::XMFLOAT4X4 InvViewProj = GDxMathHelper::Identity4x4();
+	DirectX::XMFLOAT4X4 PrevViewProj = GDxMathHelper::Identity4x4();
 	DirectX::XMFLOAT4X4 ViewProjTex = GDxMathHelper::Identity4x4();
 	DirectX::XMFLOAT4X4 ShadowTransform = GDxMathHelper::Identity4x4();
 	DirectX::XMFLOAT3 EyePosW = { 0.0f, 0.0f, 0.0f };
@@ -54,6 +56,9 @@ struct LightConstants
 struct SkyPassConstants
 {
 	DirectX::XMFLOAT4X4 ViewProj = GDxMathHelper::Identity4x4();
+	DirectX::XMFLOAT4X4 PrevViewProj = GDxMathHelper::Identity4x4();
+	DirectX::XMFLOAT3 PrevPos = { 0.0f, 0.0f, 0.0f };
+	float pad1 = 0.0f;
 	DirectX::XMFLOAT3 EyePosW = { 0.0f, 0.0f, 0.0f };
 	float roughness = 0.0f;
 };

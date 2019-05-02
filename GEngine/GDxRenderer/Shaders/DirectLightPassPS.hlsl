@@ -12,7 +12,8 @@ struct VertexToPixel
 Texture2D gAlbedoTexture			: register(t0);
 Texture2D gNormalTexture			: register(t1);
 Texture2D gWorldPosTexture			: register(t2);
-Texture2D gOrmTexture				: register(t3);
+Texture2D gVelocityTexture			: register(t3);
+Texture2D gOrmTexture				: register(t4);
 
 SamplerState			basicSampler	: register(s0);
 SamplerComparisonState	shadowSampler	: register(s1);
@@ -40,7 +41,9 @@ float4 main(VertexToPixel pIn) : SV_TARGET
 	float3 finalColor = 0.f;
 	float shadowAmount = 1.f;
 
-	for (int i = 0; i < pointLightCount; i++)
+	int i = 0;
+
+	for (i = 0; i < pointLightCount; i++)
 	{
 		shadowAmount = 1.f;
 		float atten = Attenuate(pointLight[i].Position, pointLight[i].Range, worldPos);
@@ -51,7 +54,7 @@ float4 main(VertexToPixel pIn) : SV_TARGET
 		finalColor = finalColor + DirectPBR(lightIntensity, lightColor, toLight, normalize(normal), worldPos, cameraPosition, roughness, metal, albedo, shadowAmount);
 	}
 	
-	for (int i = 0; i < dirLightCount; i++)
+	for (i = 0; i < dirLightCount; i++)
 	{
 		float shadowAmount = 1.f;
 		float lightIntensity = dirLight[i].Intensity;

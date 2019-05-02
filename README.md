@@ -34,6 +34,8 @@ to
 
 **3. boost**
 
+**4. DirectXTex**
+
 ## todo
 - [x] deferred pipeline
 - [x] physically based rendering

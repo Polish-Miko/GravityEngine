@@ -312,7 +312,7 @@
 		</item>
 	</mTextureInfo>
 	<mSceneObjectInfo class_id="3" tracking_level="0" version="0">
-		<count>13</count>
+		<count>14</count>
 		<item_version>0</item_version>
 		<item class_id="4" tracking_level="0" version="0">
 			<UniqueName>Sphere_1</UniqueName>
@@ -599,6 +599,29 @@
 				<item>4.075556564e+01</item>
 				<item>0.000000000e+00</item>
 				<item>1.176105423e+02</item>
+			</Location>
+			<Rotation>
+				<count>3</count>
+				<item>0.000000000e+00</item>
+				<item>-0.000000000e+00</item>
+				<item>0.000000000e+00</item>
+			</Rotation>
+			<Scale>
+				<count>3</count>
+				<item>1.000000000e+00</item>
+				<item>1.000000000e+00</item>
+				<item>1.000000000e+00</item>
+			</Scale>
+		</item>
+		<item>
+			<UniqueName>MoveSphere</UniqueName>
+			<MaterialUniqueName>Content\Textures\test\tga\tgaMat.gmat</MaterialUniqueName>
+			<MeshUniqueName>Sphere</MeshUniqueName>
+			<Location>
+				<count>3</count>
+				<item>-8.602617383e-01</item>
+				<item>0.000000000e+00</item>
+				<item>-5.367667770e+01</item>
 			</Location>
 			<Rotation>
 				<count>3</count>

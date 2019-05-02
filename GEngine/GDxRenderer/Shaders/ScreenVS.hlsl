@@ -1,3 +1,8 @@
+
+#include "ObjectCB.hlsli"
+
+
+
 struct VertexIn
 {
 	float3 PosL    : POSITION;
@@ -8,17 +13,6 @@ struct VertexOut
 {
 	float4 PosH    : SV_POSITION;
 	float2 TexC    : TEXCOORD;
-};
-
-cbuffer cbPerObject : register(b0)
-{
-	float4x4 gWorld;
-	float4x4 gInvTransWorld;
-	float4x4 gTexTransform;
-	uint gMaterialIndex;
-	uint gObjPad0;
-	uint gObjPad1;
-	uint gObjPad2;
 };
 
 VertexOut main(VertexIn input)

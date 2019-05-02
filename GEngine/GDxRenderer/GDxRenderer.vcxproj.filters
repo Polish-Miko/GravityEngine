@@ -228,5 +228,8 @@
     <None Include="Shaders\Lighting.hlsli" />
     <None Include="packages.config" />
     <None Include="Shaders\Material.hlsli" />
+    <None Include="Shaders\ObjectCB.hlsli" />
+    <None Include="Shaders\MainPassCB.hlsli" />
+    <None Include="Shaders\SkyPassCB.hlsli" />
   </ItemGroup>
 </Project>

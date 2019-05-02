@@ -1,38 +1,40 @@
 
+#include "ObjectCB.hlsli"
+#include "SkyPassCB.hlsli"
+
+
+
 TextureCube gCubeMap : register(t0);
 SamplerState basicSampler	: register(s0);
 
-cbuffer cbPerObject : register(b0)
+struct PixelOutput
 {
-	float4x4 gWorld;
-	float4x4 gInvTransWorld;
-	float4x4 gTexTransform;
-	uint gMaterialIndex;
-	uint gObjPad0;
-	uint gObjPad1;
-	uint gObjPad2;
-};
-
-// Constant data that varies per material.
-cbuffer cbPass : register(b1)
-{
-	float4x4 gViewProj;
-	float3 gEyePosW;
-	float roughnessCb;
+	float4	color						: SV_TARGET0;
+	float2	velocity					: SV_TARGET1;
 };
 
 struct VertexOut
 {
 	float4 PosH : SV_POSITION;
-    float3 PosL : POSITION;
+	float3 PosL		:	POSITION0;
+	float4 curPos	:	POSITION1;
+	float4 prevPos	:	POSITION2;
 };
 
-float4 main(VertexOut pin) : SV_TARGET
+PixelOutput main(VertexOut pin)// : SV_TARGET
 {
+	float4 prevPos = pin.prevPos;
+	prevPos = prevPos / prevPos.w;
+	float4 curPos = pin.curPos;
+	curPos = curPos / curPos.w;
+
+	PixelOutput output;
 	float3 color = gCubeMap.Sample(basicSampler, pin.PosL).rgb;
 	//color = color / (float3(1.0f, 1.0f, 1.0f) + color);
 	//color = pow(color, (1 / 2.2f));
-	return float4(color, 1.0f);
+	output.color = float4(color, 1.0f);
+	output.velocity = float2(curPos.x - prevPos.x, curPos.y - prevPos.y);
+	return output;
 	//return float4(1.0f, 0.0f, 0.0f, 1.0f);
 }
 

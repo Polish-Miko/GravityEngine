@@ -106,8 +106,8 @@ GGiFloat4& GDxFloat4::operator +(GGiFloat4& vec)
 {
 	GDxFloat4 dxVec = dynamic_cast<GDxFloat4&>(vec);
 
-	DirectX::XMVECTOR add1 = DirectX::XMLoadFloat4(&dxVec.value);
-	DirectX::XMVECTOR add2 = DirectX::XMLoadFloat4(&value);
+	DirectX::XMVECTOR add1 = DirectX::XMLoadFloat4(&value);
+	DirectX::XMVECTOR add2 = DirectX::XMLoadFloat4(&dxVec.value);
 	DirectX::XMVECTOR sum = DirectX::XMVectorAdd(add1, add2);
 
 	GDxFloat4* ret = new GDxFloat4();

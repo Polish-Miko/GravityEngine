@@ -1,35 +1,27 @@
 #include "Lighting.hlsli"
 #include "Material.hlsli"
+#include "ObjectCB.hlsli"
 
 struct VertexOutput
 {
-	float4 pos			: SV_POSITION;
-	float2 uv			: TEXCOORD;
-	float3 normal		: NORMAL;
-	float3 tangent		: TANGENT;
-	float3 worldPos		: POSITION0;
-	float4 ssaoPos		: POSITION1;
-	float linearZ : LINEARZ;
-	float4 shadowPos	: SHADOWPOS;
+	float4	pos			: SV_POSITION;
+	float2	uv			: TEXCOORD;
+	float3	normal		: NORMAL;
+	float3	tangent		: TANGENT;
+	float3	worldPos	: POSITION0;
+	float4	curPos		: POSITION1;
+	float4	prevPos		: POSITION2;
+	float	linearZ		: LINEARZ;
+	float4	shadowPos	: SHADOWPOS;
 };
 
 struct PixelOutput
 {
-	float4 albedo		: SV_TARGET0;
-	float4 normal		: SV_TARGET1;
-	float4 worldPos		: SV_TARGET2;
-	float4 occlusionRoughnessMetallic	: SV_TARGET3;
-};
-
-cbuffer cbPerObject : register(b0)
-{
-	float4x4 gWorld;
-	float4x4 gInvTransWorld;
-	float4x4 gTexTransform;
-	uint gMaterialIndex;
-	uint gObjPad0;
-	uint gObjPad1;
-	uint gObjPad2;
+	float4	albedo						: SV_TARGET0;
+	float4	normal						: SV_TARGET1;
+	float4	worldPos					: SV_TARGET2;
+	float2	velocity					: SV_TARGET3;
+	float4	occlusionRoughnessMetallic	: SV_TARGET4;
 };
 
 Texture2D gTextureMaps[MAX_TEXTURE_NUM] : register(t0);
@@ -63,11 +55,18 @@ PixelOutput main(VertexOutput input)// : SV_TARGET
 	//if (matData.TextureSrgb[2] == 1)
 		//ormFromTexture = pow(ormFromTexture, 2.2f);
 
+	float4 prevPos = input.prevPos;
+	prevPos = prevPos / prevPos.w;
+	float4 curPos = input.curPos;
+	curPos = curPos / curPos.w;
+
 	float3 normal = calculateNormalFromMap(normalFromTexture, normalize(input.normal), input.tangent);
 	PixelOutput output;
 	output.albedo = float4(albedoFromTexture, 1.0f);;
 	output.normal = float4(normalize(normal), 1.0f);
 	output.worldPos = float4(input.worldPos, 0.0f);
+	//output.velocity = float2(input.pos.x - prevPos.x, input.pos.y - prevPos.y);
+	output.velocity = float2(curPos.x - prevPos.x, curPos.y - prevPos.y);
 	float roughness = ormFromTexture.g;
 	float metal = ormFromTexture.b;
 	output.occlusionRoughnessMetallic = float4(0, roughness, metal, 0);

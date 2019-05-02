@@ -9,8 +9,8 @@ struct VertexToPixel
 //Light Render Results
 //Texture2D gDirectLight			: register(t0);
 //Texture2D gAmbientLight			: register(t1);
-Texture2D gLightPass			: register(t0);
-Texture2D gSkyPass				: register(t1);
+Texture2D gLightPass				: register(t0);
+//Texture2D gSkyPass				: register(t1);
 
 SamplerState			basicSampler	: register(s0);
 SamplerComparisonState	shadowSampler	: register(s1);
@@ -28,13 +28,18 @@ float4 main(VertexToPixel pIn) : SV_TARGET
 	*/
 
 	float3 light = gLightPass.Sample(basicSampler, pIn.uv).rgb;
-	float3 sky = gSkyPass.Sample(basicSampler, pIn.uv).rgb;
+	//float3 sky = gSkyPass.Sample(basicSampler, pIn.uv).rgb;
+
+	//sky = sky / (sky + float3(1.f, 1.f, 1.f));
+	//sky = saturate(sky);
 
 	light = light / (light + float3(1.f, 1.f, 1.f));
 	light = saturate(light);
 
-	float3 totalColor = light + sky;
+	//float3 totalColor = light + sky;
+	float3 totalColor = light;
 
 	float3 gammaCorrect = lerp(totalColor, pow(totalColor, 1.0 / 2.2), 1.0f);
 	return float4(gammaCorrect, 1.0f);
 }
+

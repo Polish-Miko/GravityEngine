@@ -71,8 +71,8 @@ GGiFloat4x4& GDxFloat4x4::operator *(GGiFloat4x4& mat)
 {
 	GDxFloat4x4 dxMat = dynamic_cast<GDxFloat4x4&>(mat);
 
-	DirectX::XMMATRIX fac1 = DirectX::XMLoadFloat4x4(&dxMat.value);
-	DirectX::XMMATRIX fac2 = DirectX::XMLoadFloat4x4(&value);
+	DirectX::XMMATRIX fac1 = DirectX::XMLoadFloat4x4(&value);
+	DirectX::XMMATRIX fac2 = DirectX::XMLoadFloat4x4(&dxMat.value);
 	DirectX::XMMATRIX pro = fac1 * fac2;
 
 	GDxFloat4x4* ret = new GDxFloat4x4();
@@ -88,8 +88,8 @@ GGiFloat4x4& GDxFloat4x4::operator +(GGiFloat4x4& mat)
 {
 	GDxFloat4x4 dxMat = dynamic_cast<GDxFloat4x4&>(mat);
 
-	DirectX::XMMATRIX add1 = DirectX::XMLoadFloat4x4(&dxMat.value);
-	DirectX::XMMATRIX add2 = DirectX::XMLoadFloat4x4(&value);
+	DirectX::XMMATRIX add1 = DirectX::XMLoadFloat4x4(&value);
+	DirectX::XMMATRIX add2 = DirectX::XMLoadFloat4x4(&dxMat.value);
 	DirectX::XMMATRIX sum = add1 + add2;
 
 	GDxFloat4x4* ret = new GDxFloat4x4();

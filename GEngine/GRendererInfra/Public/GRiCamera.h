@@ -58,6 +58,14 @@ public:
 	// After modifying camera position/orientation, call to rebuild the view matrix.
 	void UpdateViewMatrix();
 
+	void SetPrevViewProj(GGiFloat4x4* prev);
+	GGiFloat4x4* GetPrevViewProj();
+	void InitPrevViewProj();
+
+	void SetPrevPosition(std::vector<float> prev);
+	std::vector<float> GetPrevPosition();
+	void InitPrevPosition();
+
 private:
 	
 	GRiRendererFactory* pRendererFactory;
@@ -67,6 +75,10 @@ private:
 	float mRight[3] = { 1.0f, 0.0f, 0.0f };
 	float mUp[3] = { 0.0f, 1.0f, 0.0f };
 	float mLook[3] = { 0.0f, 0.0f, 1.0f };
+
+	GGiFloat4x4* prevViewProj;
+
+	float mPrevPosition[3] = { 0.0f,0.0f,0.0f };
 
 	// Cache frustum properties.
 	float mNearZ = 0.0f;

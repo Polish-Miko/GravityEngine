@@ -43,7 +43,7 @@ public:
 		size_t i;
 		for (i = 0; i < texNum; i++)
 		{
-			TextureNames.push_back(pMaterial->GetTextureUniqueNameByIndex(i));
+			TextureNames.push_back(pMaterial->GetTextureUniqueNameByIndex((int)i));
 		}
 		for (i = 0; i < scalarNum; i++)
 		{

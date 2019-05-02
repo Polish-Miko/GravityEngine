@@ -7,11 +7,12 @@
 Texture2D gAlbedoTexture			: register(t0);
 Texture2D gNormalTexture			: register(t1);
 Texture2D gWorldPosTexture			: register(t2);
-Texture2D gOrmTexture				: register(t3);
+Texture2D gVelocityTexture			: register(t3);
+Texture2D gOrmTexture				: register(t4);
 
-TextureCube skyIrradianceTexture	: register(t4);
-Texture2D	brdfLUTTexture			: register(t5);
-TextureCube skyPrefilterTexture[PREFILTER_MIP_LEVEL]	: register(t6);
+TextureCube skyIrradianceTexture	: register(t5);
+Texture2D	brdfLUTTexture			: register(t6);
+TextureCube skyPrefilterTexture[PREFILTER_MIP_LEVEL]	: register(t7);
 
 struct VertexToPixel
 {

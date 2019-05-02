@@ -104,5 +104,22 @@ UINT GRiSceneObject::GetObjIndex()
 	return ObjIndex;
 }
 
+GGiFloat4x4* GRiSceneObject::GetPrevTransform()
+{
+	return prevTransform;
+}
+
+void GRiSceneObject::SetPrevTransform(GGiFloat4x4* trans)
+{
+	prevTransform = trans;
+	MarkDirty();
+}
+
+void GRiSceneObject::ResetPrevTransform()
+{
+	prevTransform = GetTransform();
+	MarkDirty();
+}
+
 
 

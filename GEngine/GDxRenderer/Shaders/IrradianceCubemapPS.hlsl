@@ -1,27 +1,13 @@
 
+#include "ObjectCB.hlsli"
+#include "SkyPassCB.hlsli"
+
+
+
 static const float PI = 3.14159265359;
 
 TextureCube gCubeMap		: register(t0);
 SamplerState basicSampler	: register(s0);
-
-cbuffer cbPerObject : register(b0)
-{
-	float4x4 gWorld;
-	float4x4 gInvTransWorld;
-	float4x4 gTexTransform;
-	uint gMaterialIndex;
-	uint gObjPad0;
-	uint gObjPad1;
-	uint gObjPad2;
-};
-
-// Constant data that varies per material.
-cbuffer cbPass : register(b1)
-{
-	float4x4 gViewProj;
-	float3 gEyePosW;
-	float roughnessCb;
-};
 
 float RadicalInverse_VdC(uint bits)
 {

@@ -235,7 +235,7 @@ GGiFloat4x4* GRiFilmboxManager::ToGMatrix(const FbxAMatrix& fbxMat)
 
 	GGiFloat4x4* mTrans = pRendererFactory->CreateFloat4x4();
 
-	*mTrans = (*mS) * (*mR) * (*mT);
+	*mTrans = (*mT) * (*mR) * (*mS);
 
 	return mTrans;
 }

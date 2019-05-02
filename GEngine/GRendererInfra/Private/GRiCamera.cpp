@@ -38,6 +38,7 @@ void GRiCamera::SetPosition(float x, float y, float z)
 	mPosition[1] = y;
 	mPosition[2] = z;
 	mViewDirty = true;
+	UpdateViewMatrix();
 }
 
 std::vector<float> GRiCamera::GetRight()const
@@ -149,6 +150,7 @@ void GRiCamera::LookAt(std::vector<float> pos, std::vector<float> target, std::v
 	mUp[2] = U[2];
 
 	mViewDirty = true;
+	UpdateViewMatrix();
 }
 
 GGiFloat4x4* GRiCamera::GetView()const
@@ -177,6 +179,7 @@ void GRiCamera::Strafe(float d)
 	mPosition[2] = d * mRight[2] + mPosition[2];
 
 	mViewDirty = true;
+	UpdateViewMatrix();
 }
 
 void GRiCamera::Walk(float d)
@@ -187,6 +190,7 @@ void GRiCamera::Walk(float d)
 	mPosition[2] = d * mLook[2] + mPosition[2];
 
 	mViewDirty = true;
+	UpdateViewMatrix();
 }
 
 void GRiCamera::Ascend(float d)
@@ -197,6 +201,7 @@ void GRiCamera::Ascend(float d)
 	mPosition[2] = d * mUp[2] + mPosition[2];
 
 	mViewDirty = true;
+	UpdateViewMatrix();
 }
 
 void GRiCamera::Pitch(float angle)
@@ -216,6 +221,7 @@ void GRiCamera::Pitch(float angle)
 	mLook[2] = l[2];
 
 	mViewDirty = true;
+	UpdateViewMatrix();
 }
 
 void GRiCamera::RotateY(float angle)
@@ -240,6 +246,7 @@ void GRiCamera::RotateY(float angle)
 	mLook[2] = l[2];
 
 	mViewDirty = true;
+	UpdateViewMatrix();
 }
 
 void GRiCamera::UpdateViewMatrix()
@@ -290,6 +297,44 @@ void GRiCamera::UpdateViewMatrix()
 
 		mViewDirty = false;
 	}
+}
+
+void GRiCamera::SetPrevViewProj(GGiFloat4x4* prev)
+{
+	prevViewProj = prev;
+}
+
+GGiFloat4x4* GRiCamera::GetPrevViewProj()
+{
+	return prevViewProj;
+}
+
+void GRiCamera::InitPrevViewProj()
+{
+	prevViewProj = &(*mView * *mProj);
+}
+
+void GRiCamera::SetPrevPosition(std::vector<float> prev)
+{
+	mPrevPosition[0] = prev[0];
+	mPrevPosition[1] = prev[1];
+	mPrevPosition[2] = prev[2];
+}
+
+std::vector<float> GRiCamera::GetPrevPosition()
+{
+	std::vector<float> ret(3);
+	ret[0] = mPrevPosition[0];
+	ret[1] = mPrevPosition[1];
+	ret[2] = mPrevPosition[2];
+	return ret;
+}
+
+void GRiCamera::InitPrevPosition()
+{
+	mPrevPosition[0] = mPosition[0];
+	mPrevPosition[1] = mPosition[1];
+	mPrevPosition[2] = mPosition[2];
 }
 
 

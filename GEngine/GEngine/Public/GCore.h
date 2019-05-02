@@ -155,6 +155,7 @@ private:
 
 	void Update();
 
+	void RecordPrevFrame(const GGiGameTimer* gt);
 	void OnKeyboardInput(const GGiGameTimer* gt);
 	void UpdateGui(const GGiGameTimer* gt);
 	void OnMouseDown(WPARAM btnState, int x, int y);
