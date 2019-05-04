@@ -59,6 +59,10 @@ public:
 
 	UINT GetPrefilterLevel();
 
+	UINT GetFrameCount();
+	void SetFrameCount(UINT count);
+	void IncreaseFrameCount();
+
 protected:
 
 	HWND mhMainWnd = nullptr; // main window handle
@@ -73,6 +77,8 @@ protected:
 	std::unique_ptr<GRiFilmboxManager> mFilmboxManager;
 
 	UINT mPrefilterLevels = 5u;
+
+	UINT mFrameCount = 0u;
 
 };
 

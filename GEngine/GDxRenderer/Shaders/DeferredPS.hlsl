@@ -57,16 +57,18 @@ PixelOutput main(VertexOutput input)// : SV_TARGET
 
 	float4 prevPos = input.prevPos;
 	prevPos = prevPos / prevPos.w;
+	prevPos.xy = (prevPos.xy + float2(1.0f, 1.0f)) / float2(2.0f, 2.0f);
 	float4 curPos = input.curPos;
 	curPos = curPos / curPos.w;
+	curPos.xy = (curPos.xy + float2(1.0f, 1.0f)) / float2(2.0f, 2.0f);
 
 	float3 normal = calculateNormalFromMap(normalFromTexture, normalize(input.normal), input.tangent);
 	PixelOutput output;
 	output.albedo = float4(albedoFromTexture, 1.0f);;
 	output.normal = float4(normalize(normal), 1.0f);
 	output.worldPos = float4(input.worldPos, 0.0f);
-	//output.velocity = float2(input.pos.x - prevPos.x, input.pos.y - prevPos.y);
 	output.velocity = float2(curPos.x - prevPos.x, curPos.y - prevPos.y);
+	//output.velocity = float2(prevPos.x, prevPos.y);
 	float roughness = ormFromTexture.g;
 	float metal = ormFromTexture.b;
 	output.occlusionRoughnessMetallic = float4(0, roughness, metal, 0);

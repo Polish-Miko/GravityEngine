@@ -132,3 +132,13 @@ CD3DX12_GPU_DESCRIPTOR_HANDLE GDxRtvHeap::GetSrvGpuStart()
 {
 	return SrvGpuStart;
 }
+
+CD3DX12_GPU_DESCRIPTOR_HANDLE GDxRtvHeap::GetSrvGpu(int index)
+{
+	CD3DX12_GPU_DESCRIPTOR_HANDLE srvGpu(SrvGpuStart);
+	srvGpu.Offset(index, SrvDescriptorSize);
+	return srvGpu;
+}
+
+
+

@@ -24,6 +24,10 @@ cbuffer cbPass : register(b1)
 	float gFarZ;
 	float gTotalTime;
 	float gDeltaTime;
+	uint gFrameCount;
+	uint gPad0;
+	uint gPad1;
+	uint gPad2;
 	float4 gAmbientLight;
 };
 

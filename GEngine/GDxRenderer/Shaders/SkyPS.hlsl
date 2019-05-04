@@ -25,8 +25,10 @@ PixelOutput main(VertexOut pin)// : SV_TARGET
 {
 	float4 prevPos = pin.prevPos;
 	prevPos = prevPos / prevPos.w;
+	prevPos.xy = (prevPos.xy + float2(1.0f, 1.0f)) / float2(2.0f, 2.0f);
 	float4 curPos = pin.curPos;
 	curPos = curPos / curPos.w;
+	curPos.xy = (curPos.xy + float2(1.0f, 1.0f)) / float2(2.0f, 2.0f);
 
 	PixelOutput output;
 	float3 color = gCubeMap.Sample(basicSampler, pin.PosL).rgb;
@@ -34,6 +36,7 @@ PixelOutput main(VertexOut pin)// : SV_TARGET
 	//color = pow(color, (1 / 2.2f));
 	output.color = float4(color, 1.0f);
 	output.velocity = float2(curPos.x - prevPos.x, curPos.y - prevPos.y);
+	//output.velocity = float2(prevPos.x, prevPos.y);
 	return output;
 	//return float4(1.0f, 0.0f, 0.0f, 1.0f);
 }

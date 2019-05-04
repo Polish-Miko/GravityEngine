@@ -30,6 +30,8 @@ public:
 
 	CD3DX12_GPU_DESCRIPTOR_HANDLE GetSrvGpuStart();
 
+	CD3DX12_GPU_DESCRIPTOR_HANDLE GetSrvGpu(int index);
+
 private:
 
 	ID3D12Device* md3dDevice;

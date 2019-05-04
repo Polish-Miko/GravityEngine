@@ -29,6 +29,7 @@ using namespace DirectX::PackedVector;
 
 class GDxRenderer : public GRiRenderer
 {
+
 protected:
 
 	GDxRenderer(const GDxRenderer& rhs) = delete;
@@ -57,6 +58,7 @@ public:
 	virtual GRiSceneObject* SelectSceneObject(int sx, int sy) override;
 
 protected:
+
 	virtual void CreateRtvAndDsvDescriptorHeaps();
 	virtual void Update(const GGiGameTimer* gt) override;
 	virtual void Draw(const GGiGameTimer* gt) override;
@@ -140,6 +142,7 @@ protected:
 	DXGI_FORMAT mDepthStencilFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
 
 protected:
+
 	std::vector<std::unique_ptr<GDxFrameResource>> mFrameResources;
 	GDxFrameResource* mCurrFrameResource = nullptr;
 	int mCurrFrameResourceIndex = 0;
@@ -170,7 +173,10 @@ protected:
 	UINT mGBufferSrvIndex = 0;
 	UINT mLightPassSrvIndex = 0;
 	UINT mSkyPassSrvIndex = 0;
+	UINT mTaaPassSrvIndex = 0;
 	UINT mIblIndex = 0;
+
+	UINT mTaaHistoryIndex = 0;
 
 	CD3DX12_GPU_DESCRIPTOR_HANDLE mNullSrv;
 

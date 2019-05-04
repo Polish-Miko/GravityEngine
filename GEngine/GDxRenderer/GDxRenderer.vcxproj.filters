@@ -223,6 +223,8 @@
     <FxCompile Include="Shaders\IrradianceCubemapPS.hlsl" />
     <FxCompile Include="Shaders\SkyPS.hlsl" />
     <FxCompile Include="Shaders\SkyVS.hlsl" />
+    <FxCompile Include="Shaders\TaaPassPS.hlsl" />
+    <FxCompile Include="Shaders\UnjitteredFullScreenVS.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Shaders\Lighting.hlsli" />
@@ -231,5 +233,6 @@
     <None Include="Shaders\ObjectCB.hlsli" />
     <None Include="Shaders\MainPassCB.hlsli" />
     <None Include="Shaders\SkyPassCB.hlsli" />
+    <None Include="Shaders\HaltonSequence.hlsli" />
   </ItemGroup>
 </Project>

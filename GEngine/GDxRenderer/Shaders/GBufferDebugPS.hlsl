@@ -1,6 +1,7 @@
 
 #include "Material.hlsli"
 #include "ObjectCB.hlsli"
+#include "MainPassCB.hlsli"
 
 struct VertexOut
 {
@@ -39,7 +40,7 @@ float4 main(VertexOut input) : SV_TARGET
 		float2 rgSamp = gTextureMaps[index].Sample(Sampler, input.TexC).rg;
 		//rgSamp = rgSamp / (rgSamp + float2(1.0f, 1.0f));
 		//rgSamp = (rgSamp + float2(2.0f, 2.0f)) / 4;
-		rgSamp *= 10.0f;
+		//rgSamp *= 10.0f;
 		color = float4(rgSamp.rg, 0.0f, 1.0f);
 		break;
 	default:

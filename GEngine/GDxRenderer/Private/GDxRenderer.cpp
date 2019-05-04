@@ -297,31 +297,18 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 
 		// For each render item...
 		DrawSceneObjects(mCommandList.Get(), RenderLayer::ScreenQuad, false);
-
-		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["LightPass"]->mRtv[0]->mResource.Get(),
-			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ));
 	}
 
 	// Sky Pass
 	{
-		mCommandList->RSSetViewports(1, &mScreenViewport);
-		mCommandList->RSSetScissorRects(1, &mScissorRect);
+		mCommandList->RSSetViewports(1, &(mRtvHeaps["LightPass"]->mRtv[0]->mViewport));
+		mCommandList->RSSetScissorRects(1, &(mRtvHeaps["LightPass"]->mRtv[0]->mScissorRect));
 
 		mCommandList->SetGraphicsRootSignature(mRootSignatures["Sky"].Get());
 
-		// Clear the back buffer.
-		/*
-		DirectX::XMVECTORF32 clearColor = { mRtvHeaps["LightPass"]->mRtv[0]->mProperties.mClearColor[0],
-		mRtvHeaps["LightPass"]->mRtv[0]->mProperties.mClearColor[1],
-		mRtvHeaps["LightPass"]->mRtv[0]->mProperties.mClearColor[2],
-		mRtvHeaps["LightPass"]->mRtv[0]->mProperties.mClearColor[3]
-		};
-		mCommandList->ClearRenderTargetView(mRtvHeaps["LightPass"]->mRtvHeap.handleCPU(0), clearColor, 0, nullptr);
-		*/
+		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["GBuffer"]->mRtv[mVelocityBufferSrvIndex - mGBufferSrvIndex]->mResource.Get(),
+			D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_RENDER_TARGET));
 
-		// Specify the buffers we are going to render to.
-		//mCommandList->OMSetRenderTargets(1, &CurrentBackBufferView(), true, &DepthStencilView());
-		//mCommandList->OMSetRenderTargets(1, &(mRtvHeaps["SkyPass"]->mRtvHeap.handleCPU(0)), true, &DepthStencilView());
 		D3D12_CPU_DESCRIPTOR_HANDLE skyRtvs[2] =
 		{
 			mRtvHeaps["LightPass"]->mRtvHeap.handleCPU(0),
@@ -338,6 +325,91 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 
 		mCommandList->SetPipelineState(mPSOs["Sky"].Get());
 		DrawSceneObjects(mCommandList.Get(), RenderLayer::Sky, true);
+
+		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["LightPass"]->mRtv[0]->mResource.Get(),
+			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ));
+
+		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["GBuffer"]->mRtv[mVelocityBufferSrvIndex - mGBufferSrvIndex]->mResource.Get(),
+			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ));
+	}
+
+	// TAA Pass
+	{
+		mCommandList->RSSetViewports(1, &(mRtvHeaps["TaaPass"]->mRtv[2]->mViewport));
+		mCommandList->RSSetScissorRects(1, &(mRtvHeaps["TaaPass"]->mRtv[2]->mScissorRect));
+
+		mCommandList->SetGraphicsRootSignature(mRootSignatures["TaaPass"].Get());
+
+		mCommandList->SetPipelineState(mPSOs["TaaPass"].Get());
+
+		auto passCB = mCurrFrameResource->PassCB->Resource();
+		mCommandList->SetGraphicsRootConstantBufferView(0, passCB->GetGPUVirtualAddress());
+
+		mCommandList->SetGraphicsRootDescriptorTable(1, mRtvHeaps["LightPass"]->GetSrvGpuStart());
+
+		mCommandList->SetGraphicsRootDescriptorTable(2, mRtvHeaps["TaaPass"]->GetSrvGpu(mTaaHistoryIndex));
+		mTaaHistoryIndex = (mTaaHistoryIndex + 1) % 2;
+
+		mCommandList->SetGraphicsRootDescriptorTable(3, mRtvHeaps["GBuffer"]->GetSrvGpu(mVelocityBufferSrvIndex - mGBufferSrvIndex));
+
+		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["TaaPass"]->mRtv[2]->mResource.Get(),
+			D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_RENDER_TARGET));
+
+		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["TaaPass"]->mRtv[mTaaHistoryIndex]->mResource.Get(),
+			D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_RENDER_TARGET));
+
+		// Clear RT.
+		DirectX::XMVECTORF32 taaClearColor = { mRtvHeaps["TaaPass"]->mRtv[2]->mProperties.mClearColor[0],
+		mRtvHeaps["TaaPass"]->mRtv[2]->mProperties.mClearColor[1],
+		mRtvHeaps["TaaPass"]->mRtv[2]->mProperties.mClearColor[2],
+		mRtvHeaps["TaaPass"]->mRtv[2]->mProperties.mClearColor[3]
+		};
+
+		mCommandList->ClearRenderTargetView(mRtvHeaps["TaaPass"]->mRtvHeap.handleCPU(2), taaClearColor, 0, nullptr);
+
+		DirectX::XMVECTORF32 hisClearColor = { mRtvHeaps["TaaPass"]->mRtv[mTaaHistoryIndex]->mProperties.mClearColor[0],
+		mRtvHeaps["TaaPass"]->mRtv[mTaaHistoryIndex]->mProperties.mClearColor[1],
+		mRtvHeaps["TaaPass"]->mRtv[mTaaHistoryIndex]->mProperties.mClearColor[2],
+		mRtvHeaps["TaaPass"]->mRtv[mTaaHistoryIndex]->mProperties.mClearColor[3]
+		};
+
+		mCommandList->ClearRenderTargetView(mRtvHeaps["TaaPass"]->mRtvHeap.handleCPU(mTaaHistoryIndex), hisClearColor, 0, nullptr);
+
+		D3D12_CPU_DESCRIPTOR_HANDLE taaRtvs[2] =
+		{
+			mRtvHeaps["TaaPass"]->mRtvHeap.handleCPU(2),
+			mRtvHeaps["TaaPass"]->mRtvHeap.handleCPU(mTaaHistoryIndex)
+		};
+		mCommandList->OMSetRenderTargets(2, taaRtvs, false, &DepthStencilView());
+
+		// For each render item...
+		DrawSceneObjects(mCommandList.Get(), RenderLayer::ScreenQuad, false);
+
+		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["TaaPass"]->mRtv[2]->mResource.Get(),
+			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ));
+
+		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["TaaPass"]->mRtv[mTaaHistoryIndex]->mResource.Get(),
+			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ));
+	}
+
+	// Post Process Pass
+	{
+		mCommandList->RSSetViewports(1, &mScreenViewport);
+		mCommandList->RSSetScissorRects(1, &mScissorRect);
+
+		mCommandList->SetGraphicsRootSignature(mRootSignatures["PostProcess"].Get());
+
+		mCommandList->SetPipelineState(mPSOs["PostProcess"].Get());
+
+		mCommandList->SetGraphicsRootDescriptorTable(0, mRtvHeaps["TaaPass"]->GetSrvGpu(2));
+		//mCommandList->SetGraphicsRootDescriptorTable(1, mRtvHeaps["SkyPass"]->GetSrvGpuStart());
+
+		// Specify the buffers we are going to render to.
+		//mCommandList->OMSetRenderTargets(1, &CurrentBackBufferView(), true, &DepthStencilView());
+		mCommandList->OMSetRenderTargets(1, &CurrentBackBufferView(), true, &DepthStencilView());
+
+		// For each render item...
+		DrawSceneObjects(mCommandList.Get(), RenderLayer::ScreenQuad, false);
 	}
 
 	// Debug Pass
@@ -354,35 +426,18 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 		UINT objCBByteSize = GDxUtil::CalcConstantBufferByteSize(sizeof(ObjectConstants));
 		auto objectCB = mCurrFrameResource->ObjectCB->Resource();
 
-		mCommandList->SetGraphicsRootDescriptorTable(1, mRtvHeaps["GBuffer"]->GetSrvGpuStart());
+		auto passCB = mCurrFrameResource->PassCB->Resource();
+		mCommandList->SetGraphicsRootConstantBufferView(1, passCB->GetGPUVirtualAddress());
+
+		mCommandList->SetGraphicsRootDescriptorTable(2, mRtvHeaps["GBuffer"]->GetSrvGpuStart());
 
 		matBuffer = mCurrFrameResource->MaterialBuffer->Resource();
-		mCommandList->SetGraphicsRootShaderResourceView(2, matBuffer->GetGPUVirtualAddress());
+		mCommandList->SetGraphicsRootShaderResourceView(3, matBuffer->GetGPUVirtualAddress());
 
 		mCommandList->OMSetRenderTargets(1, &CurrentBackBufferView(), true, &DepthStencilView());
 
 		// For each render item...
 		DrawSceneObjects(mCommandList.Get(), RenderLayer::Debug, true);
-	}
-
-	// Post Process Pass
-	{
-		mCommandList->RSSetViewports(1, &mScreenViewport);
-		mCommandList->RSSetScissorRects(1, &mScissorRect);
-
-		mCommandList->SetGraphicsRootSignature(mRootSignatures["PostProcess"].Get());
-
-		mCommandList->SetPipelineState(mPSOs["PostProcess"].Get());
-
-		mCommandList->SetGraphicsRootDescriptorTable(0, mRtvHeaps["LightPass"]->GetSrvGpuStart());
-		//mCommandList->SetGraphicsRootDescriptorTable(1, mRtvHeaps["SkyPass"]->GetSrvGpuStart());
-
-		// Specify the buffers we are going to render to.
-		//mCommandList->OMSetRenderTargets(1, &CurrentBackBufferView(), true, &DepthStencilView());
-		mCommandList->OMSetRenderTargets(1, &CurrentBackBufferView(), true, &DepthStencilView());
-
-		// For each render item...
-		DrawSceneObjects(mCommandList.Get(), RenderLayer::ScreenQuad, false);
 	}
 
 	// Immediate Mode GUI Pass
@@ -822,6 +877,7 @@ void GDxRenderer::UpdateMainPassCB(const GGiGameTimer* gt)
 	mMainPassCB.FarZ = 1000.0f;
 	mMainPassCB.TotalTime = gt->TotalTime();
 	mMainPassCB.DeltaTime = gt->DeltaTime();
+	mMainPassCB.FrameCount = mFrameCount;
 	mMainPassCB.AmbientLight = { 0.4f, 0.4f, 0.6f, 1.0f };
 
 	auto currPassCB = mCurrFrameResource->PassCB.get();
@@ -924,13 +980,14 @@ void GDxRenderer::BuildRootSignature()
 		CD3DX12_DESCRIPTOR_RANGE range;
 		range.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, mRtvHeaps["GBuffer"]->mRtvHeap.HeapDesc.NumDescriptors, 0);
 
-		CD3DX12_ROOT_PARAMETER gBufferDebugRootParameters[3];
+		CD3DX12_ROOT_PARAMETER gBufferDebugRootParameters[4];
 		gBufferDebugRootParameters[0].InitAsConstantBufferView(0);
-		gBufferDebugRootParameters[1].InitAsDescriptorTable(1, &range, D3D12_SHADER_VISIBILITY_ALL);
-		gBufferDebugRootParameters[2].InitAsShaderResourceView(0, 1);
+		gBufferDebugRootParameters[1].InitAsConstantBufferView(1);
+		gBufferDebugRootParameters[2].InitAsDescriptorTable(1, &range, D3D12_SHADER_VISIBILITY_ALL);
+		gBufferDebugRootParameters[3].InitAsShaderResourceView(0, 1);
 
 		// A root signature is an array of root parameters.
-		CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(3, gBufferDebugRootParameters,
+		CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(4, gBufferDebugRootParameters,
 			0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
 		CD3DX12_STATIC_SAMPLER_DESC StaticSamplers[2];
@@ -1010,16 +1067,69 @@ void GDxRenderer::BuildRootSignature()
 			IID_PPV_ARGS(mRootSignatures["LightPass"].GetAddressOf())));
 	}
 
+	// Taa pass signature
+	{
+		//TAA inputs
+		CD3DX12_DESCRIPTOR_RANGE rangeLight;
+		rangeLight.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
+		CD3DX12_DESCRIPTOR_RANGE rangeHistory;
+		rangeHistory.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1);
+		CD3DX12_DESCRIPTOR_RANGE rangeVelocity;
+		rangeVelocity.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 2);
+
+		CD3DX12_ROOT_PARAMETER gTaaPassRootParameters[4];
+		gTaaPassRootParameters[0].InitAsConstantBufferView(1);
+		gTaaPassRootParameters[1].InitAsDescriptorTable(1, &rangeLight, D3D12_SHADER_VISIBILITY_ALL);
+		gTaaPassRootParameters[2].InitAsDescriptorTable(1, &rangeHistory, D3D12_SHADER_VISIBILITY_ALL);
+		gTaaPassRootParameters[3].InitAsDescriptorTable(1, &rangeVelocity, D3D12_SHADER_VISIBILITY_ALL);
+
+		// A root signature is an array of root parameters.
+		CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(4, gTaaPassRootParameters,
+			0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+
+		CD3DX12_STATIC_SAMPLER_DESC StaticSamplers[2];
+		StaticSamplers[0].Init(0, D3D12_FILTER_COMPARISON_MIN_MAG_MIP_LINEAR,
+			D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
+			D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
+			D3D12_TEXTURE_ADDRESS_MODE_CLAMP
+			);
+		StaticSamplers[1].Init(1, D3D12_FILTER_COMPARISON_MIN_MAG_MIP_LINEAR,
+			D3D12_TEXTURE_ADDRESS_MODE_BORDER,
+			D3D12_TEXTURE_ADDRESS_MODE_BORDER,
+			D3D12_TEXTURE_ADDRESS_MODE_BORDER,
+			0.f, 16u, D3D12_COMPARISON_FUNC_LESS_EQUAL);
+		rootSigDesc.NumStaticSamplers = 2;
+		rootSigDesc.pStaticSamplers = StaticSamplers;
+
+		// create a root signature with a single slot which points to a descriptor range consisting of a single constant buffer
+		ComPtr<ID3DBlob> serializedRootSig = nullptr;
+		ComPtr<ID3DBlob> errorBlob = nullptr;
+		HRESULT hr = D3D12SerializeRootSignature(&rootSigDesc, D3D_ROOT_SIGNATURE_VERSION_1,
+			serializedRootSig.GetAddressOf(), errorBlob.GetAddressOf());
+
+		if (errorBlob != nullptr)
+		{
+			::OutputDebugStringA((char*)errorBlob->GetBufferPointer());
+		}
+		ThrowIfFailed(hr);
+
+		ThrowIfFailed(md3dDevice->CreateRootSignature(
+			0,
+			serializedRootSig->GetBufferPointer(),
+			serializedRootSig->GetBufferSize(),
+			IID_PPV_ARGS(mRootSignatures["TaaPass"].GetAddressOf())));
+	}
+
 	// Post process signature
 	{
 		//G-Buffer inputs
-		CD3DX12_DESCRIPTOR_RANGE lightRange;
-		lightRange.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, mRtvHeaps["LightPass"]->mRtvHeap.HeapDesc.NumDescriptors, 0);
+		CD3DX12_DESCRIPTOR_RANGE ppInputRange;
+		ppInputRange.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
 		//CD3DX12_DESCRIPTOR_RANGE skyRange;
 		//skyRange.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, mRtvHeaps["LightPass"]->mRtvHeap.HeapDesc.NumDescriptors, 1);
 
 		CD3DX12_ROOT_PARAMETER gPostProcessRootParameters[1];
-		gPostProcessRootParameters[0].InitAsDescriptorTable(1, &lightRange, D3D12_SHADER_VISIBILITY_ALL);
+		gPostProcessRootParameters[0].InitAsDescriptorTable(1, &ppInputRange, D3D12_SHADER_VISIBILITY_ALL);
 		//gPostProcessRootParameters[1].InitAsDescriptorTable(1, &skyRange, D3D12_SHADER_VISIBILITY_ALL);
 
 		// A root signature is an array of root parameters.
@@ -1226,9 +1336,10 @@ void GDxRenderer::BuildDescriptorHeaps()
 	D3D12_DESCRIPTOR_HEAP_DESC srvHeapDesc = {};
 	srvHeapDesc.NumDescriptors = MAX_TEXTURE_NUM
 		+ 1 //imgui
-		+ 1 //sky
+		+ 1 //sky cubemap
 		+ 5 //g-buffer
 		+ 1 //light pass
+		+ 3 //taa
 		+ (2 + mPrefilterLevels);//IBL
 	srvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 	srvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
@@ -1319,6 +1430,37 @@ void GDxRenderer::BuildDescriptorHeaps()
 		mRtvHeaps["LightPass"] = std::move(lightPassRtvHeap);
 	}
 
+	// Build RTV heap and SRV for light pass.
+	{
+		mTaaPassSrvIndex = mLightPassSrvIndex + mRtvHeaps["LightPass"]->mRtvHeap.HeapDesc.NumDescriptors;
+
+		std::vector<DXGI_FORMAT> rtvFormats =
+		{
+			DXGI_FORMAT_R32G32B32A32_FLOAT,// TAA History 1
+			DXGI_FORMAT_R32G32B32A32_FLOAT,// TAA History 2
+			DXGI_FORMAT_R32G32B32A32_FLOAT// TAA Output
+		};
+		std::vector<std::vector<FLOAT>> rtvClearColor =
+		{
+			{ 0,0,0,1 },
+			{ 0,0,0,1 },
+			{ 0,0,0,1 }
+		};
+		std::vector<GRtvProperties> propVec;
+		for (auto i = 0u; i < rtvFormats.size(); i++)
+		{
+			GRtvProperties prop;
+			prop.mRtvFormat = rtvFormats[i];
+			prop.mClearColor[0] = rtvClearColor[i][0];
+			prop.mClearColor[1] = rtvClearColor[i][1];
+			prop.mClearColor[2] = rtvClearColor[i][2];
+			prop.mClearColor[3] = rtvClearColor[i][3];
+			propVec.push_back(prop);
+		}
+		auto taaPassRtvHeap = std::make_unique<GDxRtvHeap>(md3dDevice.Get(), mClientWidth, mClientHeight, GetCpuSrv(mTaaPassSrvIndex), GetGpuSrv(mTaaPassSrvIndex), propVec);
+		mRtvHeaps["TaaPass"] = std::move(taaPassRtvHeap);
+	}
+
 	// Build RTV heap and SRV for sky pass.
 	/*
 	{
@@ -1351,7 +1493,7 @@ void GDxRenderer::BuildDescriptorHeaps()
 
 	// Build cubemap SRV and RTVs for irradiance pre-integration.
 	{
-		mIblIndex = mLightPassSrvIndex + mRtvHeaps["LightPass"]->mRtvHeap.HeapDesc.NumDescriptors;
+		mIblIndex = mTaaPassSrvIndex + mRtvHeaps["TaaPass"]->mRtvHeap.HeapDesc.NumDescriptors;
 
 		GRtvProperties prop;
 		prop.mRtvFormat = DXGI_FORMAT_R32G32B32A32_FLOAT;
@@ -1413,362 +1555,400 @@ void GDxRenderer::BuildDescriptorHeaps()
 
 void GDxRenderer::BuildPSOs()
 {
-	//
 	// PSO for GBuffers.
-	//
-	D3D12_DEPTH_STENCIL_DESC gBufferDSD;
-	gBufferDSD.DepthEnable = true;
-	gBufferDSD.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
-	gBufferDSD.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
-	gBufferDSD.StencilEnable = true;
-	gBufferDSD.StencilReadMask = 0xff;
-	gBufferDSD.StencilWriteMask = 0xff;
-	gBufferDSD.FrontFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
-	gBufferDSD.FrontFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
-	gBufferDSD.FrontFace.StencilPassOp = D3D12_STENCIL_OP_REPLACE;
-	gBufferDSD.FrontFace.StencilFunc = D3D12_COMPARISON_FUNC_ALWAYS;
-	// We are not rendering backfacing polygons, so these settings do not matter. 
-	gBufferDSD.BackFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
-	gBufferDSD.BackFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
-	gBufferDSD.BackFace.StencilPassOp = D3D12_STENCIL_OP_REPLACE;
-	gBufferDSD.BackFace.StencilFunc = D3D12_COMPARISON_FUNC_ALWAYS;
-
-	D3D12_GRAPHICS_PIPELINE_STATE_DESC gBufferPsoDesc;
-	ZeroMemory(&gBufferPsoDesc, sizeof(gBufferPsoDesc));
-	gBufferPsoDesc.VS = GDxShaderManager::LoadShader(L"Shaders\\DefaultVS.cso");
-	gBufferPsoDesc.PS = GDxShaderManager::LoadShader(L"Shaders\\DeferredPS.cso");
-	gBufferPsoDesc.InputLayout.pInputElementDescs = GDxInputLayout::DefaultLayout;
-	gBufferPsoDesc.InputLayout.NumElements = _countof(GDxInputLayout::DefaultLayout);
-	gBufferPsoDesc.pRootSignature = mRootSignatures["GBuffer"].Get();
-	//gBufferPsoDesc.pRootSignature = mRootSignatures["Forward"].Get();
-	gBufferPsoDesc.DepthStencilState = gBufferDSD;
-	gBufferPsoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
-	gBufferPsoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
-	gBufferPsoDesc.SampleMask = UINT_MAX;
-	gBufferPsoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-	gBufferPsoDesc.NumRenderTargets = (UINT)mRtvHeaps["GBuffer"]->mRtv.size();
-	for (size_t i = 0; i < mRtvHeaps["GBuffer"]->mRtv.size(); i++)
 	{
-		gBufferPsoDesc.RTVFormats[i] = mRtvHeaps["GBuffer"]->mRtv[i]->mProperties.mRtvFormat;
+		D3D12_DEPTH_STENCIL_DESC gBufferDSD;
+		gBufferDSD.DepthEnable = true;
+		gBufferDSD.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
+		gBufferDSD.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
+		gBufferDSD.StencilEnable = true;
+		gBufferDSD.StencilReadMask = 0xff;
+		gBufferDSD.StencilWriteMask = 0xff;
+		gBufferDSD.FrontFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
+		gBufferDSD.FrontFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
+		gBufferDSD.FrontFace.StencilPassOp = D3D12_STENCIL_OP_REPLACE;
+		gBufferDSD.FrontFace.StencilFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+		// We are not rendering backfacing polygons, so these settings do not matter. 
+		gBufferDSD.BackFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
+		gBufferDSD.BackFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
+		gBufferDSD.BackFace.StencilPassOp = D3D12_STENCIL_OP_REPLACE;
+		gBufferDSD.BackFace.StencilFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+
+		D3D12_GRAPHICS_PIPELINE_STATE_DESC gBufferPsoDesc;
+		ZeroMemory(&gBufferPsoDesc, sizeof(gBufferPsoDesc));
+		gBufferPsoDesc.VS = GDxShaderManager::LoadShader(L"Shaders\\DefaultVS.cso");
+		gBufferPsoDesc.PS = GDxShaderManager::LoadShader(L"Shaders\\DeferredPS.cso");
+		gBufferPsoDesc.InputLayout.pInputElementDescs = GDxInputLayout::DefaultLayout;
+		gBufferPsoDesc.InputLayout.NumElements = _countof(GDxInputLayout::DefaultLayout);
+		gBufferPsoDesc.pRootSignature = mRootSignatures["GBuffer"].Get();
+		//gBufferPsoDesc.pRootSignature = mRootSignatures["Forward"].Get();
+		gBufferPsoDesc.DepthStencilState = gBufferDSD;
+		gBufferPsoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+		gBufferPsoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+		gBufferPsoDesc.SampleMask = UINT_MAX;
+		gBufferPsoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+		gBufferPsoDesc.NumRenderTargets = (UINT)mRtvHeaps["GBuffer"]->mRtv.size();
+		for (size_t i = 0; i < mRtvHeaps["GBuffer"]->mRtv.size(); i++)
+		{
+			gBufferPsoDesc.RTVFormats[i] = mRtvHeaps["GBuffer"]->mRtv[i]->mProperties.mRtvFormat;
+		}
+		gBufferPsoDesc.DSVFormat = mDepthStencilFormat;
+		gBufferPsoDesc.SampleDesc.Count = 1;// don't use msaa in deferred rendering.
+		//deferredPSO = sysRM->CreatePSO(StringID("deferredPSO"), descPipelineState);
+		ThrowIfFailed(md3dDevice->CreateGraphicsPipelineState(&gBufferPsoDesc, IID_PPV_ARGS(&mPSOs["GBuffer"])));
 	}
-	gBufferPsoDesc.DSVFormat = mDepthStencilFormat;
-	gBufferPsoDesc.SampleDesc.Count = 1;// don't use msaa in deferred rendering.
-	//deferredPSO = sysRM->CreatePSO(StringID("deferredPSO"), descPipelineState);
-	ThrowIfFailed(md3dDevice->CreateGraphicsPipelineState(&gBufferPsoDesc, IID_PPV_ARGS(&mPSOs["GBuffer"])));
 
-	//
 	// PSO for direct light pass.
-	//
-	D3D12_DEPTH_STENCIL_DESC lightPassDSD;
-	lightPassDSD.DepthEnable = false;
-	lightPassDSD.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
-	lightPassDSD.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
-	lightPassDSD.StencilEnable = true;
-	lightPassDSD.StencilReadMask = 0xff;
-	lightPassDSD.StencilWriteMask = 0x0;
-	lightPassDSD.FrontFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
-	lightPassDSD.FrontFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
-	lightPassDSD.FrontFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
-	lightPassDSD.FrontFace.StencilFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
-	// We are not rendering backfacing polygons, so these settings do not matter. 
-	lightPassDSD.BackFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
-	lightPassDSD.BackFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
-	lightPassDSD.BackFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
-	lightPassDSD.BackFace.StencilFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
+	{
+		D3D12_DEPTH_STENCIL_DESC lightPassDSD;
+		lightPassDSD.DepthEnable = false;
+		lightPassDSD.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
+		lightPassDSD.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
+		lightPassDSD.StencilEnable = true;
+		lightPassDSD.StencilReadMask = 0xff;
+		lightPassDSD.StencilWriteMask = 0x0;
+		lightPassDSD.FrontFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
+		lightPassDSD.FrontFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
+		lightPassDSD.FrontFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
+		lightPassDSD.FrontFace.StencilFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
+		// We are not rendering backfacing polygons, so these settings do not matter. 
+		lightPassDSD.BackFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
+		lightPassDSD.BackFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
+		lightPassDSD.BackFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
+		lightPassDSD.BackFace.StencilFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
 
-	auto blendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
-	blendState.AlphaToCoverageEnable = false;
-	blendState.IndependentBlendEnable = false;
+		auto blendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+		blendState.AlphaToCoverageEnable = false;
+		blendState.IndependentBlendEnable = false;
 
-	blendState.RenderTarget[0].BlendEnable = true;
-	blendState.RenderTarget[0].BlendOp = D3D12_BLEND_OP_ADD;
-	blendState.RenderTarget[0].SrcBlend = D3D12_BLEND_ONE;
-	blendState.RenderTarget[0].DestBlend = D3D12_BLEND_ONE;
+		blendState.RenderTarget[0].BlendEnable = true;
+		blendState.RenderTarget[0].BlendOp = D3D12_BLEND_OP_ADD;
+		blendState.RenderTarget[0].SrcBlend = D3D12_BLEND_ONE;
+		blendState.RenderTarget[0].DestBlend = D3D12_BLEND_ONE;
 
-	auto rasterizer = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
-	//rasterizer.CullMode = D3D12_CULL_MODE_FRONT; // Front culling for point light
-	rasterizer.CullMode = D3D12_CULL_MODE_NONE;
-	rasterizer.DepthClipEnable = false;
+		auto rasterizer = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+		//rasterizer.CullMode = D3D12_CULL_MODE_FRONT; // Front culling for point light
+		rasterizer.CullMode = D3D12_CULL_MODE_NONE;
+		rasterizer.DepthClipEnable = false;
 
-	D3D12_GRAPHICS_PIPELINE_STATE_DESC descPipelineState;
-	ZeroMemory(&descPipelineState, sizeof(descPipelineState));
+		D3D12_GRAPHICS_PIPELINE_STATE_DESC descPipelineState;
+		ZeroMemory(&descPipelineState, sizeof(descPipelineState));
 
-	descPipelineState.VS = GDxShaderManager::LoadShader(L"Shaders\\FullScreenVS.cso");
-	descPipelineState.PS = GDxShaderManager::LoadShader(L"Shaders\\DirectLightPassPS.cso");
-	descPipelineState.pRootSignature = mRootSignatures["LightPass"].Get();
-	descPipelineState.BlendState = blendState;
-	descPipelineState.DepthStencilState = lightPassDSD;
-	descPipelineState.DepthStencilState.DepthEnable = false;
-	descPipelineState.InputLayout.pInputElementDescs = GDxInputLayout::DefaultLayout;
-	descPipelineState.InputLayout.NumElements = _countof(GDxInputLayout::DefaultLayout);
-	descPipelineState.RasterizerState = rasterizer;
-	descPipelineState.NumRenderTargets = 1;
-	descPipelineState.RTVFormats[0] = mRtvHeaps["LightPass"]->mRtv[0]->mProperties.mRtvFormat;
-	descPipelineState.SampleMask = UINT_MAX;
-	descPipelineState.SampleDesc.Count = 1;
-	descPipelineState.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-	ThrowIfFailed(md3dDevice->CreateGraphicsPipelineState(&descPipelineState, IID_PPV_ARGS(&mPSOs["DirectLightPass"])));
+		descPipelineState.VS = GDxShaderManager::LoadShader(L"Shaders\\FullScreenVS.cso");
+		descPipelineState.PS = GDxShaderManager::LoadShader(L"Shaders\\DirectLightPassPS.cso");
+		descPipelineState.pRootSignature = mRootSignatures["LightPass"].Get();
+		descPipelineState.BlendState = blendState;
+		descPipelineState.DepthStencilState = lightPassDSD;
+		descPipelineState.DepthStencilState.DepthEnable = false;
+		descPipelineState.InputLayout.pInputElementDescs = GDxInputLayout::DefaultLayout;
+		descPipelineState.InputLayout.NumElements = _countof(GDxInputLayout::DefaultLayout);
+		descPipelineState.RasterizerState = rasterizer;
+		descPipelineState.NumRenderTargets = 1;
+		descPipelineState.RTVFormats[0] = mRtvHeaps["LightPass"]->mRtv[0]->mProperties.mRtvFormat;
+		descPipelineState.SampleMask = UINT_MAX;
+		descPipelineState.SampleDesc.Count = 1;
+		descPipelineState.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+		ThrowIfFailed(md3dDevice->CreateGraphicsPipelineState(&descPipelineState, IID_PPV_ARGS(&mPSOs["DirectLightPass"])));
+	}
 
-	//
 	// PSO for ambient light pass.
-	//
-	D3D12_DEPTH_STENCIL_DESC ambientPassDSD;
-	ambientPassDSD.DepthEnable = false;
-	ambientPassDSD.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
-	ambientPassDSD.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
-	ambientPassDSD.StencilEnable = true;
-	ambientPassDSD.StencilReadMask = 0xff;
-	ambientPassDSD.StencilWriteMask = 0x0;
-	ambientPassDSD.FrontFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
-	ambientPassDSD.FrontFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
-	ambientPassDSD.FrontFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
-	ambientPassDSD.FrontFace.StencilFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
-	// We are not rendering backfacing polygons, so these settings do not matter. 
-	ambientPassDSD.BackFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
-	ambientPassDSD.BackFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
-	ambientPassDSD.BackFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
-	ambientPassDSD.BackFace.StencilFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
+	{
+		D3D12_DEPTH_STENCIL_DESC ambientPassDSD;
+		ambientPassDSD.DepthEnable = false;
+		ambientPassDSD.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
+		ambientPassDSD.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
+		ambientPassDSD.StencilEnable = true;
+		ambientPassDSD.StencilReadMask = 0xff;
+		ambientPassDSD.StencilWriteMask = 0x0;
+		ambientPassDSD.FrontFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
+		ambientPassDSD.FrontFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
+		ambientPassDSD.FrontFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
+		ambientPassDSD.FrontFace.StencilFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
+		// We are not rendering backfacing polygons, so these settings do not matter. 
+		ambientPassDSD.BackFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
+		ambientPassDSD.BackFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
+		ambientPassDSD.BackFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
+		ambientPassDSD.BackFace.StencilFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
 
-	auto ambientBlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
-	ambientBlendState.AlphaToCoverageEnable = false;
-	ambientBlendState.IndependentBlendEnable = false;
+		auto ambientBlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+		ambientBlendState.AlphaToCoverageEnable = false;
+		ambientBlendState.IndependentBlendEnable = false;
 
-	ambientBlendState.RenderTarget[0].BlendEnable = true;
-	ambientBlendState.RenderTarget[0].BlendOp = D3D12_BLEND_OP_ADD;
-	ambientBlendState.RenderTarget[0].SrcBlend = D3D12_BLEND_ONE;
-	ambientBlendState.RenderTarget[0].DestBlend = D3D12_BLEND_ONE;
+		ambientBlendState.RenderTarget[0].BlendEnable = true;
+		ambientBlendState.RenderTarget[0].BlendOp = D3D12_BLEND_OP_ADD;
+		ambientBlendState.RenderTarget[0].SrcBlend = D3D12_BLEND_ONE;
+		ambientBlendState.RenderTarget[0].DestBlend = D3D12_BLEND_ONE;
 
-	auto ambientRasterizer = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
-	//rasterizer.CullMode = D3D12_CULL_MODE_FRONT; // Front culling for point light
-	ambientRasterizer.CullMode = D3D12_CULL_MODE_NONE;
-	ambientRasterizer.DepthClipEnable = false;
+		auto ambientRasterizer = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+		//rasterizer.CullMode = D3D12_CULL_MODE_FRONT; // Front culling for point light
+		ambientRasterizer.CullMode = D3D12_CULL_MODE_NONE;
+		ambientRasterizer.DepthClipEnable = false;
 
-	D3D12_GRAPHICS_PIPELINE_STATE_DESC descAmbientPSO;
-	ZeroMemory(&descAmbientPSO, sizeof(descAmbientPSO));
+		D3D12_GRAPHICS_PIPELINE_STATE_DESC descAmbientPSO;
+		ZeroMemory(&descAmbientPSO, sizeof(descAmbientPSO));
 
-	descAmbientPSO.VS = GDxShaderManager::LoadShader(L"Shaders\\FullScreenVS.cso");
-	descAmbientPSO.PS = GDxShaderManager::LoadShader(L"Shaders\\AmbientPassPS.cso");
-	descAmbientPSO.pRootSignature = mRootSignatures["LightPass"].Get();
-	descAmbientPSO.BlendState = ambientBlendState;
-	descAmbientPSO.DepthStencilState = ambientPassDSD;
-	descAmbientPSO.DepthStencilState.DepthEnable = false;
-	descAmbientPSO.InputLayout.pInputElementDescs = GDxInputLayout::DefaultLayout;
-	descAmbientPSO.InputLayout.NumElements = _countof(GDxInputLayout::DefaultLayout);
-	descAmbientPSO.RasterizerState = ambientRasterizer;
-	descAmbientPSO.NumRenderTargets = 1;
-	descAmbientPSO.RTVFormats[0] = mRtvHeaps["LightPass"]->mRtv[0]->mProperties.mRtvFormat;
-	descAmbientPSO.SampleMask = UINT_MAX;
-	descAmbientPSO.SampleDesc.Count = 1;
-	descAmbientPSO.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-	ThrowIfFailed(md3dDevice->CreateGraphicsPipelineState(&descAmbientPSO, IID_PPV_ARGS(&mPSOs["AmbientLightPass"])));
+		descAmbientPSO.VS = GDxShaderManager::LoadShader(L"Shaders\\FullScreenVS.cso");
+		descAmbientPSO.PS = GDxShaderManager::LoadShader(L"Shaders\\AmbientPassPS.cso");
+		descAmbientPSO.pRootSignature = mRootSignatures["LightPass"].Get();
+		descAmbientPSO.BlendState = ambientBlendState;
+		descAmbientPSO.DepthStencilState = ambientPassDSD;
+		descAmbientPSO.DepthStencilState.DepthEnable = false;
+		descAmbientPSO.InputLayout.pInputElementDescs = GDxInputLayout::DefaultLayout;
+		descAmbientPSO.InputLayout.NumElements = _countof(GDxInputLayout::DefaultLayout);
+		descAmbientPSO.RasterizerState = ambientRasterizer;
+		descAmbientPSO.NumRenderTargets = 1;
+		descAmbientPSO.RTVFormats[0] = mRtvHeaps["LightPass"]->mRtv[0]->mProperties.mRtvFormat;
+		descAmbientPSO.SampleMask = UINT_MAX;
+		descAmbientPSO.SampleDesc.Count = 1;
+		descAmbientPSO.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+		ThrowIfFailed(md3dDevice->CreateGraphicsPipelineState(&descAmbientPSO, IID_PPV_ARGS(&mPSOs["AmbientLightPass"])));
+	}
 
-	//
+	// PSO for TAA pass.
+	{
+		D3D12_DEPTH_STENCIL_DESC taaPassDSD;
+		taaPassDSD.DepthEnable = true;
+		taaPassDSD.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
+		taaPassDSD.DepthFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+		taaPassDSD.StencilEnable = false;
+		taaPassDSD.StencilReadMask = 0xff;
+		taaPassDSD.StencilWriteMask = 0x0;
+		taaPassDSD.FrontFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
+		taaPassDSD.FrontFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
+		taaPassDSD.FrontFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
+		taaPassDSD.FrontFace.StencilFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
+		taaPassDSD.BackFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
+		taaPassDSD.BackFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
+		taaPassDSD.BackFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
+		taaPassDSD.BackFace.StencilFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
+
+		D3D12_GRAPHICS_PIPELINE_STATE_DESC descTaaPSO;
+		ZeroMemory(&descTaaPSO, sizeof(descTaaPSO));
+
+		descTaaPSO.VS = GDxShaderManager::LoadShader(L"Shaders\\FullScreenVS.cso");
+		descTaaPSO.PS = GDxShaderManager::LoadShader(L"Shaders\\TaaPassPS.cso"); 
+		descTaaPSO.pRootSignature = mRootSignatures["TaaPass"].Get();
+		descTaaPSO.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+		descTaaPSO.DepthStencilState = taaPassDSD;
+		//descTaaPSO.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
+		descTaaPSO.InputLayout.pInputElementDescs = GDxInputLayout::DefaultLayout;
+		descTaaPSO.InputLayout.NumElements = _countof(GDxInputLayout::DefaultLayout);
+		descTaaPSO.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+		descTaaPSO.NumRenderTargets = 2;
+		descTaaPSO.RTVFormats[0] = mRtvHeaps["TaaPass"]->mRtv[2]->mProperties.mRtvFormat;//taa output
+		descTaaPSO.RTVFormats[1] = mRtvHeaps["TaaPass"]->mRtv[0]->mProperties.mRtvFormat;//history
+		descTaaPSO.SampleMask = UINT_MAX;
+		descTaaPSO.SampleDesc.Count = 1;
+		descTaaPSO.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+		ThrowIfFailed(md3dDevice->CreateGraphicsPipelineState(&descTaaPSO, IID_PPV_ARGS(&mPSOs["TaaPass"])));
+	}
+
 	// PSO for post process.
-	//
-	D3D12_GRAPHICS_PIPELINE_STATE_DESC PostProcessPsoDesc;
+	{
+		D3D12_GRAPHICS_PIPELINE_STATE_DESC PostProcessPsoDesc;
 
-	D3D12_DEPTH_STENCIL_DESC postProcessDSD;
-	postProcessDSD.DepthEnable = true;
-	postProcessDSD.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
-	postProcessDSD.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
-	postProcessDSD.StencilEnable = false;
-	postProcessDSD.StencilReadMask = 0xff;
-	postProcessDSD.StencilWriteMask = 0x0;
-	postProcessDSD.FrontFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
-	postProcessDSD.FrontFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
-	postProcessDSD.FrontFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
-	postProcessDSD.FrontFace.StencilFunc = D3D12_COMPARISON_FUNC_GREATER_EQUAL;
-	// We are not rendering backfacing polygons, so these settings do not matter. 
-	postProcessDSD.BackFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
-	postProcessDSD.BackFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
-	postProcessDSD.BackFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
-	postProcessDSD.BackFace.StencilFunc = D3D12_COMPARISON_FUNC_GREATER_EQUAL;
+		D3D12_DEPTH_STENCIL_DESC postProcessDSD;
+		postProcessDSD.DepthEnable = true;
+		postProcessDSD.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
+		postProcessDSD.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
+		postProcessDSD.StencilEnable = false;
+		postProcessDSD.StencilReadMask = 0xff;
+		postProcessDSD.StencilWriteMask = 0x0;
+		postProcessDSD.FrontFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
+		postProcessDSD.FrontFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
+		postProcessDSD.FrontFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
+		postProcessDSD.FrontFace.StencilFunc = D3D12_COMPARISON_FUNC_GREATER_EQUAL;
+		// We are not rendering backfacing polygons, so these settings do not matter. 
+		postProcessDSD.BackFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
+		postProcessDSD.BackFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
+		postProcessDSD.BackFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
+		postProcessDSD.BackFace.StencilFunc = D3D12_COMPARISON_FUNC_GREATER_EQUAL;
 
-	ZeroMemory(&PostProcessPsoDesc, sizeof(D3D12_GRAPHICS_PIPELINE_STATE_DESC));
-	PostProcessPsoDesc.InputLayout.pInputElementDescs = GDxInputLayout::DefaultLayout;
-	PostProcessPsoDesc.InputLayout.NumElements = _countof(GDxInputLayout::DefaultLayout);
-	PostProcessPsoDesc.pRootSignature = mRootSignatures["PostProcess"].Get();
-	PostProcessPsoDesc.VS = GDxShaderManager::LoadShader(L"Shaders\\FullScreenVS.cso");
-	PostProcessPsoDesc.PS = GDxShaderManager::LoadShader(L"Shaders\\PostProcessPS.cso");
-	PostProcessPsoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
-	PostProcessPsoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
-	PostProcessPsoDesc.DepthStencilState = postProcessDSD;
-	PostProcessPsoDesc.SampleMask = UINT_MAX;
-	PostProcessPsoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-	PostProcessPsoDesc.NumRenderTargets = 1;
-	PostProcessPsoDesc.RTVFormats[0] = mBackBufferFormat;
-	PostProcessPsoDesc.SampleDesc.Count = 1;//m4xMsaaState ? 4 : 1;
-	PostProcessPsoDesc.SampleDesc.Quality = 0;//m4xMsaaState ? (m4xMsaaQuality - 1) : 0;
-	PostProcessPsoDesc.DSVFormat = mDepthStencilFormat;
-	ThrowIfFailed(md3dDevice->CreateGraphicsPipelineState(&PostProcessPsoDesc, IID_PPV_ARGS(&mPSOs["PostProcess"])));
+		ZeroMemory(&PostProcessPsoDesc, sizeof(D3D12_GRAPHICS_PIPELINE_STATE_DESC));
+		PostProcessPsoDesc.InputLayout.pInputElementDescs = GDxInputLayout::DefaultLayout;
+		PostProcessPsoDesc.InputLayout.NumElements = _countof(GDxInputLayout::DefaultLayout);
+		PostProcessPsoDesc.pRootSignature = mRootSignatures["PostProcess"].Get();
+		PostProcessPsoDesc.VS = GDxShaderManager::LoadShader(L"Shaders\\FullScreenVS.cso");
+		PostProcessPsoDesc.PS = GDxShaderManager::LoadShader(L"Shaders\\PostProcessPS.cso");
+		PostProcessPsoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+		PostProcessPsoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+		PostProcessPsoDesc.DepthStencilState = postProcessDSD;
+		PostProcessPsoDesc.SampleMask = UINT_MAX;
+		PostProcessPsoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+		PostProcessPsoDesc.NumRenderTargets = 1;
+		PostProcessPsoDesc.RTVFormats[0] = mBackBufferFormat;
+		PostProcessPsoDesc.SampleDesc.Count = 1;//m4xMsaaState ? 4 : 1;
+		PostProcessPsoDesc.SampleDesc.Quality = 0;//m4xMsaaState ? (m4xMsaaQuality - 1) : 0;
+		PostProcessPsoDesc.DSVFormat = mDepthStencilFormat;
+		ThrowIfFailed(md3dDevice->CreateGraphicsPipelineState(&PostProcessPsoDesc, IID_PPV_ARGS(&mPSOs["PostProcess"])));
+	}
 
-
-	//
 	// PSO for GBuffer debug layer.
-	//
-	D3D12_DEPTH_STENCIL_DESC gBufferDebugDSD;
-	gBufferDebugDSD.DepthEnable = true;
-	gBufferDebugDSD.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
-	gBufferDebugDSD.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
-	gBufferDebugDSD.StencilEnable = false;
-	gBufferDebugDSD.StencilReadMask = 0xff;
-	gBufferDebugDSD.StencilWriteMask = 0x0;
-	gBufferDebugDSD.FrontFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
-	gBufferDebugDSD.FrontFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
-	gBufferDebugDSD.FrontFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
-	gBufferDebugDSD.FrontFace.StencilFunc = D3D12_COMPARISON_FUNC_ALWAYS;
-	// We are not rendering backfacing polygons, so these settings do not matter. 
-	gBufferDebugDSD.BackFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
-	gBufferDebugDSD.BackFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
-	gBufferDebugDSD.BackFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
-	gBufferDebugDSD.BackFace.StencilFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+	{
+		D3D12_DEPTH_STENCIL_DESC gBufferDebugDSD;
+		gBufferDebugDSD.DepthEnable = true;
+		gBufferDebugDSD.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
+		gBufferDebugDSD.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
+		gBufferDebugDSD.StencilEnable = false;
+		gBufferDebugDSD.StencilReadMask = 0xff;
+		gBufferDebugDSD.StencilWriteMask = 0x0;
+		gBufferDebugDSD.FrontFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
+		gBufferDebugDSD.FrontFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
+		gBufferDebugDSD.FrontFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
+		gBufferDebugDSD.FrontFace.StencilFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+		// We are not rendering backfacing polygons, so these settings do not matter. 
+		gBufferDebugDSD.BackFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
+		gBufferDebugDSD.BackFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
+		gBufferDebugDSD.BackFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
+		gBufferDebugDSD.BackFace.StencilFunc = D3D12_COMPARISON_FUNC_ALWAYS;
 
-	D3D12_GRAPHICS_PIPELINE_STATE_DESC debugPsoDesc;
+		D3D12_GRAPHICS_PIPELINE_STATE_DESC debugPsoDesc;
 
-	ZeroMemory(&debugPsoDesc, sizeof(D3D12_GRAPHICS_PIPELINE_STATE_DESC));
-	debugPsoDesc.InputLayout.pInputElementDescs = GDxInputLayout::DefaultLayout;
-	debugPsoDesc.InputLayout.NumElements = _countof(GDxInputLayout::DefaultLayout);
-	debugPsoDesc.pRootSignature = mRootSignatures["Forward"].Get();
-	debugPsoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
-	debugPsoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
-	debugPsoDesc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
-	debugPsoDesc.SampleMask = UINT_MAX;
-	debugPsoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-	debugPsoDesc.NumRenderTargets = 1;
-	debugPsoDesc.RTVFormats[0] = mBackBufferFormat;
-	debugPsoDesc.SampleDesc.Count = 1;
-	debugPsoDesc.SampleDesc.Quality = 0;
-	debugPsoDesc.DSVFormat = mDepthStencilFormat;
-	debugPsoDesc.pRootSignature = mRootSignatures["GBufferDebug"].Get();
-	debugPsoDesc.VS = GDxShaderManager::LoadShader(L"Shaders\\ScreenVS.cso");
-	debugPsoDesc.PS = GDxShaderManager::LoadShader(L"Shaders\\GBufferDebugPS.cso");
-	debugPsoDesc.DepthStencilState = gBufferDebugDSD;
-	ThrowIfFailed(md3dDevice->CreateGraphicsPipelineState(&debugPsoDesc, IID_PPV_ARGS(&mPSOs["GBufferDebug"])));
+		ZeroMemory(&debugPsoDesc, sizeof(D3D12_GRAPHICS_PIPELINE_STATE_DESC));
+		debugPsoDesc.InputLayout.pInputElementDescs = GDxInputLayout::DefaultLayout;
+		debugPsoDesc.InputLayout.NumElements = _countof(GDxInputLayout::DefaultLayout);
+		//debugPsoDesc.pRootSignature = mRootSignatures["Forward"].Get();
+		debugPsoDesc.pRootSignature = mRootSignatures["GBufferDebug"].Get();
+		debugPsoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+		debugPsoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+		debugPsoDesc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
+		debugPsoDesc.SampleMask = UINT_MAX;
+		debugPsoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+		debugPsoDesc.NumRenderTargets = 1;
+		debugPsoDesc.RTVFormats[0] = mBackBufferFormat;
+		debugPsoDesc.SampleDesc.Count = 1;
+		debugPsoDesc.SampleDesc.Quality = 0;
+		debugPsoDesc.DSVFormat = mDepthStencilFormat;
+		debugPsoDesc.pRootSignature = mRootSignatures["GBufferDebug"].Get();
+		debugPsoDesc.VS = GDxShaderManager::LoadShader(L"Shaders\\ScreenVS.cso");
+		debugPsoDesc.PS = GDxShaderManager::LoadShader(L"Shaders\\GBufferDebugPS.cso");
+		debugPsoDesc.DepthStencilState = gBufferDebugDSD;
+		ThrowIfFailed(md3dDevice->CreateGraphicsPipelineState(&debugPsoDesc, IID_PPV_ARGS(&mPSOs["GBufferDebug"])));
+	}
 
-	//
 	// PSO for sky.
-	//
+	{
+		D3D12_DEPTH_STENCIL_DESC gskyDSD;
+		gskyDSD.DepthEnable = true;
+		gskyDSD.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
+		gskyDSD.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
+		gskyDSD.StencilEnable = false;
+		gskyDSD.StencilReadMask = 0xff;
+		gskyDSD.StencilWriteMask = 0x0;
+		gskyDSD.FrontFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
+		gskyDSD.FrontFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
+		gskyDSD.FrontFace.StencilPassOp = D3D12_STENCIL_OP_REPLACE;
+		gskyDSD.FrontFace.StencilFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+		gskyDSD.BackFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
+		gskyDSD.BackFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
+		gskyDSD.BackFace.StencilPassOp = D3D12_STENCIL_OP_REPLACE;
+		gskyDSD.BackFace.StencilFunc = D3D12_COMPARISON_FUNC_ALWAYS;
 
-	D3D12_DEPTH_STENCIL_DESC gskyDSD;
-	gskyDSD.DepthEnable = true;
-	gskyDSD.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
-	gskyDSD.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
-	gskyDSD.StencilEnable = false;
-	gskyDSD.StencilReadMask = 0xff;
-	gskyDSD.StencilWriteMask = 0x0;
-	gskyDSD.FrontFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
-	gskyDSD.FrontFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
-	gskyDSD.FrontFace.StencilPassOp = D3D12_STENCIL_OP_REPLACE;
-	gskyDSD.FrontFace.StencilFunc = D3D12_COMPARISON_FUNC_ALWAYS;
-	gskyDSD.BackFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
-	gskyDSD.BackFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
-	gskyDSD.BackFace.StencilPassOp = D3D12_STENCIL_OP_REPLACE;
-	gskyDSD.BackFace.StencilFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+		auto skyBlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+		skyBlendState.AlphaToCoverageEnable = false;
+		skyBlendState.IndependentBlendEnable = false;
+		skyBlendState.RenderTarget[0].BlendEnable = true;
+		skyBlendState.RenderTarget[0].BlendOp = D3D12_BLEND_OP_ADD;
+		skyBlendState.RenderTarget[0].SrcBlend = D3D12_BLEND_ONE;
+		skyBlendState.RenderTarget[0].DestBlend = D3D12_BLEND_ONE;
 
-	auto skyBlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
-	skyBlendState.AlphaToCoverageEnable = false;
-	skyBlendState.IndependentBlendEnable = false;
-	skyBlendState.RenderTarget[0].BlendEnable = true;
-	skyBlendState.RenderTarget[0].BlendOp = D3D12_BLEND_OP_ADD;
-	skyBlendState.RenderTarget[0].SrcBlend = D3D12_BLEND_ONE;
-	skyBlendState.RenderTarget[0].DestBlend = D3D12_BLEND_ONE;
+		D3D12_GRAPHICS_PIPELINE_STATE_DESC skyPsoDesc;
 
-	D3D12_GRAPHICS_PIPELINE_STATE_DESC skyPsoDesc;
+		ZeroMemory(&skyPsoDesc, sizeof(D3D12_GRAPHICS_PIPELINE_STATE_DESC));
+		skyPsoDesc.InputLayout.pInputElementDescs = GDxInputLayout::DefaultLayout;
+		skyPsoDesc.InputLayout.NumElements = _countof(GDxInputLayout::DefaultLayout);
+		skyPsoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+		//skyPsoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+		skyPsoDesc.BlendState = skyBlendState;
+		//skyPsoDesc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
+		//skyPsoDesc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
+		//skyPsoDesc.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
+		skyPsoDesc.DepthStencilState = gskyDSD;
+		skyPsoDesc.SampleMask = UINT_MAX;
+		skyPsoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+		skyPsoDesc.NumRenderTargets = 2;
+		skyPsoDesc.RTVFormats[0] = mRtvHeaps["LightPass"]->mRtv[0]->mProperties.mRtvFormat;
+		skyPsoDesc.RTVFormats[1] = mRtvHeaps["GBuffer"]->mRtv[mVelocityBufferSrvIndex - mGBufferSrvIndex]->mProperties.mRtvFormat;
+		skyPsoDesc.SampleDesc.Count = 1;
+		skyPsoDesc.SampleDesc.Quality = 0;
+		skyPsoDesc.DSVFormat = mDepthStencilFormat;
 
-	ZeroMemory(&skyPsoDesc, sizeof(D3D12_GRAPHICS_PIPELINE_STATE_DESC));
-	skyPsoDesc.InputLayout.pInputElementDescs = GDxInputLayout::DefaultLayout;
-	skyPsoDesc.InputLayout.NumElements = _countof(GDxInputLayout::DefaultLayout);
-	skyPsoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
-	//skyPsoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
-	skyPsoDesc.BlendState = skyBlendState;
-	//skyPsoDesc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
-	//skyPsoDesc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
-	//skyPsoDesc.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
-	skyPsoDesc.DepthStencilState = gskyDSD;
-	skyPsoDesc.SampleMask = UINT_MAX;
-	skyPsoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-	skyPsoDesc.NumRenderTargets = 2;
-	skyPsoDesc.RTVFormats[0] = mRtvHeaps["LightPass"]->mRtv[0]->mProperties.mRtvFormat;
-	skyPsoDesc.RTVFormats[1] = mRtvHeaps["GBuffer"]->mRtv[mVelocityBufferSrvIndex - mGBufferSrvIndex]->mProperties.mRtvFormat;
-	skyPsoDesc.SampleDesc.Count = 1;
-	skyPsoDesc.SampleDesc.Quality = 0;
-	skyPsoDesc.DSVFormat = mDepthStencilFormat;
+		// The camera is inside the sky sphere, so just turn off culling.
+		//skyPsoDesc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
+		skyPsoDesc.RasterizerState.CullMode = D3D12_CULL_MODE_FRONT;
 
-	// The camera is inside the sky sphere, so just turn off culling.
-	//skyPsoDesc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
-	skyPsoDesc.RasterizerState.CullMode = D3D12_CULL_MODE_FRONT;
+		// Make sure the depth function is LESS_EQUAL and not just LESS.  
+		// Otherwise, the normalized depth values at z = 1 (NDC) will 
+		// fail the depth test if the depth buffer was cleared to 1.
+		skyPsoDesc.pRootSignature = mRootSignatures["Sky"].Get();
+		skyPsoDesc.VS = GDxShaderManager::LoadShader(L"Shaders\\SkyVS.cso");
+		skyPsoDesc.PS = GDxShaderManager::LoadShader(L"Shaders\\SkyPS.cso");
+		ThrowIfFailed(md3dDevice->CreateGraphicsPipelineState(&skyPsoDesc, IID_PPV_ARGS(&mPSOs["Sky"])));
+	}
 
-	// Make sure the depth function is LESS_EQUAL and not just LESS.  
-	// Otherwise, the normalized depth values at z = 1 (NDC) will 
-	// fail the depth test if the depth buffer was cleared to 1.
-	skyPsoDesc.pRootSignature = mRootSignatures["Sky"].Get();
-	skyPsoDesc.VS = GDxShaderManager::LoadShader(L"Shaders\\SkyVS.cso");
-	skyPsoDesc.PS = GDxShaderManager::LoadShader(L"Shaders\\SkyPS.cso");
-	ThrowIfFailed(md3dDevice->CreateGraphicsPipelineState(&skyPsoDesc, IID_PPV_ARGS(&mPSOs["Sky"])));
-
-	//
 	// PSO for irradiance pre-integration.
-	//
-	D3D12_GRAPHICS_PIPELINE_STATE_DESC irradiancePsoDesc;
+	{
+		D3D12_GRAPHICS_PIPELINE_STATE_DESC irradiancePsoDesc;
 
-	ZeroMemory(&irradiancePsoDesc, sizeof(D3D12_GRAPHICS_PIPELINE_STATE_DESC));
-	irradiancePsoDesc.InputLayout.pInputElementDescs = GDxInputLayout::DefaultLayout;
-	irradiancePsoDesc.InputLayout.NumElements = _countof(GDxInputLayout::DefaultLayout);
-	irradiancePsoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
-	irradiancePsoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
-	irradiancePsoDesc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
-	irradiancePsoDesc.SampleMask = UINT_MAX;
-	irradiancePsoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-	irradiancePsoDesc.NumRenderTargets = 1;
-	irradiancePsoDesc.RTVFormats[0] = DXGI_FORMAT_R32G32B32A32_FLOAT;
-	irradiancePsoDesc.SampleDesc.Count = 1;
-	irradiancePsoDesc.SampleDesc.Quality = 0;
-	irradiancePsoDesc.DSVFormat = mDepthStencilFormat;
+		ZeroMemory(&irradiancePsoDesc, sizeof(D3D12_GRAPHICS_PIPELINE_STATE_DESC));
+		irradiancePsoDesc.InputLayout.pInputElementDescs = GDxInputLayout::DefaultLayout;
+		irradiancePsoDesc.InputLayout.NumElements = _countof(GDxInputLayout::DefaultLayout);
+		irradiancePsoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+		irradiancePsoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+		irradiancePsoDesc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
+		irradiancePsoDesc.SampleMask = UINT_MAX;
+		irradiancePsoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+		irradiancePsoDesc.NumRenderTargets = 1;
+		irradiancePsoDesc.RTVFormats[0] = DXGI_FORMAT_R32G32B32A32_FLOAT;
+		irradiancePsoDesc.SampleDesc.Count = 1;
+		irradiancePsoDesc.SampleDesc.Quality = 0;
+		irradiancePsoDesc.DSVFormat = mDepthStencilFormat;
 
-	// The camera is inside the sky sphere, so just turn off culling.
-	irradiancePsoDesc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
+		// The camera is inside the sky sphere, so just turn off culling.
+		irradiancePsoDesc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
 
-	// Make sure the depth function is LESS_EQUAL and not just LESS.  
-	// Otherwise, the normalized depth values at z = 1 (NDC) will 
-	// fail the depth test if the depth buffer was cleared to 1.
-	irradiancePsoDesc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
-	irradiancePsoDesc.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
-	irradiancePsoDesc.pRootSignature = mRootSignatures["Sky"].Get();
-	irradiancePsoDesc.VS = GDxShaderManager::LoadShader(L"Shaders\\SkyVS.cso");
-	irradiancePsoDesc.PS = GDxShaderManager::LoadShader(L"Shaders\\IrradianceCubemapPS.cso");
-	ThrowIfFailed(md3dDevice->CreateGraphicsPipelineState(&irradiancePsoDesc, IID_PPV_ARGS(&mPSOs["Irradiance"])));
+		// Make sure the depth function is LESS_EQUAL and not just LESS.  
+		// Otherwise, the normalized depth values at z = 1 (NDC) will 
+		// fail the depth test if the depth buffer was cleared to 1.
+		irradiancePsoDesc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
+		irradiancePsoDesc.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
+		irradiancePsoDesc.pRootSignature = mRootSignatures["Sky"].Get();
+		irradiancePsoDesc.VS = GDxShaderManager::LoadShader(L"Shaders\\SkyVS.cso");
+		irradiancePsoDesc.PS = GDxShaderManager::LoadShader(L"Shaders\\IrradianceCubemapPS.cso");
+		ThrowIfFailed(md3dDevice->CreateGraphicsPipelineState(&irradiancePsoDesc, IID_PPV_ARGS(&mPSOs["Irradiance"])));
+	}
 
-	//
 	// PSO for prefilter pre-integration.
-	//
-	D3D12_GRAPHICS_PIPELINE_STATE_DESC prefilterPsoDesc;
+	{
+		D3D12_GRAPHICS_PIPELINE_STATE_DESC prefilterPsoDesc;
 
-	ZeroMemory(&prefilterPsoDesc, sizeof(D3D12_GRAPHICS_PIPELINE_STATE_DESC));
-	prefilterPsoDesc.InputLayout.pInputElementDescs = GDxInputLayout::DefaultLayout;
-	prefilterPsoDesc.InputLayout.NumElements = _countof(GDxInputLayout::DefaultLayout);
-	prefilterPsoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
-	prefilterPsoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
-	prefilterPsoDesc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
-	prefilterPsoDesc.SampleMask = UINT_MAX;
-	prefilterPsoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-	prefilterPsoDesc.NumRenderTargets = 1;
-	prefilterPsoDesc.RTVFormats[0] = DXGI_FORMAT_R32G32B32A32_FLOAT;
-	prefilterPsoDesc.SampleDesc.Count = 1;
-	prefilterPsoDesc.SampleDesc.Quality = 0;
-	prefilterPsoDesc.DSVFormat = mDepthStencilFormat;
+		ZeroMemory(&prefilterPsoDesc, sizeof(D3D12_GRAPHICS_PIPELINE_STATE_DESC));
+		prefilterPsoDesc.InputLayout.pInputElementDescs = GDxInputLayout::DefaultLayout;
+		prefilterPsoDesc.InputLayout.NumElements = _countof(GDxInputLayout::DefaultLayout);
+		prefilterPsoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+		prefilterPsoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+		prefilterPsoDesc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
+		prefilterPsoDesc.SampleMask = UINT_MAX;
+		prefilterPsoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+		prefilterPsoDesc.NumRenderTargets = 1;
+		prefilterPsoDesc.RTVFormats[0] = DXGI_FORMAT_R32G32B32A32_FLOAT;
+		prefilterPsoDesc.SampleDesc.Count = 1;
+		prefilterPsoDesc.SampleDesc.Quality = 0;
+		prefilterPsoDesc.DSVFormat = mDepthStencilFormat;
 
-	// The camera is inside the sky sphere, so just turn off culling.
-	prefilterPsoDesc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
+		// The camera is inside the sky sphere, so just turn off culling.
+		prefilterPsoDesc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
 
-	// Make sure the depth function is LESS_EQUAL and not just LESS.  
-	// Otherwise, the normalized depth values at z = 1 (NDC) will 
-	// fail the depth test if the depth buffer was cleared to 1.
-	prefilterPsoDesc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
-	prefilterPsoDesc.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
-	prefilterPsoDesc.pRootSignature = mRootSignatures["Sky"].Get();
-	prefilterPsoDesc.VS = GDxShaderManager::LoadShader(L"Shaders\\SkyVS.cso");
-	prefilterPsoDesc.PS = GDxShaderManager::LoadShader(L"Shaders\\PrefilterCubemapPS.cso");
-	ThrowIfFailed(md3dDevice->CreateGraphicsPipelineState(&prefilterPsoDesc, IID_PPV_ARGS(&mPSOs["Prefilter"])));
+		// Make sure the depth function is LESS_EQUAL and not just LESS.  
+		// Otherwise, the normalized depth values at z = 1 (NDC) will 
+		// fail the depth test if the depth buffer was cleared to 1.
+		prefilterPsoDesc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
+		prefilterPsoDesc.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
+		prefilterPsoDesc.pRootSignature = mRootSignatures["Sky"].Get();
+		prefilterPsoDesc.VS = GDxShaderManager::LoadShader(L"Shaders\\SkyVS.cso");
+		prefilterPsoDesc.PS = GDxShaderManager::LoadShader(L"Shaders\\PrefilterCubemapPS.cso");
+		ThrowIfFailed(md3dDevice->CreateGraphicsPipelineState(&prefilterPsoDesc, IID_PPV_ARGS(&mPSOs["Prefilter"])));
+	}
 
 }
 

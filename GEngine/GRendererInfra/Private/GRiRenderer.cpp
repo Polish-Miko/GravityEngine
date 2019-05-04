@@ -135,5 +135,20 @@ UINT GRiRenderer::GetPrefilterLevel()
 	return mPrefilterLevels;
 }
 
+UINT GRiRenderer::GetFrameCount()
+{
+	return mFrameCount;
+}
+
+void GRiRenderer::SetFrameCount(UINT count)
+{
+	mFrameCount = count;
+}
+
+void GRiRenderer::IncreaseFrameCount()
+{
+	mFrameCount++;
+}
+
 
 

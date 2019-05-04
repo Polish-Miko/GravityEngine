@@ -834,6 +834,7 @@ void GCore::LoadCameras()
 
 void GCore::RecordPrevFrame(const GGiGameTimer* gt)
 {
+	mRenderer->IncreaseFrameCount();
 	GGiFloat4x4* prevVP = &(*(mCamera->GetView()) * (*mCamera->GetProj()));
 	mCamera->SetPrevViewProj(prevVP);
 	mCamera->SetPrevPosition(mCamera->GetPosition());

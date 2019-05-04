@@ -9,7 +9,7 @@ struct VertexToPixel
 //Light Render Results
 //Texture2D gDirectLight			: register(t0);
 //Texture2D gAmbientLight			: register(t1);
-Texture2D gLightPass				: register(t0);
+Texture2D gPpInput					: register(t0);
 //Texture2D gSkyPass				: register(t1);
 
 SamplerState			basicSampler	: register(s0);
@@ -18,26 +18,16 @@ SamplerComparisonState	shadowSampler	: register(s1);
 
 float4 main(VertexToPixel pIn) : SV_TARGET
 {
-	/*
-	float3 direct = gDirectLight.Sample(basicSampler, pIn.uv).rgb;
-	float3 ambient = gAmbientLight.Sample(basicSampler, pIn.uv).rgb;
 
-	float directIntensity = 1.0f;
-	float ambientIntensity = 1.0f;
-	float3 totalColor = direct * directIntensity + ambient * ambientIntensity;
-	*/
+	float3 pp = gPpInput.Sample(basicSampler, pIn.uv).rgb;
 
-	float3 light = gLightPass.Sample(basicSampler, pIn.uv).rgb;
-	//float3 sky = gSkyPass.Sample(basicSampler, pIn.uv).rgb;
+	//return float4(pp, 1.0f);
 
-	//sky = sky / (sky + float3(1.f, 1.f, 1.f));
-	//sky = saturate(sky);
-
-	light = light / (light + float3(1.f, 1.f, 1.f));
-	light = saturate(light);
+	float3 toneMap = pp / (pp + float3(1.f, 1.f, 1.f));
+	toneMap = saturate(toneMap);
 
 	//float3 totalColor = light + sky;
-	float3 totalColor = light;
+	float3 totalColor = toneMap;
 
 	float3 gammaCorrect = lerp(totalColor, pow(totalColor, 1.0 / 2.2), 1.0f);
 	return float4(gammaCorrect, 1.0f);
