@@ -15,7 +15,9 @@ using namespace DirectX;
 using namespace DirectX::PackedVector;
 
 // Win32 message handler
+#ifdef USE_IMGUI
 extern LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+#endif
 
 class GCore
 {

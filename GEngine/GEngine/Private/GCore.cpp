@@ -29,7 +29,9 @@ GCore::GCore()
 
 GCore::~GCore()
 {
+#ifdef USE_IMGUI
 	mImgui->ShutDown();
+#endif
 }
 
 GCore& GCore::GetCore()
@@ -166,14 +168,19 @@ void GCore::Update()
 {
 	OnKeyboardInput(mTimer.get());
 
+#ifdef USE_IMGUI
 	UpdateGui(mTimer.get());
+#endif
 
 	mRenderer->Update(mTimer.get());
 }
 
 void GCore::MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
+
+#ifdef USE_IMGUI
 	ImGui_ImplWin32_WndProcHandler(hwnd, msg, wParam, lParam);
+#endif
 
 	switch (msg)
 	{
@@ -348,7 +355,11 @@ void GCore::OnMouseDown(WPARAM btnState, int x, int y)
 
 	SetCapture(mRenderer->MainWnd());
 
+#ifdef USE_IMGUI
 	if ((btnState & MK_LBUTTON) != 0 && !ImGuizmo::IsOver())
+#else
+	if ((btnState & MK_LBUTTON) != 0)
+#endif
 	{
 		Pick(x, y);
 	}

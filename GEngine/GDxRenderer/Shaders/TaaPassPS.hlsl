@@ -3,10 +3,10 @@
 #include "MainPassCB.hlsli"
 #include "HaltonSequence.hlsli"
 
+//#define ANTI_FLICKERING
 
-static const float VarianceClipGamma = 1.00f;
-
-static const int SampleRadius = 1;
+static const float VarianceClipGamma = 1.0f;
+static const float ExposureScale = 10;
 
 
 struct VertexToPixel
@@ -53,6 +53,34 @@ float3 YCoCgR2RGB(float3 YCoCgRColor)
 	return rgbColor;
 }
 
+float Luminance(in float3 color)
+{
+	return dot(color, float3(0.25f, 0.50f, 0.25f));
+}
+
+float3 ToneMap(float3 color)
+{
+	return color / (1 + Luminance(color));
+}
+
+float3 UnToneMap(float3 color)
+{
+	return color / (1 - Luminance(color));
+}
+
+// Faster but less accurate luma computation. 
+// Luma includes a scaling by 4.
+float Luma4(float3 Color)
+{
+	return (Color.g * 2.0) + (Color.r + Color.b);
+}
+
+// Optimized HDR weighting function.
+float HdrWeight4(float3 Color, float Exposure)
+{
+	return rcp(Luma4(Color) * Exposure + 4.0);
+}
+
 float3 ClipAABB(float3 aabbMin, float3 aabbMax, float3 prevSample, float3 avg)
 {
 #if 1
@@ -94,11 +122,6 @@ float3 ClipAABB(float3 aabbMin, float3 aabbMax, float3 prevSample, float3 avg)
 #endif
 }
 
-float Luminance(in float3 color)
-{
-	return dot(color, float3(0.299f, 0.587f, 0.114f));
-}
-
 PixelOutput main(VertexToPixel pIn)// : SV_TARGET
 {
 
@@ -109,12 +132,16 @@ PixelOutput main(VertexToPixel pIn)// : SV_TARGET
 		Halton_2_3[subsampIndex].x * gInvRenderTargetSize.x * JitterDistance,
 		Halton_2_3[subsampIndex].y * gInvRenderTargetSize.y * JitterDistance
 		) / 2;
-	float2 JitteredUV = pIn.uv + Jitter;
+	float2 JitteredUV = pIn.uv - Jitter;
 
 	float2 velocity = gVelocityBuffer.Sample(basicSampler, JitteredUV).rg;
 
 	float3 currColor = gInputTexture.Sample(basicSampler, JitteredUV).rgb;
+	currColor = ToneMap(currColor);
+	currColor = RGB2YCoCgR(currColor);
 	float3 prevColor = gHistoryTexture.Sample(basicSampler, pIn.uv - velocity).rgb;
+	prevColor = ToneMap(prevColor);
+	prevColor = RGB2YCoCgR(prevColor);
 
 	if (gFrameCount == 0)
 	{
@@ -125,30 +152,39 @@ PixelOutput main(VertexToPixel pIn)// : SV_TARGET
 
 	// Sample neighborhoods.
 
-	uint N = 0;
-	float3 colorMin = float3(9999999.0f, 9999999.0f, 9999999.0f);
-	float3 colorMax = float3(-99999999.0f, -99999999.0f, -99999999.0f);
+	uint N = 9;
+	float TotalWeight = 0.0f;
+	float3 sum = 0.0f;
 	float3 m1 = 0.0f;
 	float3 m2 = 0.0f;
+	float3 neighborMin = float3(9999999.0f, 9999999.0f, 9999999.0f);
+	float3 neighborMax = float3(-99999999.0f, -99999999.0f, -99999999.0f);
+	float3 neighborhood[9];
+	float neighborhoodSampWeight[9];
 
-	for (int y = -SampleRadius; y <= SampleRadius; ++y)
+	for (int y = -1; y <= 1; ++y)
 	{
-		for (int x = -SampleRadius; x <= SampleRadius; ++x)
+		for (int x = -1; x <= 1; ++x)
 		{
+			uint i = (y + 1) * 3 + x + 1;
 			float2 sampleOffset = float2(x, y) * gInvRenderTargetSize;
 			float2 sampleUV = JitteredUV + sampleOffset;
 			sampleUV = saturate(sampleUV);
 
 			float3 NeighborhoodSamp = gInputTexture.Sample(basicSampler, sampleUV).rgb;
 			NeighborhoodSamp = max(NeighborhoodSamp, 0.0f);
-			//NeighborhoodSamp = RGB2YCoCgR(NeighborhoodSamp);//remove?
+			NeighborhoodSamp = ToneMap(NeighborhoodSamp);
+			NeighborhoodSamp = RGB2YCoCgR(NeighborhoodSamp);
 
-			colorMin = min(colorMin, NeighborhoodSamp);
-			colorMax = max(colorMax, NeighborhoodSamp);
+			neighborhood[i] = NeighborhoodSamp;
+			neighborhoodSampWeight[i] = HdrWeight4(NeighborhoodSamp, ExposureScale);
+			neighborMin = min(neighborMin, NeighborhoodSamp);
+			neighborMax = max(neighborMax, NeighborhoodSamp);
 
 			m1 += NeighborhoodSamp;
 			m2 += NeighborhoodSamp * NeighborhoodSamp;
-			N += 1;
+			TotalWeight += neighborhoodSampWeight[i];
+			sum += neighborhood[i] * neighborhoodSampWeight[i];
 		}
 	}
 
@@ -157,18 +193,44 @@ PixelOutput main(VertexToPixel pIn)// : SV_TARGET
 	float3 sigma = sqrt(abs(m2 / N - mu * mu));
 	float3 minc = mu - VarianceClipGamma * sigma;
 	float3 maxc = mu + VarianceClipGamma * sigma;
+	float3 Filtered = sum / TotalWeight;
+	minc = min(minc, Filtered);
+	maxc = max(maxc, Filtered);
 	//prevColor = ClipAABB(colorMin, colorMax, prevColor, (colorMin + colorMax) / 2);
 	prevColor = ClipAABB(minc, maxc, prevColor, mu);
 	//prevColor = YCoCgR2RGB(prevColor);
 
-	float3 weightA = float3(0.1f, 0.1f, 0.1f);
-	float3 weightB = float3(1.0f, 1.0f, 1.0f) - weightA;
+#ifndef ANTI_FLICKERING
+	float weightCurr = 0.1f;
+	float weightPrev = 1.0f - weightCurr;
+#else
+	// Anti-flickering
+	float weightCurrMin = 0.05f;
+	float weightCurrMax = 0.12f;
 
-	//weightA *= 1.0f / (1.0f + Luminance(currColor));
-	//weightB *= 1.0f / (1.0f + Luminance(prevColor));
+	float LumaMin = Luminance(neighborMin);
+	float LumaMax = Luminance(neighborMax);
+	float LumaHistory = Luminance(prevColor);
 
-	//float3 color = 0.05 * light + 0.95 * prevColor;
-	float3 color = (currColor * weightA + prevColor * weightB) / (weightA + weightB);
+	float WeightCurrBlend = 1.0f;
+
+	float DistToClamp = 2 * abs(min(LumaHistory - LumaMin, LumaMax - LumaHistory) / (LumaMax - LumaMin));
+	WeightCurrBlend *= lerp(0, 1, saturate(4 * DistToClamp));
+	//BlendFinal += 0.8 * saturate(0.02 * LumaHistory / abs(Filtered.x - LumaHistory));
+	//BlendFinal *= (LumaMin * InExposureScale + 0.5) / (LumaMax * InExposureScale + 0.5);
+
+	float weightCurr = lerp(weightCurrMin, weightCurrMax, WeightCurrBlend);
+	float weightPrev = 1.0f - weightCurr;
+#endif
+
+	//weightCurr *= 1.0f / (1.0f + Luminance(currColor));
+	//weightPrev *= 1.0f / (1.0f + Luminance(prevColor));
+
+	float RcpWeight = rcp(weightCurr + weightPrev);
+	float3 color = (currColor * weightCurr + prevColor * weightPrev) * RcpWeight;
+
+	color = YCoCgR2RGB(color);
+	color = UnToneMap(color);
 
 	output.color = float4(color, 1.0f);
 	output.history = float4(color, 1.0f);

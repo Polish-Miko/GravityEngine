@@ -128,7 +128,32 @@ void GDxRenderer::Initialize()
 	BuildFrameResources();
 	BuildPSOs();
 
+	/*
+	ThrowIfFailed(mCommandList->Close());
+	ID3D12CommandList* cmdsLists2[] = { mCommandList.Get() };
+	mCommandQueue->ExecuteCommandLists(_countof(cmdsLists2), cmdsLists2);
+	*/
+
+	// Wait until initialization is complete.
+	FlushCommandQueue();
+
+#ifdef USE_IMGUI
 	pImgui->Initialize(MainWnd(), md3dDevice.Get(), NUM_FRAME_RESOURCES, mSrvDescriptorHeap.Get());
+#endif
+
+	/*
+	mCurrFrameResource = mFrameResources[0].get();
+
+	auto cmdListAlloc = mCurrFrameResource->CmdListAlloc;
+
+	// Reuse the memory associated with command recording.
+	// We can only reset when the associated command lists have finished execution on the GPU.
+	ThrowIfFailed(cmdListAlloc->Reset());
+
+	// A command list can be reset after it has been added to the command queue via ExecuteCommandList.
+	// Reusing the command list reuses memory.
+	ThrowIfFailed(mCommandList->Reset(cmdListAlloc.Get(), nullptr));
+	*/
 
 	CubemapPreIntegration();
 
@@ -139,6 +164,8 @@ void GDxRenderer::Initialize()
 
 	// Wait until initialization is complete.
 	FlushCommandQueue();
+	HRESULT hr = md3dDevice->GetDeviceRemovedReason();
+	hr = hr;
 }
 
 void GDxRenderer::Draw(const GGiGameTimer* gt)
@@ -442,7 +469,9 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 
 	// Immediate Mode GUI Pass
 	{
+#ifdef USE_IMGUI
 		pImgui->Render(mCommandList.Get());
+#endif
 	}
 
 	// Indicate a state transition on the resource usage.
@@ -1959,16 +1988,15 @@ void GDxRenderer::BuildFrameResources()
 		mFrameResources.push_back(std::make_unique<GDxFrameResource>(md3dDevice.Get(),
 			2, MAX_SCENE_OBJECT_NUM, MAX_MATERIAL_NUM));//(UINT)pSceneObjects.size(), (UINT)pMaterials.size()));
 	}
+
+	for (auto i = 0u; i < (6 * mPrefilterLevels); i++)
+	{
+		PreIntegrationPassCbs.push_back(std::make_unique<GDxUploadBuffer<SkyPassConstants>>(md3dDevice.Get(), 1, true));
+	}
 }
 
 void GDxRenderer::CubemapPreIntegration()
 {
-	for (auto i = 0u; i < (6 * mPrefilterLevels); i++)
-	{
-
-		PreIntegrationPassCbs.push_back(std::make_unique<GDxUploadBuffer<SkyPassConstants>>(md3dDevice.Get(), 1, true));
-	}
-
 	ID3D12DescriptorHeap* descriptorHeaps[] = { mSrvDescriptorHeap.Get() };
 	mCommandList->SetDescriptorHeaps(_countof(descriptorHeaps), descriptorHeaps);
 
@@ -1983,9 +2011,6 @@ void GDxRenderer::CubemapPreIntegration()
 	mCommandList->SetGraphicsRootSignature(mRootSignatures["Sky"].Get());
 
 	mCommandList->SetPipelineState(mPSOs["Irradiance"].Get());
-
-	mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mCubeRtvs["Irradiance"]->mResource.Get(),
-		D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_RENDER_TARGET));
 
 	// Load object CB.
 	mCurrFrameResource = mFrameResources[0].get();
@@ -2007,8 +2032,13 @@ void GDxRenderer::CubemapPreIntegration()
 
 		ObjectConstants objConstants;
 		XMStoreFloat4x4(&objConstants.World, XMMatrixTranspose(world));
+		XMStoreFloat4x4(&objConstants.PrevWorld, XMMatrixTranspose(world));
+		XMStoreFloat4x4(&objConstants.InvTransWorld, XMMatrixTranspose(world));
 		XMStoreFloat4x4(&objConstants.TexTransform, XMMatrixTranspose(texTransform));
 		objConstants.MaterialIndex = e.second->GetMaterial()->MatIndex;
+		objConstants.ObjPad0 = 0;
+		objConstants.ObjPad1 = 0;
+		objConstants.ObjPad2 = 0;
 
 		currObjectCB->CopyData(e.second->GetObjIndex(), objConstants);
 	}
@@ -2027,8 +2057,11 @@ void GDxRenderer::CubemapPreIntegration()
 
 			dxVP->Transpose();
 			mSkyPassCB.ViewProj = dxVP->GetValue();
+			mSkyPassCB.PrevViewProj = dxVP->GetValue();
+			mSkyPassCB.pad1 = 0.0f;
 			auto eyePos = pCamera->GetPosition();
 			mSkyPassCB.EyePosW = DirectX::XMFLOAT3(eyePos[0], eyePos[1], eyePos[2]);
+			mSkyPassCB.PrevPos = DirectX::XMFLOAT3(eyePos[0], eyePos[1], eyePos[2]);
 			if (i == 0)
 			{
 				mSkyPassCB.roughness = 0.01f;

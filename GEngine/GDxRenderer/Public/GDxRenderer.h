@@ -4,6 +4,7 @@
 
 #pragma once
 
+#define USE_IMGUI
 
 #if defined(DEBUG) || defined(_DEBUG)
 #define _CRTDBG_MAP_ALLOC
