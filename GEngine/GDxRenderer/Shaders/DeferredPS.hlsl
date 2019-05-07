@@ -44,7 +44,7 @@ PixelOutput main(VertexOutput input)// : SV_TARGET
 	uint diffuseMapIndex = matData.TextureIndex[0];
 	uint normalMapIndex = matData.TextureIndex[1];
 	uint OrmMapIndex = matData.TextureIndex[2];
- 
+
 	float3 albedoFromTexture = gTextureMaps[diffuseMapIndex].Sample(Sampler, input.uv).rgb;
 	float3 normalFromTexture = gTextureMaps[normalMapIndex].Sample(Sampler, input.uv).rgb;
 	float3 ormFromTexture = gTextureMaps[OrmMapIndex].Sample(Sampler, input.uv).rgb;

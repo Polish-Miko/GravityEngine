@@ -2,7 +2,7 @@
 <!DOCTYPE boost_serialization>
 <boost_serialization signature="serialization::archive" version="17">
 <Project class_id="0" tracking_level="0" version="0">
-	<mSkyCubemapUniqueName>Content\Textures\Cubemap\Cubemap_DallasW.dds</mSkyCubemapUniqueName>
+	<mSkyCubemapUniqueName>Resource\Textures\GE_Default_Cubemap.dds</mSkyCubemapUniqueName>
 	<mTextureInfo class_id="1" tracking_level="0" version="0">
 		<count>76</count>
 		<item_version>0</item_version>
@@ -307,7 +307,7 @@
 			<bSrgb>0</bSrgb>
 		</item>
 		<item>
-			<UniqueFileName>Resource\Textures\GE_Default_Cubemap.dds</UniqueFileName>
+			<UniqueFileName>Content\Textures\Cubemap\Cubemap_DallasW.dds</UniqueFileName>
 			<bSrgb>1</bSrgb>
 		</item>
 	</mTextureInfo>
@@ -619,7 +619,7 @@
 			<MeshUniqueName>Sphere</MeshUniqueName>
 			<Location>
 				<count>3</count>
-				<item>5.319328690e+01</item>
+				<item>-5.822930145e+01</item>
 				<item>0.000000000e+00</item>
 				<item>-5.367667770e+01</item>
 			</Location>

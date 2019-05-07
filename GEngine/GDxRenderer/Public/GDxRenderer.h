@@ -205,6 +205,7 @@ protected:
 	UINT mLightPassSrvIndex = 0;
 	UINT mSkyPassSrvIndex = 0;
 	UINT mTaaPassSrvIndex = 0;
+	UINT mMotionBlurSrvIndex = 0;
 	UINT mIblIndex = 0;
 
 	UINT mTaaHistoryIndex = 0;

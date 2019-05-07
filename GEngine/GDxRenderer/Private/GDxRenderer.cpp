@@ -462,6 +462,43 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ));
 	}
 
+	// Motion Blur Pass
+	{
+		mCommandList->RSSetViewports(1, &(mRtvHeaps["MotionBlurPass"]->mRtv[0]->mViewport));
+		mCommandList->RSSetScissorRects(1, &(mRtvHeaps["MotionBlurPass"]->mRtv[0]->mScissorRect));
+
+		mCommandList->SetGraphicsRootSignature(mRootSignatures["MotionBlurPass"].Get());
+
+		mCommandList->SetPipelineState(mPSOs["MotionBlurPass"].Get());
+
+		auto passCB = mCurrFrameResource->PassCB->Resource();
+		mCommandList->SetGraphicsRootConstantBufferView(0, passCB->GetGPUVirtualAddress());
+
+		mCommandList->SetGraphicsRootDescriptorTable(1, mRtvHeaps["TaaPass"]->GetSrvGpu(2));
+
+		mCommandList->SetGraphicsRootDescriptorTable(2, mRtvHeaps["GBuffer"]->GetSrvGpu(mVelocityBufferSrvIndex - mGBufferSrvIndex));
+
+		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["MotionBlurPass"]->mRtv[0]->mResource.Get(),
+			D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_RENDER_TARGET));
+
+		// Clear RT.
+		DirectX::XMVECTORF32 motionBlurClearColor = { mRtvHeaps["MotionBlurPass"]->mRtv[0]->mProperties.mClearColor[0],
+		mRtvHeaps["MotionBlurPass"]->mRtv[0]->mProperties.mClearColor[1],
+		mRtvHeaps["MotionBlurPass"]->mRtv[0]->mProperties.mClearColor[2],
+		mRtvHeaps["MotionBlurPass"]->mRtv[0]->mProperties.mClearColor[3]
+		};
+
+		mCommandList->ClearRenderTargetView(mRtvHeaps["MotionBlurPass"]->mRtvHeap.handleCPU(0), motionBlurClearColor, 0, nullptr);
+
+		mCommandList->OMSetRenderTargets(1, &(mRtvHeaps["MotionBlurPass"]->mRtvHeap.handleCPU(0)), false, &DepthStencilView());
+
+		// For each render item...
+		DrawSceneObjects(mCommandList.Get(), RenderLayer::ScreenQuad, false);
+
+		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["MotionBlurPass"]->mRtv[0]->mResource.Get(),
+			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ));
+	}
+
 	// Post Process Pass
 	{
 		mCommandList->RSSetViewports(1, &mScreenViewport);
@@ -471,7 +508,7 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 
 		mCommandList->SetPipelineState(mPSOs["PostProcess"].Get());
 
-		mCommandList->SetGraphicsRootDescriptorTable(0, mRtvHeaps["TaaPass"]->GetSrvGpu(2));
+		mCommandList->SetGraphicsRootDescriptorTable(0, mRtvHeaps["MotionBlurPass"]->GetSrvGpu(0));
 		//mCommandList->SetGraphicsRootDescriptorTable(1, mRtvHeaps["SkyPass"]->GetSrvGpuStart());
 
 		// Specify the buffers we are going to render to.
@@ -1257,6 +1294,56 @@ void GDxRenderer::BuildRootSignature()
 			IID_PPV_ARGS(mRootSignatures["TaaPass"].GetAddressOf())));
 	}
 
+	// Motion blur pass signature
+	{
+		//Motion blur inputs
+		CD3DX12_DESCRIPTOR_RANGE rangeLight;
+		rangeLight.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
+		CD3DX12_DESCRIPTOR_RANGE rangeVelocity;
+		rangeVelocity.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1);
+
+		CD3DX12_ROOT_PARAMETER gTaaPassRootParameters[3];
+		gTaaPassRootParameters[0].InitAsConstantBufferView(1);
+		gTaaPassRootParameters[1].InitAsDescriptorTable(1, &rangeLight, D3D12_SHADER_VISIBILITY_ALL);
+		gTaaPassRootParameters[2].InitAsDescriptorTable(1, &rangeVelocity, D3D12_SHADER_VISIBILITY_ALL);
+
+		// A root signature is an array of root parameters.
+		CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(3, gTaaPassRootParameters,
+			0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+
+		CD3DX12_STATIC_SAMPLER_DESC StaticSamplers[2];
+		StaticSamplers[0].Init(0, D3D12_FILTER_COMPARISON_MIN_MAG_MIP_LINEAR,
+			D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
+			D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
+			D3D12_TEXTURE_ADDRESS_MODE_CLAMP
+		);
+		StaticSamplers[1].Init(1, D3D12_FILTER_COMPARISON_MIN_MAG_MIP_LINEAR,
+			D3D12_TEXTURE_ADDRESS_MODE_BORDER,
+			D3D12_TEXTURE_ADDRESS_MODE_BORDER,
+			D3D12_TEXTURE_ADDRESS_MODE_BORDER,
+			0.f, 16u, D3D12_COMPARISON_FUNC_LESS_EQUAL);
+		rootSigDesc.NumStaticSamplers = 2;
+		rootSigDesc.pStaticSamplers = StaticSamplers;
+
+		// create a root signature with a single slot which points to a descriptor range consisting of a single constant buffer
+		ComPtr<ID3DBlob> serializedRootSig = nullptr;
+		ComPtr<ID3DBlob> errorBlob = nullptr;
+		HRESULT hr = D3D12SerializeRootSignature(&rootSigDesc, D3D_ROOT_SIGNATURE_VERSION_1,
+			serializedRootSig.GetAddressOf(), errorBlob.GetAddressOf());
+
+		if (errorBlob != nullptr)
+		{
+			::OutputDebugStringA((char*)errorBlob->GetBufferPointer());
+		}
+		ThrowIfFailed(hr);
+
+		ThrowIfFailed(md3dDevice->CreateRootSignature(
+			0,
+			serializedRootSig->GetBufferPointer(),
+			serializedRootSig->GetBufferSize(),
+			IID_PPV_ARGS(mRootSignatures["MotionBlurPass"].GetAddressOf())));
+	}
+
 	// Post process signature
 	{
 		//G-Buffer inputs
@@ -1477,6 +1564,7 @@ void GDxRenderer::BuildDescriptorHeaps()
 		+ 5 //g-buffer
 		+ 1 //light pass
 		+ 3 //taa
+		+ 1 //motion blur
 		+ (2 + mPrefilterLevels);//IBL
 	srvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 	srvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
@@ -1504,7 +1592,7 @@ void GDxRenderer::BuildDescriptorHeaps()
 	skySrvDesc.Format = tex->Resource->GetDesc().Format;
 	md3dDevice->CreateShaderResourceView(tex->Resource.Get(), &skySrvDesc, GetCpuSrv(mSkyTexHeapIndex));
 
-	// Build RTV heap and SRV for GBuffers.
+	// Build RTV heap and SRV for depth pass.
 	{
 		mDepthSrvIndex = mSkyTexHeapIndex + 1;
 
@@ -1594,7 +1682,7 @@ void GDxRenderer::BuildDescriptorHeaps()
 		mRtvHeaps["LightPass"] = std::move(lightPassRtvHeap);
 	}
 
-	// Build RTV heap and SRV for light pass.
+	// Build RTV heap and SRV for TAA pass.
 	{
 		mTaaPassSrvIndex = mLightPassSrvIndex + mRtvHeaps["LightPass"]->mRtvHeap.HeapDesc.NumDescriptors;
 
@@ -1625,19 +1713,17 @@ void GDxRenderer::BuildDescriptorHeaps()
 		mRtvHeaps["TaaPass"] = std::move(taaPassRtvHeap);
 	}
 
-	// Build RTV heap and SRV for sky pass.
-	/*
+	// Build RTV heap and SRV for motion blur pass.
 	{
-		mSkyPassSrvIndex = mLightPassSrvIndex + mRtvHeaps["LightPass"]->mRtvHeap.HeapDesc.NumDescriptors;
+		mMotionBlurSrvIndex = mTaaPassSrvIndex + mRtvHeaps["TaaPass"]->mRtvHeap.HeapDesc.NumDescriptors;
 
 		std::vector<DXGI_FORMAT> rtvFormats =
 		{
-			//DXGI_FORMAT_R32G32B32A32_FLOAT
-			DXGI_FORMAT_R8G8B8A8_UNORM// sky
+			DXGI_FORMAT_R32G32B32A32_FLOAT// Motion Blur Output
 		};
 		std::vector<std::vector<FLOAT>> rtvClearColor =
 		{
-			{ 0,0,0,0 }
+			{ 0,0,0,1 }
 		};
 		std::vector<GRtvProperties> propVec;
 		for (auto i = 0u; i < rtvFormats.size(); i++)
@@ -1650,14 +1736,13 @@ void GDxRenderer::BuildDescriptorHeaps()
 			prop.mClearColor[3] = rtvClearColor[i][3];
 			propVec.push_back(prop);
 		}
-		auto skyPassRtvHeap = std::make_unique<GDxRtvHeap>(md3dDevice.Get(), mClientWidth, mClientHeight, GetCpuSrv(mSkyPassSrvIndex), GetGpuSrv(mSkyPassSrvIndex), propVec);
-		mRtvHeaps["SkyPass"] = std::move(skyPassRtvHeap);
+		auto motionBlurPassRtvHeap = std::make_unique<GDxRtvHeap>(md3dDevice.Get(), mClientWidth, mClientHeight, GetCpuSrv(mMotionBlurSrvIndex), GetGpuSrv(mMotionBlurSrvIndex), propVec);
+		mRtvHeaps["MotionBlurPass"] = std::move(motionBlurPassRtvHeap);
 	}
-	*/
 
 	// Build cubemap SRV and RTVs for irradiance pre-integration.
 	{
-		mIblIndex = mTaaPassSrvIndex + mRtvHeaps["TaaPass"]->mRtvHeap.HeapDesc.NumDescriptors;
+		mIblIndex = mMotionBlurSrvIndex + mRtvHeaps["TaaPass"]->mRtvHeap.HeapDesc.NumDescriptors;
 
 		GRtvProperties prop;
 		prop.mRtvFormat = DXGI_FORMAT_R32G32B32A32_FLOAT;
@@ -1945,6 +2030,44 @@ void GDxRenderer::BuildPSOs()
 		descTaaPSO.SampleDesc.Count = 1;
 		descTaaPSO.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 		ThrowIfFailed(md3dDevice->CreateGraphicsPipelineState(&descTaaPSO, IID_PPV_ARGS(&mPSOs["TaaPass"])));
+	}
+
+	// PSO for motion blur pass.
+	{
+		D3D12_DEPTH_STENCIL_DESC motionBlurPassDSD;
+		motionBlurPassDSD.DepthEnable = true;
+		motionBlurPassDSD.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
+		motionBlurPassDSD.DepthFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+		motionBlurPassDSD.StencilEnable = false;
+		motionBlurPassDSD.StencilReadMask = 0xff;
+		motionBlurPassDSD.StencilWriteMask = 0x0;
+		motionBlurPassDSD.FrontFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
+		motionBlurPassDSD.FrontFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
+		motionBlurPassDSD.FrontFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
+		motionBlurPassDSD.FrontFace.StencilFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
+		motionBlurPassDSD.BackFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
+		motionBlurPassDSD.BackFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
+		motionBlurPassDSD.BackFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
+		motionBlurPassDSD.BackFace.StencilFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
+
+		D3D12_GRAPHICS_PIPELINE_STATE_DESC descMotionBlurPSO;
+		ZeroMemory(&descMotionBlurPSO, sizeof(descMotionBlurPSO));
+
+		descMotionBlurPSO.VS = GDxShaderManager::LoadShader(L"Shaders\\FullScreenVS.cso");
+		descMotionBlurPSO.PS = GDxShaderManager::LoadShader(L"Shaders\\MotionBlurPassPS.cso");
+		descMotionBlurPSO.pRootSignature = mRootSignatures["MotionBlurPass"].Get();
+		descMotionBlurPSO.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+		descMotionBlurPSO.DepthStencilState = motionBlurPassDSD;
+		//descMotionBlurPSO.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
+		descMotionBlurPSO.InputLayout.pInputElementDescs = GDxInputLayout::DefaultLayout;
+		descMotionBlurPSO.InputLayout.NumElements = _countof(GDxInputLayout::DefaultLayout);
+		descMotionBlurPSO.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+		descMotionBlurPSO.NumRenderTargets = 1;
+		descMotionBlurPSO.RTVFormats[0] = mRtvHeaps["MotionBlurPass"]->mRtv[0]->mProperties.mRtvFormat;//motion blur output
+		descMotionBlurPSO.SampleMask = UINT_MAX;
+		descMotionBlurPSO.SampleDesc.Count = 1;
+		descMotionBlurPSO.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+		ThrowIfFailed(md3dDevice->CreateGraphicsPipelineState(&descMotionBlurPSO, IID_PPV_ARGS(&mPSOs["MotionBlurPass"])));
 	}
 
 	// PSO for post process.
