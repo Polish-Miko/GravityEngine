@@ -225,6 +225,8 @@
     <FxCompile Include="Shaders\SkyVS.hlsl" />
     <FxCompile Include="Shaders\TaaPassPS.hlsl" />
     <FxCompile Include="Shaders\UnjitteredFullScreenVS.hlsl" />
+    <FxCompile Include="Shaders\DepthPassPS.hlsl" />
+    <FxCompile Include="Shaders\DepthPassVS.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Shaders\Lighting.hlsli" />

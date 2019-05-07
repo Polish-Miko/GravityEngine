@@ -25,11 +25,12 @@ struct PassConstants
 {
 	DirectX::XMFLOAT4X4 View = GDxMathHelper::Identity4x4();
 	DirectX::XMFLOAT4X4 InvView = GDxMathHelper::Identity4x4();
-	DirectX::XMFLOAT4X4 Proj = GDxMathHelper::Identity4x4();
-	DirectX::XMFLOAT4X4 InvProj = GDxMathHelper::Identity4x4();
-	DirectX::XMFLOAT4X4 ViewProj = GDxMathHelper::Identity4x4();
-	DirectX::XMFLOAT4X4 InvViewProj = GDxMathHelper::Identity4x4();
-	DirectX::XMFLOAT4X4 PrevViewProj = GDxMathHelper::Identity4x4();
+	DirectX::XMFLOAT4X4 Proj = GDxMathHelper::Identity4x4();//Jittered
+	DirectX::XMFLOAT4X4 InvProj = GDxMathHelper::Identity4x4();//Jittered
+	DirectX::XMFLOAT4X4 ViewProj = GDxMathHelper::Identity4x4();//Jittered
+	DirectX::XMFLOAT4X4 UnjitteredViewProj = GDxMathHelper::Identity4x4();//Unjittered
+	DirectX::XMFLOAT4X4 InvViewProj = GDxMathHelper::Identity4x4();//Jittered
+	DirectX::XMFLOAT4X4 PrevViewProj = GDxMathHelper::Identity4x4();//Unjittered
 	DirectX::XMFLOAT4X4 ViewProjTex = GDxMathHelper::Identity4x4();
 	DirectX::XMFLOAT4X4 ShadowTransform = GDxMathHelper::Identity4x4();
 	DirectX::XMFLOAT3 EyePosW = { 0.0f, 0.0f, 0.0f };
@@ -41,9 +42,8 @@ struct PassConstants
 	float TotalTime = 0.0f;
 	float DeltaTime = 0.0f;
 	UINT FrameCount = 0u;
+	DirectX::XMFLOAT2 Jitter = { 0.0f,0.0f };
 	UINT     Pad0;
-	UINT     Pad1;
-	UINT     Pad2;
 
 	DirectX::XMFLOAT4 AmbientLight = { 0.0f, 0.0f, 0.0f, 1.0f };
 };
@@ -61,6 +61,7 @@ struct SkyPassConstants
 {
 	DirectX::XMFLOAT4X4 ViewProj = GDxMathHelper::Identity4x4();
 	DirectX::XMFLOAT4X4 PrevViewProj = GDxMathHelper::Identity4x4();
+	DirectX::XMFLOAT4X4 UnjitteredViewProj = GDxMathHelper::Identity4x4();
 	DirectX::XMFLOAT3 PrevPos = { 0.0f, 0.0f, 0.0f };
 	float pad1 = 0.0f;
 	DirectX::XMFLOAT3 EyePosW = { 0.0f, 0.0f, 0.0f };

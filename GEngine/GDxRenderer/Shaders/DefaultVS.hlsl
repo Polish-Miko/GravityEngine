@@ -2,7 +2,7 @@
 #include "Material.hlsli"
 #include "ObjectCB.hlsli"
 #include "MainPassCB.hlsli"
-#include "HaltonSequence.hlsli"
+//#include "HaltonSequence.hlsli"
 
 struct Light
 {
@@ -36,6 +36,7 @@ struct VertexOutput
 };
 
 // Compute jittered view projection matrix.
+/*
 float4x4 GetJitteredViewProj()
 {
 	uint subsampIndex = gFrameCount % SAMPLE_COUNT;
@@ -48,6 +49,7 @@ float4x4 GetJitteredViewProj()
 
 	return jitteredViewProj;
 }
+*/
 
 float2 ProjectionConstants(float gNearZ, float gFarZ)
 {
@@ -71,14 +73,14 @@ VertexOutput main(VertexInput input)
 
 	MaterialData matData = gMaterialData[gMaterialIndex];
 
-	float4x4 jitteredViewProj = GetJitteredViewProj();
+	//float4x4 jitteredViewProj = GetJitteredViewProj();
 
 	float4 worldPos = mul(float4(input.pos, 1.0f), gWorld);
 	float4 prevWorldPos = mul(float4(input.pos, 1.0f), gPrevWorld);
-	output.curPos = mul(worldPos, gViewProj);
+	output.curPos = mul(worldPos, gUnjitteredViewProj);
 	output.prevPos = mul(prevWorldPos, gPrevViewProj);
 	float4 texC = float4(input.uv, 0.0f, 1.0f);
-	output.pos = mul(worldPos, jitteredViewProj);
+	output.pos = mul(worldPos, gViewProj);
 	output.uv = mul(texC, matData.MatTransform).xy;
 	output.normal = normalize(mul(input.normal, (float3x3)gInvTransWorld));
 	output.tangent = normalize(mul(input.tangent, (float3x3)gInvTransWorld));

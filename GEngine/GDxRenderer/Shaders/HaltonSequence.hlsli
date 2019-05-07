@@ -6,7 +6,7 @@
 
 #define SAMPLE_COUNT 8
 
-static const float JitterDistance = 0.75f;
+static const float JitterDistance = 1.0f;
 
 // 8x TAA
 static const float2 Halton_2_3[8] =

@@ -28,6 +28,35 @@ using Microsoft::WRL::ComPtr;
 using namespace DirectX;
 using namespace DirectX::PackedVector;
 
+#define TAA_SAMPLE_COUNT 8;
+#define TAA_JITTER_DISTANCE 1.0;
+
+// 8x TAA
+static const double Halton_2[8] =
+{
+	0.0,
+	-1.0 / 2.0,
+	1.0 / 2.0,
+	-3.0 / 4.0,
+	1.0 / 4.0,
+	-1.0 / 4.0,
+	3.0 / 4.0,
+	-7.0 / 8.0
+};
+
+// 8x TAA
+static const double Halton_3[8] =
+{
+	-1.0 / 3.0,
+	1.0 / 3.0,
+	-7.0 / 9.0,
+	-1.0 / 9.0,
+	5.0 / 9.0,
+	-5.0 / 9.0,
+	1.0 / 9.0,
+	7.0 / 9.0
+};
+
 class GDxRenderer : public GRiRenderer
 {
 
@@ -170,6 +199,7 @@ protected:
 	UINT mNullTexSrvIndex1 = 0;
 	UINT mNullTexSrvIndex2 = 0;
 
+	UINT mDepthSrvIndex = 0;
 	UINT mVelocityBufferSrvIndex = 0;
 	UINT mGBufferSrvIndex = 0;
 	UINT mLightPassSrvIndex = 0;

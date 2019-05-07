@@ -647,7 +647,7 @@ void GCore::LoadMeshes()
 	mMeshes[geo->UniqueName] = std::move(temp4);
 
 	meshData.clear();
-	GRiMeshData quadMeshData = geoGen->CreateQuad(0.0f, 1.0f, 1.0f, 1.0f, 0.0f);
+	GRiMeshData quadMeshData = geoGen->CreateQuad(0.0f, 0.0f, 1.0f, 1.0f, 0.0f);
 	meshData.push_back(quadMeshData);
 	geo = pRendererFactory->CreateMesh(meshData);
 	geo->UniqueName = L"Quad";

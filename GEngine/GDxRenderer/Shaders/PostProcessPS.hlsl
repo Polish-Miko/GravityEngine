@@ -1,4 +1,5 @@
 
+//#define TEST
 
 struct VertexToPixel
 {
@@ -21,15 +22,17 @@ float4 main(VertexToPixel pIn) : SV_TARGET
 
 	float3 pp = gPpInput.Sample(basicSampler, pIn.uv).rgb;
 
-	//return float4(pp, 1.0f);
-
+#ifdef TEST
+	return float4(pp, 1.0f);
+#else
 	float3 toneMap = pp / (pp + float3(1.f, 1.f, 1.f));
 	toneMap = saturate(toneMap);
 
-	//float3 totalColor = light + sky;
 	float3 totalColor = toneMap;
 
 	float3 gammaCorrect = lerp(totalColor, pow(totalColor, 1.0 / 2.2), 1.0f);
 	return float4(gammaCorrect, 1.0f);
+#endif
+
 }
 

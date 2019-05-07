@@ -1,7 +1,6 @@
 //#define POINT_INTENSITY 0.5
 #include "Lighting.hlsli"
 
-
 struct VertexToPixel
 {
 	float4 position		: SV_POSITION;
@@ -36,6 +35,9 @@ float4 main(VertexToPixel pIn) : SV_TARGET
 		shadowAmount = PointShadow(worldPos - pointLight[pointLightIndex].Position);
 	}
 	*/
+
+	//clamp roughness
+	roughness = max(ROUGHNESS_CLAMP, roughness);
 
 
 	float3 finalColor = 0.f;

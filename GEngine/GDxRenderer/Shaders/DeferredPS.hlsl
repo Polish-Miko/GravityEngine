@@ -44,7 +44,7 @@ PixelOutput main(VertexOutput input)// : SV_TARGET
 	uint diffuseMapIndex = matData.TextureIndex[0];
 	uint normalMapIndex = matData.TextureIndex[1];
 	uint OrmMapIndex = matData.TextureIndex[2];
-
+ 
 	float3 albedoFromTexture = gTextureMaps[diffuseMapIndex].Sample(Sampler, input.uv).rgb;
 	float3 normalFromTexture = gTextureMaps[normalMapIndex].Sample(Sampler, input.uv).rgb;
 	float3 ormFromTexture = gTextureMaps[OrmMapIndex].Sample(Sampler, input.uv).rgb;
@@ -57,10 +57,10 @@ PixelOutput main(VertexOutput input)// : SV_TARGET
 
 	float4 prevPos = input.prevPos;
 	prevPos = prevPos / prevPos.w;
-	prevPos.xy = (prevPos.xy + float2(1.0f, 1.0f)) / float2(2.0f, 2.0f);
+	prevPos.xy = prevPos.xy / float2(2.0f, -2.0f) + float2(0.5f, 0.5f);//negate Y because world coord and tex coord have different Y axis.
 	float4 curPos = input.curPos;
 	curPos = curPos / curPos.w;
-	curPos.xy = (curPos.xy + float2(1.0f, 1.0f)) / float2(2.0f, 2.0f);
+	curPos.xy = curPos.xy / float2(2.0f, -2.0f) + float2(0.5f, 0.5f);//negate Y because world coord and tex coord have different Y axis.
 
 	float3 normal = calculateNormalFromMap(normalFromTexture, normalize(input.normal), input.tangent);
 	PixelOutput output;

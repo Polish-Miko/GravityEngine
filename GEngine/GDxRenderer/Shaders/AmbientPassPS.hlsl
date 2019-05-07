@@ -57,6 +57,9 @@ float4 main(VertexToPixel pIn) : SV_TARGET
 	float metal = gOrmTexture.Sample(basicSampler, pIn.uv).b;
 	float shadowAmount = 1.f;
 
+	//clamp roughness
+	roughness = max(ROUGHNESS_CLAMP, roughness);
+
 	float3 viewDir = normalize(cameraPosition - worldPos);
 	float3 prefilter = PrefilteredColor(viewDir, normal, roughness);
 	float2 brdf = BrdfLUT(normal, viewDir, roughness);

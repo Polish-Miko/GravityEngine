@@ -657,25 +657,25 @@ GRiMeshData GRiGeometryGenerator::CreateQuad(float x, float y, float w, float h,
 
 	// Position coordinates specified in NDC space.
 	meshData.Vertices[0] = GRiVertex(
-		x, y - h, depth,
+		x, y, depth,
 		0.0f, 0.0f, -1.0f,
 		1.0f, 0.0f, 0.0f,
 		0.0f, 1.0f);
 
 	meshData.Vertices[1] = GRiVertex(
-		x, y, depth,
+		x, y + h, depth,
 		0.0f, 0.0f, -1.0f,
 		1.0f, 0.0f, 0.0f,
 		0.0f, 0.0f);
 
 	meshData.Vertices[2] = GRiVertex(
-		x + w, y, depth,
+		x + w, y+h, depth,
 		0.0f, 0.0f, -1.0f,
 		1.0f, 0.0f, 0.0f,
 		1.0f, 0.0f);
 
 	meshData.Vertices[3] = GRiVertex(
-		x + w, y - h, depth,
+		x + w, y, depth,
 		0.0f, 0.0f, -1.0f,
 		1.0f, 0.0f, 0.0f,
 		1.0f, 1.0f);

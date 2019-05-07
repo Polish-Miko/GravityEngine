@@ -12,6 +12,7 @@ cbuffer cbPass : register(b1)
 	float4x4 gProj;
 	float4x4 gInvProj;
 	float4x4 gViewProj;
+	float4x4 gUnjitteredViewProj;
 	float4x4 gInvViewProj;
 	float4x4 gPrevViewProj;
 	float4x4 gViewProjTex;
@@ -25,9 +26,8 @@ cbuffer cbPass : register(b1)
 	float gTotalTime;
 	float gDeltaTime;
 	uint gFrameCount;
+	float2 gJitter;
 	uint gPad0;
-	uint gPad1;
-	uint gPad2;
 	float4 gAmbientLight;
 };
 
