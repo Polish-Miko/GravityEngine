@@ -42,7 +42,7 @@ to
 - [x] scene editing
   - [x] scene serialization
   - [x] manipulation gizmo
+- [x] Temporal AA
 - [ ] shadow
 - [ ] AO
-- [ ] AA
 - [ ] instancing/culling
