@@ -39,3 +39,11 @@ enum class RenderLayer : int
 	ScreenQuad,
 	Count
 };
+
+struct ProfileData
+{
+	std::string name;
+	float time;
+};
+
+

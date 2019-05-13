@@ -24,6 +24,8 @@ public:
 	virtual float AspectRatio() const;
 	HWND MainWnd() const;
 
+	int GetClientWidth();
+	int GetClientHeight();
 	void SetClientWidth(int width);
 	void SetClientHeight(int height);
 
@@ -62,6 +64,8 @@ public:
 	UINT GetFrameCount();
 	void SetFrameCount(UINT count);
 	void IncreaseFrameCount();
+
+	virtual std::vector<ProfileData> GetGpuProfiles() = 0;
 
 protected:
 

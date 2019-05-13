@@ -891,7 +891,20 @@ void GCore::UpdateGui(const GGiGameTimer* gt)
 			}
 		}
 	}
-	mImgui->SetGUIContent(bSelectionNotNull, view, proj, objLoc, objRot, objScale, mCameraSpeed);
+
+	mImgui->SetGUIContent(
+		bSelectionNotNull, 
+		view,
+		proj,
+		objLoc,
+		objRot,
+		objScale,
+		mCameraSpeed,
+		mRenderer->GetGpuProfiles(),
+		mRenderer->GetClientWidth(),
+		mRenderer->GetClientHeight()
+	);
+
 	bool bDirty = bSelectionNotNull && (objLoc[0] != prevLoc[0] || objLoc[1] != prevLoc[1] || objLoc[2] != prevLoc[2] ||
 		objRot[0] != prevRot[0] || objRot[1] != prevRot[1] || objRot[2] != prevRot[2] ||
 		objScale[0] != prevScale[0] || objScale[1] != prevScale[1] || objScale[2] != prevScale[2]

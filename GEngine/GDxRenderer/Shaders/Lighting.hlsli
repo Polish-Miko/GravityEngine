@@ -154,7 +154,7 @@ float3 AmbientPBR(float3 normal, float3 worldPos,
 	float3 kD = float3(1.0f, 1.0f, 1.0f) - kS;
 	kD *= (1.0f - metalness);
 
-	float3 specular = prefilteredColor * (kS * brdf.x + brdf.y);
+	float3 specular = prefilteredColor * (kS * brdf.x + float3(brdf.y, brdf.y, brdf.y));
 	float3 diffuse = irradiance * albedo;
 
 	float3 ambient = (kD * diffuse + specular) * ao;

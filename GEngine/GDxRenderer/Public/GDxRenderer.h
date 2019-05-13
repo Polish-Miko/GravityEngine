@@ -18,6 +18,7 @@
 #include "GDxCubeRtv.h"
 #include "GDxRtvHeap.h"
 #include "GDxImgui.h"
+#include "GDxGpuProfiler.h"
 
 // Link necessary d3d12 libraries.
 #pragma comment(lib,"d3dcompiler.lib")
@@ -30,6 +31,8 @@ using namespace DirectX::PackedVector;
 
 #define TAA_SAMPLE_COUNT 8;
 #define TAA_JITTER_DISTANCE 1.0;
+
+#define SKY_CUBEMAP_SIZE 1024
 
 // 8x TAA
 static const double Halton_2[8] =
@@ -87,6 +90,8 @@ public:
 
 	virtual GRiSceneObject* SelectSceneObject(int sx, int sy) override;
 
+	virtual std::vector<ProfileData> GetGpuProfiles() override;
+
 protected:
 
 	virtual void CreateRtvAndDsvDescriptorHeaps();
@@ -102,6 +107,7 @@ protected:
 	void UpdateSkyPassCB(const GGiGameTimer* gt);
 	void UpdateLightCB(const GGiGameTimer* gt);
 
+	void InitializeGpuProfiler();
 	void BuildRootSignature();
 	void BuildDescriptorHeaps();
 	void BuildPSOs();

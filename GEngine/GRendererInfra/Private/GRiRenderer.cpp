@@ -150,5 +150,15 @@ void GRiRenderer::IncreaseFrameCount()
 	mFrameCount++;
 }
 
+int GRiRenderer::GetClientWidth()
+{
+	return mClientWidth;
+}
+
+int GRiRenderer::GetClientHeight()
+{
+	return mClientHeight;
+}
+
 
 

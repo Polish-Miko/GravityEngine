@@ -69,6 +69,5 @@ float4 main(VertexToPixel pIn) : SV_TARGET
 		cameraPosition, roughness, metal, albedo,
 		irradiance, prefilter, brdf, shadowAmount);
 
-
 	return float4(finalColor, 1.0f);
 }

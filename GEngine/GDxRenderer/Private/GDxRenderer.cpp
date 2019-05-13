@@ -123,6 +123,7 @@ void GDxRenderer::PreInitialize(HWND OutputWindow, double width, double height)
 
 void GDxRenderer::Initialize()
 {
+	InitializeGpuProfiler();
 	BuildDescriptorHeaps();
 	BuildRootSignature();
 	BuildFrameResources();
@@ -183,6 +184,8 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 	ID3D12DescriptorHeap* descriptorHeaps[] = { mSrvDescriptorHeap.Get() };
 	mCommandList->SetDescriptorHeaps(_countof(descriptorHeaps), descriptorHeaps);
 
+	GDxGpuProfiler::GetGpuProfiler().BeginFrame();
+
 	auto matBuffer = mCurrFrameResource->MaterialBuffer->Resource();
 	// Indicate a state transition on the resource usage.
 	mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(),
@@ -191,8 +194,10 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 	// Clear the back buffer.
 	mCommandList->ClearRenderTargetView(CurrentBackBufferView(), Colors::LightSteelBlue, 0, nullptr);
 
-	// Depth Pass
+	// Depth Prepass
 	{
+		GDxGpuProfiler::GetGpuProfiler().StartGpuProfile("Depth Prepass");
+
 		mCommandList->RSSetViewports(1, &(mRtvHeaps["Depth"]->mRtv[0]->mViewport));
 		mCommandList->RSSetScissorRects(1, &(mRtvHeaps["Depth"]->mRtv[0]->mScissorRect));
 
@@ -228,10 +233,14 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 
 		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["Depth"]->mRtv[0]->mResource.Get(),
 			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ));
+
+		GDxGpuProfiler::GetGpuProfiler().EndGpuProfile();
 	}
 
 	// G-Buffer Pass
 	{
+		GDxGpuProfiler::GetGpuProfiler().StartGpuProfile("G-Buffer Pass");
+
 		mCommandList->RSSetViewports(1, &(mRtvHeaps["GBuffer"]->mRtv[0]->mViewport));
 		mCommandList->RSSetScissorRects(1, &(mRtvHeaps["GBuffer"]->mRtv[0]->mScissorRect));
 
@@ -286,10 +295,14 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 			mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["GBuffer"]->mRtv[i]->mResource.Get(),
 				D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ));
 		}
+
+		GDxGpuProfiler::GetGpuProfiler().EndGpuProfile();
 	}
 
 	// Direct Light Pass
 	{
+		GDxGpuProfiler::GetGpuProfiler().StartGpuProfile("Direct Light Pass");
+
 		mCommandList->RSSetViewports(1, &(mRtvHeaps["LightPass"]->mRtv[0]->mViewport));
 		mCommandList->RSSetScissorRects(1, &(mRtvHeaps["LightPass"]->mRtv[0]->mScissorRect));
 
@@ -327,10 +340,14 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 
 		//mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["LightPass"]->mRtv[0]->mResource.Get(),
 			//D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ));
+
+		GDxGpuProfiler::GetGpuProfiler().EndGpuProfile();
 	}
 
 	// Ambient Light Pass
 	{
+		GDxGpuProfiler::GetGpuProfiler().StartGpuProfile("Ambient Light Pass");
+
 		mCommandList->RSSetViewports(1, &(mRtvHeaps["LightPass"]->mRtv[0]->mViewport));
 		mCommandList->RSSetScissorRects(1, &(mRtvHeaps["LightPass"]->mRtv[0]->mScissorRect));
 
@@ -365,10 +382,14 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 
 		// For each render item...
 		DrawSceneObjects(mCommandList.Get(), RenderLayer::ScreenQuad, false);
+
+		GDxGpuProfiler::GetGpuProfiler().EndGpuProfile();
 	}
 
 	// Sky Pass
 	{
+		GDxGpuProfiler::GetGpuProfiler().StartGpuProfile("Sky Pass");
+
 		mCommandList->RSSetViewports(1, &(mRtvHeaps["LightPass"]->mRtv[0]->mViewport));
 		mCommandList->RSSetScissorRects(1, &(mRtvHeaps["LightPass"]->mRtv[0]->mScissorRect));
 
@@ -399,10 +420,14 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 
 		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["GBuffer"]->mRtv[mVelocityBufferSrvIndex - mGBufferSrvIndex]->mResource.Get(),
 			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ));
+
+		GDxGpuProfiler::GetGpuProfiler().EndGpuProfile();
 	}
 
 	// TAA Pass
 	{
+		GDxGpuProfiler::GetGpuProfiler().StartGpuProfile("TAA Pass");
+
 		mCommandList->RSSetViewports(1, &(mRtvHeaps["TaaPass"]->mRtv[2]->mViewport));
 		mCommandList->RSSetScissorRects(1, &(mRtvHeaps["TaaPass"]->mRtv[2]->mScissorRect));
 
@@ -460,10 +485,14 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 
 		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["TaaPass"]->mRtv[mTaaHistoryIndex]->mResource.Get(),
 			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ));
+
+		GDxGpuProfiler::GetGpuProfiler().EndGpuProfile();
 	}
 
 	// Motion Blur Pass
 	{
+		GDxGpuProfiler::GetGpuProfiler().StartGpuProfile("Motion Blur Pass");
+
 		mCommandList->RSSetViewports(1, &(mRtvHeaps["MotionBlurPass"]->mRtv[0]->mViewport));
 		mCommandList->RSSetScissorRects(1, &(mRtvHeaps["MotionBlurPass"]->mRtv[0]->mScissorRect));
 
@@ -497,10 +526,14 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 
 		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["MotionBlurPass"]->mRtv[0]->mResource.Get(),
 			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ));
+
+		GDxGpuProfiler::GetGpuProfiler().EndGpuProfile();
 	}
 
 	// Post Process Pass
 	{
+		GDxGpuProfiler::GetGpuProfiler().StartGpuProfile("Post Processing Pass");
+
 		mCommandList->RSSetViewports(1, &mScreenViewport);
 		mCommandList->RSSetScissorRects(1, &mScissorRect);
 
@@ -517,12 +550,16 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 
 		// For each render item...
 		DrawSceneObjects(mCommandList.Get(), RenderLayer::ScreenQuad, false);
+
+		GDxGpuProfiler::GetGpuProfiler().EndGpuProfile();
 	}
 
 	// Debug Pass
 	bool bDrawDebugQuad = true;
 	if (bDrawDebugQuad)
 	{
+		GDxGpuProfiler::GetGpuProfiler().StartGpuProfile("Debug Pass");
+
 		mCommandList->RSSetViewports(1, &mScreenViewport);
 		mCommandList->RSSetScissorRects(1, &mScissorRect);
 
@@ -545,13 +582,23 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 
 		// For each render item...
 		DrawSceneObjects(mCommandList.Get(), RenderLayer::Debug, true);
+
+		GDxGpuProfiler::GetGpuProfiler().EndGpuProfile();
 	}
 
 	// Immediate Mode GUI Pass
 	{
+
 #ifdef USE_IMGUI
+
+		GDxGpuProfiler::GetGpuProfiler().StartGpuProfile("GUI Pass");
+
 		pImgui->Render(mCommandList.Get());
+
+		GDxGpuProfiler::GetGpuProfiler().EndGpuProfile();
+
 #endif
+
 	}
 
 	// Indicate a state transition on the resource usage.
@@ -566,8 +613,8 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 	mCommandQueue->ExecuteCommandLists(_countof(cmdsLists), cmdsLists);
 
 	// Swap the back and front buffers
-	ThrowIfFailed(mSwapChain->Present(1, 0)); // Present with vsync
-	//ThrowIfFailed(mSwapChain->Present(0, 0)); // Present without vsync
+	//ThrowIfFailed(mSwapChain->Present(1, 0)); // Present with vsync
+	ThrowIfFailed(mSwapChain->Present(0, 0)); // Present without vsync
 	mCurrBackBuffer = (mCurrBackBuffer + 1) % SwapChainBufferCount;
 
 	// Advance the fence value to mark commands up to this fence point.
@@ -577,6 +624,8 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 	// Because we are on the GPU timeline, the new fence point won't be 
 	// set until the GPU finishes processing all the commands prior to this Signal().
 	mCommandQueue->Signal(mFence.Get(), mCurrentFence);
+
+	GDxGpuProfiler::GetGpuProfiler().EndFrame();
 }
 
 void GDxRenderer::Update(const GGiGameTimer* gt)
@@ -1745,13 +1794,14 @@ void GDxRenderer::BuildDescriptorHeaps()
 		mIblIndex = mMotionBlurSrvIndex + mRtvHeaps["TaaPass"]->mRtvHeap.HeapDesc.NumDescriptors;
 
 		GRtvProperties prop;
-		prop.mRtvFormat = DXGI_FORMAT_R32G32B32A32_FLOAT;
+		//prop.mRtvFormat = DXGI_FORMAT_R32G32B32A32_FLOAT;
+		prop.mRtvFormat = DXGI_FORMAT_R16G16B16A16_FLOAT;
 		prop.mClearColor[0] = 0;
 		prop.mClearColor[1] = 0;
 		prop.mClearColor[2] = 0;
 		prop.mClearColor[3] = 1;
 
-		auto gIrradianceCubemap = std::make_unique<GDxCubeRtv>(md3dDevice.Get(), 2048, GetCpuSrv(mIblIndex), GetGpuSrv(mIblIndex), prop);
+		auto gIrradianceCubemap = std::make_unique<GDxCubeRtv>(md3dDevice.Get(), SKY_CUBEMAP_SIZE, GetCpuSrv(mIblIndex), GetGpuSrv(mIblIndex), prop);
 		mCubeRtvs["Irradiance"] = std::move(gIrradianceCubemap);
 	}
 
@@ -1777,13 +1827,14 @@ void GDxRenderer::BuildDescriptorHeaps()
 		for (auto i = 0u; i < mPrefilterLevels; i++)
 		{
 			GRtvProperties prop;
-			prop.mRtvFormat = DXGI_FORMAT_R32G32B32A32_FLOAT;
+			//prop.mRtvFormat = DXGI_FORMAT_R32G32B32A32_FLOAT;
+			prop.mRtvFormat = DXGI_FORMAT_R16G16B16A16_FLOAT;
 			prop.mClearColor[0] = 0;
 			prop.mClearColor[1] = 0;
 			prop.mClearColor[2] = 0;
 			prop.mClearColor[3] = 1;
 
-			auto gPrefilterCubemap = std::make_unique<GDxCubeRtv>(md3dDevice.Get(), (UINT)(2048 / pow(2, i)), GetCpuSrv(mIblIndex + 2 + i), GetGpuSrv(mIblIndex + 2 + i), prop);
+			auto gPrefilterCubemap = std::make_unique<GDxCubeRtv>(md3dDevice.Get(), (UINT)(SKY_CUBEMAP_SIZE / pow(2, i)), GetCpuSrv(mIblIndex + 2 + i), GetGpuSrv(mIblIndex + 2 + i), prop);
 			mCubeRtvs["Prefilter_" + std::to_string(i)] = std::move(gPrefilterCubemap);
 		}
 	}
@@ -2552,6 +2603,11 @@ void GDxRenderer::CreateRtvAndDsvDescriptorHeaps()
 		&dsvHeapDesc, IID_PPV_ARGS(mDsvHeap.GetAddressOf())));
 }
 
+void GDxRenderer::InitializeGpuProfiler()
+{
+	GDxGpuProfiler::GetGpuProfiler().Initialize(md3dDevice.Get(), mCommandList.Get(), mCommandQueue.Get());
+}
+
 #pragma endregion
 
 #pragma region Draw
@@ -2753,6 +2809,11 @@ GRiSceneObject* GDxRenderer::SelectSceneObject(int sx, int sy)
 		}
 	}
 	return pickedSceneObject;
+}
+
+std::vector<ProfileData> GDxRenderer::GetGpuProfiles()
+{
+	return GDxGpuProfiler::GetGpuProfiler().GetProfiles();
 }
 
 #pragma endregion

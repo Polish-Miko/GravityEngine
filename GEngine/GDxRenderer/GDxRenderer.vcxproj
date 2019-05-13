@@ -171,6 +171,8 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="Private\GDxReadbackBuffer.h" />
+    <ClInclude Include="Private\GDxGpuProfiler.h" />
     <ClInclude Include="Public\GDxImgui.h" />
     <ClInclude Include="Private\d3dx12.h" />
     <ClInclude Include="Private\GDxDescriptorHeap.h" />
@@ -207,6 +209,8 @@
     <ClInclude Include="Private\GDxUploadBuffer.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Private\GDxReadbackBuffer.cpp" />
+    <ClCompile Include="Private\GDxGpuProfiler.cpp" />
     <ClCompile Include="Private\GDxImgui.cpp" />
     <ClCompile Include="Private\GDxDescriptorHeap.cpp" />
     <ClCompile Include="Private\GDxMathHelper.cpp" />
