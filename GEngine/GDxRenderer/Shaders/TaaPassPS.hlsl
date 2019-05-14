@@ -82,6 +82,11 @@ static const float neighborhoodFixedSpatialWeight[9] =
 	1.0f / 16.0f
 };
 
+float LinearDepth(float depth)
+{
+	return (depth * gNearZ) / (gFarZ - depth * (gFarZ - gNearZ));
+}
+
 static float CatmullRom(float x)
 {
 	float ax = abs(x);
@@ -237,7 +242,8 @@ PixelOutput main(VertexToPixel pIn)// : SV_TARGET
 			float2 sampleUV = JitteredUV + sampleOffset;
 			sampleUV = saturate(sampleUV);
 
-			float3 NeighborhoodDepthSamp = gDepthBuffer.Sample(basicSampler, sampleUV).rgb;
+			float NeighborhoodDepthSamp = gDepthBuffer.Sample(basicSampler, sampleUV).r;
+			NeighborhoodDepthSamp = LinearDepth(NeighborhoodDepthSamp);
 			if (NeighborhoodDepthSamp > closestDepth)
 			{
 				closestDepth = NeighborhoodDepthSamp;
@@ -419,8 +425,9 @@ PixelOutput main(VertexToPixel pIn)// : SV_TARGET
 
 #ifdef TEST
 
-	//float test = length(velocity) * 1000;
-	//output.color = float4(test, test, test, 1.0f);
+	float test = gDepthBuffer.Sample(basicSampler, pIn.uv).r;
+	test = (test * gNearZ) / (gFarZ - test * (gFarZ - gNearZ));
+	output.color = float4(test, test, test, 1.0f);
 
 #endif
 

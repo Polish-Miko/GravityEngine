@@ -307,68 +307,22 @@
 			<bSrgb>0</bSrgb>
 		</item>
 		<item>
-			<UniqueFileName>Content\Textures\Cubemap\Cubemap_DallasW.dds</UniqueFileName>
+			<UniqueFileName>Resource\Textures\GE_Default_Cubemap.dds</UniqueFileName>
 			<bSrgb>1</bSrgb>
 		</item>
 	</mTextureInfo>
 	<mSceneObjectInfo class_id="3" tracking_level="0" version="0">
-		<count>14</count>
+		<count>33</count>
 		<item_version>0</item_version>
 		<item class_id="4" tracking_level="0" version="0">
-			<UniqueName>Sphere_1</UniqueName>
-			<MaterialUniqueName>Content\Material\GreasyPan.gmat</MaterialUniqueName>
-			<MeshUniqueName>Sphere</MeshUniqueName>
-			<Location>
-				<count>3</count>
-				<item>3.800000000e+01</item>
-				<item>0.000000000e+00</item>
-				<item>7.000000000e+01</item>
-			</Location>
-			<Rotation>
-				<count>3</count>
-				<item>0.000000000e+00</item>
-				<item>-0.000000000e+00</item>
-				<item>0.000000000e+00</item>
-			</Rotation>
-			<Scale>
-				<count>3</count>
-				<item>1.000000000e+00</item>
-				<item>1.000000000e+00</item>
-				<item>1.000000000e+00</item>
-			</Scale>
-		</item>
-		<item>
-			<UniqueName>Box</UniqueName>
-			<MaterialUniqueName>Default</MaterialUniqueName>
-			<MeshUniqueName>Box</MeshUniqueName>
-			<Location>
-				<count>3</count>
-				<item>2.611479187e+02</item>
-				<item>-3.814697266e-06</item>
-				<item>4.669942474e+01</item>
-			</Location>
-			<Rotation>
-				<count>3</count>
-				<item>0.000000000e+00</item>
-				<item>-0.000000000e+00</item>
-				<item>0.000000000e+00</item>
-			</Rotation>
-			<Scale>
-				<count>3</count>
-				<item>1.000000000e+00</item>
-				<item>1.000000000e+00</item>
-				<item>1.000000000e+00</item>
-			</Scale>
-		</item>
-		<item>
 			<UniqueName>Plane</UniqueName>
 			<MaterialUniqueName>Content\Material\DarkTiles.gmat</MaterialUniqueName>
 			<MeshUniqueName>Grid</MeshUniqueName>
 			<Location>
 				<count>3</count>
-				<item>0.000000000e+00</item>
+				<item>-2.081939697e+01</item>
 				<item>-2.000000000e+01</item>
-				<item>0.000000000e+00</item>
+				<item>-4.072360992e+00</item>
 			</Location>
 			<Rotation>
 				<count>3</count>
@@ -378,112 +332,20 @@
 			</Rotation>
 			<Scale>
 				<count>3</count>
-				<item>1.500000000e+01</item>
+				<item>2.400000000e+01</item>
 				<item>1.000000000e+00</item>
-				<item>1.500000000e+01</item>
-			</Scale>
-		</item>
-		<item>
-			<UniqueName>Cylinder</UniqueName>
-			<MaterialUniqueName>Default</MaterialUniqueName>
-			<MeshUniqueName>Cylinder</MeshUniqueName>
-			<Location>
-				<count>3</count>
-				<item>2.022414551e+02</item>
-				<item>0.000000000e+00</item>
-				<item>4.142954254e+01</item>
-			</Location>
-			<Rotation>
-				<count>3</count>
-				<item>0.000000000e+00</item>
-				<item>-0.000000000e+00</item>
-				<item>0.000000000e+00</item>
-			</Rotation>
-			<Scale>
-				<count>3</count>
-				<item>1.000000000e+00</item>
-				<item>1.000000000e+00</item>
-				<item>1.000000000e+00</item>
-			</Scale>
-		</item>
-		<item>
-			<UniqueName>Sphere_2</UniqueName>
-			<MaterialUniqueName>Content\Material\GoldScuffed.gmat</MaterialUniqueName>
-			<MeshUniqueName>Sphere</MeshUniqueName>
-			<Location>
-				<count>3</count>
-				<item>-9.000000000e+00</item>
-				<item>0.000000000e+00</item>
-				<item>7.000000000e+01</item>
-			</Location>
-			<Rotation>
-				<count>3</count>
-				<item>0.000000000e+00</item>
-				<item>-0.000000000e+00</item>
-				<item>0.000000000e+00</item>
-			</Rotation>
-			<Scale>
-				<count>3</count>
-				<item>1.000000000e+00</item>
-				<item>1.000000000e+00</item>
-				<item>1.000000000e+00</item>
-			</Scale>
-		</item>
-		<item>
-			<UniqueName>Sphere_3</UniqueName>
-			<MaterialUniqueName>Content\Material\GrimyMetal.gmat</MaterialUniqueName>
-			<MeshUniqueName>Sphere</MeshUniqueName>
-			<Location>
-				<count>3</count>
-				<item>-5.784001541e+01</item>
-				<item>0.000000000e+00</item>
-				<item>7.000000000e+01</item>
-			</Location>
-			<Rotation>
-				<count>3</count>
-				<item>-6.373755750e-04</item>
-				<item>-6.105383682e+01</item>
-				<item>4.517728230e-04</item>
-			</Rotation>
-			<Scale>
-				<count>3</count>
-				<item>1.000000000e+00</item>
-				<item>9.999998808e-01</item>
-				<item>1.000000000e+00</item>
-			</Scale>
-		</item>
-		<item>
-			<UniqueName>Cerberus</UniqueName>
-			<MaterialUniqueName>Content\Material\Cerberus.gmat</MaterialUniqueName>
-			<MeshUniqueName>Content\Models\Cerberus.fbx</MeshUniqueName>
-			<Location>
-				<count>3</count>
-				<item>1.565023422e+00</item>
-				<item>4.999993896e+01</item>
-				<item>2.000233765e+02</item>
-			</Location>
-			<Rotation>
-				<count>3</count>
-				<item>-3.240155289e-03</item>
-				<item>-8.849428558e+01</item>
-				<item>3.361596260e-03</item>
-			</Rotation>
-			<Scale>
-				<count>3</count>
-				<item>1.000000000e+00</item>
-				<item>9.999999404e-01</item>
-				<item>9.999998808e-01</item>
+				<item>2.400000000e+01</item>
 			</Scale>
 		</item>
 		<item>
 			<UniqueName>NewSceneObject</UniqueName>
-			<MaterialUniqueName>Content\Material\MetalGrid2.gmat</MaterialUniqueName>
+			<MaterialUniqueName>Default</MaterialUniqueName>
 			<MeshUniqueName>Sphere</MeshUniqueName>
 			<Location>
 				<count>3</count>
-				<item>-5.832433319e+01</item>
-				<item>0.000000000e+00</item>
-				<item>1.204794922e+02</item>
+				<item>3.288372498e+02</item>
+				<item>-3.051757813e-05</item>
+				<item>-2.282663269e+02</item>
 			</Location>
 			<Rotation>
 				<count>3</count>
@@ -500,13 +362,13 @@
 		</item>
 		<item>
 			<UniqueName>NewSceneObject_1</UniqueName>
-			<MaterialUniqueName>Content\Material\RedBricks.gmat</MaterialUniqueName>
+			<MaterialUniqueName>Default</MaterialUniqueName>
 			<MeshUniqueName>Sphere</MeshUniqueName>
 			<Location>
 				<count>3</count>
-				<item>-5.873478699e+01</item>
+				<item>2.067136536e+02</item>
 				<item>0.000000000e+00</item>
-				<item>1.710281830e+02</item>
+				<item>-2.643029785e+02</item>
 			</Location>
 			<Rotation>
 				<count>3</count>
@@ -523,13 +385,13 @@
 		</item>
 		<item>
 			<UniqueName>NewSceneObject_2</UniqueName>
-			<MaterialUniqueName>Content\Material\MetalGrid.gmat</MaterialUniqueName>
+			<MaterialUniqueName>Default</MaterialUniqueName>
 			<MeshUniqueName>Sphere</MeshUniqueName>
 			<Location>
 				<count>3</count>
-				<item>-9.390702248e+00</item>
+				<item>7.552375031e+01</item>
 				<item>0.000000000e+00</item>
-				<item>1.177572174e+02</item>
+				<item>-3.480513306e+02</item>
 			</Location>
 			<Rotation>
 				<count>3</count>
@@ -546,13 +408,13 @@
 		</item>
 		<item>
 			<UniqueName>NewSceneObject_3</UniqueName>
-			<MaterialUniqueName>Content\Material\RustedIron2.gmat</MaterialUniqueName>
+			<MaterialUniqueName>Default</MaterialUniqueName>
 			<MeshUniqueName>Sphere</MeshUniqueName>
 			<Location>
 				<count>3</count>
-				<item>4.295300293e+01</item>
+				<item>2.142186279e+02</item>
 				<item>0.000000000e+00</item>
-				<item>1.680000000e+02</item>
+				<item>-1.123616943e+02</item>
 			</Location>
 			<Rotation>
 				<count>3</count>
@@ -569,13 +431,13 @@
 		</item>
 		<item>
 			<UniqueName>NewSceneObject_4</UniqueName>
-			<MaterialUniqueName>Content\Material\SlateCliffRock.gmat</MaterialUniqueName>
+			<MaterialUniqueName>Default</MaterialUniqueName>
 			<MeshUniqueName>Sphere</MeshUniqueName>
 			<Location>
 				<count>3</count>
-				<item>-1.265132618e+01</item>
+				<item>4.073682404e+01</item>
 				<item>0.000000000e+00</item>
-				<item>1.693796692e+02</item>
+				<item>-1.706881104e+02</item>
 			</Location>
 			<Rotation>
 				<count>3</count>
@@ -592,13 +454,13 @@
 		</item>
 		<item>
 			<UniqueName>NewSceneObject_5</UniqueName>
-			<MaterialUniqueName>Content\Material\HardWoodBrown.gmat</MaterialUniqueName>
+			<MaterialUniqueName>Default</MaterialUniqueName>
 			<MeshUniqueName>Sphere</MeshUniqueName>
 			<Location>
 				<count>3</count>
-				<item>4.075556564e+01</item>
+				<item>-7.879957581e+01</item>
 				<item>0.000000000e+00</item>
-				<item>1.176105423e+02</item>
+				<item>-2.578801575e+02</item>
 			</Location>
 			<Rotation>
 				<count>3</count>
@@ -614,19 +476,594 @@
 			</Scale>
 		</item>
 		<item>
-			<UniqueName>MoveSphere</UniqueName>
-			<MaterialUniqueName>Content\Textures\test\tga\tgaMat.gmat</MaterialUniqueName>
+			<UniqueName>NewSceneObject_6</UniqueName>
+			<MaterialUniqueName>Default</MaterialUniqueName>
 			<MeshUniqueName>Sphere</MeshUniqueName>
 			<Location>
 				<count>3</count>
-				<item>-5.822930145e+01</item>
+				<item>-2.329335632e+02</item>
 				<item>0.000000000e+00</item>
-				<item>-5.367667770e+01</item>
+				<item>-2.415220947e+02</item>
 			</Location>
 			<Rotation>
 				<count>3</count>
 				<item>0.000000000e+00</item>
 				<item>-0.000000000e+00</item>
+				<item>0.000000000e+00</item>
+			</Rotation>
+			<Scale>
+				<count>3</count>
+				<item>1.000000000e+00</item>
+				<item>1.000000000e+00</item>
+				<item>1.000000000e+00</item>
+			</Scale>
+		</item>
+		<item>
+			<UniqueName>NewSceneObject_7</UniqueName>
+			<MaterialUniqueName>Default</MaterialUniqueName>
+			<MeshUniqueName>Sphere</MeshUniqueName>
+			<Location>
+				<count>3</count>
+				<item>-2.693786316e+02</item>
+				<item>0.000000000e+00</item>
+				<item>-1.237485123e+02</item>
+			</Location>
+			<Rotation>
+				<count>3</count>
+				<item>0.000000000e+00</item>
+				<item>-0.000000000e+00</item>
+				<item>0.000000000e+00</item>
+			</Rotation>
+			<Scale>
+				<count>3</count>
+				<item>1.000000000e+00</item>
+				<item>1.000000000e+00</item>
+				<item>1.000000000e+00</item>
+			</Scale>
+		</item>
+		<item>
+			<UniqueName>NewSceneObject_8</UniqueName>
+			<MaterialUniqueName>Default</MaterialUniqueName>
+			<MeshUniqueName>Sphere</MeshUniqueName>
+			<Location>
+				<count>3</count>
+				<item>-2.962902527e+02</item>
+				<item>0.000000000e+00</item>
+				<item>-1.297407532e+01</item>
+			</Location>
+			<Rotation>
+				<count>3</count>
+				<item>0.000000000e+00</item>
+				<item>-0.000000000e+00</item>
+				<item>0.000000000e+00</item>
+			</Rotation>
+			<Scale>
+				<count>3</count>
+				<item>1.000000000e+00</item>
+				<item>1.000000000e+00</item>
+				<item>1.000000000e+00</item>
+			</Scale>
+		</item>
+		<item>
+			<UniqueName>NewSceneObject_9</UniqueName>
+			<MaterialUniqueName>Default</MaterialUniqueName>
+			<MeshUniqueName>Sphere</MeshUniqueName>
+			<Location>
+				<count>3</count>
+				<item>-1.392450562e+02</item>
+				<item>0.000000000e+00</item>
+				<item>9.543415070e+01</item>
+			</Location>
+			<Rotation>
+				<count>3</count>
+				<item>0.000000000e+00</item>
+				<item>-0.000000000e+00</item>
+				<item>0.000000000e+00</item>
+			</Rotation>
+			<Scale>
+				<count>3</count>
+				<item>1.000000000e+00</item>
+				<item>1.000000000e+00</item>
+				<item>1.000000000e+00</item>
+			</Scale>
+		</item>
+		<item>
+			<UniqueName>NewSceneObject_10</UniqueName>
+			<MaterialUniqueName>Default</MaterialUniqueName>
+			<MeshUniqueName>Sphere</MeshUniqueName>
+			<Location>
+				<count>3</count>
+				<item>-1.169625092e+02</item>
+				<item>0.000000000e+00</item>
+				<item>-6.219124603e+01</item>
+			</Location>
+			<Rotation>
+				<count>3</count>
+				<item>0.000000000e+00</item>
+				<item>-0.000000000e+00</item>
+				<item>0.000000000e+00</item>
+			</Rotation>
+			<Scale>
+				<count>3</count>
+				<item>1.000000000e+00</item>
+				<item>1.000000000e+00</item>
+				<item>1.000000000e+00</item>
+			</Scale>
+		</item>
+		<item>
+			<UniqueName>NewSceneObject_11</UniqueName>
+			<MaterialUniqueName>Default</MaterialUniqueName>
+			<MeshUniqueName>Sphere</MeshUniqueName>
+			<Location>
+				<count>3</count>
+				<item>8.239141846e+01</item>
+				<item>0.000000000e+00</item>
+				<item>2.205665588e+01</item>
+			</Location>
+			<Rotation>
+				<count>3</count>
+				<item>0.000000000e+00</item>
+				<item>-0.000000000e+00</item>
+				<item>0.000000000e+00</item>
+			</Rotation>
+			<Scale>
+				<count>3</count>
+				<item>1.000000000e+00</item>
+				<item>1.000000000e+00</item>
+				<item>1.000000000e+00</item>
+			</Scale>
+		</item>
+		<item>
+			<UniqueName>NewSceneObject_12</UniqueName>
+			<MaterialUniqueName>Default</MaterialUniqueName>
+			<MeshUniqueName>Sphere</MeshUniqueName>
+			<Location>
+				<count>3</count>
+				<item>2.709068298e+02</item>
+				<item>0.000000000e+00</item>
+				<item>-2.386903381e+01</item>
+			</Location>
+			<Rotation>
+				<count>3</count>
+				<item>0.000000000e+00</item>
+				<item>-0.000000000e+00</item>
+				<item>0.000000000e+00</item>
+			</Rotation>
+			<Scale>
+				<count>3</count>
+				<item>1.000000000e+00</item>
+				<item>1.000000000e+00</item>
+				<item>1.000000000e+00</item>
+			</Scale>
+		</item>
+		<item>
+			<UniqueName>NewSceneObject_13</UniqueName>
+			<MaterialUniqueName>Default</MaterialUniqueName>
+			<MeshUniqueName>Sphere</MeshUniqueName>
+			<Location>
+				<count>3</count>
+				<item>2.920305481e+02</item>
+				<item>0.000000000e+00</item>
+				<item>9.350103760e+01</item>
+			</Location>
+			<Rotation>
+				<count>3</count>
+				<item>0.000000000e+00</item>
+				<item>-0.000000000e+00</item>
+				<item>0.000000000e+00</item>
+			</Rotation>
+			<Scale>
+				<count>3</count>
+				<item>1.000000000e+00</item>
+				<item>1.000000000e+00</item>
+				<item>1.000000000e+00</item>
+			</Scale>
+		</item>
+		<item>
+			<UniqueName>NewSceneObject_14</UniqueName>
+			<MaterialUniqueName>Default</MaterialUniqueName>
+			<MeshUniqueName>Sphere</MeshUniqueName>
+			<Location>
+				<count>3</count>
+				<item>-3.771450195e+02</item>
+				<item>-1.167369628e-04</item>
+				<item>4.049490356e+02</item>
+			</Location>
+			<Rotation>
+				<count>3</count>
+				<item>0.000000000e+00</item>
+				<item>-0.000000000e+00</item>
+				<item>0.000000000e+00</item>
+			</Rotation>
+			<Scale>
+				<count>3</count>
+				<item>1.000000000e+00</item>
+				<item>1.000000000e+00</item>
+				<item>1.000000000e+00</item>
+			</Scale>
+		</item>
+		<item>
+			<UniqueName>NewSceneObject_15</UniqueName>
+			<MaterialUniqueName>Default</MaterialUniqueName>
+			<MeshUniqueName>Sphere</MeshUniqueName>
+			<Location>
+				<count>3</count>
+				<item>-1.976914520e+02</item>
+				<item>0.000000000e+00</item>
+				<item>2.235486755e+02</item>
+			</Location>
+			<Rotation>
+				<count>3</count>
+				<item>0.000000000e+00</item>
+				<item>-0.000000000e+00</item>
+				<item>0.000000000e+00</item>
+			</Rotation>
+			<Scale>
+				<count>3</count>
+				<item>1.000000000e+00</item>
+				<item>1.000000000e+00</item>
+				<item>1.000000000e+00</item>
+			</Scale>
+		</item>
+		<item>
+			<UniqueName>NewSceneObject_16</UniqueName>
+			<MaterialUniqueName>Default</MaterialUniqueName>
+			<MeshUniqueName>Sphere</MeshUniqueName>
+			<Location>
+				<count>3</count>
+				<item>-3.368361206e+02</item>
+				<item>0.000000000e+00</item>
+				<item>2.013889008e+02</item>
+			</Location>
+			<Rotation>
+				<count>3</count>
+				<item>0.000000000e+00</item>
+				<item>-0.000000000e+00</item>
+				<item>0.000000000e+00</item>
+			</Rotation>
+			<Scale>
+				<count>3</count>
+				<item>1.000000000e+00</item>
+				<item>1.000000000e+00</item>
+				<item>1.000000000e+00</item>
+			</Scale>
+		</item>
+		<item>
+			<UniqueName>NewSceneObject_17</UniqueName>
+			<MaterialUniqueName>Default</MaterialUniqueName>
+			<MeshUniqueName>Sphere</MeshUniqueName>
+			<Location>
+				<count>3</count>
+				<item>-8.972261047e+01</item>
+				<item>0.000000000e+00</item>
+				<item>3.190105591e+02</item>
+			</Location>
+			<Rotation>
+				<count>3</count>
+				<item>0.000000000e+00</item>
+				<item>-0.000000000e+00</item>
+				<item>0.000000000e+00</item>
+			</Rotation>
+			<Scale>
+				<count>3</count>
+				<item>1.000000000e+00</item>
+				<item>1.000000000e+00</item>
+				<item>1.000000000e+00</item>
+			</Scale>
+		</item>
+		<item>
+			<UniqueName>NewSceneObject_18</UniqueName>
+			<MaterialUniqueName>Default</MaterialUniqueName>
+			<MeshUniqueName>Sphere</MeshUniqueName>
+			<Location>
+				<count>3</count>
+				<item>-2.134788513e+00</item>
+				<item>0.000000000e+00</item>
+				<item>1.808474121e+02</item>
+			</Location>
+			<Rotation>
+				<count>3</count>
+				<item>0.000000000e+00</item>
+				<item>-0.000000000e+00</item>
+				<item>0.000000000e+00</item>
+			</Rotation>
+			<Scale>
+				<count>3</count>
+				<item>1.000000000e+00</item>
+				<item>1.000000000e+00</item>
+				<item>1.000000000e+00</item>
+			</Scale>
+		</item>
+		<item>
+			<UniqueName>NewSceneObject_19</UniqueName>
+			<MaterialUniqueName>Default</MaterialUniqueName>
+			<MeshUniqueName>Sphere</MeshUniqueName>
+			<Location>
+				<count>3</count>
+				<item>1.442761993e+02</item>
+				<item>0.000000000e+00</item>
+				<item>1.579924622e+02</item>
+			</Location>
+			<Rotation>
+				<count>3</count>
+				<item>0.000000000e+00</item>
+				<item>-0.000000000e+00</item>
+				<item>0.000000000e+00</item>
+			</Rotation>
+			<Scale>
+				<count>3</count>
+				<item>1.000000000e+00</item>
+				<item>1.000000000e+00</item>
+				<item>1.000000000e+00</item>
+			</Scale>
+		</item>
+		<item>
+			<UniqueName>NewSceneObject_20</UniqueName>
+			<MaterialUniqueName>Default</MaterialUniqueName>
+			<MeshUniqueName>Sphere</MeshUniqueName>
+			<Location>
+				<count>3</count>
+				<item>3.968223267e+02</item>
+				<item>0.000000000e+00</item>
+				<item>1.252062988e+02</item>
+			</Location>
+			<Rotation>
+				<count>3</count>
+				<item>0.000000000e+00</item>
+				<item>-0.000000000e+00</item>
+				<item>0.000000000e+00</item>
+			</Rotation>
+			<Scale>
+				<count>3</count>
+				<item>1.000000000e+00</item>
+				<item>1.000000000e+00</item>
+				<item>1.000000000e+00</item>
+			</Scale>
+		</item>
+		<item>
+			<UniqueName>NewSceneObject_21</UniqueName>
+			<MaterialUniqueName>Default</MaterialUniqueName>
+			<MeshUniqueName>Sphere</MeshUniqueName>
+			<Location>
+				<count>3</count>
+				<item>3.159870605e+02</item>
+				<item>0.000000000e+00</item>
+				<item>2.527781982e+02</item>
+			</Location>
+			<Rotation>
+				<count>3</count>
+				<item>0.000000000e+00</item>
+				<item>-0.000000000e+00</item>
+				<item>0.000000000e+00</item>
+			</Rotation>
+			<Scale>
+				<count>3</count>
+				<item>1.000000000e+00</item>
+				<item>1.000000000e+00</item>
+				<item>1.000000000e+00</item>
+			</Scale>
+		</item>
+		<item>
+			<UniqueName>NewSceneObject_22</UniqueName>
+			<MaterialUniqueName>Default</MaterialUniqueName>
+			<MeshUniqueName>Sphere</MeshUniqueName>
+			<Location>
+				<count>3</count>
+				<item>8.358612823e+01</item>
+				<item>0.000000000e+00</item>
+				<item>3.177545776e+02</item>
+			</Location>
+			<Rotation>
+				<count>3</count>
+				<item>0.000000000e+00</item>
+				<item>-0.000000000e+00</item>
+				<item>0.000000000e+00</item>
+			</Rotation>
+			<Scale>
+				<count>3</count>
+				<item>1.000000000e+00</item>
+				<item>1.000000000e+00</item>
+				<item>1.000000000e+00</item>
+			</Scale>
+		</item>
+		<item>
+			<UniqueName>NewSceneObject_23</UniqueName>
+			<MaterialUniqueName>Default</MaterialUniqueName>
+			<MeshUniqueName>Sphere</MeshUniqueName>
+			<Location>
+				<count>3</count>
+				<item>3.143714600e+02</item>
+				<item>4.254591113e-05</item>
+				<item>3.507026672e+02</item>
+			</Location>
+			<Rotation>
+				<count>3</count>
+				<item>0.000000000e+00</item>
+				<item>-0.000000000e+00</item>
+				<item>0.000000000e+00</item>
+			</Rotation>
+			<Scale>
+				<count>3</count>
+				<item>1.000000000e+00</item>
+				<item>1.000000000e+00</item>
+				<item>1.000000000e+00</item>
+			</Scale>
+		</item>
+		<item>
+			<UniqueName>NewSceneObject_24</UniqueName>
+			<MaterialUniqueName>Default</MaterialUniqueName>
+			<MeshUniqueName>Sphere</MeshUniqueName>
+			<Location>
+				<count>3</count>
+				<item>2.022574768e+02</item>
+				<item>0.000000000e+00</item>
+				<item>2.896687012e+02</item>
+			</Location>
+			<Rotation>
+				<count>3</count>
+				<item>0.000000000e+00</item>
+				<item>-0.000000000e+00</item>
+				<item>0.000000000e+00</item>
+			</Rotation>
+			<Scale>
+				<count>3</count>
+				<item>1.000000000e+00</item>
+				<item>1.000000000e+00</item>
+				<item>1.000000000e+00</item>
+			</Scale>
+		</item>
+		<item>
+			<UniqueName>NewSceneObject_25</UniqueName>
+			<MaterialUniqueName>Default</MaterialUniqueName>
+			<MeshUniqueName>Sphere</MeshUniqueName>
+			<Location>
+				<count>3</count>
+				<item>3.818992310e+02</item>
+				<item>0.000000000e+00</item>
+				<item>-6.649580383e+01</item>
+			</Location>
+			<Rotation>
+				<count>3</count>
+				<item>0.000000000e+00</item>
+				<item>-0.000000000e+00</item>
+				<item>0.000000000e+00</item>
+			</Rotation>
+			<Scale>
+				<count>3</count>
+				<item>1.000000000e+00</item>
+				<item>1.000000000e+00</item>
+				<item>1.000000000e+00</item>
+			</Scale>
+		</item>
+		<item>
+			<UniqueName>NewSceneObject_26</UniqueName>
+			<MaterialUniqueName>Default</MaterialUniqueName>
+			<MeshUniqueName>Sphere</MeshUniqueName>
+			<Location>
+				<count>3</count>
+				<item>-3.736422119e+02</item>
+				<item>0.000000000e+00</item>
+				<item>7.161496735e+01</item>
+			</Location>
+			<Rotation>
+				<count>3</count>
+				<item>0.000000000e+00</item>
+				<item>-0.000000000e+00</item>
+				<item>0.000000000e+00</item>
+			</Rotation>
+			<Scale>
+				<count>3</count>
+				<item>1.000000000e+00</item>
+				<item>1.000000000e+00</item>
+				<item>1.000000000e+00</item>
+			</Scale>
+		</item>
+		<item>
+			<UniqueName>NewSceneObject_27</UniqueName>
+			<MaterialUniqueName>Default</MaterialUniqueName>
+			<MeshUniqueName>Sphere</MeshUniqueName>
+			<Location>
+				<count>3</count>
+				<item>1.804605408e+02</item>
+				<item>0.000000000e+00</item>
+				<item>1.829284668e+01</item>
+			</Location>
+			<Rotation>
+				<count>3</count>
+				<item>0.000000000e+00</item>
+				<item>-0.000000000e+00</item>
+				<item>0.000000000e+00</item>
+			</Rotation>
+			<Scale>
+				<count>3</count>
+				<item>1.000000000e+00</item>
+				<item>1.000000000e+00</item>
+				<item>1.000000000e+00</item>
+			</Scale>
+		</item>
+		<item>
+			<UniqueName>NewSceneObject_28</UniqueName>
+			<MaterialUniqueName>Default</MaterialUniqueName>
+			<MeshUniqueName>Sphere</MeshUniqueName>
+			<Location>
+				<count>3</count>
+				<item>-3.516707458e+02</item>
+				<item>0.000000000e+00</item>
+				<item>-3.070967407e+02</item>
+			</Location>
+			<Rotation>
+				<count>3</count>
+				<item>0.000000000e+00</item>
+				<item>-0.000000000e+00</item>
+				<item>0.000000000e+00</item>
+			</Rotation>
+			<Scale>
+				<count>3</count>
+				<item>1.000000000e+00</item>
+				<item>1.000000000e+00</item>
+				<item>1.000000000e+00</item>
+			</Scale>
+		</item>
+		<item>
+			<UniqueName>NewSceneObject_29</UniqueName>
+			<MaterialUniqueName>Default</MaterialUniqueName>
+			<MeshUniqueName>Sphere</MeshUniqueName>
+			<Location>
+				<count>3</count>
+				<item>1.205026627e+01</item>
+				<item>0.000000000e+00</item>
+				<item>4.012838745e+02</item>
+			</Location>
+			<Rotation>
+				<count>3</count>
+				<item>0.000000000e+00</item>
+				<item>-0.000000000e+00</item>
+				<item>0.000000000e+00</item>
+			</Rotation>
+			<Scale>
+				<count>3</count>
+				<item>1.000000000e+00</item>
+				<item>1.000000000e+00</item>
+				<item>1.000000000e+00</item>
+			</Scale>
+		</item>
+		<item>
+			<UniqueName>NewSceneObject_30</UniqueName>
+			<MaterialUniqueName>Default</MaterialUniqueName>
+			<MeshUniqueName>Sphere</MeshUniqueName>
+			<Location>
+				<count>3</count>
+				<item>-2.137225647e+02</item>
+				<item>-6.103515625e-05</item>
+				<item>3.678075867e+02</item>
+			</Location>
+			<Rotation>
+				<count>3</count>
+				<item>0.000000000e+00</item>
+				<item>-0.000000000e+00</item>
+				<item>0.000000000e+00</item>
+			</Rotation>
+			<Scale>
+				<count>3</count>
+				<item>1.000000000e+00</item>
+				<item>1.000000000e+00</item>
+				<item>1.000000000e+00</item>
+			</Scale>
+		</item>
+		<item>
+			<UniqueName>NewSceneObject_31</UniqueName>
+			<MaterialUniqueName>Default</MaterialUniqueName>
+			<MeshUniqueName>Sphere</MeshUniqueName>
+			<Location>
+				<count>3</count>
+				<item>0.000000000e+00</item>
+				<item>0.000000000e+00</item>
+				<item>0.000000000e+00</item>
+			</Location>
+			<Rotation>
+				<count>3</count>
+				<item>0.000000000e+00</item>
+				<item>0.000000000e+00</item>
 				<item>0.000000000e+00</item>
 			</Rotation>
 			<Scale>

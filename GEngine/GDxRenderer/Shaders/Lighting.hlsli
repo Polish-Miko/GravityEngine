@@ -5,8 +5,8 @@
 #define ROUGHNESS_CLAMP 0.02f
 
 #define MAX_DIRECTIONAL_LIGHT_NUM 4
-#define MAX_POINT_LIGHT_NUM 16
-#define MAX_SPOTLIGHT_NUM 16
+#define MAX_POINT_LIGHT_NUM 1024
+#define MAX_SPOTLIGHT_NUM 1024
 
 static const float MIN_ROUGHNESS = 0.0000001f;
 static const float F0_NON_METAL = 0.04f;

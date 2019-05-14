@@ -445,7 +445,7 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 
 		mCommandList->SetGraphicsRootDescriptorTable(3, mRtvHeaps["GBuffer"]->GetSrvGpu(mVelocityBufferSrvIndex - mGBufferSrvIndex));
 
-		mCommandList->SetGraphicsRootDescriptorTable(4, mRtvHeaps["Depth"]->GetSrvGpuStart());
+		mCommandList->SetGraphicsRootDescriptorTable(4, GetGpuSrv(mDepthBufferSrvIndex));
 
 		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["TaaPass"]->mRtv[2]->mResource.Get(),
 			D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_RENDER_TARGET));
@@ -475,7 +475,8 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 			mRtvHeaps["TaaPass"]->mRtvHeap.handleCPU(2),
 			mRtvHeaps["TaaPass"]->mRtvHeap.handleCPU(mTaaHistoryIndex)
 		};
-		mCommandList->OMSetRenderTargets(2, taaRtvs, false, &DepthStencilView());
+		//mCommandList->OMSetRenderTargets(2, taaRtvs, false, &DepthStencilView());
+		mCommandList->OMSetRenderTargets(2, taaRtvs, false, nullptr);
 
 		// For each render item...
 		DrawSceneObjects(mCommandList.Get(), RenderLayer::ScreenQuad, false);
@@ -701,6 +702,41 @@ void GDxRenderer::OnResize()
 		rtvHeapHandle.Offset(1, mRtvDescriptorSize);
 	}
 
+	D3D12_RESOURCE_DESC depthStencilDesc;
+	depthStencilDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+	depthStencilDesc.Alignment = 0;
+	depthStencilDesc.Width = mClientWidth;
+	depthStencilDesc.Height = mClientHeight;
+	depthStencilDesc.DepthOrArraySize = 1;
+	depthStencilDesc.MipLevels = 1;
+	depthStencilDesc.Format = DXGI_FORMAT_R24G8_TYPELESS;
+	depthStencilDesc.SampleDesc.Count = 1;
+	depthStencilDesc.SampleDesc.Quality = 0;
+	depthStencilDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+	depthStencilDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
+
+	D3D12_DEPTH_STENCIL_VIEW_DESC dsv_desc;
+	dsv_desc.Flags = D3D12_DSV_FLAG_NONE;
+	dsv_desc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	dsv_desc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
+	dsv_desc.Texture2D.MipSlice = 0;
+
+	D3D12_CLEAR_VALUE optClear;
+	optClear.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	optClear.DepthStencil.Depth = 1.0f;
+	optClear.DepthStencil.Stencil = 0;
+	ThrowIfFailed(md3dDevice->CreateCommittedResource(
+		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+		D3D12_HEAP_FLAG_NONE,
+		&depthStencilDesc,
+		D3D12_RESOURCE_STATE_COMMON,
+		&optClear,
+		IID_PPV_ARGS(mDepthStencilBuffer.GetAddressOf())));
+
+	// Create descriptor to mip level 0 of entire resource using the format of the resource.
+	md3dDevice->CreateDepthStencilView(mDepthStencilBuffer.Get(), &dsv_desc, DepthStencilView());
+
+	/*
 	// Create the depth/stencil buffer and view.
 	D3D12_RESOURCE_DESC depthStencilDesc;
 	depthStencilDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
@@ -729,6 +765,7 @@ void GDxRenderer::OnResize()
 
 	// Create descriptor to mip level 0 of entire resource using the format of the resource.
 	md3dDevice->CreateDepthStencilView(mDepthStencilBuffer.Get(), nullptr, DepthStencilView());
+	*/
 
 	// Transition the resource from its initial state to be used as a depth buffer.
 	mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mDepthStencilBuffer.Get(),
@@ -767,11 +804,13 @@ void GDxRenderer::OnResize()
 
 void GDxRenderer::ScriptUpdate(const GGiGameTimer* gt)
 {
+	/*
 	if (pSceneObjects.find(L"MoveSphere") != pSceneObjects.end())
 	{
 		std::vector<float> loc = pSceneObjects[L"MoveSphere"]->GetLocation();
 		pSceneObjects[L"MoveSphere"]->SetLocation(70 * DirectX::XMScalarSin(gt->TotalTime()), loc[1], loc[2]);
 	}
+	*/
 }
 
 void GDxRenderer::UpdateObjectCBs(const GGiGameTimer* gt)
@@ -875,8 +914,25 @@ void GDxRenderer::UpdateLightCB(const GGiGameTimer* gt)
 	lightCB.pointLight[0].Position[2] = 0.0f;
 	lightCB.pointLight[0].Range = 100.0f;
 
-	lightCB.dirLightCount = 3;
-	lightCB.pointLightCount = 0;
+	int lightCount = 16;
+	for (int i = -lightCount; i < lightCount; i++)
+	{
+		for (int j = -lightCount; j < lightCount; j++)
+		{
+			lightCB.pointLight[(i + lightCount) * 2 * lightCount + j + lightCount].Color[0] = ((abs(i * j + 1) % 8) * 0.1f + 0.2f);
+			lightCB.pointLight[(i + lightCount) * 2 * lightCount + j + lightCount].Color[1] = ((abs(i * j + 2) % 7) * 0.1f + 0.3f);
+			lightCB.pointLight[(i + lightCount) * 2 * lightCount + j + lightCount].Color[2] = ((abs(i * j) % 6) * 0.1f + 0.4f);
+			lightCB.pointLight[(i + lightCount) * 2 * lightCount + j + lightCount].Color[3] = 1.0f;
+			lightCB.pointLight[(i + lightCount) * 2 * lightCount + j + lightCount].Intensity = 500.0f;
+			lightCB.pointLight[(i + lightCount) * 2 * lightCount + j + lightCount].Position[0] = i * 30.0f;
+			lightCB.pointLight[(i + lightCount) * 2 * lightCount + j + lightCount].Position[1] = 0.0f;
+			lightCB.pointLight[(i + lightCount) * 2 * lightCount + j + lightCount].Position[2] = j * 30.0f;
+			lightCB.pointLight[(i + lightCount) * 2 * lightCount + j + lightCount].Range = 300.0f;
+		}
+	}
+
+	lightCB.dirLightCount = 0;
+	lightCB.pointLightCount = 4 * lightCount * lightCount;
 
 	auto LightCB = mCurrFrameResource->LightCB.get();
 	LightCB->CopyData(0, lightCB);
@@ -1610,6 +1666,8 @@ void GDxRenderer::BuildDescriptorHeaps()
 	srvHeapDesc.NumDescriptors = MAX_TEXTURE_NUM
 		+ 1 //imgui
 		+ 1 //sky cubemap
+		+ 1 //depth buffer
+		+ 1 //depth prepass
 		+ 5 //g-buffer
 		+ 1 //light pass
 		+ 3 //taa
@@ -1641,9 +1699,25 @@ void GDxRenderer::BuildDescriptorHeaps()
 	skySrvDesc.Format = tex->Resource->GetDesc().Format;
 	md3dDevice->CreateShaderResourceView(tex->Resource.Get(), &skySrvDesc, GetCpuSrv(mSkyTexHeapIndex));
 
+	// Build SRV for depth buffer
+	{
+		mDepthBufferSrvIndex = mSkyTexHeapIndex + 1;
+
+		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+		srvDesc.Texture2D.MostDetailedMip = 0;
+		srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
+		srvDesc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+		//srvDesc.Texture2D.MipLevels = -1;
+		srvDesc.Texture2D.MipLevels = 1;
+
+		md3dDevice->CreateShaderResourceView(mDepthStencilBuffer.Get(), &srvDesc, GetCpuSrv(mDepthBufferSrvIndex));
+	}
+
 	// Build RTV heap and SRV for depth pass.
 	{
-		mDepthSrvIndex = mSkyTexHeapIndex + 1;
+		mDepthSrvIndex = mDepthBufferSrvIndex + 1;
 
 		std::vector<DXGI_FORMAT> rtvFormats =
 		{

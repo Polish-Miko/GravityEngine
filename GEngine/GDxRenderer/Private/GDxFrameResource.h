@@ -6,8 +6,8 @@
 
 // should be the same with the definition in Lighting.hlsli
 #define MAX_DIRECTIONAL_LIGHT_NUM 4
-#define MAX_POINT_LIGHT_NUM 16
-#define MAX_SPOTLIGHT_NUM 16
+#define MAX_POINT_LIGHT_NUM 1024
+#define MAX_SPOTLIGHT_NUM 1024
 
 struct ObjectConstants
 {

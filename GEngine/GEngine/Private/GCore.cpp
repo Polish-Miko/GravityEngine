@@ -344,7 +344,7 @@ void GCore::OnKeyboardInput(const GGiGameTimer* gt)
 
 void GCore::OnResize()
 {
-	mCamera->SetLens(0.25f * GGiEngineUtil::PI, mRenderer->AspectRatio(), 1.0f, 1000.0f);
+	mCamera->SetLens(0.25f * GGiEngineUtil::PI, mRenderer->AspectRatio(), 1.0f, 10000.0f);
 	mRenderer->OnResize();
 }
 
@@ -798,7 +798,7 @@ void GCore::LoadCameras()
 	mCamera = std::make_unique<GRiCamera>();
 	mCamera->SetRendererFactory(pRendererFactory);
 	mCamera->SetPosition(0.0f, 0.0f, 0.0f);
-	mCamera->SetLens(0.25f * GGiEngineUtil::PI, mRenderer->AspectRatio(), 1.0f, 1000.0f);
+	mCamera->SetLens(0.25f * GGiEngineUtil::PI, mRenderer->AspectRatio(), 1.0f, 10000.0f);
 	mCamera->InitPrevViewProj();
 	mCamera->InitPrevPosition();
 

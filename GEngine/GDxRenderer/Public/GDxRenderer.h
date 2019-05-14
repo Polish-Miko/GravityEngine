@@ -206,6 +206,7 @@ protected:
 	UINT mNullTexSrvIndex2 = 0;
 
 	UINT mDepthSrvIndex = 0;
+	UINT mDepthBufferSrvIndex = 0;
 	UINT mVelocityBufferSrvIndex = 0;
 	UINT mGBufferSrvIndex = 0;
 	UINT mLightPassSrvIndex = 0;
