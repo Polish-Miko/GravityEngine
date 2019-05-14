@@ -194,48 +194,8 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 	// Clear the back buffer.
 	mCommandList->ClearRenderTargetView(CurrentBackBufferView(), Colors::LightSteelBlue, 0, nullptr);
 
-	// Depth Prepass
-	{
-		GDxGpuProfiler::GetGpuProfiler().StartGpuProfile("Depth Prepass");
-
-		mCommandList->RSSetViewports(1, &(mRtvHeaps["Depth"]->mRtv[0]->mViewport));
-		mCommandList->RSSetScissorRects(1, &(mRtvHeaps["Depth"]->mRtv[0]->mScissorRect));
-
-		mCommandList->SetGraphicsRootSignature(mRootSignatures["DepthPass"].Get());
-
-		mCommandList->SetPipelineState(mPSOs["DepthPass"].Get());
-
-		UINT objCBByteSize = GDxUtil::CalcConstantBufferByteSize(sizeof(ObjectConstants));
-		auto objectCB = mCurrFrameResource->ObjectCB->Resource();
-
-		auto passCB = mCurrFrameResource->PassCB->Resource();
-		mCommandList->SetGraphicsRootConstantBufferView(1, passCB->GetGPUVirtualAddress());
-
-		mCommandList->OMSetStencilRef(1);
-
-		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["Depth"]->mRtv[0]->mResource.Get(),
-			D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_RENDER_TARGET));
-
-		DirectX::XMVECTORF32 clearColor = { mRtvHeaps["Depth"]->mRtv[0]->mProperties.mClearColor[0],
-		mRtvHeaps["Depth"]->mRtv[0]->mProperties.mClearColor[1],
-		mRtvHeaps["Depth"]->mRtv[0]->mProperties.mClearColor[2],
-		mRtvHeaps["Depth"]->mRtv[0]->mProperties.mClearColor[3]
-		};
-
-		mCommandList->ClearRenderTargetView(mRtvHeaps["Depth"]->mRtvHeap.handleCPU((UINT)0), clearColor, 0, nullptr);
-
-		// Clear depth buffer.
-		mCommandList->ClearDepthStencilView(DepthStencilView(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
-
-		mCommandList->OMSetRenderTargets(1, &(mRtvHeaps["Depth"]->mRtvHeap.hCPUHeapStart), true, &DepthStencilView());
-
-		DrawSceneObjects(mCommandList.Get(), RenderLayer::Deferred, true);
-
-		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["Depth"]->mRtv[0]->mResource.Get(),
-			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ));
-
-		GDxGpuProfiler::GetGpuProfiler().EndGpuProfile();
-	}
+	// Clear depth buffer.
+	mCommandList->ClearDepthStencilView(DepthStencilView(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
 
 	// G-Buffer Pass
 	{
@@ -279,9 +239,6 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 			// SO DO NOT CLEAR DEPTH.
 			mCommandList->ClearRenderTargetView(mRtvHeaps["GBuffer"]->mRtvHeap.handleCPU((UINT)i), clearColor, 0, nullptr);
 		}
-
-		// Clear depth buffer.
-		mCommandList->ClearDepthStencilView(DepthStencilView(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
 
 		// Specify the buffers we are going to render to.
 		//mCommandList->OMSetRenderTargets(mRtvHeaps["GBuffer"]->mRtvHeap.HeapDesc.NumDescriptors, &(mRtvHeaps["GBuffer"]->mRtvHeap.hCPUHeapStart), true, &DepthStencilView());
@@ -1210,45 +1167,6 @@ void GDxRenderer::BuildRootSignature()
 			IID_PPV_ARGS(mRootSignatures["GBuffer"].GetAddressOf())));
 	}
 
-	// Depth root signature
-	{
-		CD3DX12_ROOT_PARAMETER gBufferRootParameters[2];
-		gBufferRootParameters[0].InitAsConstantBufferView(0);
-		gBufferRootParameters[1].InitAsConstantBufferView(1);
-
-		// A root signature is an array of root parameters.
-		CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(2, gBufferRootParameters,
-			0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
-
-		CD3DX12_STATIC_SAMPLER_DESC StaticSamplers[2];
-		StaticSamplers[0].Init(0, D3D12_FILTER_ANISOTROPIC);
-		StaticSamplers[1].Init(1, D3D12_FILTER_COMPARISON_MIN_MAG_MIP_LINEAR,
-			D3D12_TEXTURE_ADDRESS_MODE_BORDER,
-			D3D12_TEXTURE_ADDRESS_MODE_BORDER,
-			D3D12_TEXTURE_ADDRESS_MODE_BORDER,
-			0.f, 16u, D3D12_COMPARISON_FUNC_LESS_EQUAL);
-		rootSigDesc.NumStaticSamplers = 2;
-		rootSigDesc.pStaticSamplers = StaticSamplers;
-
-		// create a root signature with a single slot which points to a descriptor range consisting of a single constant buffer
-		ComPtr<ID3DBlob> serializedRootSig = nullptr;
-		ComPtr<ID3DBlob> errorBlob = nullptr;
-		HRESULT hr = D3D12SerializeRootSignature(&rootSigDesc, D3D_ROOT_SIGNATURE_VERSION_1,
-			serializedRootSig.GetAddressOf(), errorBlob.GetAddressOf());
-
-		if (errorBlob != nullptr)
-		{
-			::OutputDebugStringA((char*)errorBlob->GetBufferPointer());
-		}
-		ThrowIfFailed(hr);
-
-		ThrowIfFailed(md3dDevice->CreateRootSignature(
-			0,
-			serializedRootSig->GetBufferPointer(),
-			serializedRootSig->GetBufferSize(),
-			IID_PPV_ARGS(mRootSignatures["DepthPass"].GetAddressOf())));
-	}
-
 	// GBufferDebug root signature
 	{
 
@@ -1667,7 +1585,6 @@ void GDxRenderer::BuildDescriptorHeaps()
 		+ 1 //imgui
 		+ 1 //sky cubemap
 		+ 1 //depth buffer
-		+ 1 //depth prepass
 		+ 5 //g-buffer
 		+ 1 //light pass
 		+ 3 //taa
@@ -1715,36 +1632,9 @@ void GDxRenderer::BuildDescriptorHeaps()
 		md3dDevice->CreateShaderResourceView(mDepthStencilBuffer.Get(), &srvDesc, GetCpuSrv(mDepthBufferSrvIndex));
 	}
 
-	// Build RTV heap and SRV for depth pass.
-	{
-		mDepthSrvIndex = mDepthBufferSrvIndex + 1;
-
-		std::vector<DXGI_FORMAT> rtvFormats =
-		{
-			DXGI_FORMAT_R32_FLOAT 
-		};
-		std::vector<std::vector<FLOAT>> rtvClearColor =
-		{
-			{ 0,0,0,0 }
-		};
-		std::vector<GRtvProperties> propVec;
-		for (size_t i = 0; i < rtvFormats.size(); i++)
-		{
-			GRtvProperties prop;
-			prop.mRtvFormat = rtvFormats[i];
-			prop.mClearColor[0] = rtvClearColor[i][0];
-			prop.mClearColor[1] = rtvClearColor[i][1];
-			prop.mClearColor[2] = rtvClearColor[i][2];
-			prop.mClearColor[3] = rtvClearColor[i][3];
-			propVec.push_back(prop);
-		}
-		auto gDepthRtvHeap = std::make_unique<GDxRtvHeap>(md3dDevice.Get(), mClientWidth, mClientHeight, GetCpuSrv(mDepthSrvIndex), GetGpuSrv(mDepthSrvIndex), propVec);
-		mRtvHeaps["Depth"] = std::move(gDepthRtvHeap);
-	}
-
 	// Build RTV heap and SRV for GBuffers.
 	{
-		mGBufferSrvIndex = mDepthSrvIndex + 1;
+		mGBufferSrvIndex = mDepthBufferSrvIndex + 1;
 		mVelocityBufferSrvIndex = mGBufferSrvIndex + 3;
 
 		std::vector<DXGI_FORMAT> rtvFormats =
@@ -1970,46 +1860,6 @@ void GDxRenderer::BuildPSOs()
 		gBufferPsoDesc.SampleDesc.Count = 1;// don't use msaa in deferred rendering.
 		//deferredPSO = sysRM->CreatePSO(StringID("deferredPSO"), descPipelineState);
 		ThrowIfFailed(md3dDevice->CreateGraphicsPipelineState(&gBufferPsoDesc, IID_PPV_ARGS(&mPSOs["GBuffer"])));
-	}
-
-	// PSO for depth pass.
-	{
-		D3D12_DEPTH_STENCIL_DESC depthDSD;
-		depthDSD.DepthEnable = true;
-		depthDSD.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
-		depthDSD.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
-		depthDSD.StencilEnable = false;
-		depthDSD.StencilReadMask = 0xff;
-		depthDSD.StencilWriteMask = 0xff;
-		depthDSD.FrontFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
-		depthDSD.FrontFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
-		depthDSD.FrontFace.StencilPassOp = D3D12_STENCIL_OP_REPLACE;
-		depthDSD.FrontFace.StencilFunc = D3D12_COMPARISON_FUNC_ALWAYS;
-		// We are not rendering backfacing polygons, so these settings do not matter. 
-		depthDSD.BackFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
-		depthDSD.BackFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
-		depthDSD.BackFace.StencilPassOp = D3D12_STENCIL_OP_REPLACE;
-		depthDSD.BackFace.StencilFunc = D3D12_COMPARISON_FUNC_ALWAYS;
-
-		D3D12_GRAPHICS_PIPELINE_STATE_DESC depthPsoDesc;
-		ZeroMemory(&depthPsoDesc, sizeof(depthPsoDesc));
-		depthPsoDesc.VS = GDxShaderManager::LoadShader(L"Shaders\\DepthPassVS.cso");
-		depthPsoDesc.PS = GDxShaderManager::LoadShader(L"Shaders\\DepthPassPS.cso");
-		depthPsoDesc.InputLayout.pInputElementDescs = GDxInputLayout::DefaultLayout;
-		depthPsoDesc.InputLayout.NumElements = _countof(GDxInputLayout::DefaultLayout);
-		depthPsoDesc.pRootSignature = mRootSignatures["DepthPass"].Get();
-		//gBufferPsoDesc.pRootSignature = mRootSignatures["Forward"].Get();
-		depthPsoDesc.DepthStencilState = depthDSD;
-		depthPsoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
-		depthPsoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
-		depthPsoDesc.SampleMask = UINT_MAX;
-		depthPsoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-		depthPsoDesc.NumRenderTargets = 1;
-		depthPsoDesc.RTVFormats[0] = mRtvHeaps["Depth"]->mRtv[0]->mProperties.mRtvFormat;
-		depthPsoDesc.DSVFormat = mDepthStencilFormat;
-		depthPsoDesc.SampleDesc.Count = 1;// don't use msaa in deferred rendering.
-		//deferredPSO = sysRM->CreatePSO(StringID("deferredPSO"), descPipelineState);
-		ThrowIfFailed(md3dDevice->CreateGraphicsPipelineState(&depthPsoDesc, IID_PPV_ARGS(&mPSOs["DepthPass"])));
 	}
 
 	// PSO for direct light pass.
