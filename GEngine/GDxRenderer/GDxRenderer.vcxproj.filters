@@ -123,6 +123,9 @@
     <ClInclude Include="Private\GDxReadbackBuffer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Private\GDxUav.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -218,6 +221,9 @@
     <ClCompile Include="Private\GDxReadbackBuffer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Private\GDxUav.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shaders\AnimationDefaultVS.hlsl" />
@@ -238,6 +244,7 @@
     <FxCompile Include="Shaders\TaaPassPS.hlsl" />
     <FxCompile Include="Shaders\UnjitteredFullScreenVS.hlsl" />
     <FxCompile Include="Shaders\MotionBlurPassPS.hlsl" />
+    <FxCompile Include="Shaders\TiledDeferredCS.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Shaders\Lighting.hlsli" />

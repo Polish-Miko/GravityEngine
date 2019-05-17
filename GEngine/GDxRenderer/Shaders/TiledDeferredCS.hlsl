@@ -15,33 +15,60 @@
 #ifndef TILED_DEFERRED_CS_HLSL
 #define TILED_DEFERRED_CS_HLSL
 
-#include "GBuffer.hlsl"
-#include "FramebufferFlat.hlsl"
-#include "ShaderDefines.h"
+#include "Lighting.hlsli"
+#include "MainPassCB.hlsli"
+
+#define VISUALIZE_TILE_LIGHT_NUM 1
+
+//#include "GBuffer.hlsl"
+//#include "FramebufferFlat.hlsl"
+//#include "ShaderDefines.h"
+
+//G-Buffer
+Texture2D gAlbedoTexture			: register(t0);
+Texture2D gNormalTexture			: register(t1);
+Texture2D gWorldPosTexture			: register(t2);
+Texture2D gVelocityTexture			: register(t3);
+Texture2D gOrmTexture				: register(t4);
+
+Texture2D gDepthBuffer				: register(t5);
+Texture2D gStencilBuffer			: register(t6);
 
 // This determines the tile size for light binning and associated tradeoffs
-#define COMPUTE_SHADER_TILE_GROUP_DIM 16
+// should be the same with GDxRenderer.h
 #define TILE_SIZE_X 16
 #define TILE_SIZE_Y 16
 
-#define COMPUTE_SHADER_TILE_GROUP_SIZE (COMPUTE_SHADER_TILE_GROUP_DIM*COMPUTE_SHADER_TILE_GROUP_DIM)
+#define COMPUTE_SHADER_TILE_GROUP_SIZE (TILE_SIZE_X * TILE_SIZE_Y)
 
-RWStructuredBuffer<uint2> gFramebuffer : register(u0);
+//RWStructuredBuffer<uint2> gFramebuffer : register(u0);
+RWTexture2D<float4> gFramebuffer : register(u0);
 
 groupshared uint sMinZ;
 groupshared uint sMaxZ;
 
 // Light list for the tile
-groupshared uint sTileLightIndices[MAX_LIGHTS];
-groupshared uint sTileNumLights;
+groupshared uint sTilePointLightIndices[MAX_POINT_LIGHT_NUM];
+groupshared uint sTileNumPointLights;
+
+float LinearDepth(float depth)
+{
+	return (depth * gNearZ) / (gFarZ - depth * (gFarZ - gNearZ));
+}
+
+float ViewDepth(float depth)
+{
+	return (gFarZ * gNearZ) / (gFarZ - depth * (gFarZ - gNearZ));
+}
 
 // List of pixels that require per-sample shading
 // We encode two 16-bit x/y coordinates in one uint to save shared memory space
-groupshared uint sPerSamplePixels[COMPUTE_SHADER_TILE_GROUP_SIZE];
-groupshared uint sNumPerSamplePixels;
+//groupshared uint sPerSamplePixels[COMPUTE_SHADER_TILE_GROUP_SIZE];
+//groupshared uint sNumPerSamplePixels;
 
 //--------------------------------------------------------------------------------------
 // Utility for writing to our flat MSAAed UAV
+/*
 void WriteSample(uint2 coords, uint sampleIndex, float4 value)
 {
     gFramebuffer[GetFramebufferSampleAddress(coords, sampleIndex)] = PackRGBA16(value);
@@ -56,29 +83,28 @@ uint2 UnpackCoords(uint coords)
 {
     return uint2(coords & 0xFFFF, coords >> 16);
 }
+*/
 
 [numthreads(TILE_SIZE_X, TILE_SIZE_Y, 1)]
-void ComputeShaderTileCS(uint3 groupId          : SV_GroupID,
-                         uint3 dispatchThreadId : SV_DispatchThreadID,
-                         uint3 groupThreadId    : SV_GroupThreadID
-                         )
+void main(
+	uint3 groupId          : SV_GroupID,
+	uint3 dispatchThreadId : SV_DispatchThreadID,
+	uint3 groupThreadId : SV_GroupThreadID
+	)
 {
     // NOTE: This is currently necessary rather than just using SV_GroupIndex to work
     // around a compiler bug on Fermi.
     uint groupIndex = groupThreadId.y * TILE_SIZE_X + groupThreadId.x;
-    
-    // How many total lights?
-    uint totalLights, dummy;
-    gLight.GetDimensions(totalLights, dummy);
 
     uint2 globalCoords = dispatchThreadId.xy;
 
-    SurfaceData surfaceSamples[MSAA_SAMPLES];
-    ComputeSurfaceDataFromGBufferAllSamples(globalCoords, surfaceSamples);
+    //SurfaceData surfaceSamples[MSAA_SAMPLES];
+    //ComputeSurfaceDataFromGBufferAllSamples(globalCoords, surfaceSamples);
         
     // Work out Z bounds for our samples
-    float minZSample = mCameraNearFar.y;
-    float maxZSample = mCameraNearFar.x;
+	/*
+    float minZSample = gFarZ;
+    float maxZSample = gNearZ;
     {
         [unroll] for (uint sample = 0; sample < MSAA_SAMPLES; ++sample) {
             // Avoid shading skybox/background or otherwise invalid pixels
@@ -92,11 +118,16 @@ void ComputeShaderTileCS(uint3 groupId          : SV_GroupID,
             }
         }
     }
+	*/
+	float depth = gDepthBuffer.Load(int3(globalCoords, 0)).r;
+	depth = ViewDepth(depth);
+	float stencil = gStencilBuffer.Load(int3(globalCoords, 0)).g;
     
     // Initialize shared memory light list and Z bounds
-    if (groupIndex == 0) {
-        sTileNumLights = 0;
-        sNumPerSamplePixels = 0;
+    if (groupIndex == 0)
+	{
+        sTileNumPointLights = 0;
+        //sNumPerSamplePixels = 0;
         sMinZ = 0x7F7FFFFF;      // Max float
         sMaxZ = 0;
     }
@@ -108,10 +139,15 @@ void ComputeShaderTileCS(uint3 groupId          : SV_GroupID,
     // Since even in the best case the speed benefit of the parallel reduction is modest on current architectures
     // with typical tile sizes, we have reverted to simple atomics for now.
     // Only scatter pixels with actual valid samples in them
+	/*
     if (maxZSample >= minZSample) {
         InterlockedMin(sMinZ, asuint(minZSample));
         InterlockedMax(sMaxZ, asuint(maxZSample));
     }
+	*/
+
+	InterlockedMin(sMinZ, asuint(depth));
+	InterlockedMax(sMaxZ, asuint(depth));
 
     GroupMemoryBarrierWithGroupSync();
 
@@ -125,110 +161,182 @@ void ComputeShaderTileCS(uint3 groupId          : SV_GroupID,
     // The overhead of group synchronization/LDS or global memory lookup is probably as much as this
     // little bit of math anyways, but worth testing.
 
-    // Work out scale/bias from [0, 1]
-    float2 tileScale = float2(mFramebufferDimensions.xy) * rcp(float(2 * COMPUTE_SHADER_TILE_GROUP_DIM));
-    float2 tileBias = tileScale - float2(groupId.xy);
+	/*
+	// Work out scale/bias from [0, 1]
+	float2 tileScale = float2(mFramebufferDimensions.xy) * rcp(float(2 * float2(TILE_SIZE_X, TILE_SIZE_Y)));
+	float2 tileBias = tileScale - float2(groupId.xy);
 
-    // Now work out composite projection matrix
-    // Relevant matrix columns for this tile frusta
-    float4 c1 = float4(mCameraProj._11 * tileScale.x, 0.0f, tileBias.x, 0.0f);
-    float4 c2 = float4(0.0f, -mCameraProj._22 * tileScale.y, tileBias.y, 0.0f);
-    float4 c4 = float4(0.0f, 0.0f, 1.0f, 0.0f);
+	// Now work out composite projection matrix
+	// Relevant matrix columns for this tile frusta
+	float4 c1 = float4(mCameraProj._11 * tileScale.x, 0.0f, tileBias.x, 0.0f);
+	float4 c2 = float4(0.0f, -mCameraProj._22 * tileScale.y, tileBias.y, 0.0f);
+	float4 c4 = float4(0.0f, 0.0f, 1.0f, 0.0f);
+
+	float4 frustumPlanes[6];
+	// Sides
+	frustumPlanes[0] = c4 - c1;
+	frustumPlanes[1] = c4 + c1;
+	frustumPlanes[2] = c4 - c2;
+	frustumPlanes[3] = c4 + c2;
+	*/
+
+	/*
+	float2 tileScale = float2(gRenderTargetSize.xy) * rcp(2 * float2(TILE_SIZE_X, TILE_SIZE_Y));
+	float2 tileBias = tileScale - groupId.xy;
+
+	float4 c1 = float4(gProj._11 * tileScale.x, 0.0, tileBias.x, 0.0);
+	float4 c2 = float4(0.0, -gProj._22 * tileScale.y, tileBias.y, 0.0);
+	float4 c4 = float4(0.0, 0.0, 1.0, 0.0);
+
+	float4 frustumPlanes[6];
+	// Sides
+	frustumPlanes[0] = c4 - c1; // right
+	frustumPlanes[1] = c1; // left
+	frustumPlanes[2] = c4 - c2; // top
+	frustumPlanes[3] = c2; // bottom
+	*/
+
+	///*
+	// Work out scale/bias from [0, 1]
+	float2 tileNum = float2(gRenderTargetSize.xy) * rcp(float2(TILE_SIZE_X, TILE_SIZE_Y));
+	float2 tileCenterOffset = float2(groupId.xy) * 2 + float2(1.0f, 1.0f) - tileNum;
+
+	// Now work out composite projection matrix
+	// Relevant matrix columns for this tile frusta
+	float4 c1 = float4(-gProj._11 * tileNum.x, 0.0f, tileCenterOffset.x, 0.0f);
+	float4 c2 = float4(0.0f, -gProj._22 * tileNum.y, -tileCenterOffset.y, 0.0f);
+	float4 c4 = float4(0.0f, 0.0f, 1.0f, 0.0f);
 
     // Derive frustum planes
+	// See http://www.lighthouse3d.com/tutorials/view-frustum-culling/clip-space-approach-extracting-the-planes/
+	// 
     float4 frustumPlanes[6];
     // Sides
     frustumPlanes[0] = c4 - c1;
     frustumPlanes[1] = c4 + c1;
     frustumPlanes[2] = c4 - c2;
     frustumPlanes[3] = c4 + c2;
+	//*/
+
     // Near/far
     frustumPlanes[4] = float4(0.0f, 0.0f,  1.0f, -minTileZ);
     frustumPlanes[5] = float4(0.0f, 0.0f, -1.0f,  maxTileZ);
     
     // Normalize frustum planes (near/far already normalized)
-    [unroll] for (uint i = 0; i < 4; ++i) {
+    [unroll]
+	for (uint i = 0; i < 6; ++i)
+	{
         frustumPlanes[i] *= rcp(length(frustumPlanes[i].xyz));
     }
     
     // Cull lights for this tile
-    for (uint lightIndex = groupIndex; lightIndex < totalLights; lightIndex += COMPUTE_SHADER_TILE_GROUP_SIZE) {
-        PointLight light = gLight[lightIndex];
-                
+    for (uint lightIndex = groupIndex; lightIndex < pointLightCount; lightIndex += COMPUTE_SHADER_TILE_GROUP_SIZE)
+	{
+        PointLight light = pointLight[lightIndex];
+        
         // Cull: point light sphere vs tile frustum
         bool inFrustum = true;
-        [unroll] for (uint i = 0; i < 6; ++i) {
-            float d = dot(frustumPlanes[i], float4(light.positionView, 1.0f));
-            inFrustum = inFrustum && (d >= -light.attenuationEnd);
+
+        [unroll]
+		for (uint i = 0; i < 4; ++i)
+		{
+			float4 lightPositionView = mul(float4(light.Position, 1.0f), gView);
+            //float d = dot(frustumPlanes[i], float4(light.positionView, 1.0f));
+			float d = dot(frustumPlanes[i], lightPositionView);
+            inFrustum = inFrustum && (d >= -light.Range);
         }
 
-        [branch] if (inFrustum) {
+        [branch]
+		if (inFrustum)
+		{
             // Append light to list
             // Compaction might be better if we expect a lot of lights
             uint listIndex;
-            InterlockedAdd(sTileNumLights, 1, listIndex);
-            sTileLightIndices[listIndex] = lightIndex;
+            InterlockedAdd(sTileNumPointLights, 1, listIndex);
+            sTilePointLightIndices[listIndex] = lightIndex;
         }
     }
-
+ 
     GroupMemoryBarrierWithGroupSync();
     
-    uint numLights = sTileNumLights;
+    uint numLights = sTileNumPointLights;
 
     // Only process onscreen pixels (tiles can span screen edges)
-    if (all(globalCoords < mFramebufferDimensions.xy)) {
-        [branch] if (mUI.visualizeLightCount) {
-            [unroll] for (uint sample = 0; sample < MSAA_SAMPLES; ++sample) {
-                WriteSample(globalCoords, sample, (float(sTileNumLights) / 255.0f).xxxx);
-            }
-        } else if (numLights > 0) {
-            bool perSampleShading = RequiresPerSampleShading(surfaceSamples);
-            [branch] if (mUI.visualizePerSampleShading && perSampleShading) {
-                [unroll] for (uint sample = 0; sample < MSAA_SAMPLES; ++sample) {
-                    WriteSample(globalCoords, sample, float4(1, 0, 0, 1));
-                }
-            } else {
-                float3 lit = float3(0.0f, 0.0f, 0.0f);
-                for (uint tileLightIndex = 0; tileLightIndex < numLights; ++tileLightIndex) {
-                    PointLight light = gLight[sTileLightIndices[tileLightIndex]];
-                    AccumulateBRDF(surfaceSamples[0], light, lit);
-                }
+    if (all(globalCoords < gRenderTargetSize.xy))
+	{
+#if VISUALIZE_TILE_LIGHT_NUM
+		gFramebuffer[globalCoords] = float(sTileNumPointLights) / 200.0f;
+#else
+		if (numLights > 0)
+		{
+			bool perSampleShading = RequiresPerSampleShading(surfaceSamples);
+				[branch]
+			if (mUI.visualizePerSampleShading && perSampleShading)
+			{
+				[unroll]
+				for (uint sample = 0; sample < MSAA_SAMPLES; ++sample)
+				{
+					WriteSample(globalCoords, sample, float4(1, 0, 0, 1));
+				}
+			}
+			else
+			{
+				float3 lit = float3(0.0f, 0.0f, 0.0f);
+				for (uint tileLightIndex = 0; tileLightIndex < numLights; ++tileLightIndex)
+				{
+					PointLight light = gLight[sTilePointLightIndices[tileLightIndex]];
+					AccumulateBRDF(surfaceSamples[0], light, lit);
+				}
 
-                // Write sample 0 result
-                WriteSample(globalCoords, 0, float4(lit, 1.0f));
-                        
-                [branch] if (perSampleShading) {
-                    #if DEFER_PER_SAMPLE
-                        // Create a list of pixels that need per-sample shading
-                        uint listIndex;
-                        InterlockedAdd(sNumPerSamplePixels, 1, listIndex);
-                        sPerSamplePixels[listIndex] = PackCoords(globalCoords);
-                    #else
-                        // Shade the other samples for this pixel
-                        for (uint sample = 1; sample < MSAA_SAMPLES; ++sample) {
-                            float3 litSample = float3(0.0f, 0.0f, 0.0f);
-                            for (uint tileLightIndex = 0; tileLightIndex < numLights; ++tileLightIndex) {
-                                PointLight light = gLight[sTileLightIndices[tileLightIndex]];
-                                AccumulateBRDF(surfaceSamples[sample], light, litSample);
-                            }                        
-                            WriteSample(globalCoords, sample, float4(litSample, 1.0f));
-                        }
-                    #endif
-                } else {
-                    // Otherwise per-pixel shading, so splat the result to all samples
-                    [unroll] for (uint sample = 1; sample < MSAA_SAMPLES; ++sample) {
-                        WriteSample(globalCoords, sample, float4(lit, 1.0f));
-                    }
-                }
-            }
-        } else {
-            // Otherwise no lights affect here so clear all samples
-            [unroll] for (uint sample = 0; sample < MSAA_SAMPLES; ++sample) {
-                WriteSample(globalCoords, sample, float4(0.0f, 0.0f, 0.0f, 0.0f));
-            }
-        }
+				// Write sample 0 result
+				WriteSample(globalCoords, 0, float4(lit, 1.0f));
+
+				[branch]
+				if (perSampleShading)
+				{
+#if DEFER_PER_SAMPLE
+					// Create a list of pixels that need per-sample shading
+					uint listIndex;
+					InterlockedAdd(sNumPerSamplePixels, 1, listIndex);
+					sPerSamplePixels[listIndex] = PackCoords(globalCoords);
+#else
+					// Shade the other samples for this pixel
+					for (uint sample = 1; sample < MSAA_SAMPLES; ++sample)
+					{
+						float3 litSample = float3(0.0f, 0.0f, 0.0f);
+						for (uint tileLightIndex = 0; tileLightIndex < numLights; ++tileLightIndex)
+						{
+							PointLight light = gLight[sTilePointLightIndices[tileLightIndex]];
+							AccumulateBRDF(surfaceSamples[sample], light, litSample);
+						}
+						WriteSample(globalCoords, sample, float4(litSample, 1.0f));
+					}
+#endif
+				}
+				else
+				{
+					// Otherwise per-pixel shading, so splat the result to all samples
+					[unroll]
+					for (uint sample = 1; sample < MSAA_SAMPLES; ++sample)
+					{
+						WriteSample(globalCoords, sample, float4(lit, 1.0f));
+					}
+				}
+			}
+		}
+		else
+		{
+			// Otherwise no lights affect here so clear all samples
+			[unroll]
+			for (uint sample = 0; sample < MSAA_SAMPLES; ++sample)
+			{
+				WriteSample(globalCoords, sample, float4(0.0f, 0.0f, 0.0f, 0.0f));
+			}
+		}
+#endif
     }
 
+	/*
     #if DEFER_PER_SAMPLE && MSAA_SAMPLES > 1
         // NOTE: We were careful to write only sample 0 above if we are going to do sample
         // frequency shading below, so we don't need a device memory barrier here.
@@ -248,12 +356,13 @@ void ComputeShaderTileCS(uint3 groupId          : SV_GroupID,
 
             float3 lit = float3(0.0f, 0.0f, 0.0f);
             for (uint tileLightIndex = 0; tileLightIndex < numLights; ++tileLightIndex) {
-                PointLight light = gLight[sTileLightIndices[tileLightIndex]];
+                PointLight light = gLight[sTilePointLightIndices[tileLightIndex]];
                 AccumulateBRDF(surface, light, lit);
             }
             WriteSample(sampleCoords, sampleIndex, float4(lit, 1.0f));
         }
     #endif
+		*/
 }
 
 

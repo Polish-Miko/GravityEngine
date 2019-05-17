@@ -19,6 +19,7 @@
 #include "GDxRtvHeap.h"
 #include "GDxImgui.h"
 #include "GDxGpuProfiler.h"
+#include "GDxUav.h"
 
 // Link necessary d3d12 libraries.
 #pragma comment(lib,"d3dcompiler.lib")
@@ -33,6 +34,10 @@ using namespace DirectX::PackedVector;
 #define TAA_JITTER_DISTANCE 1.0;
 
 #define SKY_CUBEMAP_SIZE 1024
+
+// should be the same with TiledDeferredCS.hlsl
+#define DEFER_TILE_SIZE_X 16
+#define DEFER_TILE_SIZE_Y 16
 
 // 8x TAA
 static const double Halton_2[8] =
@@ -160,6 +165,7 @@ protected:
 	int mCurrBackBuffer = 0;
 	Microsoft::WRL::ComPtr<ID3D12Resource> mSwapChainBuffer[SwapChainBufferCount];
 	Microsoft::WRL::ComPtr<ID3D12Resource> mDepthStencilBuffer;
+	Microsoft::WRL::ComPtr<ID3D12Resource> mStencilBuffer;
 
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> mRtvHeap;
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> mDsvHeap;
@@ -187,6 +193,7 @@ protected:
 
 	ComPtr<ID3D12DescriptorHeap> mSrvDescriptorHeap = nullptr;
 
+	std::unordered_map<std::string, std::unique_ptr<GDxUav>> mUavs;
 	std::unordered_map<std::string, std::unique_ptr<GDxRtvHeap>> mRtvHeaps;
 	std::unordered_map<std::string, std::unique_ptr<GDxCubeRtv>> mCubeRtvs;
 	std::unordered_map<std::string, ComPtr<ID3DBlob>> mShaders;
@@ -205,8 +212,9 @@ protected:
 	UINT mNullTexSrvIndex1 = 0;
 	UINT mNullTexSrvIndex2 = 0;
 
-	UINT mDepthSrvIndex = 0;
+	//UINT mDepthSrvIndex = 0;
 	UINT mDepthBufferSrvIndex = 0;
+	UINT mStencilBufferSrvIndex = 0;
 	UINT mVelocityBufferSrvIndex = 0;
 	UINT mGBufferSrvIndex = 0;
 	UINT mLightPassSrvIndex = 0;

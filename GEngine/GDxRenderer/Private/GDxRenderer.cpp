@@ -256,89 +256,57 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 		GDxGpuProfiler::GetGpuProfiler().EndGpuProfile();
 	}
 
-	// Direct Light Pass
+	// Light Pass
 	{
-		GDxGpuProfiler::GetGpuProfiler().StartGpuProfile("Direct Light Pass");
+		GDxGpuProfiler::GetGpuProfiler().StartGpuProfile("Light Pass");
 
-		mCommandList->RSSetViewports(1, &(mRtvHeaps["LightPass"]->mRtv[0]->mViewport));
-		mCommandList->RSSetScissorRects(1, &(mRtvHeaps["LightPass"]->mRtv[0]->mScissorRect));
+		mCommandList->RSSetViewports(1, &(mUavs["LightPass"]->mViewport));
+		mCommandList->RSSetScissorRects(1, &(mUavs["LightPass"]->mScissorRect));
 
-		mCommandList->SetGraphicsRootSignature(mRootSignatures["LightPass"].Get());
+		mCommandList->SetComputeRootSignature(mRootSignatures["LightPass"].Get());
 
-		mCommandList->SetPipelineState(mPSOs["DirectLightPass"].Get());
-		
+		mCommandList->SetPipelineState(mPSOs["LightPass"].Get());
+
 		auto lightCB = mCurrFrameResource->LightCB->Resource();
-		mCommandList->SetGraphicsRootConstantBufferView(0, lightCB->GetGPUVirtualAddress());
+		mCommandList->SetComputeRootConstantBufferView(0, lightCB->GetGPUVirtualAddress());
 
-		mCommandList->SetGraphicsRootDescriptorTable(1, mRtvHeaps["GBuffer"]->GetSrvGpuStart());
+		auto passCB = mCurrFrameResource->PassCB->Resource();
+		mCommandList->SetComputeRootConstantBufferView(1, passCB->GetGPUVirtualAddress());
 
-		mCommandList->SetGraphicsRootDescriptorTable(2, GetGpuSrv(mIblIndex));
-		
-		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["LightPass"]->mRtv[0]->mResource.Get(),
+		mCommandList->SetComputeRootDescriptorTable(2, mRtvHeaps["GBuffer"]->GetSrvGpuStart());
+
+		mCommandList->CopyResource(mStencilBuffer.Get(), mDepthStencilBuffer.Get());
+		mCommandList->SetComputeRootDescriptorTable(3, GetGpuSrv(mDepthBufferSrvIndex));
+
+		mCommandList->SetComputeRootDescriptorTable(4, mUavs["LightPass"]->GetGpuUav());
+
+		// Indicate a state transition on the resource usage.
+		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mUavs["LightPass"]->GetResource(),
 			D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_RENDER_TARGET));
 
 		// Clear the back buffer.
-		DirectX::XMVECTORF32 clearColor = { mRtvHeaps["LightPass"]->mRtv[0]->mProperties.mClearColor[0],
-		mRtvHeaps["LightPass"]->mRtv[0]->mProperties.mClearColor[1],
-		mRtvHeaps["LightPass"]->mRtv[0]->mProperties.mClearColor[2],
-		mRtvHeaps["LightPass"]->mRtv[0]->mProperties.mClearColor[3]
+		DirectX::XMVECTORF32 clearColor = { mUavs["LightPass"]->mProperties.mClearColor[0],
+		mUavs["LightPass"]->mProperties.mClearColor[1],
+		mUavs["LightPass"]->mProperties.mClearColor[2],
+		mUavs["LightPass"]->mProperties.mClearColor[3]
 		};
 
 		// WE ALREADY WROTE THE DEPTH INFO TO THE DEPTH BUFFER IN DrawNormalsAndDepth,
 		// SO DO NOT CLEAR DEPTH.
-		mCommandList->ClearRenderTargetView(mRtvHeaps["LightPass"]->mRtvHeap.handleCPU(0), clearColor, 0, nullptr);
+		mCommandList->ClearRenderTargetView(mUavs["LightPass"]->GetCpuRtv(), clearColor, 0, nullptr);
 
-		// Specify the buffers we are going to render to.
-		//mCommandList->OMSetRenderTargets(mRtvHeaps["GBuffer"]->mRtvHeap.HeapDesc.NumDescriptors, &(mRtvHeaps["GBuffer"]->mRtvHeap.hCPUHeapStart), true, &DepthStencilView());
-		mCommandList->OMSetRenderTargets(1, &(mRtvHeaps["LightPass"]->mRtvHeap.handleCPU(0)), true, &DepthStencilView());
+		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mUavs["LightPass"]->GetResource(),
+			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ));
 
-		// For each render item...
-		DrawSceneObjects(mCommandList.Get(), RenderLayer::ScreenQuad, false);
+		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mUavs["LightPass"]->GetResource(),
+			D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_UNORDERED_ACCESS));
 
-		//mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["LightPass"]->mRtv[0]->mResource.Get(),
-			//D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ));
+		UINT numGroupsX = (UINT)ceilf((float)mClientWidth / DEFER_TILE_SIZE_X);
+		UINT numGroupsY = (UINT)ceilf((float)mClientHeight / DEFER_TILE_SIZE_Y);
+		mCommandList->Dispatch(numGroupsX, numGroupsY, 1);
 
-		GDxGpuProfiler::GetGpuProfiler().EndGpuProfile();
-	}
-
-	// Ambient Light Pass
-	{
-		GDxGpuProfiler::GetGpuProfiler().StartGpuProfile("Ambient Light Pass");
-
-		mCommandList->RSSetViewports(1, &(mRtvHeaps["LightPass"]->mRtv[0]->mViewport));
-		mCommandList->RSSetScissorRects(1, &(mRtvHeaps["LightPass"]->mRtv[0]->mScissorRect));
-
-		mCommandList->SetGraphicsRootSignature(mRootSignatures["LightPass"].Get());
-
-		mCommandList->SetPipelineState(mPSOs["AmbientLightPass"].Get());
-		
-		auto lightCB = mCurrFrameResource->LightCB->Resource();
-		mCommandList->SetGraphicsRootConstantBufferView(0, lightCB->GetGPUVirtualAddress());
-
-		mCommandList->SetGraphicsRootDescriptorTable(1, mRtvHeaps["GBuffer"]->GetSrvGpuStart());
-
-		mCommandList->SetGraphicsRootDescriptorTable(2, GetGpuSrv(mIblIndex));
-		
-		//mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["LightPass"]->mRtv[0]->mResource.Get(),
-			//D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_RENDER_TARGET));
-
-		// Clear the back buffer.
-		DirectX::XMVECTORF32 clearColor = { mRtvHeaps["LightPass"]->mRtv[0]->mProperties.mClearColor[0],
-		mRtvHeaps["LightPass"]->mRtv[0]->mProperties.mClearColor[1],
-		mRtvHeaps["LightPass"]->mRtv[0]->mProperties.mClearColor[2],
-		mRtvHeaps["LightPass"]->mRtv[0]->mProperties.mClearColor[3]
-		};
-
-		// WE ALREADY WROTE THE DEPTH INFO TO THE DEPTH BUFFER IN DrawNormalsAndDepth,
-		// SO DO NOT CLEAR DEPTH.
-		//mCommandList->ClearRenderTargetView(mRtvHeaps["LightPass"]->mRtvHeap.handleCPU(0), clearColor, 0, nullptr);
-
-		// Specify the buffers we are going to render to.
-		//mCommandList->OMSetRenderTargets(mRtvHeaps["GBuffer"]->mRtvHeap.HeapDesc.NumDescriptors, &(mRtvHeaps["GBuffer"]->mRtvHeap.hCPUHeapStart), true, &DepthStencilView());
-		mCommandList->OMSetRenderTargets(1, &(mRtvHeaps["LightPass"]->mRtvHeap.handleCPU(0)), true, &DepthStencilView());
-
-		// For each render item...
-		DrawSceneObjects(mCommandList.Get(), RenderLayer::ScreenQuad, false);
+		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mUavs["LightPass"]->GetResource(),
+			D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_GENERIC_READ));
 
 		GDxGpuProfiler::GetGpuProfiler().EndGpuProfile();
 	}
@@ -347,17 +315,20 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 	{
 		GDxGpuProfiler::GetGpuProfiler().StartGpuProfile("Sky Pass");
 
-		mCommandList->RSSetViewports(1, &(mRtvHeaps["LightPass"]->mRtv[0]->mViewport));
-		mCommandList->RSSetScissorRects(1, &(mRtvHeaps["LightPass"]->mRtv[0]->mScissorRect));
+		mCommandList->RSSetViewports(1, &(mUavs["LightPass"]->mViewport));
+		mCommandList->RSSetScissorRects(1, &(mUavs["LightPass"]->mScissorRect));
 
 		mCommandList->SetGraphicsRootSignature(mRootSignatures["Sky"].Get());
+
+		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mUavs["LightPass"]->GetResource(),
+			D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_RENDER_TARGET));
 
 		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["GBuffer"]->mRtv[mVelocityBufferSrvIndex - mGBufferSrvIndex]->mResource.Get(),
 			D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_RENDER_TARGET));
 
 		D3D12_CPU_DESCRIPTOR_HANDLE skyRtvs[2] =
 		{
-			mRtvHeaps["LightPass"]->mRtvHeap.handleCPU(0),
+			mUavs["LightPass"]->GetCpuRtv(),
 			mRtvHeaps["GBuffer"]->mRtvHeap.handleCPU(mVelocityBufferSrvIndex - mGBufferSrvIndex)
 		};
 		mCommandList->OMSetRenderTargets(2, skyRtvs, false, &DepthStencilView());
@@ -372,7 +343,7 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 		mCommandList->SetPipelineState(mPSOs["Sky"].Get());
 		DrawSceneObjects(mCommandList.Get(), RenderLayer::Sky, true);
 
-		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["LightPass"]->mRtv[0]->mResource.Get(),
+		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mUavs["LightPass"]->GetResource(),
 			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ));
 
 		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["GBuffer"]->mRtv[mVelocityBufferSrvIndex - mGBufferSrvIndex]->mResource.Get(),
@@ -395,7 +366,7 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 		auto passCB = mCurrFrameResource->PassCB->Resource();
 		mCommandList->SetGraphicsRootConstantBufferView(0, passCB->GetGPUVirtualAddress());
 
-		mCommandList->SetGraphicsRootDescriptorTable(1, mRtvHeaps["LightPass"]->GetSrvGpuStart());
+		mCommandList->SetGraphicsRootDescriptorTable(1, mUavs["LightPass"]->GetGpuSrv());
 
 		mCommandList->SetGraphicsRootDescriptorTable(2, mRtvHeaps["TaaPass"]->GetSrvGpu(mTaaHistoryIndex));
 		mTaaHistoryIndex = (mTaaHistoryIndex + 1) % 2;
@@ -641,6 +612,7 @@ void GDxRenderer::OnResize()
 	for (int i = 0; i < SwapChainBufferCount; ++i)
 		mSwapChainBuffer[i].Reset();
 	mDepthStencilBuffer.Reset();
+	mStencilBuffer.Reset();
 
 	// Resize the swap chain.
 	ThrowIfFailed(mSwapChain->ResizeBuffers(
@@ -689,40 +661,16 @@ void GDxRenderer::OnResize()
 		D3D12_RESOURCE_STATE_COMMON,
 		&optClear,
 		IID_PPV_ARGS(mDepthStencilBuffer.GetAddressOf())));
-
-	// Create descriptor to mip level 0 of entire resource using the format of the resource.
-	md3dDevice->CreateDepthStencilView(mDepthStencilBuffer.Get(), &dsv_desc, DepthStencilView());
-
-	/*
-	// Create the depth/stencil buffer and view.
-	D3D12_RESOURCE_DESC depthStencilDesc;
-	depthStencilDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-	depthStencilDesc.Alignment = 0;
-	depthStencilDesc.Width = mClientWidth;
-	depthStencilDesc.Height = mClientHeight;
-	depthStencilDesc.DepthOrArraySize = 1;
-	depthStencilDesc.MipLevels = 1;
-	depthStencilDesc.Format = mDepthStencilFormat;
-	depthStencilDesc.SampleDesc.Count = 1;
-	depthStencilDesc.SampleDesc.Quality = 0;
-	depthStencilDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
-	depthStencilDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
-
-	D3D12_CLEAR_VALUE optClear;
-	optClear.Format = mDepthStencilFormat;
-	optClear.DepthStencil.Depth = 1.0f;
-	optClear.DepthStencil.Stencil = 0;
 	ThrowIfFailed(md3dDevice->CreateCommittedResource(
 		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
 		D3D12_HEAP_FLAG_NONE,
 		&depthStencilDesc,
 		D3D12_RESOURCE_STATE_COMMON,
 		&optClear,
-		IID_PPV_ARGS(mDepthStencilBuffer.GetAddressOf())));
+		IID_PPV_ARGS(mStencilBuffer.GetAddressOf())));
 
 	// Create descriptor to mip level 0 of entire resource using the format of the resource.
-	md3dDevice->CreateDepthStencilView(mDepthStencilBuffer.Get(), nullptr, DepthStencilView());
-	*/
+	md3dDevice->CreateDepthStencilView(mDepthStencilBuffer.Get(), &dsv_desc, DepthStencilView());
 
 	// Transition the resource from its initial state to be used as a depth buffer.
 	mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mDepthStencilBuffer.Get(),
@@ -751,6 +699,14 @@ void GDxRenderer::OnResize()
 		if (rtvHeap.second->mRtv.size() != 0 && rtvHeap.second->mRtv[0]->mResource != nullptr)
 		{
 			rtvHeap.second->OnResize(mClientWidth, mClientHeight);
+		}
+	}
+
+	for (auto &uav : mUavs)
+	{
+		if (uav.second->ResourceNotNull())
+		{
+			uav.second->OnResize(mClientWidth, mClientHeight);
 		}
 	}
 }
@@ -1214,6 +1170,7 @@ void GDxRenderer::BuildRootSignature()
 	}
 
 	// Light pass signature
+	/*
 	{
 		//G-Buffer inputs
 		CD3DX12_DESCRIPTOR_RANGE range;
@@ -1260,6 +1217,61 @@ void GDxRenderer::BuildRootSignature()
 			serializedRootSig->GetBufferSize(),
 			IID_PPV_ARGS(mRootSignatures["LightPass"].GetAddressOf())));
 	}
+	*/
+
+	// Light pass signature
+	{
+		//G-Buffer inputs
+		CD3DX12_DESCRIPTOR_RANGE range;
+		range.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, mRtvHeaps["GBuffer"]->mRtvHeap.HeapDesc.NumDescriptors, 0);
+
+		//Depth inputs
+		CD3DX12_DESCRIPTOR_RANGE rangeDepth;
+		rangeDepth.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, (UINT)2, mRtvHeaps["GBuffer"]->mRtvHeap.HeapDesc.NumDescriptors);
+
+		//Depth inputs
+		CD3DX12_DESCRIPTOR_RANGE rangeUav;
+		rangeUav.Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, (UINT)1, 0);
+
+		CD3DX12_ROOT_PARAMETER gLightPassRootParameters[5];
+		gLightPassRootParameters[0].InitAsConstantBufferView(0);
+		gLightPassRootParameters[1].InitAsConstantBufferView(1);
+		gLightPassRootParameters[2].InitAsDescriptorTable(1, &range, D3D12_SHADER_VISIBILITY_ALL);
+		gLightPassRootParameters[3].InitAsDescriptorTable(1, &rangeDepth, D3D12_SHADER_VISIBILITY_ALL);
+		gLightPassRootParameters[4].InitAsDescriptorTable(1, &rangeUav, D3D12_SHADER_VISIBILITY_ALL);
+
+		// A root signature is an array of root parameters.
+		CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(5, gLightPassRootParameters,
+			0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+
+		CD3DX12_STATIC_SAMPLER_DESC StaticSamplers[2];
+		StaticSamplers[0].Init(0, D3D12_FILTER_ANISOTROPIC);
+		StaticSamplers[1].Init(1, D3D12_FILTER_COMPARISON_MIN_MAG_MIP_LINEAR,
+			D3D12_TEXTURE_ADDRESS_MODE_BORDER,
+			D3D12_TEXTURE_ADDRESS_MODE_BORDER,
+			D3D12_TEXTURE_ADDRESS_MODE_BORDER,
+			0.f, 16u, D3D12_COMPARISON_FUNC_LESS_EQUAL);
+		rootSigDesc.NumStaticSamplers = 2;
+		rootSigDesc.pStaticSamplers = StaticSamplers;
+
+		// create a root signature with a single slot which points to a descriptor range consisting of a single constant buffer
+		ComPtr<ID3DBlob> serializedRootSig = nullptr;
+		ComPtr<ID3DBlob> errorBlob = nullptr;
+		HRESULT hr = D3D12SerializeRootSignature(&rootSigDesc, D3D_ROOT_SIGNATURE_VERSION_1,
+			serializedRootSig.GetAddressOf(), errorBlob.GetAddressOf());
+
+		if (errorBlob != nullptr)
+		{
+			::OutputDebugStringA((char*)errorBlob->GetBufferPointer());
+		}
+		ThrowIfFailed(hr);
+
+		ThrowIfFailed(md3dDevice->CreateRootSignature(
+			0,
+			serializedRootSig->GetBufferPointer(),
+			serializedRootSig->GetBufferSize(),
+			IID_PPV_ARGS(mRootSignatures["LightPass"].GetAddressOf())));
+	}
 
 	// Taa pass signature
 	{
@@ -1271,7 +1283,7 @@ void GDxRenderer::BuildRootSignature()
 		CD3DX12_DESCRIPTOR_RANGE rangeVelocity;
 		rangeVelocity.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 2);
 		CD3DX12_DESCRIPTOR_RANGE rangeDepth;
-		rangeDepth.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 3);
+		rangeDepth.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 2, 3);
 
 		CD3DX12_ROOT_PARAMETER gTaaPassRootParameters[5];
 		gTaaPassRootParameters[0].InitAsConstantBufferView(1);
@@ -1585,8 +1597,9 @@ void GDxRenderer::BuildDescriptorHeaps()
 		+ 1 //imgui
 		+ 1 //sky cubemap
 		+ 1 //depth buffer
+		+ 1 //stencil buffer
 		+ 5 //g-buffer
-		+ 1 //light pass
+		+ 2 //light pass srv and uav
 		+ 3 //taa
 		+ 1 //motion blur
 		+ (2 + mPrefilterLevels);//IBL
@@ -1616,7 +1629,7 @@ void GDxRenderer::BuildDescriptorHeaps()
 	skySrvDesc.Format = tex->Resource->GetDesc().Format;
 	md3dDevice->CreateShaderResourceView(tex->Resource.Get(), &skySrvDesc, GetCpuSrv(mSkyTexHeapIndex));
 
-	// Build SRV for depth buffer
+	// Build SRV for depth/stencil buffer
 	{
 		mDepthBufferSrvIndex = mSkyTexHeapIndex + 1;
 
@@ -1630,11 +1643,24 @@ void GDxRenderer::BuildDescriptorHeaps()
 		srvDesc.Texture2D.MipLevels = 1;
 
 		md3dDevice->CreateShaderResourceView(mDepthStencilBuffer.Get(), &srvDesc, GetCpuSrv(mDepthBufferSrvIndex));
+
+		mStencilBufferSrvIndex = mDepthBufferSrvIndex + 1;
+
+		D3D12_SHADER_RESOURCE_VIEW_DESC stencilSrvDesc = {};
+		stencilSrvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+		stencilSrvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+		stencilSrvDesc.Texture2D.MostDetailedMip = 0;
+		stencilSrvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
+		stencilSrvDesc.Format = DXGI_FORMAT_X24_TYPELESS_G8_UINT;
+		//stencilSrvDesc.Texture2D.MipLevels = -1;
+		stencilSrvDesc.Texture2D.MipLevels = 1;
+
+		md3dDevice->CreateShaderResourceView(mStencilBuffer.Get(), &stencilSrvDesc, GetCpuSrv(mStencilBufferSrvIndex));
 	}
 
 	// Build RTV heap and SRV for GBuffers.
 	{
-		mGBufferSrvIndex = mDepthBufferSrvIndex + 1;
+		mGBufferSrvIndex = mStencilBufferSrvIndex + 1;
 		mVelocityBufferSrvIndex = mGBufferSrvIndex + 3;
 
 		std::vector<DXGI_FORMAT> rtvFormats =
@@ -1668,8 +1694,9 @@ void GDxRenderer::BuildDescriptorHeaps()
 		mRtvHeaps["GBuffer"] = std::move(gBufferRtvHeap);
 	}
 
-	// Build RTV heap and SRV for light pass.
+	// Build UAV and SRV for light pass.
 	{
+		/*
 		mLightPassSrvIndex = mGBufferSrvIndex + mRtvHeaps["GBuffer"]->mRtvHeap.HeapDesc.NumDescriptors;
 
 		std::vector<DXGI_FORMAT> rtvFormats =
@@ -1693,11 +1720,23 @@ void GDxRenderer::BuildDescriptorHeaps()
 		}
 		auto lightPassRtvHeap = std::make_unique<GDxRtvHeap>(md3dDevice.Get(), mClientWidth, mClientHeight, GetCpuSrv(mLightPassSrvIndex), GetGpuSrv(mLightPassSrvIndex), propVec);
 		mRtvHeaps["LightPass"] = std::move(lightPassRtvHeap);
+		*/
+		mLightPassSrvIndex = mGBufferSrvIndex + mRtvHeaps["GBuffer"]->mRtvHeap.HeapDesc.NumDescriptors;
+
+		GDxUavProperties prop;
+		prop.mUavFormat = DXGI_FORMAT_R32G32B32A32_FLOAT;// Direct light and ambient light
+		prop.mClearColor[0] = 0;
+		prop.mClearColor[1] = 0;
+		prop.mClearColor[2] = 0;
+		prop.mClearColor[3] = 1;
+
+		auto lightPassUav = std::make_unique<GDxUav>(md3dDevice.Get(), mClientWidth, mClientHeight, GetCpuSrv(mLightPassSrvIndex), GetGpuSrv(mLightPassSrvIndex), prop, true, true);
+		mUavs["LightPass"] = std::move(lightPassUav);
 	}
 
 	// Build RTV heap and SRV for TAA pass.
 	{
-		mTaaPassSrvIndex = mLightPassSrvIndex + mRtvHeaps["LightPass"]->mRtvHeap.HeapDesc.NumDescriptors;
+		mTaaPassSrvIndex = mLightPassSrvIndex + mUavs["LightPass"]->GetSize();
 
 		std::vector<DXGI_FORMAT> rtvFormats =
 		{
@@ -1862,8 +1901,9 @@ void GDxRenderer::BuildPSOs()
 		ThrowIfFailed(md3dDevice->CreateGraphicsPipelineState(&gBufferPsoDesc, IID_PPV_ARGS(&mPSOs["GBuffer"])));
 	}
 
-	// PSO for direct light pass.
+	// PSO for light pass.
 	{
+		/*
 		D3D12_DEPTH_STENCIL_DESC lightPassDSD;
 		lightPassDSD.DepthEnable = false;
 		lightPassDSD.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
@@ -1875,7 +1915,7 @@ void GDxRenderer::BuildPSOs()
 		lightPassDSD.FrontFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
 		lightPassDSD.FrontFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
 		lightPassDSD.FrontFace.StencilFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
-		// We are not rendering backfacing polygons, so these settings do not matter. 
+		// We are not rendering backfacing polygons, so these settings do not matter.
 		lightPassDSD.BackFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
 		lightPassDSD.BackFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
 		lightPassDSD.BackFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
@@ -1913,59 +1953,13 @@ void GDxRenderer::BuildPSOs()
 		descPipelineState.SampleDesc.Count = 1;
 		descPipelineState.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 		ThrowIfFailed(md3dDevice->CreateGraphicsPipelineState(&descPipelineState, IID_PPV_ARGS(&mPSOs["DirectLightPass"])));
-	}
+		*/
 
-	// PSO for ambient light pass.
-	{
-		D3D12_DEPTH_STENCIL_DESC ambientPassDSD;
-		ambientPassDSD.DepthEnable = false;
-		ambientPassDSD.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
-		ambientPassDSD.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
-		ambientPassDSD.StencilEnable = true;
-		ambientPassDSD.StencilReadMask = 0xff;
-		ambientPassDSD.StencilWriteMask = 0x0;
-		ambientPassDSD.FrontFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
-		ambientPassDSD.FrontFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
-		ambientPassDSD.FrontFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
-		ambientPassDSD.FrontFace.StencilFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
-		// We are not rendering backfacing polygons, so these settings do not matter. 
-		ambientPassDSD.BackFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
-		ambientPassDSD.BackFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
-		ambientPassDSD.BackFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
-		ambientPassDSD.BackFace.StencilFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
-
-		auto ambientBlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
-		ambientBlendState.AlphaToCoverageEnable = false;
-		ambientBlendState.IndependentBlendEnable = false;
-
-		ambientBlendState.RenderTarget[0].BlendEnable = true;
-		ambientBlendState.RenderTarget[0].BlendOp = D3D12_BLEND_OP_ADD;
-		ambientBlendState.RenderTarget[0].SrcBlend = D3D12_BLEND_ONE;
-		ambientBlendState.RenderTarget[0].DestBlend = D3D12_BLEND_ONE;
-
-		auto ambientRasterizer = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
-		//rasterizer.CullMode = D3D12_CULL_MODE_FRONT; // Front culling for point light
-		ambientRasterizer.CullMode = D3D12_CULL_MODE_NONE;
-		ambientRasterizer.DepthClipEnable = false;
-
-		D3D12_GRAPHICS_PIPELINE_STATE_DESC descAmbientPSO;
-		ZeroMemory(&descAmbientPSO, sizeof(descAmbientPSO));
-
-		descAmbientPSO.VS = GDxShaderManager::LoadShader(L"Shaders\\FullScreenVS.cso");
-		descAmbientPSO.PS = GDxShaderManager::LoadShader(L"Shaders\\AmbientPassPS.cso");
-		descAmbientPSO.pRootSignature = mRootSignatures["LightPass"].Get();
-		descAmbientPSO.BlendState = ambientBlendState;
-		descAmbientPSO.DepthStencilState = ambientPassDSD;
-		descAmbientPSO.DepthStencilState.DepthEnable = false;
-		descAmbientPSO.InputLayout.pInputElementDescs = GDxInputLayout::DefaultLayout;
-		descAmbientPSO.InputLayout.NumElements = _countof(GDxInputLayout::DefaultLayout);
-		descAmbientPSO.RasterizerState = ambientRasterizer;
-		descAmbientPSO.NumRenderTargets = 1;
-		descAmbientPSO.RTVFormats[0] = mRtvHeaps["LightPass"]->mRtv[0]->mProperties.mRtvFormat;
-		descAmbientPSO.SampleMask = UINT_MAX;
-		descAmbientPSO.SampleDesc.Count = 1;
-		descAmbientPSO.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-		ThrowIfFailed(md3dDevice->CreateGraphicsPipelineState(&descAmbientPSO, IID_PPV_ARGS(&mPSOs["AmbientLightPass"])));
+		D3D12_COMPUTE_PIPELINE_STATE_DESC computePsoDesc = {};
+		computePsoDesc.pRootSignature = mRootSignatures["LightPass"].Get();
+		computePsoDesc.CS = GDxShaderManager::LoadShader(L"Shaders\\TiledDeferredCS.cso");
+		computePsoDesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
+		ThrowIfFailed(md3dDevice->CreateComputePipelineState(&computePsoDesc, IID_PPV_ARGS(&mPSOs["LightPass"])));
 	}
 
 	// PSO for TAA pass.
@@ -2169,7 +2163,7 @@ void GDxRenderer::BuildPSOs()
 		skyPsoDesc.SampleMask = UINT_MAX;
 		skyPsoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 		skyPsoDesc.NumRenderTargets = 2;
-		skyPsoDesc.RTVFormats[0] = mRtvHeaps["LightPass"]->mRtv[0]->mProperties.mRtvFormat;
+		skyPsoDesc.RTVFormats[0] = mUavs["LightPass"]->GetFormat();
 		skyPsoDesc.RTVFormats[1] = mRtvHeaps["GBuffer"]->mRtv[mVelocityBufferSrvIndex - mGBufferSrvIndex]->mProperties.mRtvFormat;
 		skyPsoDesc.SampleDesc.Count = 1;
 		skyPsoDesc.SampleDesc.Quality = 0;
