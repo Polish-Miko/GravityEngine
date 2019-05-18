@@ -320,7 +320,7 @@ void GCore::MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 void GCore::OnKeyboardInput(const GGiGameTimer* gt)
 {
 	const float dt = gt->DeltaTime();
-
+	
 	if ((GetAsyncKeyState('W') & 0x8000) && (GetAsyncKeyState(VK_RBUTTON) & 0x8000))
 		mCamera->Walk(mCameraSpeed * dt);
 

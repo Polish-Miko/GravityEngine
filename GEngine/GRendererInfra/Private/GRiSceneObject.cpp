@@ -62,13 +62,15 @@ void GRiSceneObject::SetScale(float x, float y, float z)
 
 void GRiSceneObject::SetTexTransform(GGiFloat4x4* texTrans)
 {
-	TexTransform = texTrans;
+	std::shared_ptr<GGiFloat4x4> temp(texTrans);
+	TexTransform = temp;
+	//TexTransform = std::make_shared<GGiFloat4x4>(*texTrans);
 	MarkDirty();
 }
 
 GGiFloat4x4* GRiSceneObject::GetTexTransform()
 {
-	return TexTransform;
+	return TexTransform.get();
 }
 
 void GRiSceneObject::SetMesh(GRiMesh* mesh)
@@ -106,18 +108,23 @@ UINT GRiSceneObject::GetObjIndex()
 
 GGiFloat4x4* GRiSceneObject::GetPrevTransform()
 {
-	return prevTransform;
+	return prevTransform.get();
 }
 
 void GRiSceneObject::SetPrevTransform(GGiFloat4x4* trans)
 {
-	prevTransform = trans;
+	std::shared_ptr<GGiFloat4x4> temp(trans);
+	prevTransform = temp;
+	//prevTransform = std::make_shared<GGiFloat4x4>(*trans);
 	MarkDirty();
 }
 
 void GRiSceneObject::ResetPrevTransform()
 {
-	prevTransform = GetTransform();
+	std::shared_ptr<GGiFloat4x4> temp(GetTransform());
+	prevTransform = temp;
+	//GGiFloat4x4* temp = GetTransform();
+	//prevTransform = std::make_shared<GGiFloat4x4>(*temp);
 	MarkDirty();
 }
 

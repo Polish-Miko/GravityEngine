@@ -275,10 +275,9 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 
 		mCommandList->SetComputeRootDescriptorTable(2, mRtvHeaps["GBuffer"]->GetSrvGpuStart());
 
-		mCommandList->CopyResource(mStencilBuffer.Get(), mDepthStencilBuffer.Get());
 		mCommandList->SetComputeRootDescriptorTable(3, GetGpuSrv(mDepthBufferSrvIndex));
 
-		mCommandList->SetComputeRootDescriptorTable(4, mUavs["LightPass"]->GetGpuUav());
+		mCommandList->SetComputeRootDescriptorTable(4, GetGpuSrv(mIblIndex));
 
 		// Indicate a state transition on the resource usage.
 		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mUavs["LightPass"]->GetResource(),
@@ -296,10 +295,9 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 		mCommandList->ClearRenderTargetView(mUavs["LightPass"]->GetCpuRtv(), clearColor, 0, nullptr);
 
 		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mUavs["LightPass"]->GetResource(),
-			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ));
+			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_UNORDERED_ACCESS));
 
-		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mUavs["LightPass"]->GetResource(),
-			D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_UNORDERED_ACCESS));
+		mCommandList->SetComputeRootDescriptorTable(5, mUavs["LightPass"]->GetGpuUav());
 
 		UINT numGroupsX = (UINT)ceilf((float)mClientWidth / DEFER_TILE_SIZE_X);
 		UINT numGroupsY = (UINT)ceilf((float)mClientHeight / DEFER_TILE_SIZE_Y);
@@ -612,7 +610,6 @@ void GDxRenderer::OnResize()
 	for (int i = 0; i < SwapChainBufferCount; ++i)
 		mSwapChainBuffer[i].Reset();
 	mDepthStencilBuffer.Reset();
-	mStencilBuffer.Reset();
 
 	// Resize the swap chain.
 	ThrowIfFailed(mSwapChain->ResizeBuffers(
@@ -638,7 +635,7 @@ void GDxRenderer::OnResize()
 	depthStencilDesc.Height = mClientHeight;
 	depthStencilDesc.DepthOrArraySize = 1;
 	depthStencilDesc.MipLevels = 1;
-	depthStencilDesc.Format = DXGI_FORMAT_R24G8_TYPELESS;
+	depthStencilDesc.Format = DXGI_FORMAT_R32G8X24_TYPELESS; //DXGI_FORMAT_R24G8_TYPELESS;
 	depthStencilDesc.SampleDesc.Count = 1;
 	depthStencilDesc.SampleDesc.Quality = 0;
 	depthStencilDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
@@ -646,12 +643,12 @@ void GDxRenderer::OnResize()
 
 	D3D12_DEPTH_STENCIL_VIEW_DESC dsv_desc;
 	dsv_desc.Flags = D3D12_DSV_FLAG_NONE;
-	dsv_desc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	dsv_desc.Format = DXGI_FORMAT_D32_FLOAT_S8X24_UINT; //DXGI_FORMAT_D24_UNORM_S8_UINT;
 	dsv_desc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
 	dsv_desc.Texture2D.MipSlice = 0;
 
 	D3D12_CLEAR_VALUE optClear;
-	optClear.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	optClear.Format = DXGI_FORMAT_D32_FLOAT_S8X24_UINT; //DXGI_FORMAT_D24_UNORM_S8_UINT;
 	optClear.DepthStencil.Depth = 1.0f;
 	optClear.DepthStencil.Stencil = 0;
 	ThrowIfFailed(md3dDevice->CreateCommittedResource(
@@ -661,13 +658,6 @@ void GDxRenderer::OnResize()
 		D3D12_RESOURCE_STATE_COMMON,
 		&optClear,
 		IID_PPV_ARGS(mDepthStencilBuffer.GetAddressOf())));
-	ThrowIfFailed(md3dDevice->CreateCommittedResource(
-		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
-		D3D12_HEAP_FLAG_NONE,
-		&depthStencilDesc,
-		D3D12_RESOURCE_STATE_COMMON,
-		&optClear,
-		IID_PPV_ARGS(mStencilBuffer.GetAddressOf())));
 
 	// Create descriptor to mip level 0 of entire resource using the format of the resource.
 	md3dDevice->CreateDepthStencilView(mDepthStencilBuffer.Get(), &dsv_desc, DepthStencilView());
@@ -738,6 +728,7 @@ void GDxRenderer::UpdateObjectCBs(const GGiGameTimer* gt)
 			GDxFloat4x4* dxTrans = dynamic_cast<GDxFloat4x4*>(e.second->GetTransform());
 			if (dxTrans == nullptr)
 				ThrowGGiException("Cast failed from GGiFloat4x4* to GDxFloat4x4*.");
+
 			GDxFloat4x4* dxPrevTrans = dynamic_cast<GDxFloat4x4*>(e.second->GetPrevTransform());
 			if (dxPrevTrans == nullptr)
 				ThrowGGiException("Cast failed from GGiFloat4x4* to GDxFloat4x4*.");
@@ -747,6 +738,7 @@ void GDxRenderer::UpdateObjectCBs(const GGiGameTimer* gt)
 				ThrowGGiException("Cast failed from GGiFloat4x4* to GDxFloat4x4*.");
 			
 			XMMATRIX renderObjectTrans = XMLoadFloat4x4(&(dxTrans->GetValue()));
+			delete dxTrans;
 			XMMATRIX invWorld = XMMatrixInverse(&XMMatrixDeterminant(renderObjectTrans), renderObjectTrans);
 			XMMATRIX invTransWorld = XMMatrixTranspose(invWorld);
 			XMMATRIX prevWorld = XMLoadFloat4x4(&(dxPrevTrans->GetValue()));
@@ -838,9 +830,9 @@ void GDxRenderer::UpdateLightCB(const GGiGameTimer* gt)
 			lightCB.pointLight[(i + lightCount) * 2 * lightCount + j + lightCount].Color[3] = 1.0f;
 			lightCB.pointLight[(i + lightCount) * 2 * lightCount + j + lightCount].Intensity = 500.0f;
 			lightCB.pointLight[(i + lightCount) * 2 * lightCount + j + lightCount].Position[0] = i * 30.0f;
-			lightCB.pointLight[(i + lightCount) * 2 * lightCount + j + lightCount].Position[1] = 0.0f;
+			lightCB.pointLight[(i + lightCount) * 2 * lightCount + j + lightCount].Position[1] = -15.0f;
 			lightCB.pointLight[(i + lightCount) * 2 * lightCount + j + lightCount].Position[2] = j * 30.0f;
-			lightCB.pointLight[(i + lightCount) * 2 * lightCount + j + lightCount].Range = 300.0f;
+			lightCB.pointLight[(i + lightCount) * 2 * lightCount + j + lightCount].Range = 50.0f;
 		}
 	}
 
@@ -1227,21 +1219,26 @@ void GDxRenderer::BuildRootSignature()
 
 		//Depth inputs
 		CD3DX12_DESCRIPTOR_RANGE rangeDepth;
-		rangeDepth.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, (UINT)2, mRtvHeaps["GBuffer"]->mRtvHeap.HeapDesc.NumDescriptors);
+		rangeDepth.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, (UINT)1, mRtvHeaps["GBuffer"]->mRtvHeap.HeapDesc.NumDescriptors);
 
-		//Depth inputs
+		//IBL inputs
+		CD3DX12_DESCRIPTOR_RANGE rangeIBL;
+		rangeIBL.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, (UINT)mPrefilterLevels + (UINT)1 + (UINT)1, mRtvHeaps["GBuffer"]->mRtvHeap.HeapDesc.NumDescriptors + 1);
+
+		//Output
 		CD3DX12_DESCRIPTOR_RANGE rangeUav;
 		rangeUav.Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, (UINT)1, 0);
 
-		CD3DX12_ROOT_PARAMETER gLightPassRootParameters[5];
+		CD3DX12_ROOT_PARAMETER gLightPassRootParameters[6];
 		gLightPassRootParameters[0].InitAsConstantBufferView(0);
 		gLightPassRootParameters[1].InitAsConstantBufferView(1);
 		gLightPassRootParameters[2].InitAsDescriptorTable(1, &range, D3D12_SHADER_VISIBILITY_ALL);
 		gLightPassRootParameters[3].InitAsDescriptorTable(1, &rangeDepth, D3D12_SHADER_VISIBILITY_ALL);
-		gLightPassRootParameters[4].InitAsDescriptorTable(1, &rangeUav, D3D12_SHADER_VISIBILITY_ALL);
+		gLightPassRootParameters[4].InitAsDescriptorTable(1, &rangeIBL, D3D12_SHADER_VISIBILITY_ALL);
+		gLightPassRootParameters[5].InitAsDescriptorTable(1, &rangeUav, D3D12_SHADER_VISIBILITY_ALL);
 
 		// A root signature is an array of root parameters.
-		CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(5, gLightPassRootParameters,
+		CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(6, gLightPassRootParameters,
 			0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
 		CD3DX12_STATIC_SAMPLER_DESC StaticSamplers[2];
@@ -1283,7 +1280,7 @@ void GDxRenderer::BuildRootSignature()
 		CD3DX12_DESCRIPTOR_RANGE rangeVelocity;
 		rangeVelocity.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 2);
 		CD3DX12_DESCRIPTOR_RANGE rangeDepth;
-		rangeDepth.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 2, 3);
+		rangeDepth.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 3);
 
 		CD3DX12_ROOT_PARAMETER gTaaPassRootParameters[5];
 		gTaaPassRootParameters[0].InitAsConstantBufferView(1);
@@ -1632,35 +1629,34 @@ void GDxRenderer::BuildDescriptorHeaps()
 	// Build SRV for depth/stencil buffer
 	{
 		mDepthBufferSrvIndex = mSkyTexHeapIndex + 1;
+		//mStencilBufferSrvIndex = mDepthBufferSrvIndex + 1;
 
 		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
 		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+		srvDesc.Texture2D.MipLevels = 1;
 		srvDesc.Texture2D.MostDetailedMip = 0;
 		srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
-		srvDesc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
-		//srvDesc.Texture2D.MipLevels = -1;
-		srvDesc.Texture2D.MipLevels = 1;
+		srvDesc.Format = DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS; //DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
 
 		md3dDevice->CreateShaderResourceView(mDepthStencilBuffer.Get(), &srvDesc, GetCpuSrv(mDepthBufferSrvIndex));
 
-		mStencilBufferSrvIndex = mDepthBufferSrvIndex + 1;
-
 		D3D12_SHADER_RESOURCE_VIEW_DESC stencilSrvDesc = {};
 		stencilSrvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+		//stencilSrvDesc.Shader4ComponentMapping = D3D12_ENCODE_SHADER_4_COMPONENT_MAPPING(1,1,1,1);
 		stencilSrvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+		stencilSrvDesc.Texture2D.MipLevels = 1;
 		stencilSrvDesc.Texture2D.MostDetailedMip = 0;
 		stencilSrvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
-		stencilSrvDesc.Format = DXGI_FORMAT_X24_TYPELESS_G8_UINT;
-		//stencilSrvDesc.Texture2D.MipLevels = -1;
-		stencilSrvDesc.Texture2D.MipLevels = 1;
+		//stencilSrvDesc.Format = DXGI_FORMAT_X24_TYPELESS_G8_UINT;
+		stencilSrvDesc.Format = DXGI_FORMAT_X32_TYPELESS_G8X24_UINT;
 
-		md3dDevice->CreateShaderResourceView(mStencilBuffer.Get(), &stencilSrvDesc, GetCpuSrv(mStencilBufferSrvIndex));
+		//md3dDevice->CreateShaderResourceView(mDepthStencilBuffer.Get(), &stencilSrvDesc, GetCpuSrv(mStencilBufferSrvIndex));
 	}
 
 	// Build RTV heap and SRV for GBuffers.
 	{
-		mGBufferSrvIndex = mStencilBufferSrvIndex + 1;
+		mGBufferSrvIndex = mDepthBufferSrvIndex + 1;
 		mVelocityBufferSrvIndex = mGBufferSrvIndex + 3;
 
 		std::vector<DXGI_FORMAT> rtvFormats =
@@ -2640,6 +2636,7 @@ GRiSceneObject* GDxRenderer::SelectSceneObject(int sx, int sy)
 			ThrowGGiException("cast fail.");
 		}
 		XMMATRIX W = XMLoadFloat4x4(&dxSoTrans->GetValue());
+		delete soTrans;
 		XMMATRIX invWorld = XMMatrixInverse(&XMMatrixDeterminant(W), W);
 
 		// Tranform ray to vi space of Mesh.

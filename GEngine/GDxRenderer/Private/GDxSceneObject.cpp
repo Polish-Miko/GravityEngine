@@ -33,7 +33,13 @@ GGiFloat4x4* GDxSceneObject::GetTransform()
 	matRot->SetByRotationPitchYawRoll(Rotation[0] * GGiEngineUtil::PI / 180.0f, Rotation[1] * GGiEngineUtil::PI / 180.0f, Rotation[2] * GGiEngineUtil::PI / 180.0f);
 	GDxFloat4x4* matScale = new GDxFloat4x4();
 	matScale->SetByScale(Scale[0], Scale[1], Scale[2]);
-	GGiFloat4x4* trans = &((*matScale) * (*matRot) * (*matLoc));
+	//GGiFloat4x4* trans = &((*matScale) * (*matRot) * (*matLoc));
+	GGiFloat4x4* temp = &((*matScale) * (*matRot));
+	GGiFloat4x4* trans = &((*temp) * (*matLoc));
+	delete temp;
+	delete matScale;
+	delete matRot;
+	delete matLoc;
 	//GGiFloat4x4* trans = &((*matScale) * (*matRot) * (*matLoc));
 	return trans;
 }

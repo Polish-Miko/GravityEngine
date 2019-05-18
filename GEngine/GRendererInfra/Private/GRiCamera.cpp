@@ -301,6 +301,8 @@ void GRiCamera::UpdateViewMatrix()
 
 void GRiCamera::SetPrevViewProj(GGiFloat4x4* prev)
 {
+	if (prevViewProj != nullptr)
+		delete prevViewProj;
 	prevViewProj = prev;
 }
 

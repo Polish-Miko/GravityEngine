@@ -18,7 +18,7 @@
 #include "Lighting.hlsli"
 #include "MainPassCB.hlsli"
 
-#define VISUALIZE_TILE_LIGHT_NUM 1
+//#define VISUALIZE_TILE_LIGHT_NUM 1
 
 //#include "GBuffer.hlsl"
 //#include "FramebufferFlat.hlsl"
@@ -32,7 +32,13 @@ Texture2D gVelocityTexture			: register(t3);
 Texture2D gOrmTexture				: register(t4);
 
 Texture2D gDepthBuffer				: register(t5);
-Texture2D gStencilBuffer			: register(t6);
+//Texture2D<uint2> gStencilBuffer			: register(t6);
+
+#define PREFILTER_MIP_LEVEL 5
+
+TextureCube skyIrradianceTexture	: register(t6);
+Texture2D	brdfLUTTexture			: register(t7);
+TextureCube skyPrefilterTexture[PREFILTER_MIP_LEVEL]	: register(t8);
 
 // This determines the tile size for light binning and associated tradeoffs
 // should be the same with GDxRenderer.h
@@ -51,6 +57,13 @@ groupshared uint sMaxZ;
 groupshared uint sTilePointLightIndices[MAX_POINT_LIGHT_NUM];
 groupshared uint sTileNumPointLights;
 
+SamplerState samLinear
+{
+	Filter = MIN_MAG_MIP_LINEAR;
+	AddressU = Wrap;
+	AddressV = Wrap;
+};
+
 float LinearDepth(float depth)
 {
 	return (depth * gNearZ) / (gFarZ - depth * (gFarZ - gNearZ));
@@ -59,6 +72,29 @@ float LinearDepth(float depth)
 float ViewDepth(float depth)
 {
 	return (gFarZ * gNearZ) / (gFarZ - depth * (gFarZ - gNearZ));
+}
+
+float3 PrefilteredColor(float3 viewDir, float3 normal, float roughness)
+{
+	float roughnessLevel = roughness * PREFILTER_MIP_LEVEL;
+	int fl = floor(roughnessLevel);
+	int cl = ceil(roughnessLevel);
+	float3 R = reflect(-viewDir, normal);
+	//float3 flSample = skyPrefilterTexture[fl].Sample(basicSampler, R).rgb;
+	//float3 clSample = skyPrefilterTexture[cl].Sample(basicSampler, R).rgb;
+	float3 flSample = skyPrefilterTexture[fl].SampleLevel(samLinear, R, 0).rgb;
+	float3 clSample = skyPrefilterTexture[cl].SampleLevel(samLinear, R, 0).rgb;
+	float3 prefilterColor = lerp(flSample, clSample, (roughnessLevel - fl));
+	return prefilterColor;
+}
+
+float2 BrdfLUT(float3 normal, float3 viewDir, float roughness)
+{
+	float NdotV = dot(normal, viewDir);
+	NdotV = max(NdotV, 0.0f);
+	float2 uv = float2(NdotV, roughness);
+	//return brdfLUTTexture.Sample(basicSampler, uv).rg;
+	return brdfLUTTexture.SampleLevel(samLinear, uv, 0).rg;
 }
 
 // List of pixels that require per-sample shading
@@ -119,9 +155,10 @@ void main(
         }
     }
 	*/
-	float depth = gDepthBuffer.Load(int3(globalCoords, 0)).r;
-	depth = ViewDepth(depth);
-	float stencil = gStencilBuffer.Load(int3(globalCoords, 0)).g;
+	float depthBuffer = gDepthBuffer.Load(int3(globalCoords, 0)).r;
+	float depth = ViewDepth(depthBuffer);
+	float linearDepth = (depth - gNearZ) / (gFarZ - gNearZ);
+	//float stencil = gStencilBuffer.Load(int3(globalCoords, 0)).g;
     
     // Initialize shared memory light list and Z bounds
     if (groupIndex == 0)
@@ -262,77 +299,70 @@ void main(
     uint numLights = sTileNumPointLights;
 
     // Only process onscreen pixels (tiles can span screen edges)
-    if (all(globalCoords < gRenderTargetSize.xy))
+	if (all(globalCoords < gRenderTargetSize.xy) && linearDepth < 1.0f)
 	{
 #if VISUALIZE_TILE_LIGHT_NUM
 		gFramebuffer[globalCoords] = float(sTileNumPointLights) / 200.0f;
 #else
+		float3 finalColor = 0.f;
+
+		float4 packedAlbedo = gAlbedoTexture.Load(int3(globalCoords, 0));
+		float3 albedo = packedAlbedo.rgb;
+		float3 normal = gNormalTexture.Load(int3(globalCoords, 0)).rgb;
+		float3 worldPos = gWorldPosTexture.Load(int3(globalCoords, 0)).rgb;
+		float roughness = gOrmTexture.Load(int3(globalCoords, 0)).g;
+		float metal = gOrmTexture.Load(int3(globalCoords, 0)).b;
+
+		//clamp roughness
+		roughness = max(ROUGHNESS_CLAMP, roughness);
+
+		float shadowAmount = 1.f;
+
 		if (numLights > 0)
 		{
-			bool perSampleShading = RequiresPerSampleShading(surfaceSamples);
-				[branch]
-			if (mUI.visualizePerSampleShading && perSampleShading)
+
+			int i = 0;
+
+			// Point light.
+			for (i = 0; i < numLights; i++)
 			{
-				[unroll]
-				for (uint sample = 0; sample < MSAA_SAMPLES; ++sample)
-				{
-					WriteSample(globalCoords, sample, float4(1, 0, 0, 1));
-				}
+				shadowAmount = 1.f;
+				float atten = Attenuate(pointLight[sTilePointLightIndices[i]].Position, pointLight[sTilePointLightIndices[i]].Range, worldPos);
+				float lightIntensity = pointLight[sTilePointLightIndices[i]].Intensity * atten;
+				float3 toLight = normalize(pointLight[sTilePointLightIndices[i]].Position - worldPos);
+				float3 lightColor = pointLight[sTilePointLightIndices[i]].Color.rgb;
+
+				finalColor = finalColor + DirectPBR(lightIntensity, lightColor, toLight, normalize(normal), worldPos, cameraPosition, roughness, metal, albedo, shadowAmount);
 			}
-			else
+
+			// Directional light.
+			for (i = 0; i < dirLightCount; i++)
 			{
-				float3 lit = float3(0.0f, 0.0f, 0.0f);
-				for (uint tileLightIndex = 0; tileLightIndex < numLights; ++tileLightIndex)
-				{
-					PointLight light = gLight[sTilePointLightIndices[tileLightIndex]];
-					AccumulateBRDF(surfaceSamples[0], light, lit);
-				}
+				float shadowAmount = 1.f;
+				float lightIntensity = dirLight[i].Intensity;
+				float3 toLight = normalize(-dirLight[i].Direction);
+				float3 lightColor = dirLight[i].DiffuseColor.rgb;
 
-				// Write sample 0 result
-				WriteSample(globalCoords, 0, float4(lit, 1.0f));
-
-				[branch]
-				if (perSampleShading)
-				{
-#if DEFER_PER_SAMPLE
-					// Create a list of pixels that need per-sample shading
-					uint listIndex;
-					InterlockedAdd(sNumPerSamplePixels, 1, listIndex);
-					sPerSamplePixels[listIndex] = PackCoords(globalCoords);
-#else
-					// Shade the other samples for this pixel
-					for (uint sample = 1; sample < MSAA_SAMPLES; ++sample)
-					{
-						float3 litSample = float3(0.0f, 0.0f, 0.0f);
-						for (uint tileLightIndex = 0; tileLightIndex < numLights; ++tileLightIndex)
-						{
-							PointLight light = gLight[sTilePointLightIndices[tileLightIndex]];
-							AccumulateBRDF(surfaceSamples[sample], light, litSample);
-						}
-						WriteSample(globalCoords, sample, float4(litSample, 1.0f));
-					}
-#endif
-				}
-				else
-				{
-					// Otherwise per-pixel shading, so splat the result to all samples
-					[unroll]
-					for (uint sample = 1; sample < MSAA_SAMPLES; ++sample)
-					{
-						WriteSample(globalCoords, sample, float4(lit, 1.0f));
-					}
-				}
+				finalColor = finalColor + DirectPBR(lightIntensity, lightColor, toLight, normalize(normal), worldPos, cameraPosition, roughness, metal, albedo, shadowAmount);
 			}
 		}
 		else
 		{
-			// Otherwise no lights affect here so clear all samples
-			[unroll]
-			for (uint sample = 0; sample < MSAA_SAMPLES; ++sample)
-			{
-				WriteSample(globalCoords, sample, float4(0.0f, 0.0f, 0.0f, 0.0f));
-			}
+			finalColor = float4(0.0f, 0.0f, 0.0f, 0.0f);
 		}
+
+		// Ambient light.
+		float3 viewDir = normalize(cameraPosition - worldPos);
+		float3 prefilter = PrefilteredColor(viewDir, normal, roughness);
+		float2 brdf = BrdfLUT(normal, viewDir, roughness);
+		//float3 irradiance = skyIrradianceTexture.Sample(basicSampler, normal).rgb;
+		float3 irradiance = skyIrradianceTexture.SampleLevel(samLinear, normal, 0).rgb;
+
+		finalColor = finalColor + AmbientPBR(normalize(normal), worldPos,
+			cameraPosition, roughness, metal, albedo,
+			irradiance, prefilter, brdf, shadowAmount);
+
+		gFramebuffer[globalCoords] = float4(finalColor, 1.0f);
 #endif
     }
 

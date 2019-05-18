@@ -52,7 +52,7 @@ protected:
 	float Rotation[3] = { 0.0f, 0.0f, 0.0f };
 	float Scale[3] = { 1.0f, 1.0f, 1.0f };
 
-	GGiFloat4x4* prevTransform;
+	std::shared_ptr<GGiFloat4x4> prevTransform;
 
 	// Index into GPU constant buffer corresponding to the ObjectCB for this render item.
 	UINT ObjIndex = -1;
@@ -61,7 +61,7 @@ protected:
 
 	GRiMesh* Mesh;
 
-	GGiFloat4x4* TexTransform;
+	std::shared_ptr<GGiFloat4x4> TexTransform;
 
 };
 

@@ -81,13 +81,13 @@ private:
 
 	bool bScaledByViewport = true;
 
-	Microsoft::WRL::ComPtr<ID3D12Resource> mResource = nullptr;
-
 	bool bCreateRtv = false;
 
 	void SetDescriptorSize();
 
 	std::shared_ptr<GDxRtv> mRtv;
+
+	Microsoft::WRL::ComPtr<ID3D12Resource> mResource = nullptr;
 
 };
 

@@ -46,7 +46,7 @@ Texture2D gInputTexture				: register(t0);
 Texture2D gHistoryTexture			: register(t1);
 Texture2D gVelocityBuffer			: register(t2);
 Texture2D gDepthBuffer				: register(t3);
-Texture2D gStencilBuffer			: register(t4);
+//Texture2D<uint2> gStencilBuffer			: register(t4);
 
 SamplerState			basicSampler	: register(s0);
 SamplerComparisonState	shadowSampler	: register(s1);

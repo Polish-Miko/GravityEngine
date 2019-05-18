@@ -8,6 +8,8 @@
 #define MAX_POINT_LIGHT_NUM 1024
 #define MAX_SPOTLIGHT_NUM 1024
 
+#define UNREAL_LIGHT_ATTENUATION 1
+
 static const float MIN_ROUGHNESS = 0.0000001f;
 static const float F0_NON_METAL = 0.04f;
 static const float PI = 3.14159265359f;
@@ -49,11 +51,7 @@ cbuffer externalData : register(b0)
 
 float Attenuate(float3 position, float range, float3 worldPos)
 {
-	/*
-	float dist = distance(position, worldPos);
-	float att = saturate(1.0f - (dist * dist / (range * range)));
-	return att * att;
-	*/
+#if UNREAL_LIGHT_ATTENUATION
 	float dist = distance(position, worldPos);
 	float numer = dist / range;
 	numer = numer * numer;
@@ -62,6 +60,11 @@ float Attenuate(float3 position, float range, float3 worldPos)
 	numer = numer * numer;
 	float denom = dist * dist + 1;
 	return (numer / denom);
+#else
+	float dist = distance(position, worldPos);
+	float att = saturate(1.0f - (dist * dist / (range * range)));
+	return att * att;
+#endif
 }
 
 // Lambert diffuse 
