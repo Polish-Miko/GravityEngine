@@ -28,10 +28,10 @@ struct VertexOutput
 	float2	uv			: TEXCOORD;
 	float3	normal		: NORMAL;
 	float3	tangent		: TANGENT;
-	float3	worldPos	: POSITION0;
-	float4	curPos		: POSITION1;
-	float4	prevPos		: POSITION2;
-	float	linearZ : LINEARZ;
+	//float3 worldPos	: POSITION0;
+	float4	curPos		: POSITION0;
+	float4	prevPos		: POSITION1;
+	float	linearZ		: LINEARZ;
 	float4	shadowPos	: SHADOWPOS;
 };
 
@@ -84,7 +84,7 @@ VertexOutput main(VertexInput input)
 	output.uv = mul(texC, matData.MatTransform).xy;
 	output.normal = normalize(mul(input.normal, (float3x3)gInvTransWorld));
 	output.tangent = normalize(mul(input.tangent, (float3x3)gInvTransWorld));
-	output.worldPos = mul(float4(input.pos, 1.0f), gWorld).xyz;
+	//output.worldPos = mul(float4(input.pos, 1.0f), gWorld).xyz;
 	output.linearZ = LinearZ(output.pos);
 	output.shadowPos = mul(float4(input.pos, 1.0f), gShadowTransform);
 	//output.ssaoPos = mul(worldPos, gViewProjTex);

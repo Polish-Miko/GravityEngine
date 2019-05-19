@@ -659,6 +659,19 @@ void GDxRenderer::OnResize()
 		&optClear,
 		IID_PPV_ARGS(mDepthStencilBuffer.GetAddressOf())));
 
+	if (mDepthBufferSrvIndex != 0)
+	{
+		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+		srvDesc.Texture2D.MipLevels = 1;
+		srvDesc.Texture2D.MostDetailedMip = 0;
+		srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
+		srvDesc.Format = DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS; //DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+
+		md3dDevice->CreateShaderResourceView(mDepthStencilBuffer.Get(), &srvDesc, GetCpuSrv(mDepthBufferSrvIndex));
+	}
+
 	// Create descriptor to mip level 0 of entire resource using the format of the resource.
 	md3dDevice->CreateDepthStencilView(mDepthStencilBuffer.Get(), &dsv_desc, DepthStencilView());
 
@@ -1595,7 +1608,7 @@ void GDxRenderer::BuildDescriptorHeaps()
 		+ 1 //sky cubemap
 		+ 1 //depth buffer
 		+ 1 //stencil buffer
-		+ 5 //g-buffer
+		+ 4 //g-buffer
 		+ 2 //light pass srv and uav
 		+ 3 //taa
 		+ 1 //motion blur
@@ -1657,13 +1670,13 @@ void GDxRenderer::BuildDescriptorHeaps()
 	// Build RTV heap and SRV for GBuffers.
 	{
 		mGBufferSrvIndex = mDepthBufferSrvIndex + 1;
-		mVelocityBufferSrvIndex = mGBufferSrvIndex + 3;
+		mVelocityBufferSrvIndex = mGBufferSrvIndex + 2;
 
 		std::vector<DXGI_FORMAT> rtvFormats =
 		{
-			DXGI_FORMAT_R32G32B32A32_FLOAT,//Albedo
+			DXGI_FORMAT_R8G8B8A8_UNORM,//Albedo
 			DXGI_FORMAT_R8G8B8A8_SNORM, //Normal
-			DXGI_FORMAT_R32G32B32A32_FLOAT, //WorldPos
+			//DXGI_FORMAT_R32G32B32A32_FLOAT, //WorldPos
 			DXGI_FORMAT_R16G16_FLOAT, //Velocity
 			DXGI_FORMAT_R8G8B8A8_UNORM //OcclusionRoughnessMetallic
 		};
@@ -1671,7 +1684,7 @@ void GDxRenderer::BuildDescriptorHeaps()
 		{
 			{ 0,0,0,0 },
 			{ 0,0,0,0 },
-			{ 0,0,0,0 },
+			//{ 0,0,0,0 },
 			{ 0,0,0,0 },
 			{ 0,0.3f,0,0 }
 		};

@@ -9,7 +9,7 @@ struct VertexOut
 	float2 TexC    : TEXCOORD;
 };
 
-Texture2D gTextureMaps[5] : register(t0);
+Texture2D gTextureMaps[4] : register(t0);
 
 SamplerState Sampler	  : register(s0);
 

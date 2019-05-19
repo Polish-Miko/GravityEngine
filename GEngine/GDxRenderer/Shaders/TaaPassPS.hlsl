@@ -426,9 +426,9 @@ PixelOutput main(VertexToPixel pIn)// : SV_TARGET
 
 #ifdef TEST
 
-	float test = gDepthBuffer.Sample(basicSampler, pIn.uv).r;
-	test = (test * gNearZ) / (gFarZ - test * (gFarZ - gNearZ));
-	output.color = float4(test, test, test, 1.0f);
+	float3 test = gInputTexture.Sample(basicSampler, pIn.uv).rgb;
+	//test = (test * gNearZ) / (gFarZ - test * (gFarZ - gNearZ));
+	output.color = float4(test, 1.0f);
 
 #endif
 

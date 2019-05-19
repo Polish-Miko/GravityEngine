@@ -26,10 +26,14 @@ GDxUav::GDxUav(ID3D12Device* device, UINT ClientWidth, UINT ClientHeight,
 	mClientHeight = ClientHeight;
 	mProperties = uavProperties;
 	SetDescriptorSize();
-	mCpuSrv = cpuSrv;
-	mGpuSrv = gpuSrv;
-	mCpuUav = mCpuSrv.Offset(SrvUavDescriptorSize);
-	mGpuUav = mGpuSrv.Offset(SrvUavDescriptorSize);
+	CD3DX12_CPU_DESCRIPTOR_HANDLE cpuHeap = cpuSrv;
+	CD3DX12_GPU_DESCRIPTOR_HANDLE gpuHeap = gpuSrv;
+	mCpuSrv = cpuHeap;
+	mGpuSrv = gpuHeap;
+	cpuHeap.Offset(SrvUavDescriptorSize);
+	gpuHeap.Offset(SrvUavDescriptorSize);
+	mCpuUav = cpuHeap;
+	mGpuUav = gpuHeap;
 	bScaledByViewport = ScaledByViewport;
 	bCreateRtv = CreateRtv;
 
@@ -144,6 +148,10 @@ void GDxUav::OnResize(UINT newWidth, UINT newHeight)
 			mClientWidth = newWidth;
 			mClientHeight = newHeight;
 			SetViewportAndScissorRect((UINT)(mClientWidth * mProperties.mWidthPercentage), (UINT)(mClientHeight * mProperties.mHeightPercentage));
+			if (bCreateRtv)
+			{
+				mRtv->OnResize(newWidth, newHeight);
+			}
 		}
 
 		BuildResources();

@@ -15,6 +15,8 @@
 #ifndef TILED_DEFERRED_CS_HLSL
 #define TILED_DEFERRED_CS_HLSL
 
+#define USE_TBDR 1
+
 #include "Lighting.hlsli"
 #include "MainPassCB.hlsli"
 
@@ -27,18 +29,18 @@
 //G-Buffer
 Texture2D gAlbedoTexture			: register(t0);
 Texture2D gNormalTexture			: register(t1);
-Texture2D gWorldPosTexture			: register(t2);
-Texture2D gVelocityTexture			: register(t3);
-Texture2D gOrmTexture				: register(t4);
+//Texture2D gWorldPosTexture		: register(t2);
+Texture2D gVelocityTexture			: register(t2);
+Texture2D gOrmTexture				: register(t3);
 
-Texture2D gDepthBuffer				: register(t5);
-//Texture2D<uint2> gStencilBuffer			: register(t6);
+Texture2D gDepthBuffer				: register(t4);
+//Texture2D<uint2> gStencilBuffer	: register(t6);
 
 #define PREFILTER_MIP_LEVEL 5
 
-TextureCube skyIrradianceTexture	: register(t6);
-Texture2D	brdfLUTTexture			: register(t7);
-TextureCube skyPrefilterTexture[PREFILTER_MIP_LEVEL]	: register(t8);
+TextureCube skyIrradianceTexture	: register(t5);
+Texture2D	brdfLUTTexture			: register(t6);
+TextureCube skyPrefilterTexture[PREFILTER_MIP_LEVEL]	: register(t7);
 
 // This determines the tile size for light binning and associated tradeoffs
 // should be the same with GDxRenderer.h
@@ -95,6 +97,15 @@ float2 BrdfLUT(float3 normal, float3 viewDir, float roughness)
 	float2 uv = float2(NdotV, roughness);
 	//return brdfLUTTexture.Sample(basicSampler, uv).rg;
 	return brdfLUTTexture.SampleLevel(samLinear, uv, 0).rg;
+}
+
+float3 ReconstructWorldPos(uint2 gCoords, float depth)
+{
+	float ndcX = gCoords.x * gInvRenderTargetSize.x * 2 - 1;
+	float ndcY = 1 - gCoords.y * gInvRenderTargetSize.y * 2;//remember to flip y!!!
+	float4 viewPos = mul(float4(ndcX, ndcY, depth, 1.0f), gInvProj);
+	viewPos = viewPos / viewPos.w;
+	return mul(viewPos, gInvView).xyz;
 }
 
 // List of pixels that require per-sample shading
@@ -302,16 +313,17 @@ void main(
 	if (all(globalCoords < gRenderTargetSize.xy) && linearDepth < 1.0f)
 	{
 #if VISUALIZE_TILE_LIGHT_NUM
-		gFramebuffer[globalCoords] = float(sTileNumPointLights) / 200.0f;
+		gFramebuffer[globalCoords] = float(sTileNumPointLights) / 30.0f;
 #else
 		float3 finalColor = 0.f;
 
 		float4 packedAlbedo = gAlbedoTexture.Load(int3(globalCoords, 0));
 		float3 albedo = packedAlbedo.rgb;
 		float3 normal = gNormalTexture.Load(int3(globalCoords, 0)).rgb;
-		float3 worldPos = gWorldPosTexture.Load(int3(globalCoords, 0)).rgb;
+		//float3 worldPos = gWorldPosTexture.Load(int3(globalCoords, 0)).rgb;
 		float roughness = gOrmTexture.Load(int3(globalCoords, 0)).g;
 		float metal = gOrmTexture.Load(int3(globalCoords, 0)).b;
+		float3 worldPos = ReconstructWorldPos(globalCoords, depthBuffer);
 
 		//clamp roughness
 		roughness = max(ROUGHNESS_CLAMP, roughness);
@@ -323,6 +335,7 @@ void main(
 
 			int i = 0;
 
+#if USE_TBDR
 			// Point light.
 			for (i = 0; i < numLights; i++)
 			{
@@ -334,6 +347,18 @@ void main(
 
 				finalColor = finalColor + DirectPBR(lightIntensity, lightColor, toLight, normalize(normal), worldPos, cameraPosition, roughness, metal, albedo, shadowAmount);
 			}
+#else
+			for (i = 0; i < MAX_POINT_LIGHT_NUM; i++)
+			{
+				shadowAmount = 1.f;
+				float atten = Attenuate(pointLight[i].Position, pointLight[i].Range, worldPos);
+				float lightIntensity = pointLight[i].Intensity * atten;
+				float3 toLight = normalize(pointLight[i].Position - worldPos);
+				float3 lightColor = pointLight[i].Color.rgb;
+
+				finalColor = finalColor + DirectPBR(lightIntensity, lightColor, toLight, normalize(normal), worldPos, cameraPosition, roughness, metal, albedo, shadowAmount);
+			}
+#endif
 
 			// Directional light.
 			for (i = 0; i < dirLightCount; i++)

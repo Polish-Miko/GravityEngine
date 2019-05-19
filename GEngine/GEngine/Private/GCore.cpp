@@ -514,7 +514,7 @@ void GCore::LoadMaterials()
 	debug_velocity->UniqueName = L"debug_velocity";
 	debug_velocity->Name = L"debug_velocity";
 	debug_velocity->MatIndex = mMaterialIndex++;
-	debug_velocity->AddScalar(3.01f);//Velocity
+	debug_velocity->AddScalar(2.01f);//Velocity
 	debug_velocity->AddScalar((float)DebugLayerMask::RG);//RedGreen
 	mMaterials[L"debug_velocity"] = std::move(debug_velocity);
 
@@ -522,7 +522,7 @@ void GCore::LoadMaterials()
 	debug_roughness->UniqueName = L"debug_roughness";
 	debug_roughness->Name = L"debug_roughness";
 	debug_roughness->MatIndex = mMaterialIndex++;
-	debug_roughness->AddScalar(4.01f);//OcclusionRoughnessMetallic
+	debug_roughness->AddScalar(3.01f);//OcclusionRoughnessMetallic
 	debug_roughness->AddScalar((float)DebugLayerMask::G);//Green
 	mMaterials[L"debug_roughness"] = std::move(debug_roughness);
 
@@ -530,7 +530,7 @@ void GCore::LoadMaterials()
 	debug_metallic->UniqueName = L"debug_metallic";
 	debug_metallic->Name = L"debug_metallic";
 	debug_metallic->MatIndex = mMaterialIndex++;
-	debug_metallic->AddScalar(4.01f);//OcclusionRoughnessMetallic
+	debug_metallic->AddScalar(3.01f);//OcclusionRoughnessMetallic
 	debug_metallic->AddScalar((float)DebugLayerMask::B);//Blue
 	mMaterials[L"debug_metallic"] = std::move(debug_metallic);
 
