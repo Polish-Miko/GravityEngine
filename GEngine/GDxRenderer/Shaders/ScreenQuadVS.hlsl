@@ -1,3 +1,5 @@
+#include "FrustumZ.h"
+
 struct VertexToPixel
 {
 	float4 position		: SV_POSITION;
@@ -16,7 +18,7 @@ VertexToPixel main(uint id : SV_VertexID)
 		id & 2);
 
 	// Adjust the position based on the UV
-	output.position = float4(output.uv, 0, 1);
+	output.position = float4(output.uv, NEAR_Z_UNORM, 1);
 	output.position.x = output.position.x * 2 - 1;
 	output.position.y = output.position.y * -2 + 1;
 

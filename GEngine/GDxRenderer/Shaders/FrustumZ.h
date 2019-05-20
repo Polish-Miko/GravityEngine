@@ -1,0 +1,36 @@
+
+#ifndef _FRUSTUM_Z_H
+#define _FRUSTUM_Z_H
+
+
+
+
+#define USE_REVERSE_Z 1
+
+#define Z_UPPER_BOUND 10000.0f
+#define Z_LOWER_BOUND 1.0f
+#define Z_UPPER_BOUND_UNORM 1.0f
+#define Z_LOWER_BOUND_UNORM 0.0f
+
+#if USE_REVERSE_Z
+
+#define FAR_Z Z_LOWER_BOUND
+#define NEAR_Z Z_UPPER_BOUND
+#define FAR_Z_UNORM Z_LOWER_BOUND_UNORM
+#define NEAR_Z_UNORM Z_UPPER_BOUND_UNORM
+
+#else
+
+#define FAR_Z Z_UPPER_BOUND
+#define NEAR_Z Z_LOWER_BOUND
+#define FAR_Z_UNORM Z_UPPER_BOUND_UNORM
+#define NEAR_Z_UNORM Z_LOWER_BOUND_UNORM
+
+#endif
+
+
+
+
+
+ 
+#endif 

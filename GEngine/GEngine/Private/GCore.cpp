@@ -344,7 +344,7 @@ void GCore::OnKeyboardInput(const GGiGameTimer* gt)
 
 void GCore::OnResize()
 {
-	mCamera->SetLens(0.25f * GGiEngineUtil::PI, mRenderer->AspectRatio(), 1.0f, 10000.0f);
+	mCamera->SetLens(0.25f * GGiEngineUtil::PI, mRenderer->AspectRatio(), NEAR_Z, FAR_Z);
 	mRenderer->OnResize();
 }
 
@@ -647,7 +647,11 @@ void GCore::LoadMeshes()
 	mMeshes[geo->UniqueName] = std::move(temp4);
 
 	meshData.clear();
+#if USE_REVERSE_Z
+	GRiMeshData quadMeshData = geoGen->CreateQuad(0.0f, 0.0f, 1.0f, 1.0f, 1.0f);
+#else
 	GRiMeshData quadMeshData = geoGen->CreateQuad(0.0f, 0.0f, 1.0f, 1.0f, 0.0f);
+#endif
 	meshData.push_back(quadMeshData);
 	geo = pRendererFactory->CreateMesh(meshData);
 	geo->UniqueName = L"Quad";
@@ -798,7 +802,7 @@ void GCore::LoadCameras()
 	mCamera = std::make_unique<GRiCamera>();
 	mCamera->SetRendererFactory(pRendererFactory);
 	mCamera->SetPosition(0.0f, 0.0f, 0.0f);
-	mCamera->SetLens(0.25f * GGiEngineUtil::PI, mRenderer->AspectRatio(), 1.0f, 10000.0f);
+	mCamera->SetLens(0.25f * GGiEngineUtil::PI, mRenderer->AspectRatio(), NEAR_Z, FAR_Z);
 	mCamera->InitPrevViewProj();
 	mCamera->InitPrevPosition();
 

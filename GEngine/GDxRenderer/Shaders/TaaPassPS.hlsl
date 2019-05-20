@@ -1,4 +1,5 @@
 
+#include "FrustumZ.h"
 //#include "ObjectCB.hlsli"
 #include "MainPassCB.hlsli"
 //#include "HaltonSequence.hlsli"
@@ -85,7 +86,7 @@ static const float neighborhoodFixedSpatialWeight[9] =
 
 float LinearDepth(float depth)
 {
-	return (depth * gNearZ) / (gFarZ - depth * (gFarZ - gNearZ));
+	return (depth * NEAR_Z) / (FAR_Z - depth * (FAR_Z - NEAR_Z));
 }
 
 static float CatmullRom(float x)
@@ -234,7 +235,7 @@ PixelOutput main(VertexToPixel pIn)// : SV_TARGET
 
 #ifdef USE_CLOSEST_VELOCITY
 	float2 closestOffset = float2(0.0f, 0.0f);
-	float closestDepth = 99999.0f;
+	float closestDepth = FAR_Z;
 	for (y = -1; y <= 1; ++y)
 	{
 		for (x = -1; x <= 1; ++x)
@@ -245,7 +246,11 @@ PixelOutput main(VertexToPixel pIn)// : SV_TARGET
 
 			float NeighborhoodDepthSamp = gDepthBuffer.Sample(basicSampler, sampleUV).r;
 			NeighborhoodDepthSamp = LinearDepth(NeighborhoodDepthSamp);
+#if USE_REVERSE_Z
 			if (NeighborhoodDepthSamp > closestDepth)
+#else
+			if (NeighborhoodDepthSamp < closestDepth)
+#endif
 			{
 				closestDepth = NeighborhoodDepthSamp;
 				closestOffset = float2(x, y);

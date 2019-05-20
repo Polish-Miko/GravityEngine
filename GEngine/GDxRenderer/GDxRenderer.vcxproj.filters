@@ -254,5 +254,8 @@
     <None Include="Shaders\MainPassCB.hlsli" />
     <None Include="Shaders\SkyPassCB.hlsli" />
     <None Include="Shaders\HaltonSequence.hlsli" />
+    <None Include="Shaders\FrustumZ.h">
+      <Filter>Header Files</Filter>
+    </None>
   </ItemGroup>
 </Project>

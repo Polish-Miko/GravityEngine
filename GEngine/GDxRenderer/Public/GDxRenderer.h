@@ -20,6 +20,7 @@
 #include "GDxImgui.h"
 #include "GDxGpuProfiler.h"
 #include "GDxUav.h"
+#include "../Shaders/FrustumZ.h"
 
 // Link necessary d3d12 libraries.
 #pragma comment(lib,"d3dcompiler.lib")

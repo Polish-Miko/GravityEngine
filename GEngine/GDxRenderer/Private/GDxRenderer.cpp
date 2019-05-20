@@ -195,7 +195,11 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 	mCommandList->ClearRenderTargetView(CurrentBackBufferView(), Colors::LightSteelBlue, 0, nullptr);
 
 	// Clear depth buffer.
+#if USE_REVERSE_Z
+	mCommandList->ClearDepthStencilView(DepthStencilView(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 0.0f, 0, 0, nullptr);
+#else
 	mCommandList->ClearDepthStencilView(DepthStencilView(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
+#endif
 
 	// G-Buffer Pass
 	{
@@ -1872,7 +1876,11 @@ void GDxRenderer::BuildPSOs()
 		D3D12_DEPTH_STENCIL_DESC gBufferDSD;
 		gBufferDSD.DepthEnable = true;
 		gBufferDSD.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
+#if USE_REVERSE_Z
+		gBufferDSD.DepthFunc = D3D12_COMPARISON_FUNC_GREATER;
+#else
 		gBufferDSD.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
+#endif
 		gBufferDSD.StencilEnable = true;
 		gBufferDSD.StencilReadMask = 0xff;
 		gBufferDSD.StencilWriteMask = 0xff;
@@ -2055,7 +2063,11 @@ void GDxRenderer::BuildPSOs()
 		D3D12_DEPTH_STENCIL_DESC postProcessDSD;
 		postProcessDSD.DepthEnable = true;
 		postProcessDSD.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
+#if USE_REVERSE_Z
+		postProcessDSD.DepthFunc = D3D12_COMPARISON_FUNC_GREATER;
+#else
 		postProcessDSD.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
+#endif
 		postProcessDSD.StencilEnable = false;
 		postProcessDSD.StencilReadMask = 0xff;
 		postProcessDSD.StencilWriteMask = 0x0;
@@ -2093,7 +2105,11 @@ void GDxRenderer::BuildPSOs()
 		D3D12_DEPTH_STENCIL_DESC gBufferDebugDSD;
 		gBufferDebugDSD.DepthEnable = true;
 		gBufferDebugDSD.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
+#if USE_REVERSE_Z
+		gBufferDebugDSD.DepthFunc = D3D12_COMPARISON_FUNC_GREATER_EQUAL;
+#else
 		gBufferDebugDSD.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
+#endif
 		gBufferDebugDSD.StencilEnable = false;
 		gBufferDebugDSD.StencilReadMask = 0xff;
 		gBufferDebugDSD.StencilWriteMask = 0x0;
@@ -2136,7 +2152,11 @@ void GDxRenderer::BuildPSOs()
 		D3D12_DEPTH_STENCIL_DESC gskyDSD;
 		gskyDSD.DepthEnable = true;
 		gskyDSD.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
+#if USE_REVERSE_Z
+		gskyDSD.DepthFunc = D3D12_COMPARISON_FUNC_GREATER_EQUAL;
+#else
 		gskyDSD.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
+#endif
 		gskyDSD.StencilEnable = false;
 		gskyDSD.StencilReadMask = 0xff;
 		gskyDSD.StencilWriteMask = 0x0;
@@ -2215,7 +2235,11 @@ void GDxRenderer::BuildPSOs()
 		// Make sure the depth function is LESS_EQUAL and not just LESS.  
 		// Otherwise, the normalized depth values at z = 1 (NDC) will 
 		// fail the depth test if the depth buffer was cleared to 1.
+#if USE_REVERSE_Z
+		irradiancePsoDesc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_GREATER_EQUAL;
+#else
 		irradiancePsoDesc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
+#endif
 		irradiancePsoDesc.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
 		irradiancePsoDesc.pRootSignature = mRootSignatures["Sky"].Get();
 		irradiancePsoDesc.VS = GDxShaderManager::LoadShader(L"Shaders\\SkyVS.cso");
@@ -2247,7 +2271,11 @@ void GDxRenderer::BuildPSOs()
 		// Make sure the depth function is LESS_EQUAL and not just LESS.  
 		// Otherwise, the normalized depth values at z = 1 (NDC) will 
 		// fail the depth test if the depth buffer was cleared to 1.
+#if USE_REVERSE_Z
+		prefilterPsoDesc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_GREATER_EQUAL;
+#else
 		prefilterPsoDesc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
+#endif
 		prefilterPsoDesc.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
 		prefilterPsoDesc.pRootSignature = mRootSignatures["Sky"].Get();
 		prefilterPsoDesc.VS = GDxShaderManager::LoadShader(L"Shaders\\SkyVS.cso");

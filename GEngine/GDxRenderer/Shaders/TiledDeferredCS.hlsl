@@ -17,6 +17,7 @@
 
 #define USE_TBDR 1
 
+#include "FrustumZ.h"
 #include "Lighting.hlsli"
 #include "MainPassCB.hlsli"
 
@@ -68,12 +69,12 @@ SamplerState samLinear
 
 float LinearDepth(float depth)
 {
-	return (depth * gNearZ) / (gFarZ - depth * (gFarZ - gNearZ));
+	return (depth * NEAR_Z) / (FAR_Z - depth * (FAR_Z - NEAR_Z));
 }
 
 float ViewDepth(float depth)
 {
-	return (gFarZ * gNearZ) / (gFarZ - depth * (gFarZ - gNearZ));
+	return (FAR_Z * NEAR_Z) / (FAR_Z - depth * (FAR_Z - NEAR_Z));
 }
 
 float3 PrefilteredColor(float3 viewDir, float3 normal, float roughness)
@@ -168,7 +169,7 @@ void main(
 	*/
 	float depthBuffer = gDepthBuffer.Load(int3(globalCoords, 0)).r;
 	float depth = ViewDepth(depthBuffer);
-	float linearDepth = (depth - gNearZ) / (gFarZ - gNearZ);
+	float linearDepth = (depth - NEAR_Z) / (FAR_Z - NEAR_Z);
 	//float stencil = gStencilBuffer.Load(int3(globalCoords, 0)).g;
     
     // Initialize shared memory light list and Z bounds
