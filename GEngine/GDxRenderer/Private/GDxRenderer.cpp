@@ -303,9 +303,18 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 
 		mCommandList->SetComputeRootDescriptorTable(5, mUavs["LightPass"]->GetGpuUav());
 
+#if USE_TBDR
 		UINT numGroupsX = (UINT)ceilf((float)mClientWidth / DEFER_TILE_SIZE_X);
 		UINT numGroupsY = (UINT)ceilf((float)mClientHeight / DEFER_TILE_SIZE_Y);
-		mCommandList->Dispatch(numGroupsX, numGroupsY, 1);
+		UINT numGroupsZ = 1;
+#elif USE_CBDR
+		UINT numGroupsX = (UINT)ceilf((float)mClientWidth / DEFER_CLUSTER_SIZE_X);
+		UINT numGroupsY = (UINT)ceilf((float)mClientHeight / DEFER_CLUSTER_SIZE_Y);
+		UINT numGroupsZ = DEFER_CLUSTER_NUM_Z;
+#else
+		ThrowGGiException("TBDR/CBDR not enabled.");
+#endif
+		mCommandList->Dispatch(numGroupsX, numGroupsY, numGroupsZ);
 
 		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mUavs["LightPass"]->GetResource(),
 			D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_GENERIC_READ));
@@ -1267,7 +1276,7 @@ void GDxRenderer::BuildRootSignature()
 			0.f, 16u, D3D12_COMPARISON_FUNC_LESS_EQUAL);
 		rootSigDesc.NumStaticSamplers = 2;
 		rootSigDesc.pStaticSamplers = StaticSamplers;
-
+		
 		// create a root signature with a single slot which points to a descriptor range consisting of a single constant buffer
 		ComPtr<ID3DBlob> serializedRootSig = nullptr;
 		ComPtr<ID3DBlob> errorBlob = nullptr;
@@ -1974,7 +1983,13 @@ void GDxRenderer::BuildPSOs()
 
 		D3D12_COMPUTE_PIPELINE_STATE_DESC computePsoDesc = {};
 		computePsoDesc.pRootSignature = mRootSignatures["LightPass"].Get();
+#if USE_TBDR
 		computePsoDesc.CS = GDxShaderManager::LoadShader(L"Shaders\\TiledDeferredCS.cso");
+#elif USE_CBDR
+		computePsoDesc.CS = GDxShaderManager::LoadShader(L"Shaders\\ClusteredDeferredCS.cso");
+#else
+		ThrowGGiException("TBDR/CBDR not enabled.");
+#endif
 		computePsoDesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
 		ThrowIfFailed(md3dDevice->CreateComputePipelineState(&computePsoDesc, IID_PPV_ARGS(&mPSOs["LightPass"])));
 	}

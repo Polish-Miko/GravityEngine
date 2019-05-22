@@ -245,6 +245,7 @@
     <FxCompile Include="Shaders\UnjitteredFullScreenVS.hlsl" />
     <FxCompile Include="Shaders\MotionBlurPassPS.hlsl" />
     <FxCompile Include="Shaders\TiledDeferredCS.hlsl" />
+    <FxCompile Include="Shaders\ClusteredDeferredCS.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Shaders\Lighting.hlsli" />

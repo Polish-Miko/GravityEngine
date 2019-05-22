@@ -7,7 +7,7 @@
 
 #define USE_REVERSE_Z 1
 
-#define Z_UPPER_BOUND 10000.0f
+#define Z_UPPER_BOUND 50000.0f
 #define Z_LOWER_BOUND 1.0f
 #define Z_UPPER_BOUND_UNORM 1.0f
 #define Z_LOWER_BOUND_UNORM 0.0f

@@ -1,6 +1,3 @@
-//***************************************************************************************
-// d3dApp.h by Frank Luna (C) 2015 All Rights Reserved.
-//***************************************************************************************
 
 #pragma once
 
@@ -39,6 +36,18 @@ using namespace DirectX::PackedVector;
 // should be the same with TiledDeferredCS.hlsl
 #define DEFER_TILE_SIZE_X 16
 #define DEFER_TILE_SIZE_Y 16
+
+#define DEFER_CLUSTER_SIZE_X 32
+#define DEFER_CLUSTER_SIZE_Y 32
+#define DEFER_CLUSTER_NUM_Z 16
+
+#define USE_CBDR 1
+
+#if USE_CBDR
+#define USE_TBDR 0
+#else
+#define USE_TBDR 1
+#endif
 
 // 8x TAA
 static const double Halton_2[8] =
