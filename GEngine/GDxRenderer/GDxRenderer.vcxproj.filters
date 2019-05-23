@@ -246,6 +246,7 @@
     <FxCompile Include="Shaders\MotionBlurPassPS.hlsl" />
     <FxCompile Include="Shaders\TiledDeferredCS.hlsl" />
     <FxCompile Include="Shaders\ClusteredDeferredCS.hlsl" />
+    <FxCompile Include="Shaders\LightPassPS.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Shaders\Lighting.hlsli" />
@@ -255,7 +256,7 @@
     <None Include="Shaders\MainPassCB.hlsli" />
     <None Include="Shaders\SkyPassCB.hlsli" />
     <None Include="Shaders\HaltonSequence.hlsli" />
-    <None Include="Shaders\FrustumZ.h">
+    <None Include="Shaders\ShaderDefinition.h">
       <Filter>Header Files</Filter>
     </None>
   </ItemGroup>

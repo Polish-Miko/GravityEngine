@@ -17,7 +17,7 @@
 #include "GDxImgui.h"
 #include "GDxGpuProfiler.h"
 #include "GDxUav.h"
-#include "../Shaders/FrustumZ.h"
+#include "../Shaders/ShaderDefinition.h"
 
 // Link necessary d3d12 libraries.
 #pragma comment(lib,"d3dcompiler.lib")
@@ -34,12 +34,12 @@ using namespace DirectX::PackedVector;
 #define SKY_CUBEMAP_SIZE 1024
 
 // should be the same with TiledDeferredCS.hlsl
-#define DEFER_TILE_SIZE_X 16
-#define DEFER_TILE_SIZE_Y 16
+//#define DEFER_TILE_SIZE_X 16
+//#define DEFER_TILE_SIZE_Y 16
 
-#define DEFER_CLUSTER_SIZE_X 32
-#define DEFER_CLUSTER_SIZE_Y 32
-#define DEFER_CLUSTER_NUM_Z 16
+//#define DEFER_CLUSTER_SIZE_X 32
+//#define DEFER_CLUSTER_SIZE_Y 32
+//#define DEFER_CLUSTER_NUM_Z 16
 
 #define USE_CBDR 1
 
@@ -48,6 +48,14 @@ using namespace DirectX::PackedVector;
 #else
 #define USE_TBDR 1
 #endif
+
+struct LightList
+{
+	unsigned int PointLightIndices[MAX_GRID_POINT_LIGHT_NUM];
+	unsigned int NumPointLights;
+	unsigned int SpotLightIndices[MAX_GRID_SPOTLIGHT_NUM];
+	unsigned int NumSpotlights;
+};
 
 // 8x TAA
 static const double Halton_2[8] =
@@ -227,6 +235,7 @@ protected:
 	UINT mStencilBufferSrvIndex = 0;
 	UINT mVelocityBufferSrvIndex = 0;
 	UINT mGBufferSrvIndex = 0;
+	UINT mTileClusterSrvIndex = 0;
 	UINT mLightPassSrvIndex = 0;
 	UINT mSkyPassSrvIndex = 0;
 	UINT mTaaPassSrvIndex = 0;

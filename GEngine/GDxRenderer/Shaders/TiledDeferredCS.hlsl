@@ -2,7 +2,8 @@
 #ifndef TILED_DEFERRED_CS_HLSL
 #define TILED_DEFERRED_CS_HLSL
 
-#include "FrustumZ.h"
+
+#include "ShaderDefinition.h"
 #include "Lighting.hlsli"
 #include "MainPassCB.hlsli"
 
@@ -12,12 +13,7 @@
 
 #define VISUALIZE_TILE_LIGHT_NUM 0
 
-// This determines the tile size for light binning and associated tradeoffs
-// should be the same with GDxRenderer.h
-#define TILE_SIZE_X 16
-#define TILE_SIZE_Y 16
-
-#define COMPUTE_SHADER_TILE_GROUP_SIZE (TILE_SIZE_X * TILE_SIZE_Y)
+//#define COMPUTE_SHADER_TILE_GROUP_SIZE (TILE_SIZE_X * TILE_SIZE_Y)
 
 //G-Buffer
 Texture2D gAlbedoTexture			: register(t0);

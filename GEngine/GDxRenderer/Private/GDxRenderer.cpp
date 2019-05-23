@@ -260,16 +260,26 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 		GDxGpuProfiler::GetGpuProfiler().EndGpuProfile();
 	}
 
-	// Light Pass
+	// Cluster Pass
 	{
-		GDxGpuProfiler::GetGpuProfiler().StartGpuProfile("Light Pass");
+#if USE_TBDR
+		GDxGpuProfiler::GetGpuProfiler().StartGpuProfile("Tile Pass");
+#elif USE_CBDR
+		GDxGpuProfiler::GetGpuProfiler().StartGpuProfile("Cluster Pass");
+#else
+		ThrowGGiException("TBDR/CBDR not enabled.");
+#endif
 
-		mCommandList->RSSetViewports(1, &(mUavs["LightPass"]->mViewport));
-		mCommandList->RSSetScissorRects(1, &(mUavs["LightPass"]->mScissorRect));
+		mCommandList->RSSetViewports(1, &(mUavs["TileClusterPass"]->mViewport));
+		mCommandList->RSSetScissorRects(1, &(mUavs["TileClusterPass"]->mScissorRect));
 
-		mCommandList->SetComputeRootSignature(mRootSignatures["LightPass"].Get());
+		mCommandList->SetComputeRootSignature(mRootSignatures["TileClusterPass"].Get());
 
-		mCommandList->SetPipelineState(mPSOs["LightPass"].Get());
+		mCommandList->SetPipelineState(mPSOs["TileClusterPass"].Get());
+
+		// Indicate a state transition on the resource usage.
+		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mUavs["TileClusterPass"]->GetResource(),
+			D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_UNORDERED_ACCESS));
 
 		auto lightCB = mCurrFrameResource->LightCB->Resource();
 		mCommandList->SetComputeRootConstantBufferView(0, lightCB->GetGPUVirtualAddress());
@@ -277,46 +287,69 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 		auto passCB = mCurrFrameResource->PassCB->Resource();
 		mCommandList->SetComputeRootConstantBufferView(1, passCB->GetGPUVirtualAddress());
 
-		mCommandList->SetComputeRootDescriptorTable(2, mRtvHeaps["GBuffer"]->GetSrvGpuStart());
-
-		mCommandList->SetComputeRootDescriptorTable(3, GetGpuSrv(mDepthBufferSrvIndex));
-
-		mCommandList->SetComputeRootDescriptorTable(4, GetGpuSrv(mIblIndex));
-
-		// Indicate a state transition on the resource usage.
-		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mUavs["LightPass"]->GetResource(),
-			D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_RENDER_TARGET));
-
-		// Clear the back buffer.
-		DirectX::XMVECTORF32 clearColor = { mUavs["LightPass"]->mProperties.mClearColor[0],
-		mUavs["LightPass"]->mProperties.mClearColor[1],
-		mUavs["LightPass"]->mProperties.mClearColor[2],
-		mUavs["LightPass"]->mProperties.mClearColor[3]
-		};
-
-		// WE ALREADY WROTE THE DEPTH INFO TO THE DEPTH BUFFER IN DrawNormalsAndDepth,
-		// SO DO NOT CLEAR DEPTH.
-		mCommandList->ClearRenderTargetView(mUavs["LightPass"]->GetCpuRtv(), clearColor, 0, nullptr);
-
-		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mUavs["LightPass"]->GetResource(),
-			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_UNORDERED_ACCESS));
-
-		mCommandList->SetComputeRootDescriptorTable(5, mUavs["LightPass"]->GetGpuUav());
+		mCommandList->SetComputeRootDescriptorTable(2, mUavs["TileClusterPass"]->GetGpuUav());
 
 #if USE_TBDR
-		UINT numGroupsX = (UINT)ceilf((float)mClientWidth / DEFER_TILE_SIZE_X);
-		UINT numGroupsY = (UINT)ceilf((float)mClientHeight / DEFER_TILE_SIZE_Y);
+		UINT numGroupsX = (UINT)ceilf((float)mClientWidth / TILE_SIZE_X);
+		UINT numGroupsY = (UINT)ceilf((float)mClientHeight / TILE_SIZE_Y);
 		UINT numGroupsZ = 1;
 #elif USE_CBDR
-		UINT numGroupsX = (UINT)ceilf((float)mClientWidth / DEFER_CLUSTER_SIZE_X);
-		UINT numGroupsY = (UINT)ceilf((float)mClientHeight / DEFER_CLUSTER_SIZE_Y);
-		UINT numGroupsZ = DEFER_CLUSTER_NUM_Z;
+		UINT numGroupsX = (UINT)ceilf((float)mClientWidth / CLUSTER_SIZE_X);
+		UINT numGroupsY = (UINT)ceilf((float)mClientHeight / CLUSTER_SIZE_Y);
+		UINT numGroupsZ = 1;
 #else
 		ThrowGGiException("TBDR/CBDR not enabled.");
 #endif
 		mCommandList->Dispatch(numGroupsX, numGroupsY, numGroupsZ);
 
-		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mUavs["LightPass"]->GetResource(),
+		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mUavs["TileClusterPass"]->GetResource(),
+			D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_GENERIC_READ));
+
+		GDxGpuProfiler::GetGpuProfiler().EndGpuProfile();
+	}
+
+	// Light Pass
+	{
+		GDxGpuProfiler::GetGpuProfiler().StartGpuProfile("Light Pass");
+
+		mCommandList->RSSetViewports(1, &(mRtvHeaps["LightPass"]->mRtv[0]->mViewport));
+		mCommandList->RSSetScissorRects(1, &(mRtvHeaps["LightPass"]->mRtv[0]->mScissorRect));
+
+		mCommandList->SetGraphicsRootSignature(mRootSignatures["LightPass"].Get());
+
+		mCommandList->SetPipelineState(mPSOs["LightPass"].Get());
+
+		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["LightPass"]->mRtv[0]->mResource.Get(),
+			D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_RENDER_TARGET));
+
+		auto lightCB = mCurrFrameResource->LightCB->Resource();
+		mCommandList->SetGraphicsRootConstantBufferView(0, lightCB->GetGPUVirtualAddress());
+
+		auto passCB = mCurrFrameResource->PassCB->Resource();
+		mCommandList->SetGraphicsRootConstantBufferView(1, passCB->GetGPUVirtualAddress());
+
+		mCommandList->SetGraphicsRootDescriptorTable(2, mUavs["TileClusterPass"]->GetGpuSrv());
+
+		mCommandList->SetGraphicsRootDescriptorTable(3, mRtvHeaps["GBuffer"]->GetSrvGpuStart());
+
+		mCommandList->SetGraphicsRootDescriptorTable(4, GetGpuSrv(mDepthBufferSrvIndex));
+
+		mCommandList->SetGraphicsRootDescriptorTable(5, GetGpuSrv(mIblIndex));
+
+		mCommandList->OMSetRenderTargets(1, &mRtvHeaps["LightPass"]->mRtvHeap.handleCPU(0), false, nullptr);
+
+		// Clear the render target.
+		DirectX::XMVECTORF32 clearColor = { mRtvHeaps["LightPass"]->mRtv[0]->mProperties.mClearColor[0],
+		mRtvHeaps["LightPass"]->mRtv[0]->mProperties.mClearColor[1],
+		mRtvHeaps["LightPass"]->mRtv[0]->mProperties.mClearColor[2],
+		mRtvHeaps["LightPass"]->mRtv[0]->mProperties.mClearColor[3]
+		};
+
+		mCommandList->ClearRenderTargetView(mRtvHeaps["LightPass"]->mRtvHeap.handleCPU(0), clearColor, 0, nullptr);
+
+		DrawSceneObjects(mCommandList.Get(), RenderLayer::ScreenQuad, false);
+
+		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["LightPass"]->mRtv[0]->mResource.Get(),
 			D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_GENERIC_READ));
 
 		GDxGpuProfiler::GetGpuProfiler().EndGpuProfile();
@@ -326,12 +359,12 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 	{
 		GDxGpuProfiler::GetGpuProfiler().StartGpuProfile("Sky Pass");
 
-		mCommandList->RSSetViewports(1, &(mUavs["LightPass"]->mViewport));
-		mCommandList->RSSetScissorRects(1, &(mUavs["LightPass"]->mScissorRect));
+		mCommandList->RSSetViewports(1, &(mRtvHeaps["LightPass"]->mRtv[0]->mViewport));
+		mCommandList->RSSetScissorRects(1, &(mRtvHeaps["LightPass"]->mRtv[0]->mScissorRect));
 
 		mCommandList->SetGraphicsRootSignature(mRootSignatures["Sky"].Get());
 
-		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mUavs["LightPass"]->GetResource(),
+		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["LightPass"]->mRtv[0]->mResource.Get(),
 			D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_RENDER_TARGET));
 
 		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["GBuffer"]->mRtv[mVelocityBufferSrvIndex - mGBufferSrvIndex]->mResource.Get(),
@@ -339,7 +372,7 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 
 		D3D12_CPU_DESCRIPTOR_HANDLE skyRtvs[2] =
 		{
-			mUavs["LightPass"]->GetCpuRtv(),
+			mRtvHeaps["LightPass"]->mRtvHeap.handleCPU(0),
 			mRtvHeaps["GBuffer"]->mRtvHeap.handleCPU(mVelocityBufferSrvIndex - mGBufferSrvIndex)
 		};
 		mCommandList->OMSetRenderTargets(2, skyRtvs, false, &DepthStencilView());
@@ -354,7 +387,7 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 		mCommandList->SetPipelineState(mPSOs["Sky"].Get());
 		DrawSceneObjects(mCommandList.Get(), RenderLayer::Sky, true);
 
-		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mUavs["LightPass"]->GetResource(),
+		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["LightPass"]->mRtv[0]->mResource.Get(),
 			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ));
 
 		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["GBuffer"]->mRtv[mVelocityBufferSrvIndex - mGBufferSrvIndex]->mResource.Get(),
@@ -377,7 +410,7 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 		auto passCB = mCurrFrameResource->PassCB->Resource();
 		mCommandList->SetGraphicsRootConstantBufferView(0, passCB->GetGPUVirtualAddress());
 
-		mCommandList->SetGraphicsRootDescriptorTable(1, mUavs["LightPass"]->GetGpuSrv());
+		mCommandList->SetGraphicsRootDescriptorTable(1, mRtvHeaps["LightPass"]->GetSrvGpu(0));
 
 		mCommandList->SetGraphicsRootDescriptorTable(2, mRtvHeaps["TaaPass"]->GetSrvGpu(mTaaHistoryIndex));
 		mTaaHistoryIndex = (mTaaHistoryIndex + 1) % 2;
@@ -495,7 +528,7 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 	}
 
 	// Debug Pass
-	bool bDrawDebugQuad = true;
+	bool bDrawDebugQuad = false;
 	if (bDrawDebugQuad)
 	{
 		GDxGpuProfiler::GetGpuProfiler().StartGpuProfile("Debug Pass");
@@ -722,7 +755,23 @@ void GDxRenderer::OnResize()
 	{
 		if (uav.second->ResourceNotNull())
 		{
-			uav.second->OnResize(mClientWidth, mClientHeight);
+			if (uav.second->IsTexture())
+				uav.second->OnResize(mClientWidth, mClientHeight);
+			else
+			{
+				if (uav.first == "TileClusterPass")
+				{
+					UINT64 elementNum = 0;
+#if USE_TBDR
+					elementNum = UINT64(ceilf(mClientWidth / TILE_SIZE_X) * ceilf(mClientHeight / TILE_SIZE_Y) + 0.01);
+#elif USE_CBDR
+					elementNum = (UINT64)((ceilf(mClientWidth / CLUSTER_SIZE_X) + 1) * (ceilf(mClientHeight / CLUSTER_SIZE_Y) + 1) * CLUSTER_NUM_Z + 0.01);
+#else
+					ThrowGGiException("TBDR/CBDR not enabled");
+#endif
+					uav.second->OnBufferResize(elementNum);
+				}
+			}
 		}
 	}
 }
@@ -1143,7 +1192,6 @@ void GDxRenderer::BuildRootSignature()
 
 	// GBufferDebug root signature
 	{
-
 		//G-Buffer inputs
 		CD3DX12_DESCRIPTOR_RANGE range;
 		range.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, mRtvHeaps["GBuffer"]->mRtvHeap.HeapDesc.NumDescriptors, 0);
@@ -1187,21 +1235,17 @@ void GDxRenderer::BuildRootSignature()
 			IID_PPV_ARGS(mRootSignatures["GBufferDebug"].GetAddressOf())));
 	}
 
-	// Light pass signature
-	/*
+	// Tile/cluster pass signature
 	{
-		//G-Buffer inputs
-		CD3DX12_DESCRIPTOR_RANGE range;
-		range.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, mRtvHeaps["GBuffer"]->mRtvHeap.HeapDesc.NumDescriptors, 0);
 
-		//IBL inputs
-		CD3DX12_DESCRIPTOR_RANGE rangeIBL;
-		rangeIBL.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, (UINT)mPrefilterLevels + (UINT)1 + (UINT)1, mRtvHeaps["GBuffer"]->mRtvHeap.HeapDesc.NumDescriptors);
+		//Output
+		CD3DX12_DESCRIPTOR_RANGE rangeUav;
+		rangeUav.Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, (UINT)1, 0);
 
 		CD3DX12_ROOT_PARAMETER gLightPassRootParameters[3];
 		gLightPassRootParameters[0].InitAsConstantBufferView(0);
-		gLightPassRootParameters[1].InitAsDescriptorTable(1, &range, D3D12_SHADER_VISIBILITY_ALL);
-		gLightPassRootParameters[2].InitAsDescriptorTable(1, &rangeIBL, D3D12_SHADER_VISIBILITY_ALL);
+		gLightPassRootParameters[1].InitAsConstantBufferView(1);
+		gLightPassRootParameters[2].InitAsDescriptorTable(1, &rangeUav, D3D12_SHADER_VISIBILITY_ALL);
 
 		// A root signature is an array of root parameters.
 		CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(3, gLightPassRootParameters,
@@ -1233,35 +1277,34 @@ void GDxRenderer::BuildRootSignature()
 			0,
 			serializedRootSig->GetBufferPointer(),
 			serializedRootSig->GetBufferSize(),
-			IID_PPV_ARGS(mRootSignatures["LightPass"].GetAddressOf())));
+			IID_PPV_ARGS(mRootSignatures["TileClusterPass"].GetAddressOf())));
 	}
-	*/
 
 	// Light pass signature
 	{
+		//Output
+		CD3DX12_DESCRIPTOR_RANGE rangeUav;
+		rangeUav.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, (UINT)1, 0);
+
 		//G-Buffer inputs
 		CD3DX12_DESCRIPTOR_RANGE range;
-		range.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, mRtvHeaps["GBuffer"]->mRtvHeap.HeapDesc.NumDescriptors, 0);
+		range.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, mRtvHeaps["GBuffer"]->mRtvHeap.HeapDesc.NumDescriptors, 1);
 
 		//Depth inputs
 		CD3DX12_DESCRIPTOR_RANGE rangeDepth;
-		rangeDepth.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, (UINT)1, mRtvHeaps["GBuffer"]->mRtvHeap.HeapDesc.NumDescriptors);
+		rangeDepth.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, (UINT)1, mRtvHeaps["GBuffer"]->mRtvHeap.HeapDesc.NumDescriptors + 1);
 
 		//IBL inputs
 		CD3DX12_DESCRIPTOR_RANGE rangeIBL;
-		rangeIBL.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, (UINT)mPrefilterLevels + (UINT)1 + (UINT)1, mRtvHeaps["GBuffer"]->mRtvHeap.HeapDesc.NumDescriptors + 1);
-
-		//Output
-		CD3DX12_DESCRIPTOR_RANGE rangeUav;
-		rangeUav.Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, (UINT)1, 0);
+		rangeIBL.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, (UINT)mPrefilterLevels + (UINT)1 + (UINT)1, mRtvHeaps["GBuffer"]->mRtvHeap.HeapDesc.NumDescriptors + 2);
 
 		CD3DX12_ROOT_PARAMETER gLightPassRootParameters[6];
 		gLightPassRootParameters[0].InitAsConstantBufferView(0);
 		gLightPassRootParameters[1].InitAsConstantBufferView(1);
-		gLightPassRootParameters[2].InitAsDescriptorTable(1, &range, D3D12_SHADER_VISIBILITY_ALL);
-		gLightPassRootParameters[3].InitAsDescriptorTable(1, &rangeDepth, D3D12_SHADER_VISIBILITY_ALL);
-		gLightPassRootParameters[4].InitAsDescriptorTable(1, &rangeIBL, D3D12_SHADER_VISIBILITY_ALL);
-		gLightPassRootParameters[5].InitAsDescriptorTable(1, &rangeUav, D3D12_SHADER_VISIBILITY_ALL);
+		gLightPassRootParameters[2].InitAsDescriptorTable(1, &rangeUav, D3D12_SHADER_VISIBILITY_ALL);
+		gLightPassRootParameters[3].InitAsDescriptorTable(1, &range, D3D12_SHADER_VISIBILITY_ALL);
+		gLightPassRootParameters[4].InitAsDescriptorTable(1, &rangeDepth, D3D12_SHADER_VISIBILITY_ALL);
+		gLightPassRootParameters[5].InitAsDescriptorTable(1, &rangeIBL, D3D12_SHADER_VISIBILITY_ALL);
 
 		// A root signature is an array of root parameters.
 		CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(6, gLightPassRootParameters,
@@ -1622,7 +1665,8 @@ void GDxRenderer::BuildDescriptorHeaps()
 		+ 1 //depth buffer
 		+ 1 //stencil buffer
 		+ 4 //g-buffer
-		+ 2 //light pass srv and uav
+		+ 2 //tile/cluster pass srv and uav
+		+ 1 //light pass
 		+ 3 //taa
 		+ 1 //motion blur
 		+ (2 + mPrefilterLevels);//IBL
@@ -1716,10 +1760,33 @@ void GDxRenderer::BuildDescriptorHeaps()
 		mRtvHeaps["GBuffer"] = std::move(gBufferRtvHeap);
 	}
 
-	// Build UAV and SRV for light pass.
+	// Build UAV and SRV for Tile/Cluster pass.
 	{
-		/*
-		mLightPassSrvIndex = mGBufferSrvIndex + mRtvHeaps["GBuffer"]->mRtvHeap.HeapDesc.NumDescriptors;
+		mTileClusterSrvIndex = mGBufferSrvIndex + mRtvHeaps["GBuffer"]->mRtvHeap.HeapDesc.NumDescriptors;
+
+		GDxUavProperties prop;
+		prop.mUavFormat = DXGI_FORMAT_R32G32B32A32_FLOAT;
+		prop.mClearColor[0] = 0;
+		prop.mClearColor[1] = 0;
+		prop.mClearColor[2] = 0;
+		prop.mClearColor[3] = 1;
+
+		UINT64 elementNum = 0;
+#if USE_TBDR
+		elementNum = UINT64(ceilf(mClientWidth / TILE_SIZE_X) * ceilf(mClientHeight / TILE_SIZE_Y) + 0.01);
+#elif USE_CBDR
+		elementNum = (UINT64)((ceilf(mClientWidth / CLUSTER_SIZE_X) + 1) * (ceilf(mClientHeight / CLUSTER_SIZE_Y) + 1) * CLUSTER_NUM_Z + 0.01);
+#else
+		ThrowGGiException("TBDR/CBDR not enabled");
+#endif
+
+		auto tileClusterPassUav = std::make_unique<GDxUav>(md3dDevice.Get(), mClientWidth, mClientHeight, GetCpuSrv(mTileClusterSrvIndex), GetGpuSrv(mTileClusterSrvIndex), prop, false, false, false, sizeof(LightList), elementNum);
+		mUavs["TileClusterPass"] = std::move(tileClusterPassUav);
+	}
+
+	// Build RTV and SRV for light pass.
+	{
+		mLightPassSrvIndex = mTileClusterSrvIndex + mUavs["TileClusterPass"]->GetSize();
 
 		std::vector<DXGI_FORMAT> rtvFormats =
 		{
@@ -1742,23 +1809,11 @@ void GDxRenderer::BuildDescriptorHeaps()
 		}
 		auto lightPassRtvHeap = std::make_unique<GDxRtvHeap>(md3dDevice.Get(), mClientWidth, mClientHeight, GetCpuSrv(mLightPassSrvIndex), GetGpuSrv(mLightPassSrvIndex), propVec);
 		mRtvHeaps["LightPass"] = std::move(lightPassRtvHeap);
-		*/
-		mLightPassSrvIndex = mGBufferSrvIndex + mRtvHeaps["GBuffer"]->mRtvHeap.HeapDesc.NumDescriptors;
-
-		GDxUavProperties prop;
-		prop.mUavFormat = DXGI_FORMAT_R32G32B32A32_FLOAT;// Direct light and ambient light
-		prop.mClearColor[0] = 0;
-		prop.mClearColor[1] = 0;
-		prop.mClearColor[2] = 0;
-		prop.mClearColor[3] = 1;
-
-		auto lightPassUav = std::make_unique<GDxUav>(md3dDevice.Get(), mClientWidth, mClientHeight, GetCpuSrv(mLightPassSrvIndex), GetGpuSrv(mLightPassSrvIndex), prop, true, true);
-		mUavs["LightPass"] = std::move(lightPassUav);
 	}
 
 	// Build RTV heap and SRV for TAA pass.
 	{
-		mTaaPassSrvIndex = mLightPassSrvIndex + mUavs["LightPass"]->GetSize();
+		mTaaPassSrvIndex = mLightPassSrvIndex + mRtvHeaps["LightPass"]->mRtv.size();
 
 		std::vector<DXGI_FORMAT> rtvFormats =
 		{
@@ -1927,7 +1982,7 @@ void GDxRenderer::BuildPSOs()
 		ThrowIfFailed(md3dDevice->CreateGraphicsPipelineState(&gBufferPsoDesc, IID_PPV_ARGS(&mPSOs["GBuffer"])));
 	}
 
-	// PSO for light pass.
+	// PSO for tile/cluster pass.
 	{
 		/*
 		D3D12_DEPTH_STENCIL_DESC lightPassDSD;
@@ -1982,7 +2037,7 @@ void GDxRenderer::BuildPSOs()
 		*/
 
 		D3D12_COMPUTE_PIPELINE_STATE_DESC computePsoDesc = {};
-		computePsoDesc.pRootSignature = mRootSignatures["LightPass"].Get();
+		computePsoDesc.pRootSignature = mRootSignatures["TileClusterPass"].Get();
 #if USE_TBDR
 		computePsoDesc.CS = GDxShaderManager::LoadShader(L"Shaders\\TiledDeferredCS.cso");
 #elif USE_CBDR
@@ -1991,7 +2046,45 @@ void GDxRenderer::BuildPSOs()
 		ThrowGGiException("TBDR/CBDR not enabled.");
 #endif
 		computePsoDesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
-		ThrowIfFailed(md3dDevice->CreateComputePipelineState(&computePsoDesc, IID_PPV_ARGS(&mPSOs["LightPass"])));
+		ThrowIfFailed(md3dDevice->CreateComputePipelineState(&computePsoDesc, IID_PPV_ARGS(&mPSOs["TileClusterPass"])));
+	}
+
+	// PSO for light pass.
+	{
+		D3D12_DEPTH_STENCIL_DESC lightPassDSD;
+		lightPassDSD.DepthEnable = true;
+		lightPassDSD.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
+		lightPassDSD.DepthFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+		lightPassDSD.StencilEnable = false;
+		lightPassDSD.StencilReadMask = 0xff;
+		lightPassDSD.StencilWriteMask = 0x0;
+		lightPassDSD.FrontFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
+		lightPassDSD.FrontFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
+		lightPassDSD.FrontFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
+		lightPassDSD.FrontFace.StencilFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
+		lightPassDSD.BackFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
+		lightPassDSD.BackFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
+		lightPassDSD.BackFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
+		lightPassDSD.BackFace.StencilFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
+
+		D3D12_GRAPHICS_PIPELINE_STATE_DESC descLightPSO;
+		ZeroMemory(&descLightPSO, sizeof(descLightPSO));
+
+		descLightPSO.VS = GDxShaderManager::LoadShader(L"Shaders\\FullScreenVS.cso");
+		descLightPSO.PS = GDxShaderManager::LoadShader(L"Shaders\\LightPassPS.cso");
+		descLightPSO.pRootSignature = mRootSignatures["LightPass"].Get();
+		descLightPSO.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+		descLightPSO.DepthStencilState = lightPassDSD;
+		//descLightPSO.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
+		descLightPSO.InputLayout.pInputElementDescs = GDxInputLayout::DefaultLayout;
+		descLightPSO.InputLayout.NumElements = _countof(GDxInputLayout::DefaultLayout);
+		descLightPSO.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+		descLightPSO.NumRenderTargets = 1;
+		descLightPSO.RTVFormats[0] = mRtvHeaps["LightPass"]->mRtv[0]->mProperties.mRtvFormat;//light pass output
+		descLightPSO.SampleMask = UINT_MAX;
+		descLightPSO.SampleDesc.Count = 1;
+		descLightPSO.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+		ThrowIfFailed(md3dDevice->CreateGraphicsPipelineState(&descLightPSO, IID_PPV_ARGS(&mPSOs["LightPass"])));
 	}
 
 	// PSO for TAA pass.
@@ -2207,7 +2300,7 @@ void GDxRenderer::BuildPSOs()
 		skyPsoDesc.SampleMask = UINT_MAX;
 		skyPsoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 		skyPsoDesc.NumRenderTargets = 2;
-		skyPsoDesc.RTVFormats[0] = mUavs["LightPass"]->GetFormat();
+		skyPsoDesc.RTVFormats[0] = mRtvHeaps["LightPass"]->mRtv[0]->mProperties.mRtvFormat;
 		skyPsoDesc.RTVFormats[1] = mRtvHeaps["GBuffer"]->mRtv[mVelocityBufferSrvIndex - mGBufferSrvIndex]->mProperties.mRtvFormat;
 		skyPsoDesc.SampleDesc.Count = 1;
 		skyPsoDesc.SampleDesc.Quality = 0;

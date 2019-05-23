@@ -2,46 +2,48 @@
 #ifndef CLUSTERED_DEFERRED_CS_HLSL
 #define CLUSTERED_DEFERRED_CS_HLSL
 
-#include "FrustumZ.h"
+
+#include "ShaderDefinition.h"
 #include "Lighting.hlsli"
 #include "MainPassCB.hlsli"
 
-#define USE_CBDR 1
+//#define USE_CBDR 1
 
-#define TEST 0
+//#define TEST 0
 
-#define VISUALIZE_CLUSTER_LIGHT_NUM 0
+//#define VISUALIZE_CLUSTER_LIGHT_NUM 0
 
-#define VISUALIZE_CLUSTER_DISTRIBUTION 0
+//#define VISUALIZE_CLUSTER_DISTRIBUTION 0
 
 // This determines the cluster size for light binning and associated tradeoffs
 // should be the same with GDxRenderer.h
-#define CLUSTER_SIZE_X 32
-#define CLUSTER_SIZE_Y 32
-#define CLUSTER_NUM_Z 16
+//#define CLUSTER_SIZE_X 32
+//#define CLUSTER_SIZE_Y 16
+//#define CLUSTER_NUM_Z 16
 
-#define COMPUTE_SHADER_CLUSTER_GROUP_SIZE (CLUSTER_SIZE_X * CLUSTER_SIZE_Y)
+//#define COMPUTE_SHADER_CLUSTER_GROUP_SIZE (CLUSTER_SIZE_X * CLUSTER_SIZE_Y)
 
 //G-Buffer
-Texture2D gAlbedoTexture			: register(t0);
-Texture2D gNormalTexture			: register(t1);
-Texture2D gVelocityTexture			: register(t2);
-Texture2D gOrmTexture				: register(t3);
+//Texture2D gAlbedoTexture			: register(t0);
+//Texture2D gNormalTexture			: register(t1);
+//Texture2D gVelocityTexture			: register(t2);
+//Texture2D gOrmTexture				: register(t3);
 
-Texture2D gDepthBuffer				: register(t4);
+//Texture2D gDepthBuffer				: register(t4);
 
-#define PREFILTER_MIP_LEVEL 5
+//#define PREFILTER_MIP_LEVEL 5
 
-TextureCube skyIrradianceTexture	: register(t5);
-Texture2D	brdfLUTTexture			: register(t6);
-TextureCube skyPrefilterTexture[PREFILTER_MIP_LEVEL]	: register(t7);
+//TextureCube skyIrradianceTexture	: register(t5);
+//Texture2D	brdfLUTTexture			: register(t6);
+//TextureCube skyPrefilterTexture[PREFILTER_MIP_LEVEL]	: register(t7);
 
-RWTexture2D<float4> gFramebuffer : register(u0);
+RWStructuredBuffer<LightList> gLightList : register(u0);
 
 // Light list for the tile
-groupshared uint sClusterPointLightIndices[MAX_POINT_LIGHT_NUM];
-groupshared uint sClusterNumPointLights;
+//groupshared uint sClusterPointLightIndices[MAX_POINT_LIGHT_NUM];
+//groupshared uint sClusterNumPointLights;
 
+/*
 static const float DepthSlicing_16[17] = {
 	1.0f, 20.0f, 29.7f, 44.0f, 65.3f,
 	96.9f, 143.7f, 213.2f, 316.2f, 469.1f,
@@ -94,6 +96,7 @@ float3 ReconstructWorldPos(uint2 gCoords, float depth)
 	viewPos = viewPos / viewPos.w;
 	return mul(viewPos, gInvView).xyz;
 }
+*/
 
 [numthreads(CLUSTER_SIZE_X, CLUSTER_SIZE_Y, 1)]
 void main(
@@ -102,25 +105,30 @@ void main(
 	uint3 groupThreadId : SV_GroupThreadID
 	)
 {
-	uint test1 = 0;
-
     // NOTE: This is currently necessary rather than just using SV_GroupIndex to work
     // around a compiler bug on Fermi.
     uint groupIndex = groupThreadId.y * CLUSTER_SIZE_X + groupThreadId.x;
 
     uint2 globalCoords = dispatchThreadId.xy;
 
+	uint clusterIdStart = (groupId.y * ceil(gRenderTargetSize.x / CLUSTER_SIZE_X) + groupId.x) * CLUSTER_NUM_Z;
+
+	/*
 	float depthBuffer = gDepthBuffer.Load(int3(globalCoords, 0)).r;
 	float depth = ViewDepth(depthBuffer);
 	float linearDepth = (depth - NEAR_Z) / (FAR_Z - NEAR_Z);
+	*/
 
-    // Initialize shared memory light list and Z bounds
-    if (groupIndex == 0)
+    // Initialize light list.
+    if (groupIndex < CLUSTER_NUM_Z)
 	{
-        sClusterNumPointLights = 0;
+		gLightList[clusterIdStart + groupIndex].NumPointLights = 0;
     }
 
     GroupMemoryBarrierWithGroupSync();
+
+	if (!all(globalCoords < gRenderTargetSize.xy))
+		return;
 
 	// Work out scale/bias from [0, 1]
 	float2 tileNum = float2(gRenderTargetSize.xy) * rcp(float2(CLUSTER_SIZE_X, CLUSTER_SIZE_Y));
@@ -142,58 +150,52 @@ void main(
     frustumPlanes[2] = c4 - c2;
     frustumPlanes[3] = c4 + c2;
 
-	// Near/far
-	frustumPlanes[4] = float4(0.0f, 0.0f, 1.0f, -DepthSlicing_16[groupId.z]);
-	frustumPlanes[5] = float4(0.0f, 0.0f, -1.0f, DepthSlicing_16[groupId.z + 1]);
-
     // Normalize frustum planes (near/far already normalized)
     [unroll]
 	for (uint i = 0; i < 4; ++i)
 	{
-        frustumPlanes[i] *= rcp(length(frustumPlanes[i].xyz));
+        frustumPlanes[i] *= rcp(length(frustumPlanes[i].xyz));  
     }
 
     // Cull lights for this tile
     for (uint lightIndex = groupIndex; lightIndex < pointLightCount; lightIndex += COMPUTE_SHADER_CLUSTER_GROUP_SIZE)
 	{
-		//PointLight light = pointLight[lightIndex];
-
-		// Cull: point light sphere vs cluster frustum
-		bool inFrustum = true;
+		bool inFrustum;
 
 		float4 lightPositionView = mul(float4(pointLight[lightIndex].Position, 1.0f), gView);
 
-		[unroll]
-		for (uint i = 0; i < 6; ++i)
+		for (uint clusterZ = 0; clusterZ < CLUSTER_NUM_Z; clusterZ++)
 		{
-			/*
-			float4 lightPositionView = mul(float4(light.Position, 1.0f), gView);
-			float d = dot(frustumPlanes[i], lightPositionView);
-			inFrustum = inFrustum && (d >= -light.Range);
-			*/
-			inFrustum = inFrustum && (lightPositionView.w >= 0);
+			// Cull: point light sphere vs cluster frustum
+			inFrustum = true;
+
+			// Near/far
+			frustumPlanes[4] = float4(0.0f, 0.0f, 1.0f, -DepthSlicing_16[clusterZ]);
+			frustumPlanes[5] = float4(0.0f, 0.0f, -1.0f, DepthSlicing_16[clusterZ + 1]);
+
+			[unroll]
+			for (uint i = 0; i < 6; ++i)
+			{
+				float d = dot(frustumPlanes[i], lightPositionView);
+				inFrustum = inFrustum && (d >= -pointLight[lightIndex].Range);
+			}
+
+			[branch]
+			if (inFrustum)
+			{
+				// Append light to list
+				// Compaction might be better if we expect a lot of lights
+				uint listIndex;
+				InterlockedAdd(gLightList[clusterIdStart + clusterZ].NumPointLights, 1, listIndex);
+				gLightList[clusterIdStart + clusterZ].PointLightIndices[listIndex] = lightIndex;
+			}
 		}
 
-		/*
-		[branch]
-		if (inFrustum)
-		{
-			// Append light to list
-			// Compaction might be better if we expect a lot of lights
-			uint listIndex;
-			InterlockedAdd(sClusterNumPointLights, 1, listIndex);
-			sClusterPointLightIndices[listIndex] = lightIndex;
-		}
-		*/
-		if (inFrustum)
-		{
-			test1++;
-		}
     }
 
+	/*
     GroupMemoryBarrierWithGroupSync();
 
-	/*
 	uint clusterZ = 0;
 	for (clusterZ = 0; ((depth > DepthSlicing_16[clusterZ + 1]) && (clusterZ < CLUSTER_NUM_Z - 1)); clusterZ++)
 	{
@@ -295,9 +297,9 @@ void main(
 		//*/
 
 	//float test = (float)sClusterNumPointLights / 30.0f;
-	float test = (float)test1 / 30.0f;
-	float3 finalColor = float3(test, test, test);
-	gFramebuffer[globalCoords] = float4(finalColor, 1.0f);
+	//float test = (float)test1 / 30.0f;
+	//float3 finalColor = float3(test, test, test);
+	//gFramebuffer[globalCoords] = float4(finalColor, 1.0f);
 }
 
 

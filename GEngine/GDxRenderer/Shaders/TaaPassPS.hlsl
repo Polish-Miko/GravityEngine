@@ -1,5 +1,5 @@
 
-#include "FrustumZ.h"
+#include "ShaderDefinition.h"
 //#include "ObjectCB.hlsli"
 #include "MainPassCB.hlsli"
 //#include "HaltonSequence.hlsli"

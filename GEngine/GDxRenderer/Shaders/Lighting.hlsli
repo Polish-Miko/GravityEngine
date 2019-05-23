@@ -1,6 +1,8 @@
 #ifndef _LIGHTING_HLSLI
 #define _LIGHTING_HLSLI
 
+#include "ShaderDefinition.h"
+
 #define CLAMP_ROUGHNESS
 #define ROUGHNESS_CLAMP 0.02f
 
@@ -38,6 +40,14 @@ struct PointLight
 	float Range;
 	float Intensity;
 	float3 Padding;
+};
+
+struct LightList
+{
+	uint PointLightIndices[MAX_GRID_POINT_LIGHT_NUM];
+	uint NumPointLights;
+	uint SpotLightIndices[MAX_GRID_SPOTLIGHT_NUM];
+	uint NumSpotlights;
 };
 
 cbuffer externalData : register(b0)

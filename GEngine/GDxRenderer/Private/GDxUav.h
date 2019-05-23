@@ -29,7 +29,10 @@ public:
 		CD3DX12_GPU_DESCRIPTOR_HANDLE gpuSrv,
 		GDxUavProperties uavProperties,
 		bool ScaledByViewport = true,
-		bool CreateRtv = false
+		bool CreateRtv = false,
+		bool isTexture = true,
+		UINT64 elementSizeInByte = 0,
+		UINT64 numElement = 0
 	);
 	GDxUav(const GDxUav& rhs) = delete;
 	GDxUav& operator=(const GDxUav& rhs) = delete;
@@ -40,6 +43,8 @@ public:
 	void BuildDescriptors();
 
 	void OnResize(UINT newWidth, UINT newHeight);
+
+	void OnBufferResize(UINT newElementNum);
 
 	CD3DX12_GPU_DESCRIPTOR_HANDLE GetGpuSrv();
 
@@ -56,6 +61,8 @@ public:
 	ID3D12Resource* GetResource();
 
 	DXGI_FORMAT GetFormat();
+
+	bool IsTexture();
 
 	D3D12_VIEWPORT mViewport;
 	D3D12_RECT mScissorRect;
@@ -88,6 +95,11 @@ private:
 	std::shared_ptr<GDxRtv> mRtv;
 
 	Microsoft::WRL::ComPtr<ID3D12Resource> mResource = nullptr;
+
+	bool bIsTexture = true;
+
+	UINT64 elementByteSize;
+	UINT64 elementNum;
 
 };
 

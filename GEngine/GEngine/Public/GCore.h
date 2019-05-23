@@ -6,7 +6,7 @@
 #include "GScene.h"
 #include "GMaterial.h"
 #include "GGuiCallback.h"
-#include "Shaders/FrustumZ.h"
+#include "Shaders/ShaderDefinition.h"
 
 
 
