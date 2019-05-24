@@ -37,12 +37,12 @@ to
 **4. DirectXTex**
 
 ## todo
-- [x] deferred pipeline
-- [x] physically based rendering
-- [x] scene editing
-  - [x] scene serialization
-  - [x] manipulation gizmo
+- [x] TBDR/CBDR
+- [x] PBR
+- [x] Scene Editing
+  - [x] Scene Serialization
+  - [x] Manipulation Gizmo
 - [x] Temporal AA
-- [ ] shadow
+- [ ] Culling
+- [ ] Shadowing
 - [ ] AO
-- [ ] instancing/culling
