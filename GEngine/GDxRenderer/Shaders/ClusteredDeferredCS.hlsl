@@ -18,8 +18,6 @@ void main(
 	uint3 groupThreadId : SV_GroupThreadID
 	)
 {
-    // NOTE: This is currently necessary rather than just using SV_GroupIndex to work
-    // around a compiler bug on Fermi.
     uint groupIndex = groupThreadId.y * CLUSTER_THREAD_NUM_X + groupThreadId.x;
 
     uint2 globalCoords = dispatchThreadId.xy;
@@ -46,8 +44,6 @@ void main(
 	float4 c4 = float4(0.0f, 0.0f, 1.0f, 0.0f);
 
     // Derive frustum planes
-	// See http://www.lighthouse3d.com/tutorials/view-frustum-culling/clip-space-approach-extracting-the-planes/
-	// 
     float4 frustumPlanes[6];
     // Sides
     frustumPlanes[0] = c4 - c1;
@@ -70,32 +66,42 @@ void main(
 		float4 lightPositionView = mul(float4(pointLight[lightIndex].Position, 1.0f), gView);
 
 		[unroll]
-		for (uint clusterZ = 0; clusterZ < CLUSTER_NUM_Z; clusterZ++)
+		for (uint i = 0; i < 4; ++i)
 		{
-			// Cull: point light sphere vs cluster frustum
-			inFrustum = true;
+			float d = dot(frustumPlanes[i], lightPositionView);
+			inFrustum = inFrustum && (d >= -pointLight[lightIndex].Range);
+		}
 
-			// Near/far
-			frustumPlanes[4] = float4(0.0f, 0.0f, 1.0f, -DepthSlicing_16[clusterZ]);
-			frustumPlanes[5] = float4(0.0f, 0.0f, -1.0f, DepthSlicing_16[clusterZ + 1]);
-
+		if (inFrustum)
+		{
 			[unroll]
-			for (uint i = 0; i < 6; ++i)
+			for (uint clusterZ = 0; clusterZ < CLUSTER_NUM_Z; clusterZ++)
 			{
-				float d = dot(frustumPlanes[i], lightPositionView);
-				inFrustum = inFrustum && (d >= -pointLight[lightIndex].Range);
-			}
+				// Cull: point light sphere vs cluster frustum
+				inFrustum = true;
 
-			[branch]
-			if (inFrustum)
-			{
-				// Append light to list
-				// Compaction might be better if we expect a lot of lights
-				uint listIndex = 0;
-				InterlockedAdd(gLightList[clusterIdStart + clusterZ].NumPointLights, 1, listIndex);
-				if (listIndex < MAX_GRID_POINT_LIGHT_NUM)
+				// Near/far
+				frustumPlanes[4] = float4(0.0f, 0.0f, 1.0f, -DepthSlicing_16[clusterZ]);
+				frustumPlanes[5] = float4(0.0f, 0.0f, -1.0f, DepthSlicing_16[clusterZ + 1]);
+
+				[unroll]
+				for (uint i = 4; i < 6; ++i)
 				{
-					gLightList[clusterIdStart + clusterZ].PointLightIndices[listIndex] = lightIndex;
+					float d = dot(frustumPlanes[i], lightPositionView);
+					inFrustum = inFrustum && (d >= -pointLight[lightIndex].Range);
+				}
+
+				[branch]
+				if (inFrustum)
+				{
+					// Append light to list
+					// Compaction might be better if we expect a lot of lights
+					uint listIndex = 0;
+					InterlockedAdd(gLightList[clusterIdStart + clusterZ].NumPointLights, 1, listIndex);
+					if (listIndex < MAX_GRID_POINT_LIGHT_NUM)
+					{
+						gLightList[clusterIdStart + clusterZ].PointLightIndices[listIndex] = lightIndex;
+					}
 				}
 			}
 		}

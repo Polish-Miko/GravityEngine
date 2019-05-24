@@ -31,38 +31,41 @@ float LinearDepth(float depth)
 	return (depth * NEAR_Z) / (FAR_Z - depth * (FAR_Z - NEAR_Z));
 }
 
-[numthreads(TILE_SIZE_X, TILE_SIZE_Y, 1)]
+[numthreads(TILE_THREAD_NUM_X, TILE_THREAD_NUM_Y, 1)]
 void main(
 	uint3 groupId          : SV_GroupID,
 	uint3 dispatchThreadId : SV_DispatchThreadID,
 	uint3 groupThreadId : SV_GroupThreadID
 	)
 {
-    // NOTE: This is currently necessary rather than just using SV_GroupIndex to work
-    // around a compiler bug on Fermi.
-    uint groupIndex = groupThreadId.y * TILE_SIZE_X + groupThreadId.x;
-
-    uint2 globalCoords = dispatchThreadId.xy;
+    uint groupIndex = groupThreadId.y * TILE_THREAD_NUM_X + groupThreadId.x;
 
 	uint tileId = (groupId.y * ceil(gRenderTargetSize.x / TILE_SIZE_X) + groupId.x);
 
-	float depthBuffer = gDepthBuffer.Load(int3(globalCoords, 0)).r;
-	float depth = ViewDepth(depthBuffer);
-	//float linearDepth = (depth - NEAR_Z) / (FAR_Z - NEAR_Z);
-
-    // Initialize shared memory light list and Z bounds
-    if (groupIndex == 0)
+	// Initialize shared memory light list and Z bounds
+	if (groupIndex == 0)
 	{
 		gLightList[tileId].NumPointLights = 0;
 		gLightList[tileId].NumSpotlights = 0;
-        sMinZ = 0x7F7FFFFF;      // Max float
-        sMaxZ = 0;
-    }
+		sMinZ = 0x7F7FFFFF;      // Max float
+		sMaxZ = 0;
+	}
 
-    GroupMemoryBarrierWithGroupSync();
+	GroupMemoryBarrierWithGroupSync();
 
-	InterlockedMin(sMinZ, asuint(depth));
-	InterlockedMax(sMaxZ, asuint(depth));
+	for (uint x = groupThreadId.x; x < TILE_SIZE_X; x += TILE_THREAD_NUM_X)
+	{
+		for (uint y = groupThreadId.y; y < TILE_SIZE_Y; y += TILE_THREAD_NUM_Y)
+		{
+			uint2 globalCoords = uint2(TILE_SIZE_X, TILE_SIZE_Y) * groupId.xy + uint2(x, y);
+
+			float depthBuffer = gDepthBuffer.Load(int3(globalCoords, 0)).r;
+			float depth = ViewDepth(depthBuffer);
+
+			InterlockedMin(sMinZ, asuint(depth));
+			InterlockedMax(sMaxZ, asuint(depth));
+		}
+	}
 
     GroupMemoryBarrierWithGroupSync();
 
@@ -80,8 +83,6 @@ void main(
 	float4 c4 = float4(0.0f, 0.0f, 1.0f, 0.0f);
 
     // Derive frustum planes
-	// See http://www.lighthouse3d.com/tutorials/view-frustum-culling/clip-space-approach-extracting-the-planes/
-	// 
     float4 frustumPlanes[6];
     // Sides
     frustumPlanes[0] = c4 - c1;
@@ -101,7 +102,7 @@ void main(
     }
     
     // Cull lights for this tile
-    for (uint lightIndex = groupIndex; lightIndex < pointLightCount; lightIndex += COMPUTE_SHADER_TILE_GROUP_SIZE)
+    for (uint lightIndex = groupIndex; lightIndex < (uint)pointLightCount; lightIndex += COMPUTE_SHADER_TILE_GROUP_SIZE)
 	{
         PointLight light = pointLight[lightIndex];
 
@@ -113,7 +114,6 @@ void main(
         [unroll]
 		for (uint i = 0; i < 6; ++i)
 		{
-			//float4 lightPositionView = mul(float4(light.Position, 1.0f), gView);
 			float d = dot(frustumPlanes[i], lightPositionView);
             inFrustum = inFrustum && (d >= -light.Range);
         }

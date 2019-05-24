@@ -36,7 +36,10 @@
 #define TILE_SIZE_X 16
 #define TILE_SIZE_Y 16
 
-#define COMPUTE_SHADER_TILE_GROUP_SIZE (TILE_SIZE_X * TILE_SIZE_Y)
+#define TILE_THREAD_NUM_X 2
+#define TILE_THREAD_NUM_Y 2
+
+#define COMPUTE_SHADER_TILE_GROUP_SIZE (TILE_THREAD_NUM_X * TILE_THREAD_NUM_Y)
 
 
 //----------------------------------------------------------------------

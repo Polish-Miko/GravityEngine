@@ -4,7 +4,7 @@
 #include "MainPassCB.hlsli"
 
 
-#define USE_CBDR 0
+#define USE_CBDR 1
 
 #if USE_CBDR
 #define USE_TBDR 0
@@ -131,79 +131,80 @@ float4 main(VertexToPixel pIn) : SV_TARGET
 	float4 packedAlbedo = gAlbedoTexture.Sample(basicSampler, pIn.uv);
 	float3 albedo = packedAlbedo.rgb;
 	float3 normal = gNormalTexture.Sample(basicSampler, pIn.uv).rgb;
-	float roughness = gOrmTexture.Sample(basicSampler, pIn.uv).g;
-	float metal = gOrmTexture.Sample(basicSampler, pIn.uv).b;
+	float2 metalRoughness = gOrmTexture.Sample(basicSampler, pIn.uv).gb;
+	float roughness = metalRoughness.r;
+	float metal = metalRoughness.g;
 	float3 worldPos = ReconstructWorldPos(pIn.uv, depthBuffer);
 
 	//clamp roughness
 	roughness = max(ROUGHNESS_CLAMP, roughness);
 
 	float shadowAmount = 1.f;
-		int i = 0;
+	int i = 0;
 
 #if USE_CBDR
-		// Point light.
-		for (i = 0; i < numPointLight; i++)
-		{
-			shadowAmount = 1.f;
-			float atten = Attenuate(pointLight[gLightList[gridId].PointLightIndices[i]].Position, pointLight[gLightList[gridId].PointLightIndices[i]].Range, worldPos);
-			float lightIntensity = pointLight[gLightList[gridId].PointLightIndices[i]].Intensity * atten;
-			float3 toLight = normalize(pointLight[gLightList[gridId].PointLightIndices[i]].Position - worldPos);
-			float3 lightColor = pointLight[gLightList[gridId].PointLightIndices[i]].Color.rgb;
+	// Point light.
+	for (i = 0; i < numPointLight; i++)
+	{
+		shadowAmount = 1.f;
+		float atten = Attenuate(pointLight[gLightList[gridId].PointLightIndices[i]].Position, pointLight[gLightList[gridId].PointLightIndices[i]].Range, worldPos);
+		float lightIntensity = pointLight[gLightList[gridId].PointLightIndices[i]].Intensity * atten;
+		float3 toLight = normalize(pointLight[gLightList[gridId].PointLightIndices[i]].Position - worldPos);
+		float3 lightColor = pointLight[gLightList[gridId].PointLightIndices[i]].Color.rgb;
 
-			finalColor = finalColor + DirectPBR(lightIntensity, lightColor, toLight, normalize(normal), worldPos, cameraPosition, roughness, metal, albedo, shadowAmount);
-		}
+		finalColor = finalColor + DirectPBR(lightIntensity, lightColor, toLight, normalize(normal), worldPos, cameraPosition, roughness, metal, albedo, shadowAmount);
+	}
 #elif USE_TBDR
-		// Point light.
-		for (i = 0; i < numPointLight; i++)
-		{
-			shadowAmount = 1.f;
-			float atten = Attenuate(pointLight[gLightList[gridId].PointLightIndices[i]].Position, pointLight[gLightList[gridId].PointLightIndices[i]].Range, worldPos);
-			float lightIntensity = pointLight[gLightList[gridId].PointLightIndices[i]].Intensity * atten;
-			float3 toLight = normalize(pointLight[gLightList[gridId].PointLightIndices[i]].Position - worldPos);
-			float3 lightColor = pointLight[gLightList[gridId].PointLightIndices[i]].Color.rgb;
+	// Point light.
+	for (i = 0; i < (int)numPointLight; i++)
+	{
+		shadowAmount = 1.f;
+		float atten = Attenuate(pointLight[gLightList[gridId].PointLightIndices[i]].Position, pointLight[gLightList[gridId].PointLightIndices[i]].Range, worldPos);
+		float lightIntensity = pointLight[gLightList[gridId].PointLightIndices[i]].Intensity * atten;
+		float3 toLight = normalize(pointLight[gLightList[gridId].PointLightIndices[i]].Position - worldPos);
+		float3 lightColor = pointLight[gLightList[gridId].PointLightIndices[i]].Color.rgb;
 
-			finalColor = finalColor + DirectPBR(lightIntensity, lightColor, toLight, normalize(normal), worldPos, cameraPosition, roughness, metal, albedo, shadowAmount);
-		}
+		finalColor = finalColor + DirectPBR(lightIntensity, lightColor, toLight, normalize(normal), worldPos, cameraPosition, roughness, metal, albedo, shadowAmount);
+	}
 #else
-		for (i = 0; i < MAX_POINT_LIGHT_NUM; i++)
-		{
-			shadowAmount = 1.f;
-			float atten = Attenuate(pointLight[i].Position, pointLight[i].Range, worldPos);
-			float lightIntensity = pointLight[i].Intensity * atten;
-			float3 toLight = normalize(pointLight[i].Position - worldPos);
-			float3 lightColor = pointLight[i].Color.rgb;
+	for (i = 0; i < MAX_POINT_LIGHT_NUM; i++)
+	{
+		shadowAmount = 1.f;
+		float atten = Attenuate(pointLight[i].Position, pointLight[i].Range, worldPos);
+		float lightIntensity = pointLight[i].Intensity * atten;
+		float3 toLight = normalize(pointLight[i].Position - worldPos);
+		float3 lightColor = pointLight[i].Color.rgb;
 
-			finalColor = finalColor + DirectPBR(lightIntensity, lightColor, toLight, normalize(normal), worldPos, cameraPosition, roughness, metal, albedo, shadowAmount);
-		}
+		finalColor = finalColor + DirectPBR(lightIntensity, lightColor, toLight, normalize(normal), worldPos, cameraPosition, roughness, metal, albedo, shadowAmount);
+	}
 #endif
 
-		// Directional light.
-		for (i = 0; i < dirLightCount; i++)
-		{
-			float shadowAmount = 1.f;
-			float lightIntensity = dirLight[i].Intensity;
-			float3 toLight = normalize(-dirLight[i].Direction);
-			float3 lightColor = dirLight[i].DiffuseColor.rgb;
+	// Directional light.
+	for (i = 0; i < dirLightCount; i++)
+	{
+		float shadowAmount = 1.f;
+		float lightIntensity = dirLight[i].Intensity;
+		float3 toLight = normalize(-dirLight[i].Direction);
+		float3 lightColor = dirLight[i].DiffuseColor.rgb;
 
-			finalColor = finalColor + DirectPBR(lightIntensity, lightColor, toLight, normalize(normal), worldPos, cameraPosition, roughness, metal, albedo, shadowAmount);
-		}
+		finalColor = finalColor + DirectPBR(lightIntensity, lightColor, toLight, normalize(normal), worldPos, cameraPosition, roughness, metal, albedo, shadowAmount);
+	}
 
-		// Ambient light.
-		float3 viewDir = normalize(cameraPosition - worldPos);
-		float3 prefilter = PrefilteredColor(viewDir, normal, roughness);
-		float2 brdf = BrdfLUT(normal, viewDir, roughness);
-		float3 irradiance = skyIrradianceTexture.Sample(basicSampler, normal).rgb;
+	// Ambient light.
+	float3 viewDir = normalize(cameraPosition - worldPos);
+	float3 prefilter = PrefilteredColor(viewDir, normal, roughness);
+	float2 brdf = BrdfLUT(normal, viewDir, roughness);
+	float3 irradiance = skyIrradianceTexture.Sample(basicSampler, normal).rgb;
 
-		finalColor = finalColor + AmbientPBR(normalize(normal), worldPos,
-			cameraPosition, roughness, metal, albedo,
-			irradiance, prefilter, brdf, shadowAmount);
+	finalColor = finalColor + AmbientPBR(normalize(normal), worldPos,
+		cameraPosition, roughness, metal, albedo,
+		irradiance, prefilter, brdf, shadowAmount);
 
 #if TEST
-		float test = depth / 50000.0f;
-		finalColor = float3(linearDepth, linearDepth, linearDepth);
+	float test = depth / 50000.0f;
+	finalColor = float3(linearDepth, linearDepth, linearDepth);
 #endif
 
-		return float4(finalColor, 1.0f);
+	return float4(finalColor, 1.0f);
 #endif
 }

@@ -41,7 +41,7 @@ using namespace DirectX::PackedVector;
 //#define DEFER_CLUSTER_SIZE_Y 32
 //#define DEFER_CLUSTER_NUM_Z 16
 
-#define USE_CBDR 0
+#define USE_CBDR 1
 
 #if USE_CBDR
 #define USE_TBDR 0
