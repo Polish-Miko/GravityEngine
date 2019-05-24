@@ -7,96 +7,9 @@
 #include "Lighting.hlsli"
 #include "MainPassCB.hlsli"
 
-//#define USE_CBDR 1
-
-//#define TEST 0
-
-//#define VISUALIZE_CLUSTER_LIGHT_NUM 0
-
-//#define VISUALIZE_CLUSTER_DISTRIBUTION 0
-
-// This determines the cluster size for light binning and associated tradeoffs
-// should be the same with GDxRenderer.h
-//#define CLUSTER_SIZE_X 32
-//#define CLUSTER_SIZE_Y 16
-//#define CLUSTER_NUM_Z 16
-
-//#define COMPUTE_SHADER_CLUSTER_GROUP_SIZE (CLUSTER_SIZE_X * CLUSTER_SIZE_Y)
-
-//G-Buffer
-//Texture2D gAlbedoTexture			: register(t0);
-//Texture2D gNormalTexture			: register(t1);
-//Texture2D gVelocityTexture			: register(t2);
-//Texture2D gOrmTexture				: register(t3);
-
-//Texture2D gDepthBuffer				: register(t4);
-
-//#define PREFILTER_MIP_LEVEL 5
-
-//TextureCube skyIrradianceTexture	: register(t5);
-//Texture2D	brdfLUTTexture			: register(t6);
-//TextureCube skyPrefilterTexture[PREFILTER_MIP_LEVEL]	: register(t7);
-
 RWStructuredBuffer<LightList> gLightList : register(u0);
 
-// Light list for the tile
-//groupshared uint sClusterPointLightIndices[MAX_POINT_LIGHT_NUM];
-//groupshared uint sClusterNumPointLights;
-
-/*
-static const float DepthSlicing_16[17] = {
-	1.0f, 20.0f, 29.7f, 44.0f, 65.3f,
-	96.9f, 143.7f, 213.2f, 316.2f, 469.1f,
-	695.9f, 1032.4f, 1531.5f, 2272.0f, 3370.5f,
-	5000.0f, 50000.0f
-};
-
-SamplerState samLinear
-{
-	Filter = MIN_MAG_MIP_LINEAR;
-	AddressU = Wrap;
-	AddressV = Wrap;
-};
-
-float LinearDepth(float depth)
-{
-	return (depth * NEAR_Z) / (FAR_Z - depth * (FAR_Z - NEAR_Z));
-}
-
-float ViewDepth(float depth)
-{
-	return (FAR_Z * NEAR_Z) / (FAR_Z - depth * (FAR_Z - NEAR_Z));
-}
-
-float3 PrefilteredColor(float3 viewDir, float3 normal, float roughness)
-{
-	float roughnessLevel = roughness * PREFILTER_MIP_LEVEL;
-	int fl = floor(roughnessLevel);
-	int cl = ceil(roughnessLevel);
-	float3 R = reflect(-viewDir, normal);
-	float3 flSample = skyPrefilterTexture[fl].SampleLevel(samLinear, R, 0).rgb;
-	float3 clSample = skyPrefilterTexture[cl].SampleLevel(samLinear, R, 0).rgb;
-	float3 prefilterColor = lerp(flSample, clSample, (roughnessLevel - fl));
-	return prefilterColor;
-}
-
-float2 BrdfLUT(float3 normal, float3 viewDir, float roughness)
-{
-	float NdotV = dot(normal, viewDir);
-	NdotV = max(NdotV, 0.0f);
-	float2 uv = float2(NdotV, roughness);
-	return brdfLUTTexture.SampleLevel(samLinear, uv, 0).rg;
-}
-
-float3 ReconstructWorldPos(uint2 gCoords, float depth)
-{
-	float ndcX = gCoords.x * gInvRenderTargetSize.x * 2 - 1;
-	float ndcY = 1 - gCoords.y * gInvRenderTargetSize.y * 2;//remember to flip y!!!
-	float4 viewPos = mul(float4(ndcX, ndcY, depth, 1.0f), gInvProj);
-	viewPos = viewPos / viewPos.w;
-	return mul(viewPos, gInvView).xyz;
-}
-*/
+Texture2D gDepthBuffer				: register(t0);
 
 [numthreads(CLUSTER_THREAD_NUM_X, CLUSTER_THREAD_NUM_Y, 1)]
 void main(
@@ -113,20 +26,7 @@ void main(
 
 	uint clusterIdStart = (groupId.y * ceil(gRenderTargetSize.x / CLUSTER_SIZE_X) + groupId.x) * CLUSTER_NUM_Z;
 
-	/*
-	float depthBuffer = gDepthBuffer.Load(int3(globalCoords, 0)).r;
-	float depth = ViewDepth(depthBuffer);
-	float linearDepth = (depth - NEAR_Z) / (FAR_Z - NEAR_Z);
-	*/
-
     // Initialize light list.
-	/*
-    if (groupIndex < CLUSTER_NUM_Z)
-	{
-		gLightList[clusterIdStart + groupIndex].NumPointLights = 0;
-		gLightList[clusterIdStart + groupIndex].NumSpotlights = 0;
-    }
-	*/
 	if (groupIndex < CLUSTER_NUM_Z)
 	{
 		gLightList[clusterIdStart + groupIndex].NumPointLights = 0;
@@ -134,9 +34,6 @@ void main(
 	}
 
     GroupMemoryBarrierWithGroupSync();
-
-	//if (!all(globalCoords < gRenderTargetSize.xy))
-		//return;
 
 	// Work out scale/bias from [0, 1]
 	float2 tileNum = float2(gRenderTargetSize.xy) * rcp(float2(CLUSTER_SIZE_X, CLUSTER_SIZE_Y));
@@ -165,11 +62,8 @@ void main(
         frustumPlanes[i] *= rcp(length(frustumPlanes[i].xyz));  
     }
 
-    // Cull lights for this tile
-    //for (uint lightIndex = groupIndex; lightIndex < (uint)pointLightCount; lightIndex += COMPUTE_SHADER_CLUSTER_GROUP_SIZE)
+    // Cull lights for this cluster
 	for (uint lightIndex = groupIndex; lightIndex < (uint)pointLightCount; lightIndex += COMPUTE_SHADER_CLUSTER_GROUP_SIZE)
-	//if (groupIndex != 0) return;
-	//for (uint lightIndex = 0; lightIndex < (uint)pointLightCount; lightIndex += 1)
 	{
 		bool inFrustum = true;
 
@@ -184,54 +78,14 @@ void main(
 			// Near/far
 			frustumPlanes[4] = float4(0.0f, 0.0f, 1.0f, -DepthSlicing_16[clusterZ]);
 			frustumPlanes[5] = float4(0.0f, 0.0f, -1.0f, DepthSlicing_16[clusterZ + 1]);
-			/*
-			frustumPlanes[0] = float4(gProj._11 * tileNum.x, 0.0f, 1.0f - tileCenterOffset.x, 0.0f);
-			frustumPlanes[1] = float4(-gProj._11 * tileNum.x, 0.0f, 1.0f + tileCenterOffset.x, 0.0f);
-			frustumPlanes[2] = float4(0.0f, gProj._22 * tileNum.y, 1.0f + tileCenterOffset.y, 0.0f);
-			frustumPlanes[3] = float4(0.0f, -gProj._22 * tileNum.y, 1.0f - tileCenterOffset.y, 0.0f);
-			frustumPlanes[0] = float4(10, 0.0f, -10, 0.0f);
-			frustumPlanes[1] = float4(-10, 0.0f, 10, 0.0f);
-			frustumPlanes[2] = float4(0.0f, 10, 10, 0.0f);
-			frustumPlanes[3] = float4(0.0f, -10, -10, 0.0f);
-			for (uint j = 0; j < 4; ++j)
-			{
-				frustumPlanes[j] *= rcp(length(frustumPlanes[j].xyz));
-			}
-			frustumPlanes[4] = float4(0.0f, 0.0f, 1.0f, -1.0f);
-			frustumPlanes[5] = float4(0.0f, 0.0f, -1.0f, 1000.0f);
-			*/
 
-			/*
-			[unroll]
-			for (uint i = 0; i < 4; ++i)
-			{
-				float d = dot(frustumPlanes[i], float4(pointLight[lightIndex].Position, 1.0f));
-				//float d = dot(frustumPlanes[i], float4(1.0f, 1.0f, 1.0f, 1.0f));
-				inFrustum = inFrustum && (d >= -50.0f);
-				//inFrustum = inFrustum && (d >= -pointLight[lightIndex].Range);
-			}
-
-			inFrustum = inFrustum && (lightIndex < (uint)pointLightCount);
-
-			[unroll]
-			for (uint i = 0; i < 6; ++i)
-			{
-				float d = dot(frustumPlanes[i], float4(1.0f, 1.0f, 1.0f, 1.0f));
-				inFrustum = inFrustum && (d >= -pointLight[lightIndex].Range);
-			}
-			*/
-
-			//gLightList[clusterIdStart + clusterZ].NumPointLights = 50;
-			///*
 			[unroll]
 			for (uint i = 0; i < 6; ++i)
 			{
 				float d = dot(frustumPlanes[i], lightPositionView);
 				inFrustum = inFrustum && (d >= -pointLight[lightIndex].Range);
 			}
-			//*/   
 
-			///*
 			[branch]
 			if (inFrustum)
 			{
@@ -243,124 +97,10 @@ void main(
 				{
 					gLightList[clusterIdStart + clusterZ].PointLightIndices[listIndex] = lightIndex;
 				}
-				//gLightList[clusterIdStart + clusterZ].PointLightIndices[0] = lightIndex;
 			}
-			//*/
-			
-			//uint test = DepthSlicing_16[clusterZ + 1] / 500.0f;
-			//test = 5;
-			//gLightList[clusterIdStart + clusterZ].NumPointLights = test;
 		}
 
     }
-
-	/*
-    GroupMemoryBarrierWithGroupSync();
-
-	uint clusterZ = 0;
-	for (clusterZ = 0; ((depth > DepthSlicing_16[clusterZ + 1]) && (clusterZ < CLUSTER_NUM_Z - 1)); clusterZ++)
-	{
-		;
-	}
-	
-	//TODO: Output light list.
-
-    uint numLights = sClusterNumPointLights;
-
-    // Only process onscreen pixels (tiles can span screen edges)
-	if (all(globalCoords < gRenderTargetSize.xy) && (linearDepth > 0.0f) && (clusterZ == groupId.z))
-	{
-#if VISUALIZE_CLUSTER_DISTRIBUTION
-		float outputRGB = float(clusterZ) / 16.0f;
-		gFramebuffer[globalCoords] = float4(outputRGB, outputRGB, outputRGB, 1.0f);
-#elif VISUALIZE_CLUSTER_LIGHT_NUM
-		float outputRGB = float(numLights) / 30.0f;
-		gFramebuffer[globalCoords] = float4(outputRGB, outputRGB, outputRGB, 1.0f);
-#else
-		float3 finalColor = 0.f;
-
-		float4 packedAlbedo = gAlbedoTexture.Load(int3(globalCoords, 0));
-		float3 albedo = packedAlbedo.rgb;
-		float3 normal = gNormalTexture.Load(int3(globalCoords, 0)).rgb;
-		float roughness = gOrmTexture.Load(int3(globalCoords, 0)).g;
-		float metal = gOrmTexture.Load(int3(globalCoords, 0)).b;
-		float3 worldPos = ReconstructWorldPos(globalCoords, depthBuffer);
-
-		//clamp roughness
-		roughness = max(ROUGHNESS_CLAMP, roughness);
-
-		float shadowAmount = 1.f;
-
-		if (numLights > 0)
-		{
-			int i = 0;
-
-#if USE_CBDR
-			// Point light.
-			for (i = 0; i < numLights; i++)
-			{
-				shadowAmount = 1.f;
-				float atten = Attenuate(pointLight[sClusterPointLightIndices[i]].Position, pointLight[sClusterPointLightIndices[i]].Range, worldPos);
-				float lightIntensity = pointLight[sClusterPointLightIndices[i]].Intensity * atten;
-				float3 toLight = normalize(pointLight[sClusterPointLightIndices[i]].Position - worldPos);
-				float3 lightColor = pointLight[sClusterPointLightIndices[i]].Color.rgb;
-
-				finalColor = finalColor + DirectPBR(lightIntensity, lightColor, toLight, normalize(normal), worldPos, cameraPosition, roughness, metal, albedo, shadowAmount);
-			}
-#else
-			for (i = 0; i < MAX_POINT_LIGHT_NUM; i++)
-			{
-				shadowAmount = 1.f;
-				float atten = Attenuate(pointLight[i].Position, pointLight[i].Range, worldPos);
-				float lightIntensity = pointLight[i].Intensity * atten;
-				float3 toLight = normalize(pointLight[i].Position - worldPos);
-				float3 lightColor = pointLight[i].Color.rgb;
-
-				finalColor = finalColor + DirectPBR(lightIntensity, lightColor, toLight, normalize(normal), worldPos, cameraPosition, roughness, metal, albedo, shadowAmount);
-			}
-#endif
-
-			// Directional light.
-			for (i = 0; i < dirLightCount; i++)
-			{
-				float shadowAmount = 1.f;
-				float lightIntensity = dirLight[i].Intensity;
-				float3 toLight = normalize(-dirLight[i].Direction);
-				float3 lightColor = dirLight[i].DiffuseColor.rgb;
-
-				finalColor = finalColor + DirectPBR(lightIntensity, lightColor, toLight, normalize(normal), worldPos, cameraPosition, roughness, metal, albedo, shadowAmount);
-			}
-		}
-		else
-		{
-			finalColor = float3(0.0f, 0.0f, 0.0f);
-		}
-
-		// Ambient light.
-		float3 viewDir = normalize(cameraPosition - worldPos);
-		float3 prefilter = PrefilteredColor(viewDir, normal, roughness);
-		float2 brdf = BrdfLUT(normal, viewDir, roughness);
-		float3 irradiance = skyIrradianceTexture.SampleLevel(samLinear, normal, 0).rgb;
-
-		finalColor = finalColor + AmbientPBR(normalize(normal), worldPos,
-			cameraPosition, roughness, metal, albedo,
-			irradiance, prefilter, brdf, shadowAmount);
-
-#if TEST
-		float test = depth / 50000.0f;
-		finalColor = float3(linearDepth, linearDepth, linearDepth);
-#endif
-
-		gFramebuffer[globalCoords] = float4(finalColor, 1.0f);
-#endif
-
-    }
-		//*/
-
-	//float test = (float)sClusterNumPointLights / 30.0f;
-	//float test = (float)test1 / 30.0f;
-	//float3 finalColor = float3(test, test, test);
-	//gFramebuffer[globalCoords] = float4(finalColor, 1.0f);
 }
 
 

@@ -7,36 +7,12 @@
 #include "Lighting.hlsli"
 #include "MainPassCB.hlsli"
 
-#define USE_TBDR 1
-
-#define TEST 0
-
-#define VISUALIZE_TILE_LIGHT_NUM 0
-
-//#define COMPUTE_SHADER_TILE_GROUP_SIZE (TILE_SIZE_X * TILE_SIZE_Y)
-
-//G-Buffer
-Texture2D gAlbedoTexture			: register(t0);
-Texture2D gNormalTexture			: register(t1);
-Texture2D gVelocityTexture			: register(t2);
-Texture2D gOrmTexture				: register(t3);
-
-Texture2D gDepthBuffer				: register(t4);
-
-#define PREFILTER_MIP_LEVEL 5
-
-TextureCube skyIrradianceTexture	: register(t5);
-Texture2D	brdfLUTTexture			: register(t6);
-TextureCube skyPrefilterTexture[PREFILTER_MIP_LEVEL]	: register(t7);
-
-RWTexture2D<float4> gFramebuffer : register(u0);
+Texture2D gDepthBuffer				: register(t0);
 
 groupshared uint sMinZ;
 groupshared uint sMaxZ;
 
-// Light list for the tile
-groupshared uint sTilePointLightIndices[MAX_POINT_LIGHT_NUM];
-groupshared uint sTileNumPointLights;
+RWStructuredBuffer<LightList> gLightList : register(u0);
 
 SamplerState samLinear
 {
@@ -45,43 +21,14 @@ SamplerState samLinear
 	AddressV = Wrap;
 };
 
-float LinearDepth(float depth)
-{
-	return (depth * NEAR_Z) / (FAR_Z - depth * (FAR_Z - NEAR_Z));
-}
-
 float ViewDepth(float depth)
 {
 	return (FAR_Z * NEAR_Z) / (FAR_Z - depth * (FAR_Z - NEAR_Z));
 }
 
-float3 PrefilteredColor(float3 viewDir, float3 normal, float roughness)
+float LinearDepth(float depth)
 {
-	float roughnessLevel = roughness * PREFILTER_MIP_LEVEL;
-	int fl = floor(roughnessLevel);
-	int cl = ceil(roughnessLevel);
-	float3 R = reflect(-viewDir, normal);
-	float3 flSample = skyPrefilterTexture[fl].SampleLevel(samLinear, R, 0).rgb;
-	float3 clSample = skyPrefilterTexture[cl].SampleLevel(samLinear, R, 0).rgb;
-	float3 prefilterColor = lerp(flSample, clSample, (roughnessLevel - fl));
-	return prefilterColor;
-}
-
-float2 BrdfLUT(float3 normal, float3 viewDir, float roughness)
-{
-	float NdotV = dot(normal, viewDir);
-	NdotV = max(NdotV, 0.0f);
-	float2 uv = float2(NdotV, roughness);
-	return brdfLUTTexture.SampleLevel(samLinear, uv, 0).rg;
-}
-
-float3 ReconstructWorldPos(uint2 gCoords, float depth)
-{
-	float ndcX = gCoords.x * gInvRenderTargetSize.x * 2 - 1;
-	float ndcY = 1 - gCoords.y * gInvRenderTargetSize.y * 2;//remember to flip y!!!
-	float4 viewPos = mul(float4(ndcX, ndcY, depth, 1.0f), gInvProj);
-	viewPos = viewPos / viewPos.w;
-	return mul(viewPos, gInvView).xyz;
+	return (depth * NEAR_Z) / (FAR_Z - depth * (FAR_Z - NEAR_Z));
 }
 
 [numthreads(TILE_SIZE_X, TILE_SIZE_Y, 1)]
@@ -97,14 +44,17 @@ void main(
 
     uint2 globalCoords = dispatchThreadId.xy;
 
+	uint tileId = (groupId.y * ceil(gRenderTargetSize.x / TILE_SIZE_X) + groupId.x);
+
 	float depthBuffer = gDepthBuffer.Load(int3(globalCoords, 0)).r;
 	float depth = ViewDepth(depthBuffer);
-	float linearDepth = (depth - NEAR_Z) / (FAR_Z - NEAR_Z);
+	//float linearDepth = (depth - NEAR_Z) / (FAR_Z - NEAR_Z);
 
     // Initialize shared memory light list and Z bounds
     if (groupIndex == 0)
 	{
-        sTileNumPointLights = 0;
+		gLightList[tileId].NumPointLights = 0;
+		gLightList[tileId].NumSpotlights = 0;
         sMinZ = 0x7F7FFFFF;      // Max float
         sMaxZ = 0;
     }
@@ -154,6 +104,8 @@ void main(
     for (uint lightIndex = groupIndex; lightIndex < pointLightCount; lightIndex += COMPUTE_SHADER_TILE_GROUP_SIZE)
 	{
         PointLight light = pointLight[lightIndex];
+
+		float4 lightPositionView = mul(float4(pointLight[lightIndex].Position, 1.0f), gView);
         
         // Cull: point light sphere vs tile frustum
         bool inFrustum = true;
@@ -161,7 +113,7 @@ void main(
         [unroll]
 		for (uint i = 0; i < 6; ++i)
 		{
-			float4 lightPositionView = mul(float4(light.Position, 1.0f), gView);
+			//float4 lightPositionView = mul(float4(light.Position, 1.0f), gView);
 			float d = dot(frustumPlanes[i], lightPositionView);
             inFrustum = inFrustum && (d >= -light.Range);
         }
@@ -172,98 +124,12 @@ void main(
             // Append light to list
             // Compaction might be better if we expect a lot of lights
             uint listIndex;
-            InterlockedAdd(sTileNumPointLights, 1, listIndex);
-            sTilePointLightIndices[listIndex] = lightIndex;
+            InterlockedAdd(gLightList[tileId].NumPointLights, 1, listIndex);
+			if (listIndex < MAX_GRID_POINT_LIGHT_NUM)
+			{
+				gLightList[tileId].PointLightIndices[listIndex] = lightIndex;
+			}
         }
-    }
- 
-    GroupMemoryBarrierWithGroupSync();
-    
-    uint numLights = sTileNumPointLights;
-
-    // Only process onscreen pixels (tiles can span screen edges)
-	if (all(globalCoords < gRenderTargetSize.xy) && linearDepth > 0.0f)
-	{
-#if VISUALIZE_TILE_LIGHT_NUM
-		gFramebuffer[globalCoords] = float(sTileNumPointLights) / 30.0f;
-#else
-		float3 finalColor = 0.f;
-
-		float4 packedAlbedo = gAlbedoTexture.Load(int3(globalCoords, 0));
-		float3 albedo = packedAlbedo.rgb;
-		float3 normal = gNormalTexture.Load(int3(globalCoords, 0)).rgb;
-		float roughness = gOrmTexture.Load(int3(globalCoords, 0)).g;
-		float metal = gOrmTexture.Load(int3(globalCoords, 0)).b;
-		float3 worldPos = ReconstructWorldPos(globalCoords, depthBuffer);
-
-		//clamp roughness
-		roughness = max(ROUGHNESS_CLAMP, roughness);
-
-		float shadowAmount = 1.f;
-
-		if (numLights > 0)
-		{
-
-			int i = 0;
-
-#if USE_TBDR
-			// Point light.
-			for (i = 0; i < numLights; i++)
-			{
-				shadowAmount = 1.f;
-				float atten = Attenuate(pointLight[sTilePointLightIndices[i]].Position, pointLight[sTilePointLightIndices[i]].Range, worldPos);
-				float lightIntensity = pointLight[sTilePointLightIndices[i]].Intensity * atten;
-				float3 toLight = normalize(pointLight[sTilePointLightIndices[i]].Position - worldPos);
-				float3 lightColor = pointLight[sTilePointLightIndices[i]].Color.rgb;
-
-				finalColor = finalColor + DirectPBR(lightIntensity, lightColor, toLight, normalize(normal), worldPos, cameraPosition, roughness, metal, albedo, shadowAmount);
-			}
-#else
-			for (i = 0; i < MAX_POINT_LIGHT_NUM; i++)
-			{
-				shadowAmount = 1.f;
-				float atten = Attenuate(pointLight[i].Position, pointLight[i].Range, worldPos);
-				float lightIntensity = pointLight[i].Intensity * atten;
-				float3 toLight = normalize(pointLight[i].Position - worldPos);
-				float3 lightColor = pointLight[i].Color.rgb;
-
-				finalColor = finalColor + DirectPBR(lightIntensity, lightColor, toLight, normalize(normal), worldPos, cameraPosition, roughness, metal, albedo, shadowAmount);
-			}
-#endif
-
-			// Directional light.
-			for (i = 0; i < dirLightCount; i++)
-			{
-				float shadowAmount = 1.f;
-				float lightIntensity = dirLight[i].Intensity;
-				float3 toLight = normalize(-dirLight[i].Direction);
-				float3 lightColor = dirLight[i].DiffuseColor.rgb;
-
-				finalColor = finalColor + DirectPBR(lightIntensity, lightColor, toLight, normalize(normal), worldPos, cameraPosition, roughness, metal, albedo, shadowAmount);
-			}
-		}
-		else
-		{
-			finalColor = float3(0.0f, 0.0f, 0.0f);
-		}
-
-		// Ambient light.
-		float3 viewDir = normalize(cameraPosition - worldPos);
-		float3 prefilter = PrefilteredColor(viewDir, normal, roughness);
-		float2 brdf = BrdfLUT(normal, viewDir, roughness);
-		float3 irradiance = skyIrradianceTexture.SampleLevel(samLinear, normal, 0).rgb;
-
-		finalColor = finalColor + AmbientPBR(normalize(normal), worldPos,
-			cameraPosition, roughness, metal, albedo,
-			irradiance, prefilter, brdf, shadowAmount);
-
-#if TEST
-		float test = depth / 50000.0f;
-		finalColor = float3(linearDepth, linearDepth, linearDepth);
-#endif
-
-		gFramebuffer[globalCoords] = float4(finalColor, 1.0f);
-#endif
     }
 
 

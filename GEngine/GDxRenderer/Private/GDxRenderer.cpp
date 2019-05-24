@@ -289,6 +289,8 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 
 		mCommandList->SetComputeRootDescriptorTable(2, mUavs["TileClusterPass"]->GetGpuUav());
 
+		mCommandList->SetComputeRootDescriptorTable(3, GetGpuSrv(mDepthBufferSrvIndex));
+
 #if USE_TBDR
 		UINT numGroupsX = (UINT)ceilf((float)mClientWidth / TILE_SIZE_X);
 		UINT numGroupsY = (UINT)ceilf((float)mClientHeight / TILE_SIZE_Y);
@@ -1242,13 +1244,17 @@ void GDxRenderer::BuildRootSignature()
 		CD3DX12_DESCRIPTOR_RANGE rangeUav;
 		rangeUav.Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, (UINT)1, 0);
 
-		CD3DX12_ROOT_PARAMETER gLightPassRootParameters[3];
+		CD3DX12_DESCRIPTOR_RANGE rangeDepth;
+		rangeDepth.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, (UINT)1, 0);
+
+		CD3DX12_ROOT_PARAMETER gLightPassRootParameters[4];
 		gLightPassRootParameters[0].InitAsConstantBufferView(0);
 		gLightPassRootParameters[1].InitAsConstantBufferView(1);
 		gLightPassRootParameters[2].InitAsDescriptorTable(1, &rangeUav, D3D12_SHADER_VISIBILITY_ALL);
+		gLightPassRootParameters[3].InitAsDescriptorTable(1, &rangeDepth, D3D12_SHADER_VISIBILITY_ALL);
 
 		// A root signature is an array of root parameters.
-		CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(3, gLightPassRootParameters,
+		CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(4, gLightPassRootParameters,
 			0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
 		CD3DX12_STATIC_SAMPLER_DESC StaticSamplers[2];

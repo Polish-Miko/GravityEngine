@@ -3,9 +3,14 @@
 #include "Lighting.hlsli"
 #include "MainPassCB.hlsli"
 
-#define USE_CBDR 1
 
+#define USE_CBDR 0
+
+#if USE_CBDR
 #define USE_TBDR 0
+#else
+#define USE_TBDR 1
+#endif
 
 #define VISUALIZE_GRID_LIGHT_NUM 0
 
@@ -115,17 +120,6 @@ float4 main(VertexToPixel pIn) : SV_TARGET
 		numSpotlight = MAX_GRID_SPOTLIGHT_NUM;
 
 #if VISUALIZE_GRID_LIGHT_NUM
-
-	/*
-	numPointLight = gLightList[gridId - clusterZ].NumPointLights;
-	numSpotlight = gLightList[gridId - clusterZ].NumSpotlights;
-	if (numPointLight > MAX_GRID_POINT_LIGHT_NUM)
-		numPointLight = MAX_GRID_POINT_LIGHT_NUM;
-	if (numSpotlight > MAX_GRID_SPOTLIGHT_NUM)
-		numSpotlight = MAX_GRID_SPOTLIGHT_NUM;
-	*/
-
-
 	float lightNum = float(numPointLight + numSpotlight) / 30.0f;
 	return float4(lightNum, lightNum, lightNum, 1.0f);
 #elif VISUALIZE_CLUSTER_DISTRIBUTION
