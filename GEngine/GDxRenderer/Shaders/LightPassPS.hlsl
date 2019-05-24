@@ -88,6 +88,9 @@ float4 main(VertexToPixel pIn) : SV_TARGET
 	float depth = ViewDepth(depthBuffer);
 	float linearDepth = (depth - NEAR_Z) / (FAR_Z - NEAR_Z);
 
+	if (linearDepth <= 0.0f)
+		return float4(0.0f, 0.0f, 0.0f, 1.0f);
+
 	uint gridId = 0;
 #if USE_TBDR
 	uint offsetX = floor(pIn.uv.x * gRenderTargetSize.x / TILE_SIZE_X);
@@ -112,6 +115,17 @@ float4 main(VertexToPixel pIn) : SV_TARGET
 		numSpotlight = MAX_GRID_SPOTLIGHT_NUM;
 
 #if VISUALIZE_GRID_LIGHT_NUM
+
+	/*
+	numPointLight = gLightList[gridId - clusterZ].NumPointLights;
+	numSpotlight = gLightList[gridId - clusterZ].NumSpotlights;
+	if (numPointLight > MAX_GRID_POINT_LIGHT_NUM)
+		numPointLight = MAX_GRID_POINT_LIGHT_NUM;
+	if (numSpotlight > MAX_GRID_SPOTLIGHT_NUM)
+		numSpotlight = MAX_GRID_SPOTLIGHT_NUM;
+	*/
+
+
 	float lightNum = float(numPointLight + numSpotlight) / 30.0f;
 	return float4(lightNum, lightNum, lightNum, 1.0f);
 #elif VISUALIZE_CLUSTER_DISTRIBUTION

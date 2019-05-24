@@ -528,7 +528,7 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 	}
 
 	// Debug Pass
-	bool bDrawDebugQuad = false;
+	bool bDrawDebugQuad = true;
 	if (bDrawDebugQuad)
 	{
 		GDxGpuProfiler::GetGpuProfiler().StartGpuProfile("Debug Pass");
@@ -763,13 +763,13 @@ void GDxRenderer::OnResize()
 				{
 					UINT64 elementNum = 0;
 #if USE_TBDR
-					elementNum = UINT64(ceilf(mClientWidth / TILE_SIZE_X) * ceilf(mClientHeight / TILE_SIZE_Y) + 0.01);
+					elementNum = UINT64((float)ceilf(mClientWidth / (float)TILE_SIZE_X) * ceilf((float)mClientHeight / (float)TILE_SIZE_Y) + 0.01);
 #elif USE_CBDR
-					elementNum = (UINT64)((ceilf(mClientWidth / CLUSTER_SIZE_X) + 1) * (ceilf(mClientHeight / CLUSTER_SIZE_Y) + 1) * CLUSTER_NUM_Z + 0.01);
+					elementNum = (UINT64)(ceilf((float)mClientWidth / (float)CLUSTER_SIZE_X) * ceilf((float)mClientHeight / (float)CLUSTER_SIZE_Y) * CLUSTER_NUM_Z + 0.01);
 #else
 					ThrowGGiException("TBDR/CBDR not enabled");
 #endif
-					uav.second->OnBufferResize(elementNum);
+					uav.second->OnBufferResize((UINT)elementNum);
 				}
 			}
 		}
@@ -1773,9 +1773,9 @@ void GDxRenderer::BuildDescriptorHeaps()
 
 		UINT64 elementNum = 0;
 #if USE_TBDR
-		elementNum = UINT64(ceilf(mClientWidth / TILE_SIZE_X) * ceilf(mClientHeight / TILE_SIZE_Y) + 0.01);
+		elementNum = UINT64(ceilf((float)mClientWidth / (float)TILE_SIZE_X) * ceilf((float)mClientHeight / (float)TILE_SIZE_Y) + 0.01);
 #elif USE_CBDR
-		elementNum = (UINT64)((ceilf(mClientWidth / CLUSTER_SIZE_X) + 1) * (ceilf(mClientHeight / CLUSTER_SIZE_Y) + 1) * CLUSTER_NUM_Z + 0.01);
+		elementNum = (UINT64)(ceilf((float)mClientWidth / (float)CLUSTER_SIZE_X) * ceilf((float)mClientHeight / (float)CLUSTER_SIZE_Y) * CLUSTER_NUM_Z + 0.01);
 #else
 		ThrowGGiException("TBDR/CBDR not enabled");
 #endif
@@ -1813,7 +1813,7 @@ void GDxRenderer::BuildDescriptorHeaps()
 
 	// Build RTV heap and SRV for TAA pass.
 	{
-		mTaaPassSrvIndex = mLightPassSrvIndex + mRtvHeaps["LightPass"]->mRtv.size();
+		mTaaPassSrvIndex = mLightPassSrvIndex + (UINT)mRtvHeaps["LightPass"]->mRtv.size();
 
 		std::vector<DXGI_FORMAT> rtvFormats =
 		{

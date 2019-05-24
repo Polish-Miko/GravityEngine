@@ -42,11 +42,14 @@
 //----------------------------------------------------------------------
 // CBDR
 //----------------------------------------------------------------------
-#define CLUSTER_SIZE_X 32
-#define CLUSTER_SIZE_Y 16
+#define CLUSTER_SIZE_X 64
+#define CLUSTER_SIZE_Y 64
 #define CLUSTER_NUM_Z 16
 
-#define COMPUTE_SHADER_CLUSTER_GROUP_SIZE (CLUSTER_SIZE_X * CLUSTER_SIZE_Y)
+#define CLUSTER_THREAD_NUM_X 4
+#define CLUSTER_THREAD_NUM_Y 4
+
+#define COMPUTE_SHADER_CLUSTER_GROUP_SIZE (CLUSTER_THREAD_NUM_X * CLUSTER_THREAD_NUM_Y)
 
 
 static const float DepthSlicing_16[17] = {

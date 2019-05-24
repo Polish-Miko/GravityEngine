@@ -98,7 +98,7 @@ float3 ReconstructWorldPos(uint2 gCoords, float depth)
 }
 */
 
-[numthreads(CLUSTER_SIZE_X, CLUSTER_SIZE_Y, 1)]
+[numthreads(CLUSTER_THREAD_NUM_X, CLUSTER_THREAD_NUM_Y, 1)]
 void main(
 	uint3 groupId          : SV_GroupID,
 	uint3 dispatchThreadId : SV_DispatchThreadID,
@@ -107,7 +107,7 @@ void main(
 {
     // NOTE: This is currently necessary rather than just using SV_GroupIndex to work
     // around a compiler bug on Fermi.
-    uint groupIndex = groupThreadId.y * CLUSTER_SIZE_X + groupThreadId.x;
+    uint groupIndex = groupThreadId.y * CLUSTER_THREAD_NUM_X + groupThreadId.x;
 
     uint2 globalCoords = dispatchThreadId.xy;
 
@@ -120,15 +120,23 @@ void main(
 	*/
 
     // Initialize light list.
+	/*
     if (groupIndex < CLUSTER_NUM_Z)
 	{
 		gLightList[clusterIdStart + groupIndex].NumPointLights = 0;
+		gLightList[clusterIdStart + groupIndex].NumSpotlights = 0;
     }
+	*/
+	if (groupIndex < CLUSTER_NUM_Z)
+	{
+		gLightList[clusterIdStart + groupIndex].NumPointLights = 0;
+		gLightList[clusterIdStart + groupIndex].NumSpotlights = 0;
+	}
 
     GroupMemoryBarrierWithGroupSync();
 
-	if (!all(globalCoords < gRenderTargetSize.xy))
-		return;
+	//if (!all(globalCoords < gRenderTargetSize.xy))
+		//return;
 
 	// Work out scale/bias from [0, 1]
 	float2 tileNum = float2(gRenderTargetSize.xy) * rcp(float2(CLUSTER_SIZE_X, CLUSTER_SIZE_Y));
@@ -158,12 +166,16 @@ void main(
     }
 
     // Cull lights for this tile
-    for (uint lightIndex = groupIndex; lightIndex < pointLightCount; lightIndex += COMPUTE_SHADER_CLUSTER_GROUP_SIZE)
+    //for (uint lightIndex = groupIndex; lightIndex < (uint)pointLightCount; lightIndex += COMPUTE_SHADER_CLUSTER_GROUP_SIZE)
+	for (uint lightIndex = groupIndex; lightIndex < (uint)pointLightCount; lightIndex += COMPUTE_SHADER_CLUSTER_GROUP_SIZE)
+	//if (groupIndex != 0) return;
+	//for (uint lightIndex = 0; lightIndex < (uint)pointLightCount; lightIndex += 1)
 	{
-		bool inFrustum;
+		bool inFrustum = true;
 
 		float4 lightPositionView = mul(float4(pointLight[lightIndex].Position, 1.0f), gView);
 
+		[unroll]
 		for (uint clusterZ = 0; clusterZ < CLUSTER_NUM_Z; clusterZ++)
 		{
 			// Cull: point light sphere vs cluster frustum
@@ -172,23 +184,72 @@ void main(
 			// Near/far
 			frustumPlanes[4] = float4(0.0f, 0.0f, 1.0f, -DepthSlicing_16[clusterZ]);
 			frustumPlanes[5] = float4(0.0f, 0.0f, -1.0f, DepthSlicing_16[clusterZ + 1]);
+			/*
+			frustumPlanes[0] = float4(gProj._11 * tileNum.x, 0.0f, 1.0f - tileCenterOffset.x, 0.0f);
+			frustumPlanes[1] = float4(-gProj._11 * tileNum.x, 0.0f, 1.0f + tileCenterOffset.x, 0.0f);
+			frustumPlanes[2] = float4(0.0f, gProj._22 * tileNum.y, 1.0f + tileCenterOffset.y, 0.0f);
+			frustumPlanes[3] = float4(0.0f, -gProj._22 * tileNum.y, 1.0f - tileCenterOffset.y, 0.0f);
+			frustumPlanes[0] = float4(10, 0.0f, -10, 0.0f);
+			frustumPlanes[1] = float4(-10, 0.0f, 10, 0.0f);
+			frustumPlanes[2] = float4(0.0f, 10, 10, 0.0f);
+			frustumPlanes[3] = float4(0.0f, -10, -10, 0.0f);
+			for (uint j = 0; j < 4; ++j)
+			{
+				frustumPlanes[j] *= rcp(length(frustumPlanes[j].xyz));
+			}
+			frustumPlanes[4] = float4(0.0f, 0.0f, 1.0f, -1.0f);
+			frustumPlanes[5] = float4(0.0f, 0.0f, -1.0f, 1000.0f);
+			*/
 
+			/*
+			[unroll]
+			for (uint i = 0; i < 4; ++i)
+			{
+				float d = dot(frustumPlanes[i], float4(pointLight[lightIndex].Position, 1.0f));
+				//float d = dot(frustumPlanes[i], float4(1.0f, 1.0f, 1.0f, 1.0f));
+				inFrustum = inFrustum && (d >= -50.0f);
+				//inFrustum = inFrustum && (d >= -pointLight[lightIndex].Range);
+			}
+
+			inFrustum = inFrustum && (lightIndex < (uint)pointLightCount);
+
+			[unroll]
+			for (uint i = 0; i < 6; ++i)
+			{
+				float d = dot(frustumPlanes[i], float4(1.0f, 1.0f, 1.0f, 1.0f));
+				inFrustum = inFrustum && (d >= -pointLight[lightIndex].Range);
+			}
+			*/
+
+			//gLightList[clusterIdStart + clusterZ].NumPointLights = 50;
+			///*
 			[unroll]
 			for (uint i = 0; i < 6; ++i)
 			{
 				float d = dot(frustumPlanes[i], lightPositionView);
 				inFrustum = inFrustum && (d >= -pointLight[lightIndex].Range);
 			}
+			//*/   
 
+			///*
 			[branch]
 			if (inFrustum)
 			{
 				// Append light to list
 				// Compaction might be better if we expect a lot of lights
-				uint listIndex;
+				uint listIndex = 0;
 				InterlockedAdd(gLightList[clusterIdStart + clusterZ].NumPointLights, 1, listIndex);
-				gLightList[clusterIdStart + clusterZ].PointLightIndices[listIndex] = lightIndex;
+				if (listIndex < MAX_GRID_POINT_LIGHT_NUM)
+				{
+					gLightList[clusterIdStart + clusterZ].PointLightIndices[listIndex] = lightIndex;
+				}
+				//gLightList[clusterIdStart + clusterZ].PointLightIndices[0] = lightIndex;
 			}
+			//*/
+			
+			//uint test = DepthSlicing_16[clusterZ + 1] / 500.0f;
+			//test = 5;
+			//gLightList[clusterIdStart + clusterZ].NumPointLights = test;
 		}
 
     }
