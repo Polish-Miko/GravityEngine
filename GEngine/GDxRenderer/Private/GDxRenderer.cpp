@@ -530,7 +530,7 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 	}
 
 	// Debug Pass
-	bool bDrawDebugQuad = true;
+	bool bDrawDebugQuad = false;
 	if (bDrawDebugQuad)
 	{
 		GDxGpuProfiler::GetGpuProfiler().StartGpuProfile("Debug Pass");

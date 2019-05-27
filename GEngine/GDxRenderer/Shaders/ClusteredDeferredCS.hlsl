@@ -9,7 +9,7 @@
 
 RWStructuredBuffer<LightList> gLightList : register(u0);
 
-Texture2D gDepthBuffer				: register(t0);
+//Texture2D gDepthBuffer				: register(t0);
 
 [numthreads(CLUSTER_THREAD_NUM_X, CLUSTER_THREAD_NUM_Y, 1)]
 void main(
