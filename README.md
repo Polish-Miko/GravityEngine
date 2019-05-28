@@ -9,11 +9,27 @@ uses DirectX 12 exclusively for rendering.
 
 ## Showcase
 
-![preview_1](https://github.com/MrySwk/GravityEngine/blob/master/screenshot/preview_1.png)
+PBR
 
-![preview_2](https://github.com/MrySwk/GravityEngine/blob/master/screenshot/preview_2.png)
+![PBR_1](https://github.com/MrySwk/GravityEngine/blob/master/screenshot/PBR_1.png)
 
-![preview_3](https://github.com/MrySwk/GravityEngine/blob/master/screenshot/preview_3.gif)
+![PBR_2](https://github.com/MrySwk/GravityEngine/blob/master/screenshot/PBR_2.png)
+
+![PBR_3](https://github.com/MrySwk/GravityEngine/blob/master/screenshot/PBR_3.png)
+
+Clustered Deferred (1000 lights)
+
+![Clustered](https://github.com/MrySwk/GravityEngine/blob/master/screenshot/Clustered.jpg)
+
+Temporal AA
+
+Before
+
+![Before](https://github.com/MrySwk/GravityEngine/blob/master/screenshot/TAA_Before.jpg)
+
+After
+
+![After](https://github.com/MrySwk/GravityEngine/blob/master/screenshot/TAA_After.jpg)
 
 ## Dependencies
 

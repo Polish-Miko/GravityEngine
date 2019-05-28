@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<!DOCTYPE boost_serialization>
+<boost_serialization signature="serialization::archive" version="17">
+<Material class_id="0" tracking_level="0" version="0">
+	<UniqueName>Content\Models\Helmet\Helmet.gmat</UniqueName>
+	<Name>Helmet</Name>
+	<MaterialScale>
+		<count>2</count>
+		<item>1.000000000e+00</item>
+		<item>1.000000000e+00</item>
+	</MaterialScale>
+	<TextureNames class_id="1" tracking_level="0" version="0">
+		<count>3</count>
+		<item_version>0</item_version>
+		<item>Content\Models\Helmet\Helmet_Albedo.png</item>
+		<item>Content\Models\Helmet\Helmet_Normal.png</item>
+		<item>Content\Models\Helmet\Helmet_Orm.png</item>
+	</TextureNames>
+	<ScalarParams>
+		<count>0</count>
+		<item_version>0</item_version>
+	</ScalarParams>
+	<VectorParams>
+		<count>0</count>
+		<item_version>0</item_version>
+	</VectorParams>
+</Material>
+</boost_serialization>
+

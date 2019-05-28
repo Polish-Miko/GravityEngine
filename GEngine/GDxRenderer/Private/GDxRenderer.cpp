@@ -863,9 +863,9 @@ void GDxRenderer::UpdateLightCB(const GGiGameTimer* gt)
 	lightCB.dirLight[1].Direction[0] = -0.57735f;
 	lightCB.dirLight[1].Direction[1] = -0.57735f;
 	lightCB.dirLight[1].Direction[2] = -0.57735f;
-	lightCB.dirLight[1].DiffuseColor[0] = 0.3f;
-	lightCB.dirLight[1].DiffuseColor[1] = 0.3f;
-	lightCB.dirLight[1].DiffuseColor[2] = 0.3f;
+	lightCB.dirLight[1].DiffuseColor[0] = 0.6f;
+	lightCB.dirLight[1].DiffuseColor[1] = 0.6f;
+	lightCB.dirLight[1].DiffuseColor[2] = 0.6f;
 	lightCB.dirLight[1].DiffuseColor[3] = 1.0f;
 	lightCB.dirLight[1].AmbientColor[0] = 0.0f;
 	lightCB.dirLight[1].AmbientColor[1] = 0.0f;
@@ -876,9 +876,9 @@ void GDxRenderer::UpdateLightCB(const GGiGameTimer* gt)
 	lightCB.dirLight[2].Direction[0] = 0.0;
 	lightCB.dirLight[2].Direction[1] = -0.707f;
 	lightCB.dirLight[2].Direction[2] = 0.707f;
-	lightCB.dirLight[2].DiffuseColor[0] = 0.1f;
-	lightCB.dirLight[2].DiffuseColor[1] = 0.1f;
-	lightCB.dirLight[2].DiffuseColor[2] = 0.1f;
+	lightCB.dirLight[2].DiffuseColor[0] = 0.5f;
+	lightCB.dirLight[2].DiffuseColor[1] = 0.5f;
+	lightCB.dirLight[2].DiffuseColor[2] = 0.5f;
 	lightCB.dirLight[2].DiffuseColor[3] = 1.0f;
 	lightCB.dirLight[2].AmbientColor[0] = 0.0f;
 	lightCB.dirLight[2].AmbientColor[1] = 0.0f;
@@ -896,6 +896,7 @@ void GDxRenderer::UpdateLightCB(const GGiGameTimer* gt)
 	lightCB.pointLight[0].Position[2] = 0.0f;
 	lightCB.pointLight[0].Range = 100.0f;
 
+	/*
 	int lightCount = 16;
 	for (int i = -lightCount; i < lightCount; i++)
 	{
@@ -912,9 +913,10 @@ void GDxRenderer::UpdateLightCB(const GGiGameTimer* gt)
 			lightCB.pointLight[(i + lightCount) * 2 * lightCount + j + lightCount].Range = 50.0f;
 		}
 	}
+	*/
 
-	lightCB.dirLightCount = 0;
-	lightCB.pointLightCount = 4 * lightCount * lightCount;
+	lightCB.dirLightCount = 3;
+	lightCB.pointLightCount = 0;// 4 * lightCount * lightCount;
 
 	auto LightCB = mCurrFrameResource->LightCB.get();
 	LightCB->CopyData(0, lightCB);
