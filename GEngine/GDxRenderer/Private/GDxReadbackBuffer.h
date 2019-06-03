@@ -33,7 +33,7 @@ public:
 		ThrowIfFailed(device->CreateCommittedResource(
 			&HeapProps,
 			D3D12_HEAP_FLAG_NONE,
-			&CD3DX12_RESOURCE_DESC::Buffer(mElementByteSize * mElementCount, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS),
+			&CD3DX12_RESOURCE_DESC::Buffer(mElementByteSize * mElementCount/*, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS*/),
 			D3D12_RESOURCE_STATE_COPY_DEST,
 			nullptr,
 			IID_PPV_ARGS(&mReadbackBuffer)));

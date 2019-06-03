@@ -19,7 +19,7 @@ SamplerState gSampler
 	AddressV = Wrap;
 };
 
-[numthreads(8, 8, 1)]
+[numthreads(DEPTH_DOWNSAMPLE_THREAD_NUM_X, DEPTH_DOWNSAMPLE_THREAD_NUM_Y, 1)]
 void main(
 	uint3 groupId          : SV_GroupID,
 	uint3 dispatchThreadId : SV_DispatchThreadID,

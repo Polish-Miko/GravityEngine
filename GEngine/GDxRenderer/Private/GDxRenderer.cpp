@@ -257,6 +257,46 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 				D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ));
 		}
 
+		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mDepthStencilBuffer.Get(),
+			D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_GENERIC_READ));
+
+		GDxGpuProfiler::GetGpuProfiler().EndGpuProfile();
+	}
+
+	// Depth Downsample Pass
+	{
+		GDxGpuProfiler::GetGpuProfiler().StartGpuProfile("Depth Downsample Pass");
+
+		mCommandList->SetComputeRootSignature(mRootSignatures["DepthDownsamplePass"].Get());
+
+		mCommandList->SetPipelineState(mPSOs["DepthDownsamplePass"].Get());
+
+		// Indicate a state transition on the resource usage.
+		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mUavs["DepthDownsamplePass"]->GetResource(),
+			D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_UNORDERED_ACCESS));
+
+		auto passCB = mCurrFrameResource->PassCB->Resource();
+		mCommandList->SetComputeRootConstantBufferView(0, passCB->GetGPUVirtualAddress());
+
+		mCommandList->SetComputeRootDescriptorTable(1, GetGpuSrv(mDepthBufferSrvIndex));
+
+		mCommandList->SetComputeRootDescriptorTable(2, mUavs["DepthDownsamplePass"]->GetGpuUav());
+
+		UINT numGroupsX = (UINT)(DEPTH_READBACK_BUFFER_SIZE_X / DEPTH_DOWNSAMPLE_THREAD_NUM_X);
+		UINT numGroupsY = (UINT)(DEPTH_READBACK_BUFFER_SIZE_Y / DEPTH_DOWNSAMPLE_THREAD_NUM_Y);
+
+		mCommandList->Dispatch(numGroupsX, numGroupsY, 1);
+
+		// Indicate a state transition on the resource usage.
+		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mUavs["DepthDownsamplePass"]->GetResource(),
+			D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COPY_SOURCE));
+
+		mCommandList->CopyResource(mDepthReadbackBuffer.Get(), mUavs["DepthDownsamplePass"]->GetResource());
+
+		// Indicate a state transition on the resource usage.
+		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mUavs["DepthDownsamplePass"]->GetResource(),
+			D3D12_RESOURCE_STATE_COPY_SOURCE, D3D12_RESOURCE_STATE_GENERIC_READ));
+
 		GDxGpuProfiler::GetGpuProfiler().EndGpuProfile();
 	}
 
@@ -372,6 +412,9 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["GBuffer"]->mRtv[mVelocityBufferSrvIndex - mGBufferSrvIndex]->mResource.Get(),
 			D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_RENDER_TARGET));
 
+		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mDepthStencilBuffer.Get(),
+			D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_DEPTH_WRITE));
+
 		D3D12_CPU_DESCRIPTOR_HANDLE skyRtvs[2] =
 		{
 			mRtvHeaps["LightPass"]->mRtvHeap.handleCPU(0),
@@ -394,6 +437,9 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 
 		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["GBuffer"]->mRtv[mVelocityBufferSrvIndex - mGBufferSrvIndex]->mResource.Get(),
 			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ));
+
+		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mDepthStencilBuffer.Get(),
+			D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_GENERIC_READ));
 
 		GDxGpuProfiler::GetGpuProfiler().EndGpuProfile();
 	}
@@ -494,7 +540,7 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 
 		mCommandList->ClearRenderTargetView(mRtvHeaps["MotionBlurPass"]->mRtvHeap.handleCPU(0), motionBlurClearColor, 0, nullptr);
 
-		mCommandList->OMSetRenderTargets(1, &(mRtvHeaps["MotionBlurPass"]->mRtvHeap.handleCPU(0)), false, &DepthStencilView());
+		mCommandList->OMSetRenderTargets(1, &(mRtvHeaps["MotionBlurPass"]->mRtvHeap.handleCPU(0)), false, nullptr);
 
 		// For each render item...
 		DrawSceneObjects(mCommandList.Get(), RenderLayer::ScreenQuad, false);
@@ -521,7 +567,7 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 
 		// Specify the buffers we are going to render to.
 		//mCommandList->OMSetRenderTargets(1, &CurrentBackBufferView(), true, &DepthStencilView());
-		mCommandList->OMSetRenderTargets(1, &CurrentBackBufferView(), true, &DepthStencilView());
+		mCommandList->OMSetRenderTargets(1, &CurrentBackBufferView(), true, nullptr);
 
 		// For each render item...
 		DrawSceneObjects(mCommandList.Get(), RenderLayer::ScreenQuad, false);
@@ -553,7 +599,7 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 		matBuffer = mCurrFrameResource->MaterialBuffer->Resource();
 		mCommandList->SetGraphicsRootShaderResourceView(3, matBuffer->GetGPUVirtualAddress());
 
-		mCommandList->OMSetRenderTargets(1, &CurrentBackBufferView(), true, &DepthStencilView());
+		mCommandList->OMSetRenderTargets(1, &CurrentBackBufferView(), true, nullptr);
 
 		// For each render item...
 		DrawSceneObjects(mCommandList.Get(), RenderLayer::Debug, true);
@@ -579,6 +625,9 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 	// Indicate a state transition on the resource usage.
 	mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(),
 		D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
+
+	mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mDepthStencilBuffer.Get(),
+		D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_DEPTH_WRITE));
 
 	// Done recording commands.
 	ThrowIfFailed(mCommandList->Close());
@@ -725,32 +774,16 @@ void GDxRenderer::OnResize()
 
 	// Create depth readback buffer
 	{
-		D3D12_RESOURCE_DESC depthReadbackDesc;
-		depthReadbackDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-		depthReadbackDesc.Alignment = 0;
-		depthReadbackDesc.Width = DEPTH_READBACK_BUFFER_SIZE_X;
-		depthReadbackDesc.Height = DEPTH_READBACK_BUFFER_SIZE_Y;
-		depthReadbackDesc.DepthOrArraySize = 1;
-		depthReadbackDesc.MipLevels = 1;
-		depthReadbackDesc.Format = DXGI_FORMAT_R32_FLOAT;
-		depthReadbackDesc.SampleDesc.Count = 1;
-		depthReadbackDesc.SampleDesc.Quality = 0;
-		depthReadbackDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
-		depthReadbackDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
-
-		D3D12_CLEAR_VALUE optClear;
-		optClear.Format = DXGI_FORMAT_R32_FLOAT;
-		optClear.Color[0] = 0.0f;
-		optClear.Color[1] = 0.0f;
-		optClear.Color[2] = 0.0f;
-		optClear.Color[3] = 0.0f;
+		// Free the old resources if they exist.
+		if (mDepthReadbackBuffer != nullptr)
+			mDepthReadbackBuffer.Reset();
 
 		ThrowIfFailed(md3dDevice->CreateCommittedResource(
 			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_READBACK),
 			D3D12_HEAP_FLAG_NONE,
-			&depthReadbackDesc,
+			&CD3DX12_RESOURCE_DESC::Buffer(DEPTH_READBACK_BUFFER_SIZE_X * DEPTH_READBACK_BUFFER_SIZE_Y),
 			D3D12_RESOURCE_STATE_COPY_DEST,
-			&optClear,
+			nullptr,
 			IID_PPV_ARGS(mDepthReadbackBuffer.GetAddressOf())));
 	}
 
@@ -1253,6 +1286,54 @@ void GDxRenderer::BuildRootSignature()
 			serializedRootSig->GetBufferPointer(),
 			serializedRootSig->GetBufferSize(),
 			IID_PPV_ARGS(mRootSignatures["GBuffer"].GetAddressOf())));
+	}
+
+	// Depth downsample pass root signature
+	{
+		//depth inputs
+		CD3DX12_DESCRIPTOR_RANGE range;
+		range.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, (UINT)1, 0);
+
+		//Output
+		CD3DX12_DESCRIPTOR_RANGE rangeUav;
+		rangeUav.Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, (UINT)1, 0);
+
+		CD3DX12_ROOT_PARAMETER depthDownsampleRootParameters[3];
+		depthDownsampleRootParameters[0].InitAsConstantBufferView(1);
+		depthDownsampleRootParameters[1].InitAsDescriptorTable(1, &range, D3D12_SHADER_VISIBILITY_ALL);
+		depthDownsampleRootParameters[2].InitAsDescriptorTable(1, &rangeUav, D3D12_SHADER_VISIBILITY_ALL);
+
+		// A root signature is an array of root parameters.
+		CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(3, depthDownsampleRootParameters,
+			0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+
+		CD3DX12_STATIC_SAMPLER_DESC StaticSamplers[2];
+		StaticSamplers[0].Init(0, D3D12_FILTER_ANISOTROPIC);
+		StaticSamplers[1].Init(1, D3D12_FILTER_COMPARISON_MIN_MAG_MIP_LINEAR,
+			D3D12_TEXTURE_ADDRESS_MODE_BORDER,
+			D3D12_TEXTURE_ADDRESS_MODE_BORDER,
+			D3D12_TEXTURE_ADDRESS_MODE_BORDER,
+			0.f, 16u, D3D12_COMPARISON_FUNC_LESS_EQUAL);
+		rootSigDesc.NumStaticSamplers = 2;
+		rootSigDesc.pStaticSamplers = StaticSamplers;
+
+		// create a root signature with a single slot which points to a descriptor range consisting of a single constant buffer
+		ComPtr<ID3DBlob> serializedRootSig = nullptr;
+		ComPtr<ID3DBlob> errorBlob = nullptr;
+		HRESULT hr = D3D12SerializeRootSignature(&rootSigDesc, D3D_ROOT_SIGNATURE_VERSION_1,
+			serializedRootSig.GetAddressOf(), errorBlob.GetAddressOf());
+
+		if (errorBlob != nullptr)
+		{
+			::OutputDebugStringA((char*)errorBlob->GetBufferPointer());
+		}
+		ThrowIfFailed(hr);
+
+		ThrowIfFailed(md3dDevice->CreateRootSignature(
+			0,
+			serializedRootSig->GetBufferPointer(),
+			serializedRootSig->GetBufferSize(),
+			IID_PPV_ARGS(mRootSignatures["DepthDownsamplePass"].GetAddressOf())));
 	}
 
 	// GBufferDebug root signature
@@ -2067,6 +2148,15 @@ void GDxRenderer::BuildPSOs()
 		gBufferPsoDesc.SampleDesc.Count = 1;// don't use msaa in deferred rendering.
 		//deferredPSO = sysRM->CreatePSO(StringID("deferredPSO"), descPipelineState);
 		ThrowIfFailed(md3dDevice->CreateGraphicsPipelineState(&gBufferPsoDesc, IID_PPV_ARGS(&mPSOs["GBuffer"])));
+	}
+
+	// PSO for depth downsample pass
+	{
+		D3D12_COMPUTE_PIPELINE_STATE_DESC computePsoDesc = {};
+		computePsoDesc.pRootSignature = mRootSignatures["DepthDownsamplePass"].Get();
+		computePsoDesc.CS = GDxShaderManager::LoadShader(L"Shaders\\DepthDownsampleCS.cso");
+		computePsoDesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
+		ThrowIfFailed(md3dDevice->CreateComputePipelineState(&computePsoDesc, IID_PPV_ARGS(&mPSOs["DepthDownsamplePass"])));
 	}
 
 	// PSO for tile/cluster pass.

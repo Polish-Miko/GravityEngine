@@ -35,6 +35,8 @@
 //----------------------------------------------------------------------------------------------------------
 #define DEPTH_READBACK_BUFFER_SIZE_X 512
 #define DEPTH_READBACK_BUFFER_SIZE_Y 256
+#define DEPTH_DOWNSAMPLE_THREAD_NUM_X 8
+#define DEPTH_DOWNSAMPLE_THREAD_NUM_Y 8
 
 
 //----------------------------------------------------------------------------------------------------------

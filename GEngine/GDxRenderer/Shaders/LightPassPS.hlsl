@@ -75,6 +75,7 @@ float2 BrdfLUT(float3 normal, float3 viewDir, float roughness)
 	float NdotV = dot(normal, viewDir);
 	NdotV = max(NdotV, 0.0f);
 	float2 uv = float2(NdotV, roughness);
+	uv = clamp(uv, float2(0.0f, 0.0f), float2(0.99f, 0.99f));
 	return brdfLUTTexture.Sample(basicSampler, uv).rg;
 }
 
