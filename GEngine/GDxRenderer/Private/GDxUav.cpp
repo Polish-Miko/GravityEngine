@@ -77,9 +77,6 @@ void GDxUav::BuildDescriptors()
 {
 	if (bIsTexture)
 	{
-		auto hr = md3dDevice->GetDeviceRemovedReason();
-		hr = hr;
-
 		// Create UAV.
 		D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
 
@@ -88,9 +85,6 @@ void GDxUav::BuildDescriptors()
 		uavDesc.Texture2D.MipSlice = 0;
 
 		md3dDevice->CreateUnorderedAccessView(mResource.Get(), nullptr, &uavDesc, mCpuUav);
-
-		hr = md3dDevice->GetDeviceRemovedReason();
-		hr = hr;
 
 		// Create SRV.
 		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc;
@@ -104,9 +98,6 @@ void GDxUav::BuildDescriptors()
 
 		md3dDevice->CreateShaderResourceView(mResource.Get(), &srvDesc, mCpuSrv);
 
-		hr = md3dDevice->GetDeviceRemovedReason();
-		hr = hr;
-
 		// Create RTV
 		if (bCreateRtv)
 		{
@@ -119,13 +110,11 @@ void GDxUav::BuildDescriptors()
 
 			md3dDevice->CreateRenderTargetView(mResource.Get(), &rtvDesc, mRtvHeap.handleCPU(0));
 			mRtv->mRtvCpu = mRtvHeap.handleCPU(0);
-
-			hr = md3dDevice->GetDeviceRemovedReason();
-			hr = hr;
 		}
 	}
 	else
-	{// Create UAV.
+	{
+		// Create UAV.
 		D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
 
 		uavDesc.Format = DXGI_FORMAT_UNKNOWN;

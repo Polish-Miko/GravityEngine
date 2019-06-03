@@ -140,7 +140,7 @@ float3 CookTorrance(float3 n, float3 l, float3 v, float roughness, float metalne
 	float3 h = normalize(v + l);
 
 	float D = SpecDistribution(n, h, roughness);
-	float3 F = Fresnel(v, n, f0);
+	float3 F = Fresnel(v, h, f0);
 	float G = GeometricShadowing(n, v, h, roughness) * GeometricShadowing(n, l, h, roughness);
 	kS = F;
 	//return (D * F * G) / (4 * max(dot(n, v), dot(n, l)));

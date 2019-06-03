@@ -723,6 +723,37 @@ void GDxRenderer::OnResize()
 	// Create descriptor to mip level 0 of entire resource using the format of the resource.
 	md3dDevice->CreateDepthStencilView(mDepthStencilBuffer.Get(), &dsv_desc, DepthStencilView());
 
+	// Create depth readback buffer
+	{
+		D3D12_RESOURCE_DESC depthReadbackDesc;
+		depthReadbackDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+		depthReadbackDesc.Alignment = 0;
+		depthReadbackDesc.Width = DEPTH_READBACK_BUFFER_SIZE_X;
+		depthReadbackDesc.Height = DEPTH_READBACK_BUFFER_SIZE_Y;
+		depthReadbackDesc.DepthOrArraySize = 1;
+		depthReadbackDesc.MipLevels = 1;
+		depthReadbackDesc.Format = DXGI_FORMAT_R32_FLOAT;
+		depthReadbackDesc.SampleDesc.Count = 1;
+		depthReadbackDesc.SampleDesc.Quality = 0;
+		depthReadbackDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+		depthReadbackDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+
+		D3D12_CLEAR_VALUE optClear;
+		optClear.Format = DXGI_FORMAT_R32_FLOAT;
+		optClear.Color[0] = 0.0f;
+		optClear.Color[1] = 0.0f;
+		optClear.Color[2] = 0.0f;
+		optClear.Color[3] = 0.0f;
+
+		ThrowIfFailed(md3dDevice->CreateCommittedResource(
+			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_READBACK),
+			D3D12_HEAP_FLAG_NONE,
+			&depthReadbackDesc,
+			D3D12_RESOURCE_STATE_COPY_DEST,
+			&optClear,
+			IID_PPV_ARGS(mDepthReadbackBuffer.GetAddressOf())));
+	}
+
 	// Transition the resource from its initial state to be used as a depth buffer.
 	mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mDepthStencilBuffer.Get(),
 		D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_DEPTH_WRITE));
@@ -914,6 +945,36 @@ void GDxRenderer::UpdateLightCB(const GGiGameTimer* gt)
 		}
 	}
 	*/
+
+	lightCB.pointLight[0].Color[0] = 1.0f;
+	lightCB.pointLight[0].Color[1] = 1.0f;
+	lightCB.pointLight[0].Color[2] = 1.0f;
+	lightCB.pointLight[0].Color[3] = 1.0f;
+	lightCB.pointLight[0].Intensity = 5000.0f;
+	lightCB.pointLight[0].Position[0] = 0.0f;
+	lightCB.pointLight[0].Position[1] = 0.0f;
+	lightCB.pointLight[0].Position[2] = 0.0f;
+	lightCB.pointLight[0].Range = 50000.0f;
+
+	lightCB.pointLight[1].Color[0] = 1.0f;
+	lightCB.pointLight[1].Color[1] = 1.0f;
+	lightCB.pointLight[1].Color[2] = 1.0f;
+	lightCB.pointLight[1].Color[3] = 1.0f;
+	lightCB.pointLight[1].Intensity = 5000.0f;
+	lightCB.pointLight[1].Position[0] = 800.0f;
+	lightCB.pointLight[1].Position[1] = 0.0f;
+	lightCB.pointLight[1].Position[2] = 800.0f;
+	lightCB.pointLight[1].Range = 50000.0f;
+
+	lightCB.pointLight[2].Color[0] = 1.0f;
+	lightCB.pointLight[2].Color[1] = 1.0f;
+	lightCB.pointLight[2].Color[2] = 1.0f;
+	lightCB.pointLight[2].Color[3] = 1.0f;
+	lightCB.pointLight[2].Intensity = 5000.0f;
+	lightCB.pointLight[2].Position[0] = 800.0f;
+	lightCB.pointLight[2].Position[1] = 0.0f;
+	lightCB.pointLight[2].Position[2] = -800.0f;
+	lightCB.pointLight[2].Range = 50000.0f;
 
 	lightCB.dirLightCount = 3;
 	lightCB.pointLightCount = 0;// 4 * lightCount * lightCount;
@@ -1671,6 +1732,7 @@ void GDxRenderer::BuildDescriptorHeaps()
 		+ 1 //imgui
 		+ 1 //sky cubemap
 		+ 1 //depth buffer
+		+ 1 //downsampled depth buffer
 		+ 1 //stencil buffer
 		+ 4 //g-buffer
 		+ 2 //tile/cluster pass srv and uav
@@ -1732,9 +1794,26 @@ void GDxRenderer::BuildDescriptorHeaps()
 		//md3dDevice->CreateShaderResourceView(mDepthStencilBuffer.Get(), &stencilSrvDesc, GetCpuSrv(mStencilBufferSrvIndex));
 	}
 
+	// Build SRV for depth readback buffer.
+	{
+		mDepthDownsampleSrvIndex = mDepthBufferSrvIndex + 1;
+
+		GDxUavProperties prop;
+		prop.mUavFormat = DXGI_FORMAT_R32_FLOAT;
+		prop.mClearColor[0] = 0;
+		prop.mClearColor[1] = 0;
+		prop.mClearColor[2] = 0;
+		prop.mClearColor[3] = 1;
+
+		UINT64 elementNum = DEPTH_READBACK_BUFFER_SIZE_X * DEPTH_READBACK_BUFFER_SIZE_Y;
+
+		auto depthDownsamplePassUav = std::make_unique<GDxUav>(md3dDevice.Get(), mClientWidth, mClientHeight, GetCpuSrv(mDepthDownsampleSrvIndex), GetGpuSrv(mDepthDownsampleSrvIndex), prop, false, false, false, sizeof(float), elementNum);
+		mUavs["DepthDownsamplePass"] = std::move(depthDownsamplePassUav);
+	}
+
 	// Build RTV heap and SRV for GBuffers.
 	{
-		mGBufferSrvIndex = mDepthBufferSrvIndex + 1;
+		mGBufferSrvIndex = mDepthDownsampleSrvIndex + mUavs["DepthDownsamplePass"]->GetSize();
 		mVelocityBufferSrvIndex = mGBufferSrvIndex + 2;
 
 		std::vector<DXGI_FORMAT> rtvFormats =

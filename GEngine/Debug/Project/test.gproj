@@ -4,7 +4,7 @@
 <Project class_id="0" tracking_level="0" version="0">
 	<mSkyCubemapUniqueName>Content\Textures\Cubemap\Lake.dds</mSkyCubemapUniqueName>
 	<mTextureInfo class_id="1" tracking_level="0" version="0">
-		<count>87</count>
+		<count>91</count>
 		<item_version>0</item_version>
 		<item class_id="2" tracking_level="0" version="0">
 			<UniqueFileName>Content\Models\Rifle_1\Rifle_1_Albedo.png</UniqueFileName>
@@ -67,8 +67,36 @@
 			<bSrgb>1</bSrgb>
 		</item>
 		<item>
+			<UniqueFileName>Content\Models\TEST\Gold_Albedo.png</UniqueFileName>
+			<bSrgb>1</bSrgb>
+		</item>
+		<item>
 			<UniqueFileName>Content\Models\Rifle_2\Rifle_2_Normal.jpg</UniqueFileName>
 			<bSrgb>0</bSrgb>
+		</item>
+		<item>
+			<UniqueFileName>Content\Models\TEST\Gold_Normal.png</UniqueFileName>
+			<bSrgb>0</bSrgb>
+		</item>
+		<item>
+			<UniqueFileName>Content\Textures\Test2\DarkTiles_Albedo.png</UniqueFileName>
+			<bSrgb>1</bSrgb>
+		</item>
+		<item>
+			<UniqueFileName>Content\Textures\sphere_2_OcclusionRoughnessMetallic.png</UniqueFileName>
+			<bSrgb>0</bSrgb>
+		</item>
+		<item>
+			<UniqueFileName>Content\Textures\Fireplace_Albedo.png</UniqueFileName>
+			<bSrgb>0</bSrgb>
+		</item>
+		<item>
+			<UniqueFileName>Content\Models\TEST\Gold_Orm.png</UniqueFileName>
+			<bSrgb>0</bSrgb>
+		</item>
+		<item>
+			<UniqueFileName>Content\Models\TEST\White.png</UniqueFileName>
+			<bSrgb>1</bSrgb>
 		</item>
 		<item>
 			<UniqueFileName>Content\Textures\test\tga\RustedIron2_Orm.tga</UniqueFileName>
@@ -116,18 +144,6 @@
 		</item>
 		<item>
 			<UniqueFileName>Content\Textures\Cubemap\sunsetcube1024.dds</UniqueFileName>
-			<bSrgb>0</bSrgb>
-		</item>
-		<item>
-			<UniqueFileName>Content\Textures\Test2\DarkTiles_Albedo.png</UniqueFileName>
-			<bSrgb>1</bSrgb>
-		</item>
-		<item>
-			<UniqueFileName>Content\Textures\sphere_2_OcclusionRoughnessMetallic.png</UniqueFileName>
-			<bSrgb>0</bSrgb>
-		</item>
-		<item>
-			<UniqueFileName>Content\Textures\Fireplace_Albedo.png</UniqueFileName>
 			<bSrgb>0</bSrgb>
 		</item>
 		<item>
@@ -203,10 +219,6 @@
 			<bSrgb>1</bSrgb>
 		</item>
 		<item>
-			<UniqueFileName>Content\Textures\Test2\LayeredRock_Orm.png</UniqueFileName>
-			<bSrgb>0</bSrgb>
-		</item>
-		<item>
 			<UniqueFileName>Content\Textures\sphere_2_Normal.png</UniqueFileName>
 			<bSrgb>0</bSrgb>
 		</item>
@@ -259,10 +271,6 @@
 			<bSrgb>1</bSrgb>
 		</item>
 		<item>
-			<UniqueFileName>Content\Textures\Test2\MetalGird2_Albedo.png</UniqueFileName>
-			<bSrgb>1</bSrgb>
-		</item>
-		<item>
 			<UniqueFileName>Content\Textures\Test2\HardWoodBrown_Orm.png</UniqueFileName>
 			<bSrgb>0</bSrgb>
 		</item>
@@ -277,6 +285,14 @@
 		<item>
 			<UniqueFileName>Content\Textures\Test2\LayeredRock_Normal.png</UniqueFileName>
 			<bSrgb>0</bSrgb>
+		</item>
+		<item>
+			<UniqueFileName>Content\Textures\Test2\LayeredRock_Orm.png</UniqueFileName>
+			<bSrgb>0</bSrgb>
+		</item>
+		<item>
+			<UniqueFileName>Content\Textures\Test2\MetalGird2_Albedo.png</UniqueFileName>
+			<bSrgb>1</bSrgb>
 		</item>
 		<item>
 			<UniqueFileName>Content\Textures\Test2\MetalGird2_Normal.png</UniqueFileName>

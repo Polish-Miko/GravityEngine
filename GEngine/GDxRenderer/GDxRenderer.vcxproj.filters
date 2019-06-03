@@ -247,6 +247,7 @@
     <FxCompile Include="Shaders\TiledDeferredCS.hlsl" />
     <FxCompile Include="Shaders\ClusteredDeferredCS.hlsl" />
     <FxCompile Include="Shaders\LightPassPS.hlsl" />
+    <FxCompile Include="Shaders\DepthDownsampleCS.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Shaders\Lighting.hlsli" />

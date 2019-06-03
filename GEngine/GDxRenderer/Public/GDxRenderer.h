@@ -18,6 +18,7 @@
 #include "GDxGpuProfiler.h"
 #include "GDxUav.h"
 #include "../Shaders/ShaderDefinition.h"
+#include "GDxReadbackBuffer.h"
 
 // Link necessary d3d12 libraries.
 #pragma comment(lib,"d3dcompiler.lib")
@@ -184,6 +185,8 @@ protected:
 	Microsoft::WRL::ComPtr<ID3D12Resource> mSwapChainBuffer[SwapChainBufferCount];
 	Microsoft::WRL::ComPtr<ID3D12Resource> mDepthStencilBuffer;
 	//Microsoft::WRL::ComPtr<ID3D12Resource> mStencilBuffer;
+	Microsoft::WRL::ComPtr<ID3D12Resource> mDepthReadbackBuffer;
+
 
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> mRtvHeap;
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> mDsvHeap;
@@ -232,6 +235,7 @@ protected:
 
 	//UINT mDepthSrvIndex = 0;
 	UINT mDepthBufferSrvIndex = 0;
+	UINT mDepthDownsampleSrvIndex = 0;
 	UINT mStencilBufferSrvIndex = 0;
 	UINT mVelocityBufferSrvIndex = 0;
 	UINT mGBufferSrvIndex = 0;
