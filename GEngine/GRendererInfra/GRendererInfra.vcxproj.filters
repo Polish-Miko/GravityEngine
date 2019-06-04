@@ -111,7 +111,7 @@
     <ClInclude Include="Public\GRiBoundingBox.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="GRiOcclusionCullingRasterizer.h">
+    <ClInclude Include="Public\GRiOcclusionCullingRasterizer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -197,7 +197,7 @@
     <ClCompile Include="Private\GRiBoundingBox.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="GRiOcclusionCullingRasterizer.cpp">
+    <ClCompile Include="Private\GRiOcclusionCullingRasterizer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

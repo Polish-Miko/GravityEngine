@@ -6,6 +6,8 @@
 #include "ShaderDefinition.h"
 #include "MainPassCB.hlsli"
 
+#define READBACK_REVERSED_Z
+
 Texture2D gDepthBuffer : register(t0);
 
 RWStructuredBuffer<float> gDepthDownsampleBuffer : register(u0);
@@ -36,7 +38,17 @@ void main(
 
 	float depthFromTexture;
 	float2 sampUV;
-	float maxDepth = 0.0f;
+	float maxDepth;
+
+#if USE_REVERSE_Z
+#ifdef READBACK_REVERSED_Z
+	maxDepth = 1.0f;
+#else
+	maxDepth = 0.0f;
+#endif
+#else
+	maxDepth = 0.0f;
+#endif
 
 	for (int x = -1; x < 2; x++)
 	{
@@ -47,11 +59,21 @@ void main(
 			depthFromTexture = gDepthBuffer.SampleLevel(gSampler, sampUV, 0).r;
 
 #if USE_REVERSE_Z
+#ifndef READBACK_REVERSED_Z
 			depthFromTexture = 1 - depthFromTexture;
 #endif
+#endif
 
+#if USE_REVERSE_Z
+#ifdef READBACK_REVERSED_Z
+			if (depthFromTexture < maxDepth)
+#else
 			if (depthFromTexture > maxDepth)
-			{
+#endif
+#else
+			if (depthFromTexture > maxDepth)
+#endif
+			{ 
 				maxDepth = depthFromTexture;
 			}
 		}

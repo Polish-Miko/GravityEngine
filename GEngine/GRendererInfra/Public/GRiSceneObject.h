@@ -4,6 +4,13 @@
 #include "GRiMesh.h"
 
 
+enum CullState
+{
+	Visible,
+	FrustumCulled,
+	OcclusionCulled
+};
+
 class GRiSceneObject
 {
 public:
@@ -40,6 +47,9 @@ public:
 	void SetPrevTransform(GGiFloat4x4* trans);
 	void ResetPrevTransform();
 
+	CullState GetCullState();
+	void SetCullState(CullState cullState);
+
 	// Dirty flag indicating the object data has changed and we need to update the constant buffer.
 	// Because we have an object cbuffer for each FrameResource, we have to apply the
 	// update to each FrameResource.  Thus, when we modify obect data we should set 
@@ -62,6 +72,8 @@ protected:
 	GRiMesh* Mesh;
 
 	std::shared_ptr<GGiFloat4x4> TexTransform;
+
+	CullState mCullState = Visible;
 
 };
 

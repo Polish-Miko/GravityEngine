@@ -130,6 +130,7 @@ protected:
 	void UpdateMainPassCB(const GGiGameTimer* gt);
 	void UpdateSkyPassCB(const GGiGameTimer* gt);
 	void UpdateLightCB(const GGiGameTimer* gt);
+	void CullSceneObjects(const GGiGameTimer* gt);
 
 	void InitializeGpuProfiler();
 	void BuildRootSignature();

@@ -19,7 +19,7 @@
 
 #define UST_CLOSEST_VELOCITY
 
-//#define TEST
+#define TEST 0
 
 #define CLIP_TO_CENTER
 
@@ -429,10 +429,11 @@ PixelOutput main(VertexToPixel pIn)// : SV_TARGET
 	output.color = float4(color, 1.0f);
 	output.history = float4(color, 1.0f);
 
-#ifdef TEST
+#if TEST
 
-	float3 test = gInputTexture.Sample(basicSampler, pIn.uv).rgb;
+	float dep = gDepthBuffer.Sample(basicSampler, pIn.uv).r;
 	//test = (test * gNearZ) / (gFarZ - test * (gFarZ - gNearZ));
+	float3 test = float3(dep, dep, dep);
 	output.color = float4(test, 1.0f);
 
 #endif

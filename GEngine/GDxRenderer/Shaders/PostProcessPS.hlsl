@@ -1,5 +1,5 @@
 
-//#define TEST
+#define TEST 0
 
 struct VertexToPixel
 {
@@ -22,7 +22,7 @@ float4 main(VertexToPixel pIn) : SV_TARGET
 
 	float3 pp = gPpInput.Sample(basicSampler, pIn.uv).rgb;
 
-#ifdef TEST
+#if TEST
 	return float4(pp, 1.0f);
 #else
 	float3 toneMap = pp / (pp + float3(1.f, 1.f, 1.f));

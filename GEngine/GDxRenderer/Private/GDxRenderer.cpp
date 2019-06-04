@@ -300,7 +300,7 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 		GDxGpuProfiler::GetGpuProfiler().EndGpuProfile();
 	}
 
-	// Cluster Pass
+	// Tile/Cluster Pass
 	{
 #if USE_TBDR
 		GDxGpuProfiler::GetGpuProfiler().StartGpuProfile("Tile Pass");
@@ -690,6 +690,7 @@ void GDxRenderer::Update(const GGiGameTimer* gt)
 	UpdateMainPassCB(gt);
 	UpdateSkyPassCB(gt);
 	UpdateLightCB(gt);
+	CullSceneObjects(gt);
 }
 
 void GDxRenderer::OnResize()
@@ -781,7 +782,7 @@ void GDxRenderer::OnResize()
 		ThrowIfFailed(md3dDevice->CreateCommittedResource(
 			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_READBACK),
 			D3D12_HEAP_FLAG_NONE,
-			&CD3DX12_RESOURCE_DESC::Buffer(DEPTH_READBACK_BUFFER_SIZE_X * DEPTH_READBACK_BUFFER_SIZE_Y),
+			&CD3DX12_RESOURCE_DESC::Buffer(DEPTH_READBACK_BUFFER_SIZE * 4),
 			D3D12_RESOURCE_STATE_COPY_DEST,
 			nullptr,
 			IID_PPV_ARGS(mDepthReadbackBuffer.GetAddressOf())));
@@ -1227,6 +1228,40 @@ void GDxRenderer::UpdateSkyPassCB(const GGiGameTimer* gt)
 
 	auto currPassCB = mCurrFrameResource->SkyCB.get();
 	currPassCB->CopyData(0, mSkyPassCB);
+}
+
+void GDxRenderer::CullSceneObjects(const GGiGameTimer* gt)
+{
+	/*
+	for (auto so : pSceneObjectLayer[(int)RenderLayer::Deferred])
+	{
+		GRiOcclusionCullingRasterizer::GetInstance().RasterizeTestBBoxSSE(so->GetMesh()->bounds, )
+	}
+	*/
+
+	if (mFrameCount != 0)
+	{
+		// Map the data so we can read it on CPU. 
+		D3D12_RANGE readbackBufferRange = { 0, 4 * DEPTH_READBACK_BUFFER_SIZE };
+		//float mappedData[DEPTH_READBACK_BUFFER_SIZE];
+		float* mappedData = nullptr; 
+		//char* mappedData = nullptr; 
+		ThrowIfFailed(mDepthReadbackBuffer->Map(0, &readbackBufferRange, reinterpret_cast<void**>(&mappedData)));
+		std::ofstream fout;
+		fout.open("depth.raw", ios::out | ios::binary);
+		/*
+		for (int i = 0; i < DEPTH_READBACK_BUFFER_SIZE; ++i)
+		{
+			fout << mappedData[i];
+			//fout.write(reinterpret_cast<char*>(&mappedData), sizeof(mappedData));
+			//fout.write(mappedData, sizeof(mappedData));
+		}
+		//*/
+		fout.write(reinterpret_cast<char*>(mappedData), DEPTH_READBACK_BUFFER_SIZE * 4);
+		fout.close();
+		D3D12_RANGE emptyRange = { 0, 0 };
+		mDepthReadbackBuffer->Unmap(0, &emptyRange);
+	}
 }
 
 #pragma endregion

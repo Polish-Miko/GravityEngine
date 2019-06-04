@@ -26,6 +26,8 @@ public:
 
 	static GRiOcclusionCullingRasterizer& GetInstance();
 
+	bool RasterizeTestBBoxSSE(GRiBoundingBox& box, __m128* matrix, float* buffer, int clientWidth, int clientHeight);
+
 private:
 
 	static const int sBBIndexList[36];
@@ -35,8 +37,6 @@ private:
 	__forceinline __m128i Min(const __m128i &v0, const __m128i &v1);
 
 	__forceinline __m128i Max(const __m128i &v0, const __m128i &v1);
-
-	bool RasterizeTestBBoxSSE(GRiBoundingBox& box, __m128* matrix, float* buffer, int clientWidth, int clientHeight);
 
 	void SSEGather(SSEVFloat4 pOut[3], int triId, const __m128 xformedPos[]);
 

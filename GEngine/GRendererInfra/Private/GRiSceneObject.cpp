@@ -128,5 +128,16 @@ void GRiSceneObject::ResetPrevTransform()
 	MarkDirty();
 }
 
+CullState GRiSceneObject::GetCullState()
+{
+	return mCullState;
+}
+
+void GRiSceneObject::SetCullState(CullState cullState)
+{
+	mCullState = cullState;
+	//there's no need to mark dirty.
+}
+
 
 
