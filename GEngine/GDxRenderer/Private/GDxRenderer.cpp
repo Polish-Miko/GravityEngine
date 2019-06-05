@@ -1290,14 +1290,17 @@ void GDxRenderer::CullSceneObjects(const GGiGameTimer* gt)
 
 			worldViewProj = XMMatrixMultiply(renderObjectTrans, viewProj);
 
-			auto bOccCulled = GRiOcclusionCullingRasterizer::GetInstance().RasterizeTestBBoxSSE(
+			auto bOccCulled = !GRiOcclusionCullingRasterizer::GetInstance().RasterizeTestBBoxSSE(
 				so->GetMesh()->bounds,
 				worldViewProj.r,
 				depthReadbackBuffer,
 				DEPTH_READBACK_BUFFER_SIZE_X,
 				DEPTH_READBACK_BUFFER_SIZE_Y,
-				Z_UPPER_BOUND,
-				Z_LOWER_BOUND
+#if USE_REVERSE_Z
+				true
+#else
+				false
+#endif
 			);
 
 			if (bOccCulled)

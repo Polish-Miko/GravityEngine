@@ -141,7 +141,7 @@ inline float edgeFunction(const Vec3 &a, const Vec3 &b, const Vec3 &c)
 	return (c[0] - a[0]) * (b[1] - a[1]) - (c[1] - a[1]) * (b[0] - a[0]);
 }
 
-bool GRiOcclusionCullingRasterizer::RasterizeTestBBoxSSE(GRiBoundingBox& box, __m128* matrix, float* buffer, int clientWidth, int clientHeight, float zUpperBound, float zLowerBound)
+bool GRiOcclusionCullingRasterizer::RasterizeTestBBoxSSE(GRiBoundingBox& box, __m128* matrix, float* buffer, int clientWidth, int clientHeight, bool bReverseZ)
 {
 	__m128 verticesSSE[8];
 
@@ -248,7 +248,7 @@ bool GRiOcclusionCullingRasterizer::RasterizeTestBBoxSSE(GRiBoundingBox& box, __
 					// [comment]
 					// Depth-buffer test
 					// [/comment]
-					if (z < buffer[y * clientWidth + x])
+					if ((bReverseZ && (z > buffer[y * clientWidth + x])) || (!bReverseZ && (z < buffer[y * clientWidth + x])))
 					{
 						//buffer[y * clientWidth + x] = z;
 						return true;

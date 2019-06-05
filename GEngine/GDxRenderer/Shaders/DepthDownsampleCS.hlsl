@@ -6,7 +6,7 @@
 #include "ShaderDefinition.h"
 #include "MainPassCB.hlsli"
 
-//#define READBACK_REVERSED_Z
+#define READBACK_REVERSED_Z
 
 Texture2D gDepthBuffer : register(t0);
 
