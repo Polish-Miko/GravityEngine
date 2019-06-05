@@ -153,7 +153,7 @@ bool GRiOcclusionCullingRasterizer::RasterizeTestBBoxSSE(GRiBoundingBox& box, __
 	float vMax[3] = { center[0] + half[0], center[1] + half[1], center[2] + half[2] };
 
 	// fill vertices
-	static float vertices[8][4] = {
+	float vertices[8][4] = {
 		{vMin[0], vMin[1], vMin[2], 1.0f},
 		{vMax[0], vMin[1], vMin[2], 1.0f},
 		{vMax[0], vMax[1], vMin[2], 1.0f},
@@ -163,7 +163,7 @@ bool GRiOcclusionCullingRasterizer::RasterizeTestBBoxSSE(GRiBoundingBox& box, __
 		{vMax[0], vMax[1], vMax[2], 1.0f},
 		{vMin[0], vMax[1], vMax[2], 1.0f}
 	};
-
+ 
 	// transforms
 	for (int i = 0; i < 8; i++)
 	{
@@ -191,7 +191,7 @@ bool GRiOcclusionCullingRasterizer::RasterizeTestBBoxSSE(GRiBoundingBox& box, __
 
 		for (auto j = 0u; j < 3; j++)
 		{
-			vertices[i][j] = verticesSSE->m128_f32[j];
+			vertices[i][j] = verticesSSE[i].m128_f32[j];
 		}
 		vertices[i][2] = 1 / vertices[i][2];
 	}
@@ -199,12 +199,16 @@ bool GRiOcclusionCullingRasterizer::RasterizeTestBBoxSSE(GRiBoundingBox& box, __
 	for (auto i = 0u; i < 36; i += 3)
 	{
 		Vec3 v0, v1, v2;
-		for (auto j = 0u; j < 3; j++)
-		{
-			v0[0] = vertices[sBBIndexList[i + j]][0];
-			v0[1] = vertices[sBBIndexList[i + j]][1];
-			v0[2] = vertices[sBBIndexList[i + j]][2];
-		}
+
+		v0[0] = vertices[sBBIndexList[i + 0]][0];
+		v0[1] = vertices[sBBIndexList[i + 0]][1];
+		v0[2] = vertices[sBBIndexList[i + 0]][2];
+		v1[0] = vertices[sBBIndexList[i + 1]][0];
+		v1[1] = vertices[sBBIndexList[i + 1]][1];
+		v1[2] = vertices[sBBIndexList[i + 1]][2];
+		v2[0] = vertices[sBBIndexList[i + 2]][0];
+		v2[1] = vertices[sBBIndexList[i + 2]][1];
+		v2[2] = vertices[sBBIndexList[i + 2]][2];
 
 		float xmin = min3(v0[0], v1[0], v2[0]);
 		float ymin = min3(v0[1], v1[1], v2[1]);
@@ -228,8 +232,8 @@ bool GRiOcclusionCullingRasterizer::RasterizeTestBBoxSSE(GRiBoundingBox& box, __
 			{
 				Vec3 pixelSample;
 				pixelSample[0] = (float)x + 0.5f;
-				pixelSample[0] = (float)y + 0.5f;
-				pixelSample[0] = 0.0f;
+				pixelSample[1] = (float)y + 0.5f;
+				pixelSample[2] = 0.0f;
 
 				float w0 = edgeFunction(v1, v2, pixelSample);
 				float w1 = edgeFunction(v2, v0, pixelSample);
