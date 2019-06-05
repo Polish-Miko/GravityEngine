@@ -249,7 +249,7 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 		mCommandList->OMSetRenderTargets(mRtvHeaps["GBuffer"]->mRtvHeap.HeapDesc.NumDescriptors, &(mRtvHeaps["GBuffer"]->mRtvHeap.hCPUHeapStart), true, &DepthStencilView());
 
 		// For each render item...
-		DrawSceneObjects(mCommandList.Get(), RenderLayer::Deferred, true);
+		DrawSceneObjects(mCommandList.Get(), RenderLayer::Deferred, true, true);
 
 		for (size_t i = 0; i < mRtvHeaps["GBuffer"]->mRtv.size(); i++)
 		{
@@ -1159,7 +1159,8 @@ void GDxRenderer::UpdateMainPassCB(const GGiGameTimer* gt)
 		0.5f, 0.0f, 0.0f, 0.0f,
 		0.0f, -0.5f, 0.0f, 0.0f,
 		0.0f, 0.0f, 1.0f, 0.0f,
-		0.5f, 0.5f, 0.0f, 1.0f);
+		0.5f, 0.5f, 0.0f, 1.0f
+	);
 
 	XMMATRIX viewProjTex = XMMatrixMultiply(viewProj, T);
 	XMMATRIX shadowTransform = XMLoadFloat4x4(&mShadowTransform);
@@ -1232,35 +1233,76 @@ void GDxRenderer::UpdateSkyPassCB(const GGiGameTimer* gt)
 
 void GDxRenderer::CullSceneObjects(const GGiGameTimer* gt)
 {
-	/*
 	for (auto so : pSceneObjectLayer[(int)RenderLayer::Deferred])
 	{
-		GRiOcclusionCullingRasterizer::GetInstance().RasterizeTestBBoxSSE(so->GetMesh()->bounds, )
+		so->SetCullState(CullState::Visible);
 	}
-	*/
+
+	// todo : frustum culling.
 
 	if (mFrameCount != 0)
 	{
-		// Map the data so we can read it on CPU. 
+		// Map the data so we can read it on CPU.
 		D3D12_RANGE readbackBufferRange = { 0, 4 * DEPTH_READBACK_BUFFER_SIZE };
-		//float mappedData[DEPTH_READBACK_BUFFER_SIZE];
-		float* mappedData = nullptr; 
-		//char* mappedData = nullptr; 
-		ThrowIfFailed(mDepthReadbackBuffer->Map(0, &readbackBufferRange, reinterpret_cast<void**>(&mappedData)));
+		float* depthReadbackBuffer = nullptr;
+		ThrowIfFailed(mDepthReadbackBuffer->Map(0, &readbackBufferRange, reinterpret_cast<void**>(&depthReadbackBuffer)));
+
+#if 1
 		std::ofstream fout;
 		fout.open("depth.raw", ios::out | ios::binary);
-		/*
-		for (int i = 0; i < DEPTH_READBACK_BUFFER_SIZE; ++i)
-		{
-			fout << mappedData[i];
-			//fout.write(reinterpret_cast<char*>(&mappedData), sizeof(mappedData));
-			//fout.write(mappedData, sizeof(mappedData));
-		}
-		//*/
-		fout.write(reinterpret_cast<char*>(mappedData), DEPTH_READBACK_BUFFER_SIZE * 4);
+		fout.write(reinterpret_cast<char*>(depthReadbackBuffer), DEPTH_READBACK_BUFFER_SIZE * 4);
 		fout.close();
+#endif
+
 		D3D12_RANGE emptyRange = { 0, 0 };
 		mDepthReadbackBuffer->Unmap(0, &emptyRange);
+
+		auto viewMat = dynamic_cast<GDxFloat4x4*>(pCamera->GetView());
+		if (viewMat == nullptr)
+			ThrowGGiException("Cast failed from GGiFloat4x4* to GDxFloat4x4*.");
+
+		auto projMat = dynamic_cast<GDxFloat4x4*>(pCamera->GetProj());
+		if (projMat == nullptr)
+			ThrowGGiException("Cast failed from GGiFloat4x4* to GDxFloat4x4*.");
+
+		XMMATRIX view = DirectX::XMLoadFloat4x4(&viewMat->GetValue());
+		XMMATRIX proj = DirectX::XMLoadFloat4x4(&projMat->GetValue());
+
+		XMMATRIX viewProj = XMMatrixMultiply(view, proj);
+		XMMATRIX worldViewProj;
+
+		for (auto so : pSceneObjectLayer[(int)RenderLayer::Deferred])
+		{
+			GDxFloat4x4* dxTrans = dynamic_cast<GDxFloat4x4*>(so->GetTransform());
+			if (dxTrans == nullptr)
+				ThrowGGiException("Cast failed from GGiFloat4x4* to GDxFloat4x4*.");
+
+			GDxFloat4x4* dxPrevTrans = dynamic_cast<GDxFloat4x4*>(so->GetPrevTransform());
+			if (dxPrevTrans == nullptr)
+				ThrowGGiException("Cast failed from GGiFloat4x4* to GDxFloat4x4*.");
+
+			GDxFloat4x4* dxTexTrans = dynamic_cast<GDxFloat4x4*>(so->GetTexTransform());
+			if (dxTexTrans == nullptr)
+				ThrowGGiException("Cast failed from GGiFloat4x4* to GDxFloat4x4*.");
+
+			XMMATRIX renderObjectTrans = XMLoadFloat4x4(&(dxTrans->GetValue()));
+			delete dxTrans;
+
+			worldViewProj = XMMatrixMultiply(renderObjectTrans, viewProj);
+
+			auto bOccCulled = GRiOcclusionCullingRasterizer::GetInstance().RasterizeTestBBoxSSE(
+				so->GetMesh()->bounds,
+				worldViewProj.r,
+				depthReadbackBuffer,
+				DEPTH_READBACK_BUFFER_SIZE_X,
+				DEPTH_READBACK_BUFFER_SIZE_Y,
+				Z_UPPER_BOUND,
+				Z_LOWER_BOUND
+			);
+
+			if (bOccCulled)
+				so->SetCullState(CullState::OcclusionCulled);
+		}
 	}
 }
 
@@ -2887,17 +2929,18 @@ void GDxRenderer::InitializeGpuProfiler()
 
 #pragma region Draw
 
-void GDxRenderer::DrawSceneObjects(ID3D12GraphicsCommandList* cmdList, const RenderLayer layer, bool bSetCBV)
+void GDxRenderer::DrawSceneObjects(ID3D12GraphicsCommandList* cmdList, const RenderLayer layer, bool bSetCBV, bool bCheckCullState)
 {
 	// For each render item...
 	for (size_t i = 0; i < pSceneObjectLayer[((int)layer)].size(); ++i)
 	{
 		auto sObject = pSceneObjectLayer[((int)layer)][i];
-		DrawSceneObject(cmdList, sObject, bSetCBV);
+		if (!bCheckCullState || (bCheckCullState && (sObject->GetCullState() == CullState::Visible)))
+			DrawSceneObject(cmdList, sObject, bSetCBV);
 	}
 }
 
-void GDxRenderer::DrawSceneObject(ID3D12GraphicsCommandList* cmdList, GRiSceneObject* sObject, bool bSetCBV)
+void GDxRenderer::DrawSceneObject(ID3D12GraphicsCommandList* cmdList, GRiSceneObject* sObject, bool bSetCBV, bool bCheckCullState)
 {
 	GDxSceneObject* dxSO = dynamic_cast<GDxSceneObject*>(sObject);
 	if (dxSO == NULL)
@@ -2923,7 +2966,8 @@ void GDxRenderer::DrawSceneObject(ID3D12GraphicsCommandList* cmdList, GRiSceneOb
 		cmdList->SetGraphicsRootConstantBufferView(0, objCBAddress);
 	}
 
-	cmdList->DrawIndexedInstanced(dxMesh->mVIBuffer->IndexCount, 1, 0, 0, 0);
+	if (!bCheckCullState || (bCheckCullState && (sObject->GetCullState() == CullState::Visible)))
+		cmdList->DrawIndexedInstanced(dxMesh->mVIBuffer->IndexCount, 1, 0, 0, 0);
 }
 
 #pragma endregion

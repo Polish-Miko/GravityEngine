@@ -1,7 +1,10 @@
 #include "stdafx.h"
 #include "GRiOcclusionCullingRasterizer.h"
 
+#include <algorithm>
 
+typedef float Vec2[2];
+typedef float Vec3[3];
 
 
 /*
@@ -33,8 +36,8 @@ static const int sBBIndexList[36] =
 };
 */
 
-/*
-static const int sBBIndexList[36] =
+//*
+const int GRiOcclusionCullingRasterizer::sBBIndexList[36] =
 {
 	// index for top 
 	3, 7, 6,
@@ -60,6 +63,16 @@ static const int sBBIndexList[36] =
 	0, 3, 2,
 	0, 2, 1,
 };
+
+float min3(const float &a, const float &b, const float &c)
+{
+	return min(a, min(b, c));
+}
+
+float max3(const float &a, const float &b, const float &c)
+{
+	return max(a, max(b, c));
+}
 
 GRiOcclusionCullingRasterizer& GRiOcclusionCullingRasterizer::GetInstance()
 {
@@ -123,7 +136,152 @@ void GRiOcclusionCullingRasterizer::SSEGather(SSEVFloat4 pOut[3], int triId, con
 	}
 }
 
-bool GRiOcclusionCullingRasterizer::RasterizeTestBBoxSSE(GRiBoundingBox& box, __m128* matrix, float* buffer, int clientWidth, int clientHeight)
+inline float edgeFunction(const Vec3 &a, const Vec3 &b, const Vec3 &c)
+{
+	return (c[0] - a[0]) * (b[1] - a[1]) - (c[1] - a[1]) * (b[0] - a[0]);
+}
+
+bool GRiOcclusionCullingRasterizer::RasterizeTestBBoxSSE(GRiBoundingBox& box, __m128* matrix, float* buffer, int clientWidth, int clientHeight, float zUpperBound, float zLowerBound)
+{
+	__m128 verticesSSE[8];
+
+	// init vertices
+	float center[3] = { box.Center[0], box.Center[1], box.Center[2] };
+	float half[3] = { box.Extents[0] * 0.5f, box.Extents[1] * 0.5f, box.Extents[2] * 0.5f };
+
+	float vMin[3] = { center[0] - half[0], center[1] - half[1], center[2] - half[2] };
+	float vMax[3] = { center[0] + half[0], center[1] + half[1], center[2] + half[2] };
+
+	// fill vertices
+	static float vertices[8][4] = {
+		{vMin[0], vMin[1], vMin[2], 1.0f},
+		{vMax[0], vMin[1], vMin[2], 1.0f},
+		{vMax[0], vMax[1], vMin[2], 1.0f},
+		{vMin[0], vMax[1], vMin[2], 1.0f},
+		{vMin[0], vMin[1], vMax[2], 1.0f},
+		{vMax[0], vMin[1], vMax[2], 1.0f},
+		{vMax[0], vMax[1], vMax[2], 1.0f},
+		{vMin[0], vMax[1], vMax[2], 1.0f}
+	};
+
+	// transforms
+	for (int i = 0; i < 8; i++)
+	{
+		verticesSSE[i] = _mm_loadu_ps(vertices[i]);
+
+		verticesSSE[i] = SSETransformCoords(&verticesSSE[i], matrix);
+
+		__m128 vertX = _mm_shuffle_ps(verticesSSE[i], verticesSSE[i], _MM_SHUFFLE(0, 0, 0, 0)); // xxxx
+		__m128 vertY = _mm_shuffle_ps(verticesSSE[i], verticesSSE[i], _MM_SHUFFLE(1, 1, 1, 1)); // yyyy
+		__m128 vertZ = _mm_shuffle_ps(verticesSSE[i], verticesSSE[i], _MM_SHUFFLE(2, 2, 2, 2)); // zzzz
+		__m128 vertW = _mm_shuffle_ps(verticesSSE[i], verticesSSE[i], _MM_SHUFFLE(3, 3, 3, 3)); // wwww
+		static const __m128 sign_mask = _mm_set1_ps(-0.f); // -0.f = 1 << 31
+		vertW = _mm_andnot_ps(sign_mask, vertW); // abs
+		vertW = _mm_shuffle_ps(vertW, _mm_set1_ps(1.0f), _MM_SHUFFLE(0, 0, 0, 0)); //w,w,1,1
+		vertW = _mm_shuffle_ps(vertW, vertW, _MM_SHUFFLE(3, 0, 0, 0)); //w,w,w,1
+
+		// project
+		verticesSSE[i] = _mm_div_ps(verticesSSE[i], vertW);
+
+		// now vertices are between -1 and 1
+		const __m128 sadd = _mm_setr_ps(clientWidth * 0.5, clientHeight * 0.5, 0, 0);
+		const __m128 smult = _mm_setr_ps(clientWidth * 0.5, clientHeight * (-0.5), 1, 1);
+
+		verticesSSE[i] = _mm_add_ps(sadd, _mm_mul_ps(verticesSSE[i], smult));
+
+		for (auto j = 0u; j < 3; j++)
+		{
+			vertices[i][j] = verticesSSE->m128_f32[j];
+		}
+		vertices[i][2] = 1 / vertices[i][2];
+	}
+
+	for (auto i = 0u; i < 36; i += 3)
+	{
+		Vec3 v0, v1, v2;
+		for (auto j = 0u; j < 3; j++)
+		{
+			v0[0] = vertices[sBBIndexList[i + j]][0];
+			v0[1] = vertices[sBBIndexList[i + j]][1];
+			v0[2] = vertices[sBBIndexList[i + j]][2];
+		}
+
+		float xmin = min3(v0[0], v1[0], v2[0]);
+		float ymin = min3(v0[1], v1[1], v2[1]);
+		float xmax = max3(v0[0], v1[0], v2[0]);
+		float ymax = max3(v0[1], v1[1], v2[1]);
+
+		// the triangle is out of screen
+		if (xmin > clientWidth - 1 || xmax < 0 || ymin > clientHeight - 1 || ymax < 0) continue;
+
+		// be careful xmin/xmax/ymin/ymax can be negative. Don't cast to uint32_t
+		uint32_t x0 = max(int32_t(0), (int32_t)(std::floor(xmin)));
+		uint32_t x1 = min(int32_t(clientWidth) - 1, (int32_t)(std::floor(xmax)));
+		uint32_t y0 = max(int32_t(0), (int32_t)(std::floor(ymin)));
+		uint32_t y1 = min(int32_t(clientHeight) - 1, (int32_t)(std::floor(ymax)));
+
+		float area = edgeFunction(v0, v1, v2);
+
+		for (uint32_t y = y0; y < y1; ++y)
+		{
+			for (uint32_t x = x0; x < x1; ++x)
+			{
+				Vec3 pixelSample;
+				pixelSample[0] = (float)x + 0.5f;
+				pixelSample[0] = (float)y + 0.5f;
+				pixelSample[0] = 0.0f;
+
+				float w0 = edgeFunction(v1, v2, pixelSample);
+				float w1 = edgeFunction(v2, v0, pixelSample);
+				float w2 = edgeFunction(v0, v1, pixelSample);
+				if (w0 >= 0 && w1 >= 0 && w2 >= 0)
+				{
+					w0 /= area;
+					w1 /= area;
+					w2 /= area;
+					float oneOverZ = v0[2] * w0 + v1[2] * w1 + v2[2] * w2;
+					float z = 1 / oneOverZ;
+					// [comment]
+					// Depth-buffer test
+					// [/comment]
+					if (z < buffer[y * clientWidth + x])
+					{
+						//buffer[y * clientWidth + x] = z;
+						return true;
+					}
+				}
+
+				/*
+				if (w0 >= 0 && w1 >= 0 && w2 >= 0)
+				{
+					w0 /= area;
+					w1 /= area;
+					w2 /= area;
+
+					float curZ = 1 / (w0 / v0[2] + w1 / v1[2] + w2 / v2[2]);//是用v0[2]这个z么，而不是view depth？
+					buffer[y * clientWidth + x] = curZ;
+				}
+				*/
+			}
+		}
+
+		/*
+		std::ofstream ofs;
+		ofs.open("./raster2d.ppm");
+		ofs << "P6\n" << w << " " << h << "\n255\n";
+		ofs.write((char*)framebuffer, w * h * 3);
+		ofs.close();
+
+		delete[] framebuffer;
+
+		return 0;
+		//*/
+	}
+	return false;
+}
+
+/*
+bool GRiOcclusionCullingRasterizer::RasterizeTestBBoxSSE(GRiBoundingBox& box, __m128* matrix, float* buffer, int clientWidth, int clientHeight, float zUpperBound, float zLowerBound)
 {
 	//TODO: performance
 	LARGE_INTEGER frequency;        // ticks per second
@@ -139,9 +297,9 @@ bool GRiOcclusionCullingRasterizer::RasterizeTestBBoxSSE(GRiBoundingBox& box, __
 
 	//verts and flags
 	__m128 verticesSSE[8];
-	int flags[8];
+	//int flags[8];
 	//static float xformedPos[3][4];
-	static int flagsLoc[3];
+	//static int flagsLoc[3];
 
 	// Set DAZ and FZ MXCSR bits to flush denormals to zero (i.e., make it faster)
 	// Denormal are zero (DAZ) is bit 6 and Flush to zero (FZ) is bit 15. 
@@ -202,8 +360,8 @@ bool GRiOcclusionCullingRasterizer::RasterizeTestBBoxSSE(GRiBoundingBox& box, __
 		verticesSSE[i] = _mm_div_ps(verticesSSE[i], vertW);
 
 		// now vertices are between -1 and 1
-		const __m128 sadd = _mm_setr_ps(clientWidth * 0.5, clientHeight * 0.5, 0, 0);
-		const __m128 smult = _mm_setr_ps(clientWidth * 0.5, clientHeight * (-0.5), 1, 1);
+		const __m128 sadd = _mm_setr_ps(clientWidth * 0.5f, clientHeight * 0.5f, 0.0f, 0.0f);
+		const __m128 smult = _mm_setr_ps(clientWidth * 0.5f, clientHeight * (-0.5f), 1.0f, 1.0f);
 
 		verticesSSE[i] = _mm_add_ps(sadd, _mm_mul_ps(verticesSSE[i], smult));
 	}
@@ -343,13 +501,34 @@ bool GRiOcclusionCullingRasterizer::RasterizeTestBBoxSSE(GRiBoundingBox& box, __
 					gama = _mm_add_epi32(gama, aa2Inc),
 					depth = _mm_add_ps(depth, zx))
 				{
+					/*
 					mask = _mm_or_si128(_mm_or_si128(alpha, beta), gama);
 					previousDepth = _mm_loadu_ps(&(buffer[index]));
 
 					//calculate current depth
 					//(log(depth) - -6.907755375) * 0.048254941;
-					__m128 curdepth = _mm_mul_ps(_mm_sub_ps(log_ps(depth), _mm_set1_ps(-6.907755375)), _mm_set1_ps(0.048254941));
-					curdepth = _mm_sub_ps(curdepth, _mm_set1_ps(0.05));
+					for (auto ind = 0u; ind < 4; ind++)
+						depth.m128_f32[ind] = log(depth.m128_f32[ind]);
+					__m128 logDepth = depth;
+					//__m128 curdepth = _mm_mul_ps(_mm_sub_ps(log_ps(depth), _mm_set1_ps(-6.907755375)), _mm_set1_ps(0.048254941));
+					__m128 curdepth = _mm_mul_ps(_mm_sub_ps(logDepth, _mm_set1_ps(-6.907755375f)), _mm_set1_ps(0.048254941f));
+					curdepth = _mm_sub_ps(curdepth, _mm_set1_ps(0.05f));
+
+					depthMask = _mm_cmplt_ps(curdepth, previousDepth);//这个像素的当前深度小于前一帧回读的深度的话，depthMask就是全1，否则全0
+					finalMask = _mm_andnot_si128(mask, _mm_castps_si128(depthMask));
+					anyOut = _mm_or_si128(anyOut, finalMask);//测试是否有任何未被遮蔽的像素，只要有一个像素没被遮蔽，anyOut就不是全0
+					*/
+/*
+					mask = _mm_or_si128(_mm_or_si128(alpha, beta), gama);
+					previousDepth = _mm_loadu_ps(&(buffer[index]));
+
+					//calculate current depth
+					//(log(depth) - -6.907755375) * 0.048254941;
+					for (auto ind = 0u; ind < 4; ind++)
+						depth.m128_f32[ind] = log(depth.m128_f32[ind]);
+					__m128 logDepth = depth;
+					__m128 curdepth = _mm_mul_ps(_mm_sub_ps(logDepth, _mm_set1_ps(-6.907755375f)), _mm_set1_ps(0.048254941f));
+					curdepth = _mm_sub_ps(curdepth, _mm_set1_ps(0.05f));
 
 					depthMask = _mm_cmplt_ps(curdepth, previousDepth);//这个像素的当前深度小于前一帧回读的深度的话，depthMask就是全1，否则全0
 					finalMask = _mm_andnot_si128(mask, _mm_castps_si128(depthMask));
@@ -377,5 +556,5 @@ bool GRiOcclusionCullingRasterizer::RasterizeTestBBoxSSE(GRiBoundingBox& box, __
 
 	return false;//所有像素都被遮蔽了，所以这个scene object被遮蔽了，返回的是bVisible。
 }
-*/
+//*/
 

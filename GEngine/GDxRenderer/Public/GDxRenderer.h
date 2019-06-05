@@ -149,8 +149,8 @@ protected:
 	CD3DX12_CPU_DESCRIPTOR_HANDLE GetDsv(int index)const;
 	CD3DX12_CPU_DESCRIPTOR_HANDLE GetRtv(int index)const;
 
-	void DrawSceneObjects(ID3D12GraphicsCommandList* cmdList, const RenderLayer layer, bool bSetCBV);
-	void DrawSceneObject(ID3D12GraphicsCommandList* cmdList, GRiSceneObject* sObject, bool bSetCBV);
+	void DrawSceneObjects(ID3D12GraphicsCommandList* cmdList, const RenderLayer layer, bool bSetCBV, bool bCheckCullState = false);
+	void DrawSceneObject(ID3D12GraphicsCommandList* cmdList, GRiSceneObject* sObject, bool bSetCBV, bool bCheckCullState = false);
 
 protected:
 

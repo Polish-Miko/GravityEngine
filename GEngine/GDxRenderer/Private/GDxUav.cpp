@@ -121,8 +121,8 @@ void GDxUav::BuildDescriptors()
 		uavDesc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
 		uavDesc.Buffer.FirstElement = 0;
 		uavDesc.Buffer.CounterOffsetInBytes = 0;
-		uavDesc.Buffer.NumElements = elementNum;
-		uavDesc.Buffer.StructureByteStride = elementByteSize;
+		uavDesc.Buffer.NumElements = (UINT)elementNum;
+		uavDesc.Buffer.StructureByteStride = (UINT)elementByteSize;
 		//uavDesc.Buffer.NumElements = 1;
 		//uavDesc.Buffer.StructureByteStride = 1024;
 		uavDesc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_NONE;
@@ -137,8 +137,8 @@ void GDxUav::BuildDescriptors()
 		srvDesc.Format = DXGI_FORMAT_UNKNOWN;
 		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
 		srvDesc.Buffer.FirstElement = 0;
-		srvDesc.Buffer.NumElements = elementNum;
-		srvDesc.Buffer.StructureByteStride = elementByteSize;
+		srvDesc.Buffer.NumElements = (UINT)elementNum;
+		srvDesc.Buffer.StructureByteStride = (UINT)elementByteSize;
 		srvDesc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
 
 		md3dDevice->CreateShaderResourceView(mResource.Get(), &srvDesc, mCpuSrv);
