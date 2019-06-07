@@ -26,7 +26,7 @@ public:
 
 	static GRiOcclusionCullingRasterizer& GetInstance();
 
-	bool RasterizeTestBBoxSSE(GRiBoundingBox& box, __m128* matrix, float* buffer, int clientWidth, int clientHeight, bool bReverseZ);
+	bool RasterizeTestBBoxSSE(GRiBoundingBox& box, __m128* matrix, float* buffer, float* output, int clientWidth, int clientHeight, float zLowerBound, float zUpperBound, bool bReverseZ);
 
 private:
 

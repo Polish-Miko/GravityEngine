@@ -45,6 +45,7 @@ public:
 	// Get View/Proj matrices.
 	GGiFloat4x4* GetView()const;
 	GGiFloat4x4* GetProj()const;
+	GGiFloat4x4* GetReversedProj()const;
 
 	// Strafe/Walk/Ascend the camera a distance d.
 	void Strafe(float d);
@@ -93,5 +94,7 @@ private:
 	// Cache View/Proj matrices.
 	GGiFloat4x4* mView;
 	GGiFloat4x4* mProj;
+
+	GGiFloat4x4* mReversedProj;
 };
 

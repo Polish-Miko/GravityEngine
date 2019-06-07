@@ -6,6 +6,9 @@
 typedef float Vec2[2];
 typedef float Vec3[3];
 
+#define COUNTER_CLOCKWISE 1
+
+#define OUTPUT_TEST 0
 
 /*
 static const int sBBIndexList[36] =
@@ -138,19 +141,23 @@ void GRiOcclusionCullingRasterizer::SSEGather(SSEVFloat4 pOut[3], int triId, con
 
 inline float edgeFunction(const Vec3 &a, const Vec3 &b, const Vec3 &c)
 {
+#if COUNTER_CLOCKWISE
+	return -(c[0] - a[0]) * (b[1] - a[1]) + (c[1] - a[1]) * (b[0] - a[0]);
+#else
 	return (c[0] - a[0]) * (b[1] - a[1]) - (c[1] - a[1]) * (b[0] - a[0]);
+#endif
 }
 
-bool GRiOcclusionCullingRasterizer::RasterizeTestBBoxSSE(GRiBoundingBox& box, __m128* matrix, float* buffer, int clientWidth, int clientHeight, bool bReverseZ)
+bool GRiOcclusionCullingRasterizer::RasterizeTestBBoxSSE(GRiBoundingBox& box, __m128* matrix, float* buffer, float* output, int clientWidth, int clientHeight, float zLowerBound, float zUpperBound, bool bReverseZ)
 {
 	__m128 verticesSSE[8];
 
-	// init vertices
-	float center[3] = { box.Center[0], box.Center[1], box.Center[2] };
-	float half[3] = { box.Extents[0] * 0.5f, box.Extents[1] * 0.5f, box.Extents[2] * 0.5f };
+	// to avoid self-occluding
+	float expFac = 1.05f;
+	float Extents[3] = { box.Extents[0] * expFac,  box.Extents[1] * expFac,  box.Extents[2] * expFac };
 
-	float vMin[3] = { center[0] - half[0], center[1] - half[1], center[2] - half[2] };
-	float vMax[3] = { center[0] + half[0], center[1] + half[1], center[2] + half[2] };
+	float vMin[3] = { box.Center[0] - Extents[0], box.Center[1] - Extents[1], box.Center[2] - Extents[2] };
+	float vMax[3] = { box.Center[0] + Extents[0], box.Center[1] + Extents[1], box.Center[2] + Extents[2] };
 
 	// fill vertices
 	float vertices[8][4] = {
@@ -163,8 +170,10 @@ bool GRiOcclusionCullingRasterizer::RasterizeTestBBoxSSE(GRiBoundingBox& box, __
 		{vMax[0], vMax[1], vMax[2], 1.0f},
 		{vMin[0], vMax[1], vMax[2], 1.0f}
 	};
- 
+	bool bNearClip[8];
+
 	// transforms
+	/*
 	for (int i = 0; i < 8; i++)
 	{
 		verticesSSE[i] = _mm_loadu_ps(vertices[i]);
@@ -195,6 +204,50 @@ bool GRiOcclusionCullingRasterizer::RasterizeTestBBoxSSE(GRiBoundingBox& box, __
 		}
 		vertices[i][2] = 1 / vertices[i][2];
 	}
+	*/
+	float wvp[4][4] = {
+		{matrix[0].m128_f32[0], matrix[0].m128_f32[1], matrix[0].m128_f32[2], matrix[0].m128_f32[3]},
+		{matrix[1].m128_f32[0], matrix[1].m128_f32[1], matrix[1].m128_f32[2], matrix[1].m128_f32[3]},
+		{matrix[2].m128_f32[0], matrix[2].m128_f32[1], matrix[2].m128_f32[2], matrix[2].m128_f32[3]},
+		{matrix[3].m128_f32[0], matrix[3].m128_f32[1], matrix[3].m128_f32[2], matrix[3].m128_f32[3]}
+	};
+
+	float temp[8][4];
+
+ 	for (int i = 0; i < 8; i++)
+	{
+		bNearClip[i] = false;
+
+		for (auto j = 0u; j < 4; j++)
+		{
+			temp[i][j] = 0;
+			for (auto k = 0u; k < 4; k++)
+			{
+				temp[i][j] += vertices[i][k] * wvp[k][j];
+			}
+		}
+
+		vertices[i][0] = temp[i][0];
+		vertices[i][1] = temp[i][1];
+		vertices[i][2] = temp[i][2];
+		vertices[i][3] = temp[i][3];
+
+		vertices[i][0] /= abs(vertices[i][3]);
+		vertices[i][1] /= abs(vertices[i][3]);
+		vertices[i][2] /= abs(vertices[i][3]);
+		//vertices[i][2] /= vertices[i][3];// z remains negative if the triangle is beyond near plane.
+
+		if (vertices[i][3] < zLowerBound)
+			bNearClip[i] = true;
+
+		vertices[i][0] = (vertices[i][0] + 1) * 0.5f * clientWidth;
+		vertices[i][1] = (-vertices[i][1] + 1) * 0.5f * clientHeight;
+
+		if(bReverseZ)
+			vertices[i][2] = 1 / (1 - vertices[i][2]);
+		else
+			vertices[i][2] = 1 / vertices[i][2];
+	}
 
 	for (auto i = 0u; i < 36; i += 3)
 	{
@@ -218,6 +271,13 @@ bool GRiOcclusionCullingRasterizer::RasterizeTestBBoxSSE(GRiBoundingBox& box, __
 		// the triangle is out of screen
 		if (xmin > clientWidth - 1 || xmax < 0 || ymin > clientHeight - 1 || ymax < 0) continue;
 
+		bool bTriangleNearClipped = bNearClip[sBBIndexList[i + 0]] || bNearClip[sBBIndexList[i + 1]] || bNearClip[sBBIndexList[i + 2]];
+
+#if !OUTPUT_TEST
+		if (bTriangleNearClipped)
+			return true;
+#endif
+
 		// be careful xmin/xmax/ymin/ymax can be negative. Don't cast to uint32_t
 		uint32_t x0 = max(int32_t(0), (int32_t)(std::floor(xmin)));
 		uint32_t x1 = min(int32_t(clientWidth) - 1, (int32_t)(std::floor(xmax)));
@@ -225,16 +285,16 @@ bool GRiOcclusionCullingRasterizer::RasterizeTestBBoxSSE(GRiBoundingBox& box, __
 		uint32_t y1 = min(int32_t(clientHeight) - 1, (int32_t)(std::floor(ymax)));
 
 		float area = edgeFunction(v0, v1, v2);
-
-		for (uint32_t y = y0; y < y1; ++y)
+		
+		for (uint32_t y = y0; y <= y1; ++y)
 		{
-			for (uint32_t x = x0; x < x1; ++x)
+			for (uint32_t x = x0; x <= x1; ++x)
 			{
 				Vec3 pixelSample;
 				pixelSample[0] = (float)x + 0.5f;
 				pixelSample[1] = (float)y + 0.5f;
 				pixelSample[2] = 0.0f;
-
+				
 				float w0 = edgeFunction(v1, v2, pixelSample);
 				float w1 = edgeFunction(v2, v0, pixelSample);
 				float w2 = edgeFunction(v0, v1, pixelSample);
@@ -244,42 +304,30 @@ bool GRiOcclusionCullingRasterizer::RasterizeTestBBoxSSE(GRiBoundingBox& box, __
 					w1 /= area;
 					w2 /= area;
 					float oneOverZ = v0[2] * w0 + v1[2] * w1 + v2[2] * w2;
-					float z = 1 / oneOverZ;
+					float z;
+					if (bReverseZ)
+						z = 1.0f - 1.0f / oneOverZ;
+					else
+						z = 1.0f / oneOverZ;
+
+#if OUTPUT_TEST
+					if (bTriangleNearClipped)
+						output[y * clientWidth + x] = 1.0f;
+					else
+						output[y * clientWidth + x] = z;
+#endif
+
 					// [comment]
 					// Depth-buffer test
 					// [/comment]
 					if ((bReverseZ && (z > buffer[y * clientWidth + x])) || (!bReverseZ && (z < buffer[y * clientWidth + x])))
 					{
-						//buffer[y * clientWidth + x] = z;
 						return true;
+						//buffer[y * clientWidth + x] = z;
 					}
 				}
-
-				/*
-				if (w0 >= 0 && w1 >= 0 && w2 >= 0)
-				{
-					w0 /= area;
-					w1 /= area;
-					w2 /= area;
-
-					float curZ = 1 / (w0 / v0[2] + w1 / v1[2] + w2 / v2[2]);//是用v0[2]这个z么，而不是view depth？
-					buffer[y * clientWidth + x] = curZ;
-				}
-				*/
 			}
 		}
-
-		/*
-		std::ofstream ofs;
-		ofs.open("./raster2d.ppm");
-		ofs << "P6\n" << w << " " << h << "\n255\n";
-		ofs.write((char*)framebuffer, w * h * 3);
-		ofs.close();
-
-		delete[] framebuffer;
-
-		return 0;
-		//*/
 	}
 	return false;
 }

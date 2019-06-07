@@ -188,7 +188,6 @@ protected:
 	//Microsoft::WRL::ComPtr<ID3D12Resource> mStencilBuffer;
 	Microsoft::WRL::ComPtr<ID3D12Resource> mDepthReadbackBuffer;
 
-
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> mRtvHeap;
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> mDsvHeap;
 

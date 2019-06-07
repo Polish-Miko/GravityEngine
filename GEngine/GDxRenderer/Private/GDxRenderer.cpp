@@ -1233,21 +1233,73 @@ void GDxRenderer::UpdateSkyPassCB(const GGiGameTimer* gt)
 
 void GDxRenderer::CullSceneObjects(const GGiGameTimer* gt)
 {
+	// Reset cull state.
 	for (auto so : pSceneObjectLayer[(int)RenderLayer::Deferred])
 	{
 		so->SetCullState(CullState::Visible);
 	}
 
-	// todo : frustum culling.
+	// Frustum culling.
+	auto viewMat = dynamic_cast<GDxFloat4x4*>(pCamera->GetView());
+	if (viewMat == nullptr)
+		ThrowGGiException("Cast failed from GGiFloat4x4* to GDxFloat4x4*.");
 
+	auto projMat = dynamic_cast<GDxFloat4x4*>(pCamera->GetProj());
+	if (projMat == nullptr)
+		ThrowGGiException("Cast failed from GGiFloat4x4* to GDxFloat4x4*.");
+
+	auto revProjMat = dynamic_cast<GDxFloat4x4*>(pCamera->GetReversedProj());
+	if (revProjMat == nullptr)
+		ThrowGGiException("Cast failed from GGiFloat4x4* to GDxFloat4x4*.");
+
+	XMMATRIX view = DirectX::XMLoadFloat4x4(&viewMat->GetValue());
+	XMMATRIX proj = DirectX::XMLoadFloat4x4(&projMat->GetValue());
+	XMMATRIX revProj = DirectX::XMLoadFloat4x4(&revProjMat->GetValue());
+	XMMATRIX invView = XMMatrixInverse(&XMMatrixDeterminant(view), view);
+	//proj.r[0].m128_f32[0] = (float)((double)proj.r[0].m128_f32[0] * ((double)mClientWidth / (double)mClientHeight) / ((double)DEPTH_READBACK_BUFFER_SIZE_X / (double)DEPTH_READBACK_BUFFER_SIZE_Y));
+
+	XMMATRIX viewProj = XMMatrixMultiply(view, proj);
+
+	BoundingFrustum mCameraFrustum;
+#if USE_REVERSE_Z
+	BoundingFrustum::CreateFromMatrix(mCameraFrustum, revProj);
+#else
+	BoundingFrustum::CreateFromMatrix(mCameraFrustum, proj);
+#endif
+
+	for (auto so : pSceneObjectLayer[(int)RenderLayer::Deferred])
+	{
+		GDxFloat4x4* dxTrans = dynamic_cast<GDxFloat4x4*>(so->GetTransform());
+		if (dxTrans == nullptr)
+			ThrowGGiException("Cast failed from GGiFloat4x4* to GDxFloat4x4*.");
+
+		XMMATRIX world = XMLoadFloat4x4(&(dxTrans->GetValue()));
+		delete dxTrans;
+
+		XMMATRIX localToView = XMMatrixMultiply(world, view);
+
+		BoundingBox bounds;
+		bounds.Center = DirectX::XMFLOAT3(so->GetMesh()->bounds.Center);
+		bounds.Extents = DirectX::XMFLOAT3(so->GetMesh()->bounds.Extents);
+
+		BoundingBox worldBounds;
+		bounds.Transform(worldBounds, localToView);
+
+		// Perform the box/frustum intersection test in local space.
+		if ((mCameraFrustum.Contains(worldBounds) == DirectX::DISJOINT))
+			so->SetCullState(CullState::FrustumCulled);
+	}
+
+	// Occlusion culling
 	if (mFrameCount != 0)
 	{
 		// Map the data so we can read it on CPU.
 		D3D12_RANGE readbackBufferRange = { 0, 4 * DEPTH_READBACK_BUFFER_SIZE };
 		float* depthReadbackBuffer = nullptr;
+		static float outputTest[DEPTH_READBACK_BUFFER_SIZE_X * DEPTH_READBACK_BUFFER_SIZE_Y];
 		ThrowIfFailed(mDepthReadbackBuffer->Map(0, &readbackBufferRange, reinterpret_cast<void**>(&depthReadbackBuffer)));
 
-#if 1
+#if 0
 		std::ofstream fout;
 		fout.open("depth.raw", ios::out | ios::binary);
 		fout.write(reinterpret_cast<char*>(depthReadbackBuffer), DEPTH_READBACK_BUFFER_SIZE * 4);
@@ -1257,45 +1309,31 @@ void GDxRenderer::CullSceneObjects(const GGiGameTimer* gt)
 		D3D12_RANGE emptyRange = { 0, 0 };
 		mDepthReadbackBuffer->Unmap(0, &emptyRange);
 
-		auto viewMat = dynamic_cast<GDxFloat4x4*>(pCamera->GetView());
-		if (viewMat == nullptr)
-			ThrowGGiException("Cast failed from GGiFloat4x4* to GDxFloat4x4*.");
-
-		auto projMat = dynamic_cast<GDxFloat4x4*>(pCamera->GetProj());
-		if (projMat == nullptr)
-			ThrowGGiException("Cast failed from GGiFloat4x4* to GDxFloat4x4*.");
-
-		XMMATRIX view = DirectX::XMLoadFloat4x4(&viewMat->GetValue());
-		XMMATRIX proj = DirectX::XMLoadFloat4x4(&projMat->GetValue());
-
-		XMMATRIX viewProj = XMMatrixMultiply(view, proj);
 		XMMATRIX worldViewProj;
 
 		for (auto so : pSceneObjectLayer[(int)RenderLayer::Deferred])
 		{
+			if (so->GetCullState() == CullState::FrustumCulled)
+				continue;
+
 			GDxFloat4x4* dxTrans = dynamic_cast<GDxFloat4x4*>(so->GetTransform());
 			if (dxTrans == nullptr)
 				ThrowGGiException("Cast failed from GGiFloat4x4* to GDxFloat4x4*.");
 
-			GDxFloat4x4* dxPrevTrans = dynamic_cast<GDxFloat4x4*>(so->GetPrevTransform());
-			if (dxPrevTrans == nullptr)
-				ThrowGGiException("Cast failed from GGiFloat4x4* to GDxFloat4x4*.");
-
-			GDxFloat4x4* dxTexTrans = dynamic_cast<GDxFloat4x4*>(so->GetTexTransform());
-			if (dxTexTrans == nullptr)
-				ThrowGGiException("Cast failed from GGiFloat4x4* to GDxFloat4x4*.");
-
-			XMMATRIX renderObjectTrans = XMLoadFloat4x4(&(dxTrans->GetValue()));
+			XMMATRIX sceneObjectTrans = XMLoadFloat4x4(&(dxTrans->GetValue()));
 			delete dxTrans;
 
-			worldViewProj = XMMatrixMultiply(renderObjectTrans, viewProj);
+			worldViewProj = XMMatrixMultiply(sceneObjectTrans, viewProj);
 
 			auto bOccCulled = !GRiOcclusionCullingRasterizer::GetInstance().RasterizeTestBBoxSSE(
 				so->GetMesh()->bounds,
 				worldViewProj.r,
 				depthReadbackBuffer,
+				outputTest,
 				DEPTH_READBACK_BUFFER_SIZE_X,
 				DEPTH_READBACK_BUFFER_SIZE_Y,
+				Z_LOWER_BOUND,
+				Z_UPPER_BOUND,
 #if USE_REVERSE_Z
 				true
 #else
@@ -1306,6 +1344,13 @@ void GDxRenderer::CullSceneObjects(const GGiGameTimer* gt)
 			if (bOccCulled)
 				so->SetCullState(CullState::OcclusionCulled);
 		}
+
+#if 0
+		std::ofstream testOut;
+		testOut.open("output.raw", ios::out | ios::binary);
+		testOut.write(reinterpret_cast<char*>(outputTest), DEPTH_READBACK_BUFFER_SIZE * 4);
+		testOut.close();
+#endif
 	}
 }
 

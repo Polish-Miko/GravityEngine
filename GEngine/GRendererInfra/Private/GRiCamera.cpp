@@ -128,6 +128,10 @@ void GRiCamera::SetLens(float fovY, float aspect, float zn, float zf)
 	GGiFloat4x4* P = pRendererFactory->CreateFloat4x4();
 	P->SetByPerspectiveFovLH(mFovY, mAspect, mNearZ, mFarZ);
 	mProj = P;
+
+	GGiFloat4x4* rP = pRendererFactory->CreateFloat4x4();
+	rP->SetByPerspectiveFovLH(mFovY, mAspect, mFarZ, mNearZ);
+	mReversedProj = rP;
 }
 
 void GRiCamera::LookAt(std::vector<float> pos, std::vector<float> target, std::vector<float> worldUp)
@@ -169,6 +173,15 @@ GGiFloat4x4* GRiCamera::GetProj()const
 		ThrowGGiException("Trying to read dirty camera view data.")
 	}
 	return mProj;
+}
+
+GGiFloat4x4* GRiCamera::GetReversedProj()const
+{
+	if (mViewDirty)
+	{
+		ThrowGGiException("Trying to read dirty camera view data.")
+	}
+	return mReversedProj;
 }
 
 void GRiCamera::Strafe(float d)
