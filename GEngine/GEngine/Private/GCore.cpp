@@ -172,6 +172,8 @@ void GCore::Update()
 	UpdateGui(mTimer.get());
 #endif
 
+	GGiCpuProfiler::GetInstance().BeginFrame();
+
 	mRenderer->Update(mTimer.get());
 }
 
@@ -795,6 +797,39 @@ void GCore::LoadSceneObjects()
 			mSceneObjects[newSO->UniqueName] = std::move(newSO);
 		}
 	}
+
+	// Load test objects.
+	int sizeX = 32, sizeY = 32;
+
+	for (int x = -sizeX / 2; x < sizeX / 2; x++)
+	{
+		for (int y = -sizeY / 2; y < sizeY / 2; y++)
+		{
+			std::unique_ptr<GRiSceneObject> testSO(pRendererFactory->CreateSceneObject());
+			testSO->UniqueName = L"testObject_" + std::to_wstring(x + sizeX / 2) + L"_" + std::to_wstring(y + sizeY / 2);
+			testSO->SetScale(0.2f, 2.0f, 0.2f);
+			testSO->SetLocation(x * 40.0f, -200.f, y * 40.0f);
+			testSO->ResetPrevTransform();
+			testSO->SetTexTransform(pRendererFactory->CreateFloat4x4());
+			testSO->SetObjIndex(mSceneObjectIndex++);
+			testSO->SetMaterial(mMaterials[L"Default"].get());
+			testSO->SetMesh(mMeshes[L"Box"].get());
+			mSceneObjectLayer[(int)RenderLayer::Deferred].push_back(testSO.get());
+			mSceneObjects[testSO->UniqueName] = std::move(testSO);
+		}
+	}
+
+	std::unique_ptr<GRiSceneObject> testSO(pRendererFactory->CreateSceneObject());
+	testSO->UniqueName = L"testObject";
+	testSO->SetScale(40.0f, 0.1f, 40.0f);
+	testSO->SetLocation(0.0f, -240.f, 0.0f);
+	testSO->ResetPrevTransform();
+	testSO->SetTexTransform(pRendererFactory->CreateFloat4x4());
+	testSO->SetObjIndex(mSceneObjectIndex++);
+	testSO->SetMaterial(mMaterials[L"Default"].get());
+	testSO->SetMesh(mMeshes[L"Box"].get());
+	mSceneObjectLayer[(int)RenderLayer::Deferred].push_back(testSO.get());
+	mSceneObjects[testSO->UniqueName] = std::move(testSO);
 }
 
 void GCore::LoadCameras()
@@ -904,6 +939,7 @@ void GCore::UpdateGui(const GGiGameTimer* gt)
 		objRot,
 		objScale,
 		mCameraSpeed,
+		GGiCpuProfiler::GetInstance().GetProfiles(),
 		mRenderer->GetGpuProfiles(),
 		mRenderer->GetClientWidth(),
 		mRenderer->GetClientHeight()

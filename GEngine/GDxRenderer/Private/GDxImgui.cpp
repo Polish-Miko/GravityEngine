@@ -75,6 +75,7 @@ void GDxImgui::SetGUIContent(
 	float* objectRotation,
 	float* objectScale,
 	float& cameraSpeed,
+	std::vector<CpuProfileData> cpuProfiles,
 	std::vector<ProfileData> gpuProfiles,
 	int clientWidth,
 	int clientHeight
@@ -90,29 +91,41 @@ void GDxImgui::SetGUIContent(
 		ImGui::Begin("Profiler");
 		ImGui::Text("Viewport width : %d, height : %d", clientWidth, clientHeight);
 		ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+
 		std::vector<float> passRenderTimePercentage;
+
+		for (auto profile : cpuProfiles)
+		{
+			ImGui::Text("%s : %.3f ms", profile.name.data(), (profile.endTime - profile.startTime));
+		}
+
 		for (auto profile : gpuProfiles)
 		{
 			ImGui::Text("%s : %.3f ms", profile.name.data(), profile.time);
 			passRenderTimePercentage.push_back(profile.time / (1000.0f / ImGui::GetIO().Framerate));
 		}
+
 		static float values[90] = { 0 };
 		static int values_offset = 0;
 		static double refresh_time = 0.0;
+
 		if (refresh_time == 0.0)
 			refresh_time = ImGui::GetTime();
+
 		while (refresh_time < ImGui::GetTime()) // Create data at fixed 60 hz rate
 		{
 			values[values_offset] = 1000.0f / ImGui::GetIO().Framerate;
 			values_offset = (values_offset + 1) % IM_ARRAYSIZE(values);
 			refresh_time += 1.0f / 60.0f;
 		}
+
 		float maxTime = 0.0f;
 		for (auto i = 0; i < IM_ARRAYSIZE(values); i++)
 		{
 			if (values[i] > maxTime)
 				maxTime = values[i];
 		}
+
 		float ind = ceil(log2(maxTime / 17.0f));
 		ImGui::PlotLines("", values, IM_ARRAYSIZE(values), values_offset, "Framerate", 0.0f, 17.0f * pow(2.0f, max(ind, 0.0f)), ImVec2(300, 80));
 		ImGui::PlotHistogram("", passRenderTimePercentage.data(), passRenderTimePercentage.size(), 0, "Pass", 0.0f, 1.0f, ImVec2(300, 80));

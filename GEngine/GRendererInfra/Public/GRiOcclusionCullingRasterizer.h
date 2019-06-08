@@ -19,16 +19,19 @@ class GRiOcclusionCullingRasterizer
 
 public:
 
-	GRiOcclusionCullingRasterizer() {}
 	GRiOcclusionCullingRasterizer(const GRiOcclusionCullingRasterizer& rhs) = delete;
 	GRiOcclusionCullingRasterizer& operator=(const GRiOcclusionCullingRasterizer& rhs) = delete;
 	~GRiOcclusionCullingRasterizer() = default;
 
 	static GRiOcclusionCullingRasterizer& GetInstance();
 
-	bool RasterizeTestBBoxSSE(GRiBoundingBox& box, __m128* matrix, float* buffer, float* output, int clientWidth, int clientHeight, float zLowerBound, float zUpperBound, bool bReverseZ);
+	void Reproject(float* src, float* dst, __m128* viewProj, __m128* invPrevViewProj, int bufferWidth, int bufferHeight);
+
+	bool RasterizeTestBBoxSSE(GRiBoundingBox& box, __m128* worldViewProj, float* buffer, float* output, int clientWidth, int clientHeight, float zLowerBound, float zUpperBound, bool bReverseZ);
 
 private:
+
+	GRiOcclusionCullingRasterizer() {}
 
 	static const int sBBIndexList[36];
 

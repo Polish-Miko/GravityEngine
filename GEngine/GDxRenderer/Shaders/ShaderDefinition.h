@@ -33,8 +33,8 @@
 //----------------------------------------------------------------------------------------------------------
 // Depth readback
 //----------------------------------------------------------------------------------------------------------
-#define DEPTH_READBACK_BUFFER_SIZE_X 512
-#define DEPTH_READBACK_BUFFER_SIZE_Y 256
+#define DEPTH_READBACK_BUFFER_SIZE_X 256
+#define DEPTH_READBACK_BUFFER_SIZE_Y 128
 
 #define DEPTH_READBACK_BUFFER_SIZE (DEPTH_READBACK_BUFFER_SIZE_X * DEPTH_READBACK_BUFFER_SIZE_Y)
 

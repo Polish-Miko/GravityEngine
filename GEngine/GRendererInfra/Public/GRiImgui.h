@@ -22,6 +22,7 @@ public:
 		float* objectRotation,
 		float* objectScale,
 		float& cameraSpeed,
+		std::vector<CpuProfileData> cpuProfiles,
 		std::vector<ProfileData> gpuProfiles,
 		int clientWidth,
 		int clientHeight

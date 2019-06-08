@@ -77,6 +77,21 @@ float max3(const float &a, const float &b, const float &c)
 	return max(a, max(b, c));
 }
 
+float* VecCross(Vec3 a, Vec3 b)
+{
+	//remember to delete ret.
+	float* ret = new float[3];
+	ret[0] = a[1] * b[2] - a[2] * b[1];
+	ret[1] = a[2] * b[0] - a[0] * b[2];
+	ret[2] = a[0] * b[1] - a[1] * b[0];
+	return ret;
+}
+
+float VecDot(Vec3 a, Vec3 b)
+{
+	return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+}
+
 GRiOcclusionCullingRasterizer& GRiOcclusionCullingRasterizer::GetInstance()
 {
 	static GRiOcclusionCullingRasterizer *instance = new GRiOcclusionCullingRasterizer();
@@ -148,7 +163,65 @@ inline float edgeFunction(const Vec3 &a, const Vec3 &b, const Vec3 &c)
 #endif
 }
 
-bool GRiOcclusionCullingRasterizer::RasterizeTestBBoxSSE(GRiBoundingBox& box, __m128* matrix, float* buffer, float* output, int clientWidth, int clientHeight, float zLowerBound, float zUpperBound, bool bReverseZ)
+void GRiOcclusionCullingRasterizer::Reproject(float* src, float* dst, __m128* viewProj, __m128* invPrevViewProj, int bufferWidth, int bufferHeight)
+{
+	/*
+	float vpF[4][4] = {
+		{viewProj[0].m128_f32[0], viewProj[0].m128_f32[1], viewProj[0].m128_f32[2], viewProj[0].m128_f32[3]},
+		{viewProj[1].m128_f32[0], viewProj[1].m128_f32[1], viewProj[1].m128_f32[2], viewProj[1].m128_f32[3]},
+		{viewProj[2].m128_f32[0], viewProj[2].m128_f32[1], viewProj[2].m128_f32[2], viewProj[2].m128_f32[3]},
+		{viewProj[3].m128_f32[0], viewProj[3].m128_f32[1], viewProj[3].m128_f32[2], viewProj[3].m128_f32[3]}
+	};
+
+	float ipvpF[4][4] = {
+		{invPrevViewProj[0].m128_f32[0], invPrevViewProj[0].m128_f32[1], invPrevViewProj[0].m128_f32[2], invPrevViewProj[0].m128_f32[3]},
+		{invPrevViewProj[1].m128_f32[0], invPrevViewProj[1].m128_f32[1], invPrevViewProj[1].m128_f32[2], invPrevViewProj[1].m128_f32[3]},
+		{invPrevViewProj[2].m128_f32[0], invPrevViewProj[2].m128_f32[1], invPrevViewProj[2].m128_f32[2], invPrevViewProj[2].m128_f32[3]},
+		{invPrevViewProj[3].m128_f32[0], invPrevViewProj[3].m128_f32[1], invPrevViewProj[3].m128_f32[2], invPrevViewProj[3].m128_f32[3]}
+	};
+	*/
+
+	std::fill_n((float*)dst, bufferWidth * bufferHeight, 0.0f);
+
+	//float readbackPos[4];
+	for (auto i = 0u; i < bufferWidth; i++)
+	{
+		for (auto j = 0u; j < bufferHeight; j++)
+		{
+			//readbackPos[0] = i / bufferWidth;
+			//readbackPos[1] = j / bufferHeight;
+			//readbackPos[2] = src[j * bufferWidth + i];
+			//readbackPos[3] = 1.0f;
+			__m128 readbackPos = _mm_setr_ps(((float)i / ((float)bufferWidth - 1.0f)) * 2.0f - 1.0f, 1.0f - ((float)j / ((float)bufferHeight - 1.0f)) * 2, src[j * bufferWidth + i], 1.0f);
+
+			__m128 worldPos = SSETransformCoords(&readbackPos, invPrevViewProj);
+
+			__m128 vertW = _mm_shuffle_ps(worldPos, worldPos, _MM_SHUFFLE(3, 3, 3, 3)); // wwww
+			static const __m128 sign_mask = _mm_set1_ps(-0.f); // -0.f = 1 << 31
+			vertW = _mm_andnot_ps(sign_mask, vertW); // abs
+			worldPos = _mm_div_ps(worldPos, vertW);
+
+			__m128 reprojectedPos = SSETransformCoords(&worldPos, viewProj);
+
+			vertW = _mm_shuffle_ps(reprojectedPos, reprojectedPos, _MM_SHUFFLE(3, 3, 3, 3)); // wwww
+			vertW = _mm_andnot_ps(sign_mask, vertW); // abs
+			reprojectedPos = _mm_div_ps(reprojectedPos, vertW);
+
+			// now vertices are between -1 and 1
+			const __m128 sadd = _mm_setr_ps(bufferWidth * 0.5, bufferHeight * 0.5, 0, 0);
+			const __m128 smult = _mm_setr_ps(bufferWidth * 0.5, bufferHeight * (-0.5), 1, 1);
+
+			reprojectedPos = _mm_add_ps(sadd, _mm_mul_ps(reprojectedPos, smult));
+
+			int u = (int)reprojectedPos.m128_f32[0];
+			int v = (int)reprojectedPos.m128_f32[1];
+			if (u >= 0 && u < bufferWidth && v >= 0 && v < bufferHeight)
+				dst[v * bufferWidth + u] = reprojectedPos.m128_f32[2];
+		}
+	}
+}
+
+bool GRiOcclusionCullingRasterizer::RasterizeTestBBoxSSE(GRiBoundingBox& box, __m128* worldViewProj, float* buffer, float* output, int clientWidth, int clientHeight, float zLowerBound, float zUpperBound, bool bReverseZ)
 {
 	__m128 verticesSSE[8];
 
@@ -178,7 +251,7 @@ bool GRiOcclusionCullingRasterizer::RasterizeTestBBoxSSE(GRiBoundingBox& box, __
 	{
 		verticesSSE[i] = _mm_loadu_ps(vertices[i]);
 
-		verticesSSE[i] = SSETransformCoords(&verticesSSE[i], matrix);
+		verticesSSE[i] = SSETransformCoords(&verticesSSE[i], worldViewProj);
 
 		__m128 vertX = _mm_shuffle_ps(verticesSSE[i], verticesSSE[i], _MM_SHUFFLE(0, 0, 0, 0)); // xxxx
 		__m128 vertY = _mm_shuffle_ps(verticesSSE[i], verticesSSE[i], _MM_SHUFFLE(1, 1, 1, 1)); // yyyy
@@ -205,11 +278,11 @@ bool GRiOcclusionCullingRasterizer::RasterizeTestBBoxSSE(GRiBoundingBox& box, __
 		vertices[i][2] = 1 / vertices[i][2];
 	}
 	*/
-	float wvp[4][4] = {
-		{matrix[0].m128_f32[0], matrix[0].m128_f32[1], matrix[0].m128_f32[2], matrix[0].m128_f32[3]},
-		{matrix[1].m128_f32[0], matrix[1].m128_f32[1], matrix[1].m128_f32[2], matrix[1].m128_f32[3]},
-		{matrix[2].m128_f32[0], matrix[2].m128_f32[1], matrix[2].m128_f32[2], matrix[2].m128_f32[3]},
-		{matrix[3].m128_f32[0], matrix[3].m128_f32[1], matrix[3].m128_f32[2], matrix[3].m128_f32[3]}
+	float wvpF[4][4] = {
+		{worldViewProj[0].m128_f32[0], worldViewProj[0].m128_f32[1], worldViewProj[0].m128_f32[2], worldViewProj[0].m128_f32[3]},
+		{worldViewProj[1].m128_f32[0], worldViewProj[1].m128_f32[1], worldViewProj[1].m128_f32[2], worldViewProj[1].m128_f32[3]},
+		{worldViewProj[2].m128_f32[0], worldViewProj[2].m128_f32[1], worldViewProj[2].m128_f32[2], worldViewProj[2].m128_f32[3]},
+		{worldViewProj[3].m128_f32[0], worldViewProj[3].m128_f32[1], worldViewProj[3].m128_f32[2], worldViewProj[3].m128_f32[3]}
 	};
 
 	float temp[8][4];
@@ -223,7 +296,7 @@ bool GRiOcclusionCullingRasterizer::RasterizeTestBBoxSSE(GRiBoundingBox& box, __
 			temp[i][j] = 0;
 			for (auto k = 0u; k < 4; k++)
 			{
-				temp[i][j] += vertices[i][k] * wvp[k][j];
+				temp[i][j] += vertices[i][k] * wvpF[k][j];
 			}
 		}
 
@@ -269,14 +342,25 @@ bool GRiOcclusionCullingRasterizer::RasterizeTestBBoxSSE(GRiBoundingBox& box, __
 		float ymax = max3(v0[1], v1[1], v2[1]);
 
 		// the triangle is out of screen
-		if (xmin > clientWidth - 1 || xmax < 0 || ymin > clientHeight - 1 || ymax < 0) continue;
+		if (xmin > clientWidth - 1 || xmax < 0 || ymin > clientHeight - 1 || ymax < 0)
+			continue;
 
 		bool bTriangleNearClipped = bNearClip[sBBIndexList[i + 0]] || bNearClip[sBBIndexList[i + 1]] || bNearClip[sBBIndexList[i + 2]];
 
+		//if the bounding box is beyond the near plane, don't do near plane clip and give up occlusion culling for this object.
 #if !OUTPUT_TEST
 		if (bTriangleNearClipped)
 			return true;
 #endif
+
+		//backface culling
+		Vec3 e1, e2;
+		e1[0] = v1[0] - v0[0];
+		e1[1] = v1[1] - v0[1];
+		e2[0] = v2[0] - v0[0];
+		e2[1] = v2[1] - v0[1];
+		if (e1[0] * e2[1] - e1[1] * e2[0] < 0)
+			continue;
 
 		// be careful xmin/xmax/ymin/ymax can be negative. Don't cast to uint32_t
 		uint32_t x0 = max(int32_t(0), (int32_t)(std::floor(xmin)));

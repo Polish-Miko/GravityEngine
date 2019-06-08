@@ -682,6 +682,8 @@ void GDxRenderer::Update(const GGiGameTimer* gt)
 		XMStoreFloat3(&mRotatedLightDirections[i], lightDir);
 	}
 
+	GGiCpuProfiler::GetInstance().StartCpuProfile("Cpu Update Constant Buffers");
+
 	ScriptUpdate(gt);
 
 	UpdateObjectCBs(gt);
@@ -690,6 +692,9 @@ void GDxRenderer::Update(const GGiGameTimer* gt)
 	UpdateMainPassCB(gt);
 	UpdateSkyPassCB(gt);
 	UpdateLightCB(gt);
+
+	GGiCpuProfiler::GetInstance().EndCpuProfile("Cpu Update Constant Buffers");
+
 	CullSceneObjects(gt);
 }
 
@@ -1240,6 +1245,8 @@ void GDxRenderer::CullSceneObjects(const GGiGameTimer* gt)
 	}
 
 	// Frustum culling.
+	GGiCpuProfiler::GetInstance().StartCpuProfile("Frustum Culling");
+
 	auto viewMat = dynamic_cast<GDxFloat4x4*>(pCamera->GetView());
 	if (viewMat == nullptr)
 		ThrowGGiException("Cast failed from GGiFloat4x4* to GDxFloat4x4*.");
@@ -1252,13 +1259,19 @@ void GDxRenderer::CullSceneObjects(const GGiGameTimer* gt)
 	if (revProjMat == nullptr)
 		ThrowGGiException("Cast failed from GGiFloat4x4* to GDxFloat4x4*.");
 
+	auto prevViewProjMat = dynamic_cast<GDxFloat4x4*>(pCamera->GetPrevViewProj());
+	if (prevViewProjMat == nullptr)
+		ThrowGGiException("Cast failed from GGiFloat4x4* to GDxFloat4x4*.");
+
 	XMMATRIX view = DirectX::XMLoadFloat4x4(&viewMat->GetValue());
 	XMMATRIX proj = DirectX::XMLoadFloat4x4(&projMat->GetValue());
 	XMMATRIX revProj = DirectX::XMLoadFloat4x4(&revProjMat->GetValue());
+	XMMATRIX prevViewProj = DirectX::XMLoadFloat4x4(&prevViewProjMat->GetValue());
 	XMMATRIX invView = XMMatrixInverse(&XMMatrixDeterminant(view), view);
 	//proj.r[0].m128_f32[0] = (float)((double)proj.r[0].m128_f32[0] * ((double)mClientWidth / (double)mClientHeight) / ((double)DEPTH_READBACK_BUFFER_SIZE_X / (double)DEPTH_READBACK_BUFFER_SIZE_Y));
 
 	XMMATRIX viewProj = XMMatrixMultiply(view, proj);
+	XMMATRIX invPrevViewProj = XMMatrixInverse(&XMMatrixDeterminant(prevViewProj), prevViewProj);
 
 	BoundingFrustum mCameraFrustum;
 #if USE_REVERSE_Z
@@ -1290,13 +1303,19 @@ void GDxRenderer::CullSceneObjects(const GGiGameTimer* gt)
 			so->SetCullState(CullState::FrustumCulled);
 	}
 
+	GGiCpuProfiler::GetInstance().EndCpuProfile("Frustum Culling");
+
 	// Occlusion culling
 	if (mFrameCount != 0)
 	{
+
+		GGiCpuProfiler::GetInstance().StartCpuProfile("Occlusion Culling");
+
 		// Map the data so we can read it on CPU.
 		D3D12_RANGE readbackBufferRange = { 0, 4 * DEPTH_READBACK_BUFFER_SIZE };
 		float* depthReadbackBuffer = nullptr;
 		static float outputTest[DEPTH_READBACK_BUFFER_SIZE_X * DEPTH_READBACK_BUFFER_SIZE_Y];
+		static float reprojectedDepthBuffer[DEPTH_READBACK_BUFFER_SIZE_X * DEPTH_READBACK_BUFFER_SIZE_Y];
 		ThrowIfFailed(mDepthReadbackBuffer->Map(0, &readbackBufferRange, reinterpret_cast<void**>(&depthReadbackBuffer)));
 
 #if 0
@@ -1308,6 +1327,11 @@ void GDxRenderer::CullSceneObjects(const GGiGameTimer* gt)
 
 		D3D12_RANGE emptyRange = { 0, 0 };
 		mDepthReadbackBuffer->Unmap(0, &emptyRange);
+
+		// Reproject depth buffer.
+		GGiCpuProfiler::GetInstance().StartCpuProfile("Reprojection");
+		GRiOcclusionCullingRasterizer::GetInstance().Reproject(depthReadbackBuffer, reprojectedDepthBuffer, viewProj.r, invPrevViewProj.r, DEPTH_READBACK_BUFFER_SIZE_X, DEPTH_READBACK_BUFFER_SIZE_Y);
+		GGiCpuProfiler::GetInstance().EndCpuProfile("Reprojection");
 
 		XMMATRIX worldViewProj;
 
@@ -1328,7 +1352,7 @@ void GDxRenderer::CullSceneObjects(const GGiGameTimer* gt)
 			auto bOccCulled = !GRiOcclusionCullingRasterizer::GetInstance().RasterizeTestBBoxSSE(
 				so->GetMesh()->bounds,
 				worldViewProj.r,
-				depthReadbackBuffer,
+				reprojectedDepthBuffer,
 				outputTest,
 				DEPTH_READBACK_BUFFER_SIZE_X,
 				DEPTH_READBACK_BUFFER_SIZE_Y,
@@ -1345,12 +1369,14 @@ void GDxRenderer::CullSceneObjects(const GGiGameTimer* gt)
 				so->SetCullState(CullState::OcclusionCulled);
 		}
 
-#if 0
+#if 1
 		std::ofstream testOut;
 		testOut.open("output.raw", ios::out | ios::binary);
-		testOut.write(reinterpret_cast<char*>(outputTest), DEPTH_READBACK_BUFFER_SIZE * 4);
+		testOut.write(reinterpret_cast<char*>(reprojectedDepthBuffer), DEPTH_READBACK_BUFFER_SIZE * 4);
 		testOut.close();
 #endif
+
+		GGiCpuProfiler::GetInstance().EndCpuProfile("Occlusion Culling");
 	}
 }
 
@@ -1938,7 +1964,7 @@ void GDxRenderer::BuildDescriptorHeaps()
 		+ 1 //imgui
 		+ 1 //sky cubemap
 		+ 1 //depth buffer
-		+ 1 //downsampled depth buffer
+		+ 2 //downsampled depth buffer
 		+ 1 //stencil buffer
 		+ 4 //g-buffer
 		+ 2 //tile/cluster pass srv and uav

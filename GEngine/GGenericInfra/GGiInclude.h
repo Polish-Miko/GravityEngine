@@ -7,6 +7,7 @@
 #include "Public/GGiFloat4.h"
 #include "Public/GGiException.h"
 #include "Public/GGiEngineUtil.h"
+#include "Public/GGiCpuProfiler.h"
 
 template<typename T1, typename T2>
 inline T1 DynamicCast(T2 toCast, const std::string& fileName = __FILE__, int lineNumber = __LINE__)

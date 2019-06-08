@@ -42,6 +42,9 @@
     <ClInclude Include="Public\GGiEngineUtil.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Public\GGiCpuProfiler.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -60,6 +63,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Private\GGiEngineUtil.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Private\GGiCpuProfiler.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
