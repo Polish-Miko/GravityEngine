@@ -18,6 +18,8 @@ typedef float Vec3[3];
 #define SUB_TILE_SIZE_X 8
 #define SUB_TILE_SIZE_Y 4
 
+#define Z_IGNORE_BOUND 0.005f
+
 
 const int GRiOcclusionCullingRasterizer::sBBIndexList[36] =
 {
@@ -386,7 +388,7 @@ void GRiOcclusionCullingRasterizer::ReprojectToMaskedBuffer(float* src, __m128* 
 		mMaskedDepthBuffer[i].mZMin[0] = _mm_set1_ps(0.0f);
 		mMaskedDepthBuffer[i].mZMin[1] = _mm_set1_ps(1.0f);
 	}
-
+	/*
 	__m128 readbackPos, worldPos, vertW, reprojectedPos;
 	//__m128i reprojectedPosI;
 	int u, v, tileU, tileV, subTileU, subTileV, mask, tileId, subTileId, SubIdInTile, tileIdX, tileIdY, subTileIdX, subTileIdY;
@@ -476,6 +478,83 @@ void GRiOcclusionCullingRasterizer::ReprojectToMaskedBuffer(float* src, __m128* 
 				//dst[v * mBufferWidth + u] = reprojectedPos.m128_f32[2];
 		}
 	}
+	*/
+
+	Reproject(src, mIntermediateBuffer, viewProj, invPrevViewProj);
+
+	//generate mask
+	int tileIdX, tileId, subIdInTile, mask, u, v, uv;
+	float depth;
+	float lowerZ, upperZ;
+	int lowerMask, upperMask;
+	bool bLayered;
+
+	for (auto subTileIdX = 0u; subTileIdX < mSubTileNumX; subTileIdX++)
+	{
+
+		for (auto subTileIdY = 0u; subTileIdY < mSubTileNumY; subTileIdY++)
+		{
+
+			lowerZ = 1.0f;
+			upperZ = 1.0f;
+			lowerMask = 0;
+			upperMask = 0;
+			bLayered = false;
+
+			for (auto subTileU = 0u; subTileU < 8; subTileU++)
+			{
+				for (auto subTileV = 0u; subTileV < 4; subTileV++)
+				{
+
+					tileIdX = subTileIdX / 4;
+					subIdInTile = subTileIdX % 4;
+					tileId = subTileIdY * mTileNumX + tileIdX;
+					u = subTileIdX * 8 + subTileU;
+					v = subTileIdY * 4 + subTileV;
+					uv = v * mBufferWidth + u;
+
+					depth = mIntermediateBuffer[uv];
+					mask = 1 << (subTileV * 8 + subTileU);
+
+					if (depth < Z_IGNORE_BOUND)
+						continue;
+
+					if (bLayered)
+					{
+						if (depth < lowerZ / 2)
+						{
+							;
+						}
+						else if()
+					}
+					else
+					{
+						if (depth > lowerZ * 2)
+						{
+							upperZ = min(upperZ, depth);
+							upperMask |= mask;
+							bLayered = true;
+						}
+						else if (depth < lowerZ / 2)
+						{
+							upperZ = lowerZ;
+							upperMask = lowerMask;
+							lowerZ = depth;
+							lowerMask = mask;
+						}
+						else
+						{
+							lowerZ = min(lowerZ, depth);
+							lowerMask |= mask;
+						}
+					}
+					
+				}
+			}
+
+		}
+
+	}
 }
 
 void GRiOcclusionCullingRasterizer::GenerateMaskedBufferDebugImage(float* output)
@@ -527,6 +606,7 @@ void GRiOcclusionCullingRasterizer::Init(int bufferWidth, int bufferHeight, floa
 	mSubTileNum = mSubTileNumX * mSubTileNumY;
 
 	mMaskedDepthBuffer = new ZTile[mTileNum];
+	mIntermediateBuffer = new float[mBufferWidth * mBufferHeight];
 }
 
 /*

@@ -61,6 +61,8 @@ private:
 
 	ZTile* mMaskedDepthBuffer;
 
+	float* mIntermediateBuffer;
+
 	GRiOcclusionCullingRasterizer() {}
 
 	static const int sBBIndexList[36];
