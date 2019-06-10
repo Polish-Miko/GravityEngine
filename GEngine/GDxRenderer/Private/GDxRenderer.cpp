@@ -165,8 +165,18 @@ void GDxRenderer::Initialize()
 
 	// Wait until initialization is complete.
 	FlushCommandQueue();
-	HRESULT hr = md3dDevice->GetDeviceRemovedReason();
-	hr = hr;
+
+	GRiOcclusionCullingRasterizer::GetInstance().Init(
+		DEPTH_READBACK_BUFFER_SIZE_X,
+		DEPTH_READBACK_BUFFER_SIZE_Y,
+		Z_LOWER_BOUND,
+		Z_UPPER_BOUND,
+#if USE_REVERSE_Z
+		true
+#else
+		false
+#endif
+		);
 }
 
 void GDxRenderer::Draw(const GGiGameTimer* gt)
@@ -576,8 +586,7 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 	}
 
 	// Debug Pass
-	bool bDrawDebugQuad = false;
-	if (bDrawDebugQuad)
+#if 0
 	{
 		GDxGpuProfiler::GetGpuProfiler().StartGpuProfile("Debug Pass");
 
@@ -606,6 +615,7 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 
 		GDxGpuProfiler::GetGpuProfiler().EndGpuProfile();
 	}
+#endif
 
 	// Immediate Mode GUI Pass
 	{
@@ -1244,6 +1254,10 @@ void GDxRenderer::CullSceneObjects(const GGiGameTimer* gt)
 		so->SetCullState(CullState::Visible);
 	}
 
+	numVisible = 0;
+	numFrustumCulled = 0;
+	numOcclusionCulled = 0;
+
 	// Frustum culling.
 	GGiCpuProfiler::GetInstance().StartCpuProfile("Frustum Culling");
 
@@ -1300,7 +1314,10 @@ void GDxRenderer::CullSceneObjects(const GGiGameTimer* gt)
 
 		// Perform the box/frustum intersection test in local space.
 		if ((mCameraFrustum.Contains(worldBounds) == DirectX::DISJOINT))
+		{
 			so->SetCullState(CullState::FrustumCulled);
+			numFrustumCulled++;
+		}
 	}
 
 	GGiCpuProfiler::GetInstance().EndCpuProfile("Frustum Culling");
@@ -1318,7 +1335,7 @@ void GDxRenderer::CullSceneObjects(const GGiGameTimer* gt)
 		static float reprojectedDepthBuffer[DEPTH_READBACK_BUFFER_SIZE_X * DEPTH_READBACK_BUFFER_SIZE_Y];
 		ThrowIfFailed(mDepthReadbackBuffer->Map(0, &readbackBufferRange, reinterpret_cast<void**>(&depthReadbackBuffer)));
 
-#if 0
+#if 1
 		std::ofstream fout;
 		fout.open("depth.raw", ios::out | ios::binary);
 		fout.write(reinterpret_cast<char*>(depthReadbackBuffer), DEPTH_READBACK_BUFFER_SIZE * 4);
@@ -1330,11 +1347,31 @@ void GDxRenderer::CullSceneObjects(const GGiGameTimer* gt)
 
 		// Reproject depth buffer.
 		GGiCpuProfiler::GetInstance().StartCpuProfile("Reprojection");
-		GRiOcclusionCullingRasterizer::GetInstance().Reproject(depthReadbackBuffer, reprojectedDepthBuffer, viewProj.r, invPrevViewProj.r, DEPTH_READBACK_BUFFER_SIZE_X, DEPTH_READBACK_BUFFER_SIZE_Y);
+
+#if USE_MASKED_DEPTH_BUFFER
+		GRiOcclusionCullingRasterizer::GetInstance().ReprojectToMaskedBuffer(
+			depthReadbackBuffer,
+			viewProj.r,
+			invPrevViewProj.r
+		);
+#else
+		GRiOcclusionCullingRasterizer::GetInstance().Reproject(
+			depthReadbackBuffer,
+			reprojectedDepthBuffer,
+			viewProj.r,
+			invPrevViewProj.r
+		);
+#endif
+
+#if 1
+		GRiOcclusionCullingRasterizer::GetInstance().GenerateMaskedBufferDebugImage(outputTest);
+#endif
+
 		GGiCpuProfiler::GetInstance().EndCpuProfile("Reprojection");
 
 		XMMATRIX worldViewProj;
 
+		/*
 		for (auto so : pSceneObjectLayer[(int)RenderLayer::Deferred])
 		{
 			if (so->GetCullState() == CullState::FrustumCulled)
@@ -1353,26 +1390,25 @@ void GDxRenderer::CullSceneObjects(const GGiGameTimer* gt)
 				so->GetMesh()->bounds,
 				worldViewProj.r,
 				reprojectedDepthBuffer,
-				outputTest,
-				DEPTH_READBACK_BUFFER_SIZE_X,
-				DEPTH_READBACK_BUFFER_SIZE_Y,
-				Z_LOWER_BOUND,
-				Z_UPPER_BOUND,
-#if USE_REVERSE_Z
-				true
-#else
-				false
-#endif
+				outputTest
 			);
 
 			if (bOccCulled)
+			{
+				numOcclusionCulled++;
 				so->SetCullState(CullState::OcclusionCulled);
+			}
+			else
+			{
+				numVisible++;
+			}
 		}
+		//*/
 
 #if 1
 		std::ofstream testOut;
 		testOut.open("output.raw", ios::out | ios::binary);
-		testOut.write(reinterpret_cast<char*>(reprojectedDepthBuffer), DEPTH_READBACK_BUFFER_SIZE * 4);
+		testOut.write(reinterpret_cast<char*>(outputTest), DEPTH_READBACK_BUFFER_SIZE * 4);
 		testOut.close();
 #endif
 

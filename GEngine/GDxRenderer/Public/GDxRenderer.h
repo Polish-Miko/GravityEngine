@@ -34,6 +34,8 @@ using namespace DirectX::PackedVector;
 
 #define SKY_CUBEMAP_SIZE 1024
 
+#define USE_MASKED_DEPTH_BUFFER 1
+
 // should be the same with TiledDeferredCS.hlsl
 //#define DEFER_TILE_SIZE_X 16
 //#define DEFER_TILE_SIZE_Y 16
@@ -245,6 +247,10 @@ protected:
 	UINT mTaaPassSrvIndex = 0;
 	UINT mMotionBlurSrvIndex = 0;
 	UINT mIblIndex = 0;
+
+	int numVisible = 0;
+	int numFrustumCulled = 0;
+	int numOcclusionCulled = 0;
 
 	UINT mTaaHistoryIndex = 0;
 

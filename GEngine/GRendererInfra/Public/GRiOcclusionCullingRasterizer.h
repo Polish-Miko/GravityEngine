@@ -14,6 +14,12 @@ struct SSEVFloat4
 	__m128 W;
 };
 
+struct ZTile
+{
+	__m128        mZMin[2];
+	__m128i       mMask;
+};
+
 class GRiOcclusionCullingRasterizer
 {
 
@@ -25,11 +31,35 @@ public:
 
 	static GRiOcclusionCullingRasterizer& GetInstance();
 
-	void Reproject(float* src, float* dst, __m128* viewProj, __m128* invPrevViewProj, int bufferWidth, int bufferHeight);
+	void Init(int bufferWidth, int bufferHeight, float zLowerBound, float zUpperBound, bool reverseZ);
 
-	bool RasterizeTestBBoxSSE(GRiBoundingBox& box, __m128* worldViewProj, float* buffer, float* output, int clientWidth, int clientHeight, float zLowerBound, float zUpperBound, bool bReverseZ);
+	void Reproject(float* src, float* dst, __m128* viewProj, __m128* invPrevViewProj);
+
+	void ReprojectToMaskedBuffer(float* src, __m128* viewProj, __m128* invPrevViewProj);
+
+	bool RasterizeTestBBoxSSE(GRiBoundingBox& box, __m128* worldViewProj, float* buffer, float* output);
+
+	void GenerateMaskedBufferDebugImage(float* output);
 
 private:
+
+	int mBufferWidth = 0;
+	int mBufferHeight = 0;
+
+	int mTileNumX = 0;
+	int mTileNumY = 0;
+	int mTileNum = 0;
+
+	int mSubTileNumX = 0;
+	int mSubTileNumY = 0;
+	int mSubTileNum = 0;
+
+	float mZLowerBound = 0.0f;
+	float mZUpperBound = 0.0f;
+
+	bool bReverseZ = true;
+
+	ZTile* mMaskedDepthBuffer;
 
 	GRiOcclusionCullingRasterizer() {}
 
