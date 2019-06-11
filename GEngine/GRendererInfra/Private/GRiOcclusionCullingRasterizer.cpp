@@ -18,7 +18,7 @@ typedef float Vec3[3];
 #define SUB_TILE_SIZE_X 8
 #define SUB_TILE_SIZE_Y 4
 
-#define Z_IGNORE_BOUND 0.005f
+#define Z_IGNORE_BOUND 0.0003f
 
 
 const int GRiOcclusionCullingRasterizer::sBBIndexList[36] =
@@ -488,6 +488,7 @@ void GRiOcclusionCullingRasterizer::ReprojectToMaskedBuffer(float* src, __m128* 
 	float lowerZ, upperZ;
 	int lowerMask, upperMask;
 	bool bLayered;
+	std::bitset<32> lMaskBit, uMaskBit, totalMaskBit;
 
 	for (auto subTileIdX = 0u; subTileIdX < mSubTileNumX; subTileIdX++)
 	{
@@ -501,14 +502,15 @@ void GRiOcclusionCullingRasterizer::ReprojectToMaskedBuffer(float* src, __m128* 
 			upperMask = 0;
 			bLayered = false;
 
+			tileIdX = subTileIdX / 4;
+			subIdInTile = subTileIdX % 4;
+			tileId = subTileIdY * mTileNumX + tileIdX;
+
 			for (auto subTileU = 0u; subTileU < 8; subTileU++)
 			{
 				for (auto subTileV = 0u; subTileV < 4; subTileV++)
 				{
 
-					tileIdX = subTileIdX / 4;
-					subIdInTile = subTileIdX % 4;
-					tileId = subTileIdY * mTileNumX + tileIdX;
 					u = subTileIdX * 8 + subTileU;
 					v = subTileIdY * 4 + subTileV;
 					uv = v * mBufferWidth + u;
@@ -525,22 +527,51 @@ void GRiOcclusionCullingRasterizer::ReprojectToMaskedBuffer(float* src, __m128* 
 						{
 							;
 						}
-						else if()
+						else if (depth < lowerZ)
+						{
+							lowerZ = depth;
+							lowerMask |= mask;
+						}
+						else if (depth > upperZ * 2)
+						{
+							lowerZ = upperZ;
+							lowerMask = upperMask;
+							upperZ = depth;
+							upperMask = mask;
+						}
+						else if (depth > upperZ)
+						{
+							upperMask |= mask;
+						}
+						// lowerZ < depth < upperZ
+						else
+						{
+							if (upperZ - depth > depth - lowerZ)
+							{
+								lowerMask |= mask;
+							}
+							else
+							{
+								upperZ = depth;
+								upperMask |= mask;
+							}
+						}
 					}
 					else
 					{
 						if (depth > lowerZ * 2)
 						{
-							upperZ = min(upperZ, depth);
+							upperZ = depth;
 							upperMask |= mask;
 							bLayered = true;
 						}
-						else if (depth < lowerZ / 2)
+						else if (depth < lowerZ / 2 && lowerZ < 1.0f)
 						{
 							upperZ = lowerZ;
 							upperMask = lowerMask;
 							lowerZ = depth;
 							lowerMask = mask;
+							bLayered = true;
 						}
 						else
 						{
@@ -550,6 +581,37 @@ void GRiOcclusionCullingRasterizer::ReprojectToMaskedBuffer(float* src, __m128* 
 					}
 					
 				}
+			}
+
+			if (bLayered)
+			{
+				lMaskBit = std::bitset<32>(lowerMask);
+				uMaskBit = std::bitset<32>(upperMask);
+				totalMaskBit = lMaskBit | uMaskBit;
+				if (totalMaskBit.count() >= 30)
+				{
+					mMaskedDepthBuffer[tileId].mZMin[0].m128_f32[subIdInTile] = lowerZ;
+					mMaskedDepthBuffer[tileId].mZMin[1].m128_f32[subIdInTile] = upperZ;
+					mMaskedDepthBuffer[tileId].mMask.m128i_i32[subIdInTile] = upperMask;
+				}
+				else if (uMaskBit.count() >= lMaskBit.count())
+				{
+					mMaskedDepthBuffer[tileId].mZMin[0].m128_f32[subIdInTile] = 0.0f;
+					mMaskedDepthBuffer[tileId].mZMin[1].m128_f32[subIdInTile] = upperZ;
+					mMaskedDepthBuffer[tileId].mMask.m128i_i32[subIdInTile] = upperMask;
+				}
+				else
+				{
+					mMaskedDepthBuffer[tileId].mZMin[0].m128_f32[subIdInTile] = 0.0f;
+					mMaskedDepthBuffer[tileId].mZMin[1].m128_f32[subIdInTile] = lowerZ;
+					mMaskedDepthBuffer[tileId].mMask.m128i_i32[subIdInTile] = lowerMask;
+				}
+			}
+			else
+			{
+				mMaskedDepthBuffer[tileId].mZMin[0].m128_f32[subIdInTile] = 0.0f;
+				mMaskedDepthBuffer[tileId].mZMin[1].m128_f32[subIdInTile] = lowerZ;
+				mMaskedDepthBuffer[tileId].mMask.m128i_i32[subIdInTile] = lowerMask;
 			}
 
 		}
