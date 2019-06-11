@@ -19,6 +19,7 @@ typedef float Vec3[3];
 #define SUB_TILE_SIZE_Y 4
 
 #define Z_IGNORE_BOUND 0.0003f
+#define LAYER_BOUND 1.3f
 
 
 const int GRiOcclusionCullingRasterizer::sBBIndexList[36] =
@@ -523,7 +524,7 @@ void GRiOcclusionCullingRasterizer::ReprojectToMaskedBuffer(float* src, __m128* 
 
 					if (bLayered)
 					{
-						if (depth < lowerZ / 2)
+						if (depth < lowerZ / LAYER_BOUND)
 						{
 							;
 						}
@@ -532,7 +533,7 @@ void GRiOcclusionCullingRasterizer::ReprojectToMaskedBuffer(float* src, __m128* 
 							lowerZ = depth;
 							lowerMask |= mask;
 						}
-						else if (depth > upperZ * 2)
+						else if (depth > upperZ * LAYER_BOUND)
 						{
 							lowerZ = upperZ;
 							lowerMask = upperMask;
@@ -559,13 +560,13 @@ void GRiOcclusionCullingRasterizer::ReprojectToMaskedBuffer(float* src, __m128* 
 					}
 					else
 					{
-						if (depth > lowerZ * 2)
+						if (depth > lowerZ * LAYER_BOUND)
 						{
 							upperZ = depth;
 							upperMask |= mask;
 							bLayered = true;
 						}
-						else if (depth < lowerZ / 2 && lowerZ < 1.0f)
+						else if (depth < lowerZ / LAYER_BOUND && lowerZ < 1.0f)
 						{
 							upperZ = lowerZ;
 							upperMask = lowerMask;

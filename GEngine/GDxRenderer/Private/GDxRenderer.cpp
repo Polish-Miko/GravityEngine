@@ -1408,6 +1408,10 @@ void GDxRenderer::CullSceneObjects(const GGiGameTimer* gt)
 #if 1
 		std::ofstream testOut;
 		testOut.open("output.raw", ios::out | ios::binary);
+#if 1
+		for (auto i = 0u; i < DEPTH_READBACK_BUFFER_SIZE; i++)
+			outputTest[i] *= 10;
+#endif
 		testOut.write(reinterpret_cast<char*>(outputTest), DEPTH_READBACK_BUFFER_SIZE * 4);
 		testOut.close();
 #endif
