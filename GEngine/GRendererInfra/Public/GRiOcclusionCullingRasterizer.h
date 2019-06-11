@@ -37,7 +37,9 @@ public:
 
 	void ReprojectToMaskedBuffer(float* src, __m128* viewProj, __m128* invPrevViewProj);
 
-	bool RasterizeTestBBoxSSE(GRiBoundingBox& box, __m128* worldViewProj, float* buffer, float* output);
+	bool RasterizeAndTestBBox(GRiBoundingBox& box, __m128* worldViewProj, float* buffer, float* output);
+
+	bool RasterizeAndTestBBoxMasked(GRiBoundingBox& box, __m128* worldViewProj);
 
 	void GenerateMaskedBufferDebugImage(float* output);
 

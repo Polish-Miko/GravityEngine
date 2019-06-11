@@ -18,8 +18,9 @@ typedef float Vec3[3];
 #define SUB_TILE_SIZE_X 8
 #define SUB_TILE_SIZE_Y 4
 
-#define Z_IGNORE_BOUND 0.0003f
-#define LAYER_BOUND 1.3f
+#define Z_IGNORE_BOUND 0.00005f
+#define LAYER_BOUND 1.35f
+#define TOTAL_MASK_BIT_THRESHOLD 20
 
 
 const int GRiOcclusionCullingRasterizer::sBBIndexList[36] =
@@ -186,7 +187,7 @@ void GRiOcclusionCullingRasterizer::Reproject(float* src, float* dst, __m128* vi
 	}
 }
 
-bool GRiOcclusionCullingRasterizer::RasterizeTestBBoxSSE(GRiBoundingBox& box, __m128* worldViewProj, float* buffer, float* output)
+bool GRiOcclusionCullingRasterizer::RasterizeAndTestBBox(GRiBoundingBox& box, __m128* worldViewProj, float* buffer, float* output)
 {
 	__m128 verticesSSE[8];
 
@@ -589,7 +590,7 @@ void GRiOcclusionCullingRasterizer::ReprojectToMaskedBuffer(float* src, __m128* 
 				lMaskBit = std::bitset<32>(lowerMask);
 				uMaskBit = std::bitset<32>(upperMask);
 				totalMaskBit = lMaskBit | uMaskBit;
-				if (totalMaskBit.count() >= 30)
+				if (totalMaskBit.count() >= TOTAL_MASK_BIT_THRESHOLD)
 				{
 					mMaskedDepthBuffer[tileId].mZMin[0].m128_f32[subIdInTile] = lowerZ;
 					mMaskedDepthBuffer[tileId].mZMin[1].m128_f32[subIdInTile] = upperZ;
@@ -605,7 +606,7 @@ void GRiOcclusionCullingRasterizer::ReprojectToMaskedBuffer(float* src, __m128* 
 				{
 					mMaskedDepthBuffer[tileId].mZMin[0].m128_f32[subIdInTile] = 0.0f;
 					mMaskedDepthBuffer[tileId].mZMin[1].m128_f32[subIdInTile] = lowerZ;
-					mMaskedDepthBuffer[tileId].mMask.m128i_i32[subIdInTile] = lowerMask;
+					mMaskedDepthBuffer[tileId].mMask.m128i_i32[subIdInTile] = upperMask | lowerMask;
 				}
 			}
 			else
@@ -670,6 +671,201 @@ void GRiOcclusionCullingRasterizer::Init(int bufferWidth, int bufferHeight, floa
 
 	mMaskedDepthBuffer = new ZTile[mTileNum];
 	mIntermediateBuffer = new float[mBufferWidth * mBufferHeight];
+}
+
+bool GRiOcclusionCullingRasterizer::RasterizeAndTestBBoxMasked(GRiBoundingBox& box, __m128* worldViewProj)
+{
+	__m128 verticesSSE[8];
+
+	// to avoid self-occluding
+	float expFac = 1.05f;
+	float Extents[3] = { box.Extents[0] * expFac,  box.Extents[1] * expFac,  box.Extents[2] * expFac };
+
+	float vMin[3] = { box.Center[0] - Extents[0], box.Center[1] - Extents[1], box.Center[2] - Extents[2] };
+	float vMax[3] = { box.Center[0] + Extents[0], box.Center[1] + Extents[1], box.Center[2] + Extents[2] };
+
+	// fill vertices
+	float vertices[8][4] = {
+		{vMin[0], vMin[1], vMin[2], 1.0f},
+		{vMax[0], vMin[1], vMin[2], 1.0f},
+		{vMax[0], vMax[1], vMin[2], 1.0f},
+		{vMin[0], vMax[1], vMin[2], 1.0f},
+		{vMin[0], vMin[1], vMax[2], 1.0f},
+		{vMax[0], vMin[1], vMax[2], 1.0f},
+		{vMax[0], vMax[1], vMax[2], 1.0f},
+		{vMin[0], vMax[1], vMax[2], 1.0f}
+	};
+	bool bNearClip[8];
+
+	// transforms
+	/*
+	for (int i = 0; i < 8; i++)
+	{
+		verticesSSE[i] = _mm_loadu_ps(vertices[i]);
+
+		verticesSSE[i] = SSETransformCoords(&verticesSSE[i], worldViewProj);
+
+		__m128 vertX = _mm_shuffle_ps(verticesSSE[i], verticesSSE[i], _MM_SHUFFLE(0, 0, 0, 0)); // xxxx
+		__m128 vertY = _mm_shuffle_ps(verticesSSE[i], verticesSSE[i], _MM_SHUFFLE(1, 1, 1, 1)); // yyyy
+		__m128 vertZ = _mm_shuffle_ps(verticesSSE[i], verticesSSE[i], _MM_SHUFFLE(2, 2, 2, 2)); // zzzz
+		__m128 vertW = _mm_shuffle_ps(verticesSSE[i], verticesSSE[i], _MM_SHUFFLE(3, 3, 3, 3)); // wwww
+		static const __m128 sign_mask = _mm_set1_ps(-0.f); // -0.f = 1 << 31
+		vertW = _mm_andnot_ps(sign_mask, vertW); // abs
+		vertW = _mm_shuffle_ps(vertW, _mm_set1_ps(1.0f), _MM_SHUFFLE(0, 0, 0, 0)); //w,w,1,1
+		vertW = _mm_shuffle_ps(vertW, vertW, _MM_SHUFFLE(3, 0, 0, 0)); //w,w,w,1
+
+		// project
+		verticesSSE[i] = _mm_div_ps(verticesSSE[i], vertW);
+
+		// now vertices are between -1 and 1
+		const __m128 sadd = _mm_setr_ps(clientWidth * 0.5, clientHeight * 0.5, 0, 0);
+		const __m128 smult = _mm_setr_ps(clientWidth * 0.5, clientHeight * (-0.5), 1, 1);
+
+		verticesSSE[i] = _mm_add_ps(sadd, _mm_mul_ps(verticesSSE[i], smult));
+
+		for (auto j = 0u; j < 3; j++)
+		{
+			vertices[i][j] = verticesSSE[i].m128_f32[j];
+		}
+		vertices[i][2] = 1 / vertices[i][2];
+	}
+	*/
+	float wvpF[4][4] = {
+		{worldViewProj[0].m128_f32[0], worldViewProj[0].m128_f32[1], worldViewProj[0].m128_f32[2], worldViewProj[0].m128_f32[3]},
+		{worldViewProj[1].m128_f32[0], worldViewProj[1].m128_f32[1], worldViewProj[1].m128_f32[2], worldViewProj[1].m128_f32[3]},
+		{worldViewProj[2].m128_f32[0], worldViewProj[2].m128_f32[1], worldViewProj[2].m128_f32[2], worldViewProj[2].m128_f32[3]},
+		{worldViewProj[3].m128_f32[0], worldViewProj[3].m128_f32[1], worldViewProj[3].m128_f32[2], worldViewProj[3].m128_f32[3]}
+	};
+
+	float temp[8][4];
+
+	for (int i = 0; i < 8; i++)
+	{
+		bNearClip[i] = false;
+
+		for (auto j = 0u; j < 4; j++)
+		{
+			temp[i][j] = 0;
+			for (auto k = 0u; k < 4; k++)
+			{
+				temp[i][j] += vertices[i][k] * wvpF[k][j];
+			}
+		}
+
+		vertices[i][0] = temp[i][0];
+		vertices[i][1] = temp[i][1];
+		vertices[i][2] = temp[i][2];
+		vertices[i][3] = temp[i][3];
+
+		vertices[i][0] /= abs(vertices[i][3]);
+		vertices[i][1] /= abs(vertices[i][3]);
+		vertices[i][2] /= abs(vertices[i][3]);
+		//vertices[i][2] /= vertices[i][3];// z remains negative if the triangle is beyond near plane.
+
+		if (vertices[i][3] < mZLowerBound)
+			bNearClip[i] = true;
+
+		vertices[i][0] = (vertices[i][0] + 1) * 0.5f * mBufferWidth;
+		vertices[i][1] = (-vertices[i][1] + 1) * 0.5f * mBufferHeight;
+
+		if (bReverseZ)
+			vertices[i][2] = 1 / (1 - vertices[i][2]);
+		else
+			vertices[i][2] = 1 / vertices[i][2];
+	}
+
+	for (auto i = 0u; i < 36; i += 3)
+	{
+		Vec3 v0, v1, v2;
+
+		v0[0] = vertices[sBBIndexList[i + 0]][0];
+		v0[1] = vertices[sBBIndexList[i + 0]][1];
+		v0[2] = vertices[sBBIndexList[i + 0]][2];
+		v1[0] = vertices[sBBIndexList[i + 1]][0];
+		v1[1] = vertices[sBBIndexList[i + 1]][1];
+		v1[2] = vertices[sBBIndexList[i + 1]][2];
+		v2[0] = vertices[sBBIndexList[i + 2]][0];
+		v2[1] = vertices[sBBIndexList[i + 2]][1];
+		v2[2] = vertices[sBBIndexList[i + 2]][2];
+
+		float xmin = min3(v0[0], v1[0], v2[0]);
+		float ymin = min3(v0[1], v1[1], v2[1]);
+		float xmax = max3(v0[0], v1[0], v2[0]);
+		float ymax = max3(v0[1], v1[1], v2[1]);
+
+		// the triangle is out of screen
+		if (xmin > mBufferWidth - 1 || xmax < 0 || ymin > mBufferHeight - 1 || ymax < 0)
+			continue;
+
+		bool bTriangleNearClipped = bNearClip[sBBIndexList[i + 0]] || bNearClip[sBBIndexList[i + 1]] || bNearClip[sBBIndexList[i + 2]];
+
+		//if the bounding box is beyond the near plane, don't do near plane clip and give up occlusion culling for this object.
+#if !OUTPUT_TEST
+		if (bTriangleNearClipped)
+			return true;
+#endif
+
+		//backface culling
+		Vec3 e1, e2;
+		e1[0] = v1[0] - v0[0];
+		e1[1] = v1[1] - v0[1];
+		e2[0] = v2[0] - v0[0];
+		e2[1] = v2[1] - v0[1];
+		if (e1[0] * e2[1] - e1[1] * e2[0] < 0)
+			continue;
+
+		// be careful xmin/xmax/ymin/ymax can be negative. Don't cast to uint32_t
+		uint32_t x0 = max(int32_t(0), (int32_t)(std::floor(xmin)));
+		uint32_t x1 = min(int32_t(mBufferWidth) - 1, (int32_t)(std::floor(xmax)));
+		uint32_t y0 = max(int32_t(0), (int32_t)(std::floor(ymin)));
+		uint32_t y1 = min(int32_t(mBufferHeight) - 1, (int32_t)(std::floor(ymax)));
+
+		float area = edgeFunction(v0, v1, v2);
+
+		for (uint32_t y = y0; y <= y1; ++y)
+		{
+			for (uint32_t x = x0; x <= x1; ++x)
+			{
+				Vec3 pixelSample;
+				pixelSample[0] = (float)x + 0.5f;
+				pixelSample[1] = (float)y + 0.5f;
+				pixelSample[2] = 0.0f;
+
+				float w0 = edgeFunction(v1, v2, pixelSample);
+				float w1 = edgeFunction(v2, v0, pixelSample);
+				float w2 = edgeFunction(v0, v1, pixelSample);
+				if (w0 >= 0 && w1 >= 0 && w2 >= 0)
+				{
+					w0 /= area;
+					w1 /= area;
+					w2 /= area;
+					float oneOverZ = v0[2] * w0 + v1[2] * w1 + v2[2] * w2;
+					float z;
+					if (bReverseZ)
+						z = 1.0f - 1.0f / oneOverZ;
+					else
+						z = 1.0f / oneOverZ;
+
+#if OUTPUT_TEST
+					if (bTriangleNearClipped)
+						output[y * clientWidth + x] = 1.0f;
+					else
+						output[y * clientWidth + x] = z;
+#endif
+
+					// [comment]
+					// Depth-buffer test
+					// [/comment]
+					//if ((bReverseZ && (z > buffer[y * mBufferWidth + x])) || (!bReverseZ && (z < buffer[y * mBufferWidth + x])))
+					{
+						return true;
+						//buffer[y * clientWidth + x] = z;
+					}
+				}
+			}
+		}
+	}
+	return false;
 }
 
 /*

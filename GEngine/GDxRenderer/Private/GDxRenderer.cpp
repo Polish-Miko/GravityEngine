@@ -1335,11 +1335,19 @@ void GDxRenderer::CullSceneObjects(const GGiGameTimer* gt)
 		static float reprojectedDepthBuffer[DEPTH_READBACK_BUFFER_SIZE_X * DEPTH_READBACK_BUFFER_SIZE_Y];
 		ThrowIfFailed(mDepthReadbackBuffer->Map(0, &readbackBufferRange, reinterpret_cast<void**>(&depthReadbackBuffer)));
 
-#if 1
+#if 0
 		std::ofstream fout;
+#if 0
+		for (auto i = 0u; i < DEPTH_READBACK_BUFFER_SIZE; i++)
+			depthReadbackBuffer[i] *= 10;
+#endif
 		fout.open("depth.raw", ios::out | ios::binary);
 		fout.write(reinterpret_cast<char*>(depthReadbackBuffer), DEPTH_READBACK_BUFFER_SIZE * 4);
 		fout.close();
+#if 0
+		for (auto i = 0u; i < DEPTH_READBACK_BUFFER_SIZE; i++)
+			depthReadbackBuffer[i] /= 10;
+#endif
 #endif
 
 		D3D12_RANGE emptyRange = { 0, 0 };
@@ -1363,7 +1371,7 @@ void GDxRenderer::CullSceneObjects(const GGiGameTimer* gt)
 		);
 #endif
 
-#if 1
+#if 0
 		GRiOcclusionCullingRasterizer::GetInstance().GenerateMaskedBufferDebugImage(outputTest);
 #endif
 
@@ -1371,7 +1379,7 @@ void GDxRenderer::CullSceneObjects(const GGiGameTimer* gt)
 
 		XMMATRIX worldViewProj;
 
-		/*
+		//*
 		for (auto so : pSceneObjectLayer[(int)RenderLayer::Deferred])
 		{
 			if (so->GetCullState() == CullState::FrustumCulled)
@@ -1386,11 +1394,9 @@ void GDxRenderer::CullSceneObjects(const GGiGameTimer* gt)
 
 			worldViewProj = XMMatrixMultiply(sceneObjectTrans, viewProj);
 
-			auto bOccCulled = !GRiOcclusionCullingRasterizer::GetInstance().RasterizeTestBBoxSSE(
+			auto bOccCulled = !GRiOcclusionCullingRasterizer::GetInstance().RasterizeAndTestBBoxMasked(
 				so->GetMesh()->bounds,
-				worldViewProj.r,
-				reprojectedDepthBuffer,
-				outputTest
+				worldViewProj.r
 			);
 
 			if (bOccCulled)
@@ -1405,10 +1411,10 @@ void GDxRenderer::CullSceneObjects(const GGiGameTimer* gt)
 		}
 		//*/
 
-#if 1
+#if 0
 		std::ofstream testOut;
 		testOut.open("output.raw", ios::out | ios::binary);
-#if 1
+#if 0
 		for (auto i = 0u; i < DEPTH_READBACK_BUFFER_SIZE; i++)
 			outputTest[i] *= 10;
 #endif
