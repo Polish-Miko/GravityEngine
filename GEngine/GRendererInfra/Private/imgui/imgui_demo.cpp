@@ -93,8 +93,10 @@ Index of this file:
 // Play it nice with Windows users. Notepad in 2017 still doesn't display text data with Unix-style \n.
 #ifdef _WIN32
 #define IM_NEWLINE  "\r\n"
+#if defined(_MSC_VER) && _MSC_VER < 1500 // VC++ 8.0 and below
 #define snprintf    _snprintf
 #define vsnprintf   _vsnprintf
+#endif
 #else
 #define IM_NEWLINE  "\n"
 #endif
