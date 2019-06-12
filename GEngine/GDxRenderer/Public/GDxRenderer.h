@@ -134,7 +134,7 @@ protected:
 	void UpdateLightCB(const GGiGameTimer* gt);
 	void CullSceneObjects(const GGiGameTimer* gt);
 
-	void Task_FrustumCull(GRiSceneObject* so, DirectX::XMMATRIX& view, DirectX::BoundingFrustum& cameraFrustum);
+	static void Task_FrustumCull(GRiSceneObject* so, DirectX::XMMATRIX& view, DirectX::BoundingFrustum& cameraFrustum);
 
 	void InitializeGpuProfiler();
 	void BuildRootSignature();

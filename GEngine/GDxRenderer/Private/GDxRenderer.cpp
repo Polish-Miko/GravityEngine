@@ -1248,9 +1248,9 @@ void GDxRenderer::UpdateSkyPassCB(const GGiGameTimer* gt)
 
 void GDxRenderer::CullSceneObjects(const GGiGameTimer* gt)
 {
-
 	static auto threadNum = thread::hardware_concurrency();
-	static boost::asio::thread_pool pool(threadNum);
+	static boost::asio::thread_pool pool(threadNum), poolOC(threadNum);
+	boost::basic_thread_pool tp1(threadNum), tp2(threadNum);
 
 	// Reset cull state.
 	for (auto so : pSceneObjectLayer[(int)RenderLayer::Deferred])
@@ -1300,6 +1300,8 @@ void GDxRenderer::CullSceneObjects(const GGiGameTimer* gt)
 
 	for (auto so : pSceneObjectLayer[(int)RenderLayer::Deferred])
 	{
+		tp1.submit(boost::bind(GDxRenderer::Task_FrustumCull, so, boost::ref(view), boost::ref(cameraFrustum)));
+		/*
 		boost::asio::post(pool, [so, &view, &cameraFrustum]
 		{
 			GDxFloat4x4* dxTrans = dynamic_cast<GDxFloat4x4*>(so->GetTransform());
@@ -1325,9 +1327,11 @@ void GDxRenderer::CullSceneObjects(const GGiGameTimer* gt)
 			}
 		}
 		);
+		*/
 	}
 
-	pool.join();
+	tp1.join();
+	//pool.join();
 
 	GGiCpuProfiler::GetInstance().EndCpuProfile("Frustum Culling");
 
@@ -1394,7 +1398,7 @@ void GDxRenderer::CullSceneObjects(const GGiGameTimer* gt)
 			if (so->GetCullState() == CullState::FrustumCulled)
 				continue;
 
-			boost::asio::post(pool, [so, &viewProj]
+			boost::asio::post(poolOC, [so, &viewProj]
 			{
 				GDxFloat4x4* dxTrans = dynamic_cast<GDxFloat4x4*>(so->GetTransform());
 				if (dxTrans == nullptr)
@@ -1427,7 +1431,7 @@ void GDxRenderer::CullSceneObjects(const GGiGameTimer* gt)
 			);
 		}
 
-		pool.join();
+		poolOC.join();
 
 		for (auto so : pSceneObjectLayer[(int)RenderLayer::Deferred])
 		{

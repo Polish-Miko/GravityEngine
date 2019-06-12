@@ -17,6 +17,10 @@
 #include <thread>
 #include <boost/asio/thread_pool.hpp>
 #include <boost/asio/post.hpp>
+#include <boost/thread/thread_pool.hpp>
+#include <boost/thread.hpp>
+#include <boost/asio/io_service.hpp>
+#include <boost/bind.hpp>
 #include <boost/archive/tmpdir.hpp>
 #include <boost/archive/text_iarchive.hpp>
 #include <boost/archive/text_oarchive.hpp>
