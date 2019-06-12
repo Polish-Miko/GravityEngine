@@ -17,11 +17,26 @@ typedef float Vec3[3];
 #define TILE_SIZE_Y 4
 #define SUB_TILE_SIZE_X 8
 #define SUB_TILE_SIZE_Y 4
+#define TILE_WIDTH_SHIFT 5
+#define TILE_HEIGHT_SHIFT 2
+#define SIMD_SUB_TILE_COL_OFFSET _mm_setr_epi32(0, SUB_TILE_SIZE_X, SUB_TILE_SIZE_X * 2, SUB_TILE_SIZE_X * 3)
+#define SIMD_SUB_TILE_ROW_OFFSET _mm_setzero_si128()
+
+#define QUICK_MASK 0
 
 #define Z_IGNORE_BOUND 0.00005f
 #define LAYER_BOUND 1.35f
 #define TOTAL_MASK_BIT_THRESHOLD 20
 
+
+
+template<typename T, typename Y> __forceinline T simd_cast(Y A);
+template<> __forceinline __m128  simd_cast<__m128>(float A) { return _mm_set1_ps(A); }
+template<> __forceinline __m128  simd_cast<__m128>(__m128i A) { return _mm_castsi128_ps(A); }
+template<> __forceinline __m128  simd_cast<__m128>(__m128 A) { return A; }
+template<> __forceinline __m128i simd_cast<__m128i>(int A) { return _mm_set1_epi32(A); }
+template<> __forceinline __m128i simd_cast<__m128i>(__m128 A) { return _mm_castps_si128(A); }
+template<> __forceinline __m128i simd_cast<__m128i>(__m128i A) { return A; }
 
 const int GRiOcclusionCullingRasterizer::sBBIndexList[36] =
 {
@@ -673,7 +688,7 @@ void GRiOcclusionCullingRasterizer::Init(int bufferWidth, int bufferHeight, floa
 	mIntermediateBuffer = new float[mBufferWidth * mBufferHeight];
 }
 
-bool GRiOcclusionCullingRasterizer::RasterizeAndTestBBoxMasked(GRiBoundingBox& box, __m128* worldViewProj)
+bool GRiOcclusionCullingRasterizer::RectTestBBoxMasked(GRiBoundingBox& box, __m128* worldViewProj)
 {
 	__m128 verticesSSE[8];
 
@@ -739,6 +754,12 @@ bool GRiOcclusionCullingRasterizer::RasterizeAndTestBBoxMasked(GRiBoundingBox& b
 
 	float temp[8][4];
 
+	float maxX = 0.f,
+		minX = (float)mBufferWidth,
+		maxY = 0.f,
+		minY = (float)mBufferHeight,
+		maxZ = 0.f;
+
 	for (int i = 0; i < 8; i++)
 	{
 		bNearClip[i] = false;
@@ -762,109 +783,119 @@ bool GRiOcclusionCullingRasterizer::RasterizeAndTestBBoxMasked(GRiBoundingBox& b
 		vertices[i][2] /= abs(vertices[i][3]);
 		//vertices[i][2] /= vertices[i][3];// z remains negative if the triangle is beyond near plane.
 
-		if (vertices[i][3] < mZLowerBound)
-			bNearClip[i] = true;
+		//if (vertices[i][3] < mZLowerBound)
+			//bNearClip[i] = true;
 
 		vertices[i][0] = (vertices[i][0] + 1) * 0.5f * mBufferWidth;
 		vertices[i][1] = (-vertices[i][1] + 1) * 0.5f * mBufferHeight;
 
+		/*
 		if (bReverseZ)
 			vertices[i][2] = 1 / (1 - vertices[i][2]);
 		else
 			vertices[i][2] = 1 / vertices[i][2];
+		*/
+
+		maxX = max(maxX, vertices[i][0]);
+		minX = min(minX, vertices[i][0]);
+		maxY = max(maxY, vertices[i][1]);
+		minY = min(minY, vertices[i][1]);
+		maxZ = max(maxZ, vertices[i][2]);
 	}
 
-	for (auto i = 0u; i < 36; i += 3)
+	static const __m128i SIMD_TILE_PAD = _mm_setr_epi32(0, 32, 0, 4);
+	static const __m128i SIMD_TILE_PAD_MASK = _mm_setr_epi32(~(32 - 1), ~(32 - 1), ~(4 - 1), ~(4 - 1));
+	static const __m128i SIMD_SUB_TILE_PAD = _mm_setr_epi32(0, 8, 0, 4);
+	static const __m128i SIMD_SUB_TILE_PAD_MASK = _mm_setr_epi32(~(8 - 1), ~(8 - 1), ~(4 - 1), ~(4 - 1));
+
+	//////////////////////////////////////////////////////////////////////////////
+	// Compute screen space bounding box and guard for out of bounds
+	//////////////////////////////////////////////////////////////////////////////
+	
+	__m128i pixelBBoxi = _mm_cvttps_epi32(_mm_setr_ps(minX, maxX, minY, maxY));
+	pixelBBoxi = _mm_max_epi32(_mm_setzero_si128(), _mm_min_epi32(_mm_setr_epi32(mBufferWidth - 1, mBufferWidth - 1, mBufferHeight - 1, mBufferHeight - 1), pixelBBoxi));//screen clip.
+
+	//////////////////////////////////////////////////////////////////////////////
+	// Pad bounding box to (32xN) tiles. Tile BB is used for looping / traversal
+	//////////////////////////////////////////////////////////////////////////////
+
+	__m128i tileBBoxi = _mm_and_si128(_mm_add_epi32(pixelBBoxi, SIMD_TILE_PAD), SIMD_TILE_PAD_MASK);//类似于进一的对齐tile。只对xmax和ymin做了这个操作，这里y大概是反的，所以ymin应该就是上界，ymax是下界
+	int txMin = tileBBoxi.m128i_i32[0] >> TILE_WIDTH_SHIFT;//计算tilexMin，除了32得到x的最小块号
+	int txMax = tileBBoxi.m128i_i32[1] >> TILE_WIDTH_SHIFT;//计算tilexMax，计算最大块号
+	int tileRowIdx = (tileBBoxi.m128i_i32[2] >> TILE_HEIGHT_SHIFT) * mTileNumX;//竖着的最小块号乘以横着的总块数
+	int tileRowIdxEnd = (tileBBoxi.m128i_i32[3] >> TILE_HEIGHT_SHIFT) * mTileNumX;//竖着的最大块号乘以横着的总块数
+
+	/*
+	if (tileBBoxi.m128i_i32[0] == tileBBoxi.m128i_i32[1] || tileBBoxi.m128i_i32[2] == tileBBoxi.m128i_i32[3])
 	{
-		Vec3 v0, v1, v2;
-
-		v0[0] = vertices[sBBIndexList[i + 0]][0];
-		v0[1] = vertices[sBBIndexList[i + 0]][1];
-		v0[2] = vertices[sBBIndexList[i + 0]][2];
-		v1[0] = vertices[sBBIndexList[i + 1]][0];
-		v1[1] = vertices[sBBIndexList[i + 1]][1];
-		v1[2] = vertices[sBBIndexList[i + 1]][2];
-		v2[0] = vertices[sBBIndexList[i + 2]][0];
-		v2[1] = vertices[sBBIndexList[i + 2]][1];
-		v2[2] = vertices[sBBIndexList[i + 2]][2];
-
-		float xmin = min3(v0[0], v1[0], v2[0]);
-		float ymin = min3(v0[1], v1[1], v2[1]);
-		float xmax = max3(v0[0], v1[0], v2[0]);
-		float ymax = max3(v0[1], v1[1], v2[1]);
-
-		// the triangle is out of screen
-		if (xmin > mBufferWidth - 1 || xmax < 0 || ymin > mBufferHeight - 1 || ymax < 0)
-			continue;
-
-		bool bTriangleNearClipped = bNearClip[sBBIndexList[i + 0]] || bNearClip[sBBIndexList[i + 1]] || bNearClip[sBBIndexList[i + 2]];
-
-		//if the bounding box is beyond the near plane, don't do near plane clip and give up occlusion culling for this object.
-#if !OUTPUT_TEST
-		if (bTriangleNearClipped)
-			return true;
-#endif
-
-		//backface culling
-		Vec3 e1, e2;
-		e1[0] = v1[0] - v0[0];
-		e1[1] = v1[1] - v0[1];
-		e2[0] = v2[0] - v0[0];
-		e2[1] = v2[1] - v0[1];
-		if (e1[0] * e2[1] - e1[1] * e2[0] < 0)
-			continue;
-
-		// be careful xmin/xmax/ymin/ymax can be negative. Don't cast to uint32_t
-		uint32_t x0 = max(int32_t(0), (int32_t)(std::floor(xmin)));
-		uint32_t x1 = min(int32_t(mBufferWidth) - 1, (int32_t)(std::floor(xmax)));
-		uint32_t y0 = max(int32_t(0), (int32_t)(std::floor(ymin)));
-		uint32_t y1 = min(int32_t(mBufferHeight) - 1, (int32_t)(std::floor(ymax)));
-
-		float area = edgeFunction(v0, v1, v2);
-
-		for (uint32_t y = y0; y <= y1; ++y)
-		{
-			for (uint32_t x = x0; x <= x1; ++x)
-			{
-				Vec3 pixelSample;
-				pixelSample[0] = (float)x + 0.5f;
-				pixelSample[1] = (float)y + 0.5f;
-				pixelSample[2] = 0.0f;
-
-				float w0 = edgeFunction(v1, v2, pixelSample);
-				float w1 = edgeFunction(v2, v0, pixelSample);
-				float w2 = edgeFunction(v0, v1, pixelSample);
-				if (w0 >= 0 && w1 >= 0 && w2 >= 0)
-				{
-					w0 /= area;
-					w1 /= area;
-					w2 /= area;
-					float oneOverZ = v0[2] * w0 + v1[2] * w1 + v2[2] * w2;
-					float z;
-					if (bReverseZ)
-						z = 1.0f - 1.0f / oneOverZ;
-					else
-						z = 1.0f / oneOverZ;
-
-#if OUTPUT_TEST
-					if (bTriangleNearClipped)
-						output[y * clientWidth + x] = 1.0f;
-					else
-						output[y * clientWidth + x] = z;
-#endif
-
-					// [comment]
-					// Depth-buffer test
-					// [/comment]
-					//if ((bReverseZ && (z > buffer[y * mBufferWidth + x])) || (!bReverseZ && (z < buffer[y * mBufferWidth + x])))
-					{
-						return true;
-						//buffer[y * clientWidth + x] = z;
-					}
-				}
-			}
-		}
+		return false;
 	}
+	*/
+
+	///////////////////////////////////////////////////////////////////////////////
+	// Pad bounding box to (8x4) subtiles. Skip SIMD lanes outside the subtile BB
+	///////////////////////////////////////////////////////////////////////////////
+
+	__m128i subTileBBoxi = _mm_and_si128(_mm_add_epi32(pixelBBoxi, SIMD_SUB_TILE_PAD), SIMD_SUB_TILE_PAD_MASK);//进一地对齐tile，算出subtile的bounding box，下面四个式子提取出x和y的最大最小像素值
+	__m128i stxmin = _mm_set1_epi32(subTileBBoxi.m128i_i32[0] - 1); // - 1 to be able to use GT test
+	__m128i stymin = _mm_set1_epi32(subTileBBoxi.m128i_i32[2] - 1); // - 1 to be able to use GT test
+	__m128i stxmax = _mm_set1_epi32(subTileBBoxi.m128i_i32[1]);
+	__m128i stymax = _mm_set1_epi32(subTileBBoxi.m128i_i32[3]);
+
+	// Setup pixel coordinates used to discard lanes outside subtile BB
+	__m128i startPixelX = _mm_add_epi32(SIMD_SUB_TILE_COL_OFFSET, _mm_set1_epi32(tileBBoxi.m128i_i32[0]));//注意这个是没有对齐的
+	__m128i pixelY = _mm_add_epi32(SIMD_SUB_TILE_ROW_OFFSET, _mm_set1_epi32(tileBBoxi.m128i_i32[2]));//注意这个是没有对齐的
+
+	//////////////////////////////////////////////////////////////////////////////
+	// Compute z from w. Note that z is reversed order, 0 = far, 1 = near, which
+	// means we use a greater than test, so zMax is used to test for visibility.
+	//////////////////////////////////////////////////////////////////////////////
+	__m128 zMax = _mm_set1_ps(maxZ);//_mm_div_ps(_mm_set1_ps(1.0f), _mm_set1_ps(wmin));//我们要用rect的最小深度来测试才能保守
+
+	for (;;)
+	{
+		__m128i pixelX = startPixelX;
+		for (int tx = txMin;;)
+		{
+
+			int tileIdx = tileRowIdx + tx;
+			assert(tileIdx >= 0 && tileIdx < mTileNum);
+
+			// Fetch zMin from masked hierarchical Z buffer
+#if QUICK_MASK != 0
+			__mw zBuf = mMaskedHiZBuffer[tileIdx].mZMin[0];
+#else
+			__m128i mask = mMaskedDepthBuffer[tileIdx].mMask;
+			__m128 zMin0 =  (mMaskedDepthBuffer[tileIdx].mZMin[0], mMaskedDepthBuffer[tileIdx].mZMin[1], simd_cast<__m128>(_mm_cmpeq_epi32(mask, _mm_set1_epi32(~0))));
+			__m128 zMin1 = _mm_blendv_ps(mMaskedDepthBuffer[tileIdx].mZMin[1], mMaskedDepthBuffer[tileIdx].mZMin[0], simd_cast<__m128>(_mm_cmpeq_epi32(mask, _mm_setzero_si128())));
+			__m128 zBuf = _mm_min_ps(zMin0, zMin1);
+#endif
+			// Perform conservative greater than test against hierarchical Z buffer (zMax >= zBuf means the subtile is visible)
+			__m128i zPass = simd_cast<__m128i>(_mm_cmpge_ps(zMax, zBuf));	//zPass = zMax >= zBuf ? ~0 : 0
+
+			// Mask out lanes corresponding to subtiles outside the bounding box
+			__m128i bboxTestMin = _mm_and_si128(_mm_cmpgt_epi32(pixelX, stxmin), _mm_cmpgt_epi32(pixelY, stymin));
+			__m128i bboxTestMax = _mm_and_si128(_mm_cmpgt_epi32(stxmax, pixelX), _mm_cmpgt_epi32(stymax, pixelY));
+			__m128i boxMask = _mm_and_si128(bboxTestMin, bboxTestMax);
+			zPass = _mm_and_si128(zPass, boxMask);
+
+			// If not all tiles failed the conservative z test we can immediately terminate the test
+			if (!_mm_testz_si128(zPass, zPass))
+			{
+				return true;
+			}
+
+			if (++tx >= txMax)
+				break;
+			pixelX = _mm_add_epi32(pixelX, _mm_set1_epi32(TILE_SIZE_X));
+		}
+
+		tileRowIdx += mTileNumX;
+		if (tileRowIdx >= tileRowIdxEnd)
+			break;
+		pixelY = _mm_add_epi32(pixelY, _mm_set1_epi32(TILE_SIZE_Y));
+	}
+
 	return false;
 }
 

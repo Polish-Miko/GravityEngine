@@ -39,7 +39,7 @@ public:
 
 	bool RasterizeAndTestBBox(GRiBoundingBox& box, __m128* worldViewProj, float* buffer, float* output);
 
-	bool RasterizeAndTestBBoxMasked(GRiBoundingBox& box, __m128* worldViewProj);
+	bool RectTestBBoxMasked(GRiBoundingBox& box, __m128* worldViewProj);
 
 	void GenerateMaskedBufferDebugImage(float* output);
 
