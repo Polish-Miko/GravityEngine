@@ -118,6 +118,10 @@ public:
 
 	virtual std::vector<ProfileData> GetGpuProfiles() override;
 
+public:
+
+	static void Task_FrustumCull(GRiSceneObject* so, DirectX::XMMATRIX& view, DirectX::BoundingFrustum& cameraFrustum);
+
 protected:
 
 	virtual void CreateRtvAndDsvDescriptorHeaps();
@@ -133,8 +137,6 @@ protected:
 	void UpdateSkyPassCB(const GGiGameTimer* gt);
 	void UpdateLightCB(const GGiGameTimer* gt);
 	void CullSceneObjects(const GGiGameTimer* gt);
-
-	static void Task_FrustumCull(GRiSceneObject* so, DirectX::XMMATRIX& view, DirectX::BoundingFrustum& cameraFrustum);
 
 	void InitializeGpuProfiler();
 	void BuildRootSignature();

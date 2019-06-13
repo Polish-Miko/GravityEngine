@@ -15,10 +15,17 @@
 #include <sstream>
 #include <cassert>
 #include <thread>
+#include <queue>
+#include <mutex>
+#include <condition_variable>
+#include <future>
+#include <functional>
+#include <stdexcept>
 #include <boost/asio/thread_pool.hpp>
 #include <boost/asio/post.hpp>
 #include <boost/thread/thread_pool.hpp>
 #include <boost/thread.hpp>
+#include <boost/thread/thread.hpp>
 #include <boost/asio/io_service.hpp>
 #include <boost/bind.hpp>
 #include <boost/archive/tmpdir.hpp>
