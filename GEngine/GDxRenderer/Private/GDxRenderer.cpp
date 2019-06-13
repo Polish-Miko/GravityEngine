@@ -1250,10 +1250,9 @@ void GDxRenderer::CullSceneObjects(const GGiGameTimer* gt)
 {
 	static auto threadNum = thread::hardware_concurrency();
 	//boost::asio::thread_pool pool(threadNum), poolOC(threadNum);
-	auto pool = std::make_unique<boost::asio::thread_pool>(threadNum);
-	auto poolOC = std::make_unique<boost::asio::thread_pool>(threadNum);
-	//GGiThreadPool testpool(threadNum);
-	//int testNum = 0;
+	//auto pool = std::make_unique<boost::asio::thread_pool>(threadNum);
+	boost::asio::thread_pool poolOC(threadNum);
+	boost::asio::thread_pool pool(threadNum);
 
 	// Reset cull state.
 	for (auto so : pSceneObjectLayer[(int)RenderLayer::Deferred])
@@ -1304,40 +1303,42 @@ void GDxRenderer::CullSceneObjects(const GGiGameTimer* gt)
 	BoundingFrustum::CreateFromMatrix(mCameraFrustum, proj);
 #endif
 
-	for (auto so : pSceneObjectLayer[(int)RenderLayer::Deferred])
+	auto incre = 1500u;
+	for (auto i = 0u; i < pSceneObjectLayer[(int)RenderLayer::Deferred].size(); i += incre)
 	{
-		//GDxRenderer::Task_FrustumCull(so, view, cameraFrustum);
-		boost::asio::post(*pool, std::bind(&GDxRenderer::Task_FrustumCull, so, view, cameraFrustum));
-		/*
-		boost::asio::post(pool, [&, so]//, &view, &cameraFrustum]
+		boost::asio::post(pool, [&]//, &view, &cameraFrustum]
 		{
-			GDxFloat4x4* dxTrans = dynamic_cast<GDxFloat4x4*>(so->GetTransform());
-			if (dxTrans == nullptr)
-				ThrowGGiException("Cast failed from GGiFloat4x4* to GDxFloat4x4*.");
-
-			XMMATRIX world = XMLoadFloat4x4(&(dxTrans->GetValue()));
-			delete dxTrans;
-
-			XMMATRIX localToView = XMMatrixMultiply(world, view);
-
-			BoundingBox bounds;
-			bounds.Center = DirectX::XMFLOAT3(so->GetMesh()->bounds.Center);
-			bounds.Extents = DirectX::XMFLOAT3(so->GetMesh()->bounds.Extents);
-
-			BoundingBox worldBounds;
-			bounds.Transform(worldBounds, localToView);
-
-			// Perform the box/frustum intersection test in local space.
-			if ((cameraFrustum.Contains(worldBounds) == DirectX::DISJOINT))
+			for (auto j = i; j < i + incre && j< pSceneObjectLayer[(int)RenderLayer::Deferred].size(); j++)
 			{
-				so->SetCullState(CullState::FrustumCulled);
+				auto so = pSceneObjectLayer[(int)RenderLayer::Deferred][j];
+
+				GDxFloat4x4* dxTrans = dynamic_cast<GDxFloat4x4*>(so->GetTransform());
+				if (dxTrans == nullptr)
+					ThrowGGiException("Cast failed from GGiFloat4x4* to GDxFloat4x4*.");
+
+				XMMATRIX world = XMLoadFloat4x4(&(dxTrans->GetValue()));
+				delete dxTrans;
+
+				XMMATRIX localToView = XMMatrixMultiply(world, view);
+
+				BoundingBox bounds;
+				bounds.Center = DirectX::XMFLOAT3(so->GetMesh()->bounds.Center);
+				bounds.Extents = DirectX::XMFLOAT3(so->GetMesh()->bounds.Extents);
+
+				BoundingBox worldBounds;
+				bounds.Transform(worldBounds, localToView);
+
+				// Perform the box/frustum intersection test in local space.
+				if ((cameraFrustum.Contains(worldBounds) == DirectX::DISJOINT))
+				{
+					so->SetCullState(CullState::FrustumCulled);
+				}
 			}
 		}
 		);
-		*/
 	}
 
-	pool->join();
+	pool.join();
 
 	GGiCpuProfiler::GetInstance().EndCpuProfile("Frustum Culling");
 
@@ -1399,12 +1400,13 @@ void GDxRenderer::CullSceneObjects(const GGiGameTimer* gt)
 		//XMMATRIX worldViewProj;
 
 		//*
+		GGiCpuProfiler::GetInstance().StartCpuProfile("Distribution");
 		for (auto so : pSceneObjectLayer[(int)RenderLayer::Deferred])
 		{
 			if (so->GetCullState() == CullState::FrustumCulled)
 				continue;
 
-			boost::asio::post(*poolOC, [so, &viewProj]
+			boost::asio::post(poolOC, [so, &viewProj]
 			{
 				GDxFloat4x4* dxTrans = dynamic_cast<GDxFloat4x4*>(so->GetTransform());
 				if (dxTrans == nullptr)
@@ -1437,7 +1439,10 @@ void GDxRenderer::CullSceneObjects(const GGiGameTimer* gt)
 			);
 		}
 
-		poolOC->join();
+		GGiCpuProfiler::GetInstance().EndCpuProfile("Distribution");
+		GGiCpuProfiler::GetInstance().StartCpuProfile("Join");
+		poolOC.join();
+		GGiCpuProfiler::GetInstance().EndCpuProfile("Join");
 
 		for (auto so : pSceneObjectLayer[(int)RenderLayer::Deferred])
 		{
