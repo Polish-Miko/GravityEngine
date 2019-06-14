@@ -1248,11 +1248,11 @@ void GDxRenderer::UpdateSkyPassCB(const GGiGameTimer* gt)
 
 void GDxRenderer::CullSceneObjects(const GGiGameTimer* gt)
 {
-	static auto threadNum = thread::hardware_concurrency();
+	static auto numThreads = thread::hardware_concurrency();
 	//boost::asio::thread_pool pool(threadNum), poolOC(threadNum);
 	//auto pool = std::make_unique<boost::asio::thread_pool>(threadNum);
-	boost::asio::thread_pool poolOC(threadNum);
-	boost::asio::thread_pool pool(threadNum);
+	boost::asio::thread_pool poolOC(numThreads);
+	boost::asio::thread_pool pool(numThreads);
 
 	// Reset cull state.
 	for (auto so : pSceneObjectLayer[(int)RenderLayer::Deferred])
@@ -1303,42 +1303,100 @@ void GDxRenderer::CullSceneObjects(const GGiGameTimer* gt)
 	BoundingFrustum::CreateFromMatrix(mCameraFrustum, proj);
 #endif
 
-	auto incre = 1500u;
-	for (auto i = 0u; i < pSceneObjectLayer[(int)RenderLayer::Deferred].size(); i += incre)
+	////////////////////////////////////////////////////////////////////
+	//TEST
+	////////////////////////////////////////////////////////////////////
+
+	int testInt[500000] = { 0 };
+
+	GGiCpuProfiler::GetInstance().StartCpuProfile("single-threaded");
+
+	for (auto i = 0; i < 500000; i++)
+		testInt[i]++;
+
+	GGiCpuProfiler::GetInstance().EndCpuProfile("single-threaded");
+
+	GGiCpuProfiler::GetInstance().StartCpuProfile("multi-threaded");
+
+	GGiCpuProfiler::GetInstance().StartCpuProfile("Distribution");
+		
+	std::thread thrd1([&testInt]
 	{
-		boost::asio::post(pool, [&]//, &view, &cameraFrustum]
+			for (auto j = 0 * 125000; j < 1 * 125000; j++)
+				testInt[j]++;
+	}
+	);
+
+	std::thread thrd2([&testInt]
+	{
+		for (auto j = 1 * 125000; j < 2 * 125000; j++)
+			testInt[j]++;
+	}
+	);
+
+	std::thread thrd3([&testInt]
+	{
+		for (auto j = 2 * 125000; j < 3 * 125000; j++)
+			testInt[j]++;
+	}
+	);
+
+	std::thread thrd4([&testInt]
+	{
+		for (auto j = 3 * 125000; j < 4 * 125000; j++)
+			testInt[j]++;
+	}
+	);
+	GGiCpuProfiler::GetInstance().EndCpuProfile("Distribution");
+
+	GGiCpuProfiler::GetInstance().StartCpuProfile("Join");
+
+	thrd1.join();
+	thrd2.join();
+	thrd3.join();
+	thrd4.join();
+
+	GGiCpuProfiler::GetInstance().EndCpuProfile("Join");
+
+	GGiCpuProfiler::GetInstance().EndCpuProfile("multi-threaded");
+
+
+	////////////////////////////////////////////////////////////////////
+	//TEST
+	////////////////////////////////////////////////////////////////////
+
+		/*
+	for (auto so : pSceneObjectLayer[(int)RenderLayer::Deferred])
+	{
+		boost::asio::post(pool, [so, &view, &cameraFrustum]
 		{
-			for (auto j = i; j < i + incre && j< pSceneObjectLayer[(int)RenderLayer::Deferred].size(); j++)
+			GDxFloat4x4* dxTrans = dynamic_cast<GDxFloat4x4*>(so->GetTransform());
+			if (dxTrans == nullptr)
+				ThrowGGiException("Cast failed from GGiFloat4x4* to GDxFloat4x4*.");
+
+			XMMATRIX world = XMLoadFloat4x4(&(dxTrans->GetValue()));
+			delete dxTrans;
+
+			XMMATRIX localToView = XMMatrixMultiply(world, view);
+
+			BoundingBox bounds;
+			bounds.Center = DirectX::XMFLOAT3(so->GetMesh()->bounds.Center);
+			bounds.Extents = DirectX::XMFLOAT3(so->GetMesh()->bounds.Extents);
+
+			BoundingBox worldBounds;
+			bounds.Transform(worldBounds, localToView);
+
+			// Perform the box/frustum intersection test in local space.
+			if ((cameraFrustum.Contains(worldBounds) == DirectX::DISJOINT))
 			{
-				auto so = pSceneObjectLayer[(int)RenderLayer::Deferred][j];
-
-				GDxFloat4x4* dxTrans = dynamic_cast<GDxFloat4x4*>(so->GetTransform());
-				if (dxTrans == nullptr)
-					ThrowGGiException("Cast failed from GGiFloat4x4* to GDxFloat4x4*.");
-
-				XMMATRIX world = XMLoadFloat4x4(&(dxTrans->GetValue()));
-				delete dxTrans;
-
-				XMMATRIX localToView = XMMatrixMultiply(world, view);
-
-				BoundingBox bounds;
-				bounds.Center = DirectX::XMFLOAT3(so->GetMesh()->bounds.Center);
-				bounds.Extents = DirectX::XMFLOAT3(so->GetMesh()->bounds.Extents);
-
-				BoundingBox worldBounds;
-				bounds.Transform(worldBounds, localToView);
-
-				// Perform the box/frustum intersection test in local space.
-				if ((cameraFrustum.Contains(worldBounds) == DirectX::DISJOINT))
-				{
-					so->SetCullState(CullState::FrustumCulled);
-				}
+				so->SetCullState(CullState::FrustumCulled);
 			}
 		}
 		);
 	}
 
 	pool.join();
+		*/
 
 	GGiCpuProfiler::GetInstance().EndCpuProfile("Frustum Culling");
 
@@ -1400,7 +1458,6 @@ void GDxRenderer::CullSceneObjects(const GGiGameTimer* gt)
 		//XMMATRIX worldViewProj;
 
 		//*
-		GGiCpuProfiler::GetInstance().StartCpuProfile("Distribution");
 		for (auto so : pSceneObjectLayer[(int)RenderLayer::Deferred])
 		{
 			if (so->GetCullState() == CullState::FrustumCulled)
@@ -1439,10 +1496,7 @@ void GDxRenderer::CullSceneObjects(const GGiGameTimer* gt)
 			);
 		}
 
-		GGiCpuProfiler::GetInstance().EndCpuProfile("Distribution");
-		GGiCpuProfiler::GetInstance().StartCpuProfile("Join");
 		poolOC.join();
-		GGiCpuProfiler::GetInstance().EndCpuProfile("Join");
 
 		for (auto so : pSceneObjectLayer[(int)RenderLayer::Deferred])
 		{
