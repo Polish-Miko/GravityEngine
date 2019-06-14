@@ -285,6 +285,8 @@ protected:
 
 	POINT mLastMousePos;
 
+	int tt = 0;
+
 private:
 	
 	GDxRenderer();

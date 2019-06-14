@@ -1307,12 +1307,10 @@ void GDxRenderer::CullSceneObjects(const GGiGameTimer* gt)
 	//TEST
 	////////////////////////////////////////////////////////////////////
 
-	int testInt[500000] = { 0 };
-
 	GGiCpuProfiler::GetInstance().StartCpuProfile("single-threaded");
 
 	for (auto i = 0; i < 500000; i++)
-		testInt[i]++;
+		tt++;
 
 	GGiCpuProfiler::GetInstance().EndCpuProfile("single-threaded");
 
@@ -1320,31 +1318,35 @@ void GDxRenderer::CullSceneObjects(const GGiGameTimer* gt)
 
 	GGiCpuProfiler::GetInstance().StartCpuProfile("Distribution");
 		
-	std::thread thrd1([&testInt]
+	std::thread thrd1([]
 	{
-			for (auto j = 0 * 125000; j < 1 * 125000; j++)
-				testInt[j]++;
+		int i = 0;
+		for (auto j = 0 * 125000; j < 1 * 125000; j++)
+			i++;
 	}
 	);
 
-	std::thread thrd2([&testInt]
+	std::thread thrd2([]
 	{
-		for (auto j = 1 * 125000; j < 2 * 125000; j++)
-			testInt[j]++;
+		int i = 0;
+		for (auto j = 0 * 125000; j < 1 * 125000; j++)
+			i++;
 	}
 	);
 
-	std::thread thrd3([&testInt]
+	std::thread thrd3([]
 	{
-		for (auto j = 2 * 125000; j < 3 * 125000; j++)
-			testInt[j]++;
+		int i = 0;
+		for (auto j = 0 * 125000; j < 1 * 125000; j++)
+			i++;
 	}
 	);
 
-	std::thread thrd4([&testInt]
+	std::thread thrd4([]
 	{
-		for (auto j = 3 * 125000; j < 4 * 125000; j++)
-			testInt[j]++;
+		int i = 0;
+		for (auto j = 0 * 125000; j < 1 * 125000; j++)
+			i++;
 	}
 	);
 	GGiCpuProfiler::GetInstance().EndCpuProfile("Distribution");
@@ -1359,7 +1361,6 @@ void GDxRenderer::CullSceneObjects(const GGiGameTimer* gt)
 	GGiCpuProfiler::GetInstance().EndCpuProfile("Join");
 
 	GGiCpuProfiler::GetInstance().EndCpuProfile("multi-threaded");
-
 
 	////////////////////////////////////////////////////////////////////
 	//TEST
