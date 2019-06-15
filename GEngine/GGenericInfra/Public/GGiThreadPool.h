@@ -17,7 +17,9 @@ public:
 	auto Enqueue(F&& f, Args&&... args)
 		->std::future<typename std::result_of<F(Args...)>::type>;
 
-	void JoinAll();
+	void Join();
+
+	void Flush();
 
 private:
 
@@ -33,6 +35,8 @@ private:
 	std::condition_variable condition;
 
 	bool stop;
+
+	std::atomic<int> numRunningTasks = 0;
 
 };
 
@@ -55,13 +59,27 @@ inline GGiThreadPool::GGiThreadPool(size_t threads)
 				if (this->stop && this->tasks.empty())
 					return;
 				task = std::move(this->tasks.front());
+				numRunningTasks++;
 				this->tasks.pop();
 			}
 
 			task();
+			numRunningTasks--;
 		}
 	}
 	);
+}
+
+// the destructor joins all threads
+inline GGiThreadPool::~GGiThreadPool()
+{
+	{
+		std::unique_lock<std::mutex> lock(queue_mutex);
+		stop = true;
+	}
+	condition.notify_all();
+	for (std::thread &worker : workers)
+		worker.join();
 }
 
 // add new work item to the pool
@@ -87,17 +105,5 @@ auto GGiThreadPool::Enqueue(F&& f, Args&&... args)
 	}
 	condition.notify_one();
 	return res;
-}
-
-// the destructor joins all threads
-inline GGiThreadPool::~GGiThreadPool()
-{
-	{
-		std::unique_lock<std::mutex> lock(queue_mutex);
-		stop = true;
-	}
-	condition.notify_all();
-	for (std::thread &worker : workers)
-		worker.join();
 }
 

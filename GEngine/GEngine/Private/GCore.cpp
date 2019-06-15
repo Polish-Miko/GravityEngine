@@ -683,6 +683,7 @@ void GCore::LoadSceneObjects()
 	// Create screen quads for light pass and post process.
 	std::unique_ptr<GRiSceneObject> fullScreenQuadSO(pRendererFactory->CreateSceneObject());
 	fullScreenQuadSO->UniqueName = L"FullScreenQuad";
+	fullScreenQuadSO->UpdateTransform();
 	fullScreenQuadSO->ResetPrevTransform();
 	fullScreenQuadSO->SetTexTransform(pRendererFactory->CreateFloat4x4());
 	fullScreenQuadSO->SetObjIndex(mSceneObjectIndex++);
@@ -694,6 +695,7 @@ void GCore::LoadSceneObjects()
 	std::unique_ptr<GRiSceneObject> skySO(pRendererFactory->CreateSceneObject());
 	skySO->UniqueName = L"Sky";
 	skySO->SetScale(5000.f, 5000.f, 5000.f);
+	skySO->UpdateTransform();
 	skySO->ResetPrevTransform();
 	skySO->SetTexTransform(pRendererFactory->CreateFloat4x4());
 	skySO->SetObjIndex(mSceneObjectIndex++);
@@ -708,6 +710,7 @@ void GCore::LoadSceneObjects()
 		albedoQuadSO->UniqueName = L"AlbedoQuad";
 		albedoQuadSO->SetScale(.2f, .2f, .2f);
 		albedoQuadSO->SetLocation(0.f, 0.f, 0.f);
+		albedoQuadSO->UpdateTransform();
 		albedoQuadSO->ResetPrevTransform();
 		albedoQuadSO->SetTexTransform(pRendererFactory->CreateFloat4x4());
 		albedoQuadSO->SetObjIndex(mSceneObjectIndex++);
@@ -720,6 +723,7 @@ void GCore::LoadSceneObjects()
 		normalQuadSO->UniqueName = L"NormalQuad";
 		normalQuadSO->SetScale(.2f, .2f, .2f);
 		normalQuadSO->SetLocation(.2f, 0.f, 0.f);
+		normalQuadSO->UpdateTransform();
 		normalQuadSO->ResetPrevTransform();
 		normalQuadSO->SetTexTransform(pRendererFactory->CreateFloat4x4());
 		normalQuadSO->SetObjIndex(mSceneObjectIndex++);
@@ -732,6 +736,7 @@ void GCore::LoadSceneObjects()
 		worldPosQuadSO->UniqueName = L"WorldPosQuad";
 		worldPosQuadSO->SetScale(.2f, .2f, .2f);
 		worldPosQuadSO->SetLocation(.4f, 0.f, 0.f);
+		worldPosQuadSO->UpdateTransform();
 		worldPosQuadSO->ResetPrevTransform();
 		worldPosQuadSO->SetTexTransform(pRendererFactory->CreateFloat4x4());
 		worldPosQuadSO->SetObjIndex(mSceneObjectIndex++);
@@ -744,6 +749,7 @@ void GCore::LoadSceneObjects()
 		roughnessQuadSO->UniqueName = L"RoughnessQuad";
 		roughnessQuadSO->SetScale(.2f, .2f, .2f);
 		roughnessQuadSO->SetLocation(.6f, 0.f, 0.f);
+		roughnessQuadSO->UpdateTransform();
 		roughnessQuadSO->ResetPrevTransform();
 		roughnessQuadSO->SetTexTransform(pRendererFactory->CreateFloat4x4());
 		roughnessQuadSO->SetObjIndex(mSceneObjectIndex++);
@@ -756,6 +762,7 @@ void GCore::LoadSceneObjects()
 		metallicQuadSO->UniqueName = L"MetallicQuad";
 		metallicQuadSO->SetScale(.2f, .2f, .2f);
 		metallicQuadSO->SetLocation(.8f, 0.f, 0.f);
+		metallicQuadSO->UpdateTransform();
 		metallicQuadSO->ResetPrevTransform();
 		metallicQuadSO->SetTexTransform(pRendererFactory->CreateFloat4x4());
 		metallicQuadSO->SetObjIndex(mSceneObjectIndex++);
@@ -792,6 +799,7 @@ void GCore::LoadSceneObjects()
 			newSO->SetLocation(info.Location[0], info.Location[1], info.Location[2]);
 			newSO->SetRotation(info.Rotation[0], info.Rotation[1], info.Rotation[2]);
 			newSO->SetScale(info.Scale[0], info.Scale[1], info.Scale[2]);
+			newSO->UpdateTransform();
 			newSO->ResetPrevTransform();
 			mSceneObjectLayer[(int)RenderLayer::Deferred].push_back(newSO.get());
 			mSceneObjects[newSO->UniqueName] = std::move(newSO);
@@ -809,6 +817,7 @@ void GCore::LoadSceneObjects()
 			testSO->UniqueName = L"testObject_" + std::to_wstring(x + sizeX / 2) + L"_" + std::to_wstring(y + sizeY / 2);
 			testSO->SetScale(0.2f, 2.0f, 0.2f);
 			testSO->SetLocation(x * 40.0f, -200.f, y * 40.0f);
+			testSO->UpdateTransform();
 			testSO->ResetPrevTransform();
 			testSO->SetTexTransform(pRendererFactory->CreateFloat4x4());
 			testSO->SetObjIndex(mSceneObjectIndex++);
@@ -823,6 +832,7 @@ void GCore::LoadSceneObjects()
 	testSO->UniqueName = L"testObject";
 	testSO->SetScale(40.0f, 0.1f, 40.0f);
 	testSO->SetLocation(0.0f, -240.f, 0.0f);
+	testSO->UpdateTransform();
 	testSO->ResetPrevTransform();
 	testSO->SetTexTransform(pRendererFactory->CreateFloat4x4());
 	testSO->SetObjIndex(mSceneObjectIndex++);

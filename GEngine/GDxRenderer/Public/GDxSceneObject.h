@@ -7,7 +7,7 @@ class GDxSceneObject : public GRiSceneObject
 
 public:
 
-	virtual GGiFloat4x4* GetTransform() override;
+	virtual void UpdateTransform() override;
 
 	D3D12_PRIMITIVE_TOPOLOGY GetPrimitiveTopology();
 

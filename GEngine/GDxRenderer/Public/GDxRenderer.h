@@ -285,7 +285,7 @@ protected:
 
 	POINT mLastMousePos;
 
-	int tt = 0;
+	std::unique_ptr<GGiThreadPool> mRendererThreadPool = nullptr;
 
 private:
 	

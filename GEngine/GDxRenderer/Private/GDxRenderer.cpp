@@ -176,7 +176,10 @@ void GDxRenderer::Initialize()
 #else
 		false
 #endif
-		);
+	);
+
+	auto numThreads = thread::hardware_concurrency();
+	mRendererThreadPool = std::make_unique<GGiThreadPool>(numThreads);
 }
 
 void GDxRenderer::Draw(const GGiGameTimer* gt)
@@ -882,20 +885,21 @@ void GDxRenderer::UpdateObjectCBs(const GGiGameTimer* gt)
 		// This needs to be tracked per frame resource.
 		if (e.second->NumFramesDirty > 0)
 		{
-			GDxFloat4x4* dxTrans = dynamic_cast<GDxFloat4x4*>(e.second->GetTransform());
+			e.second->UpdateTransform();
+
+			auto dxTrans = dynamic_pointer_cast<GDxFloat4x4>(e.second->GetTransform());
 			if (dxTrans == nullptr)
-				ThrowGGiException("Cast failed from GGiFloat4x4* to GDxFloat4x4*.");
+				ThrowGGiException("Cast failed from shared_ptr<GGiFloat4x4> to shared_ptr<GDxFloat4x4>.");
 
-			GDxFloat4x4* dxPrevTrans = dynamic_cast<GDxFloat4x4*>(e.second->GetPrevTransform());
+			auto dxPrevTrans = dynamic_pointer_cast<GDxFloat4x4>(e.second->GetPrevTransform());
 			if (dxPrevTrans == nullptr)
-				ThrowGGiException("Cast failed from GGiFloat4x4* to GDxFloat4x4*.");
+				ThrowGGiException("Cast failed from shared_ptr<GGiFloat4x4> to shared_ptr<GDxFloat4x4>.");
 
-			GDxFloat4x4* dxTexTrans = dynamic_cast<GDxFloat4x4*>(e.second->GetTexTransform());
+			auto dxTexTrans = dynamic_pointer_cast<GDxFloat4x4>(e.second->GetTexTransform());
 			if (dxTexTrans == nullptr)
-				ThrowGGiException("Cast failed from GGiFloat4x4* to GDxFloat4x4*.");
+				ThrowGGiException("Cast failed from shared_ptr<GGiFloat4x4> to shared_ptr<GDxFloat4x4>.");
 			
 			XMMATRIX renderObjectTrans = XMLoadFloat4x4(&(dxTrans->GetValue()));
-			delete dxTrans;
 			XMMATRIX invWorld = XMMatrixInverse(&XMMatrixDeterminant(renderObjectTrans), renderObjectTrans);
 			XMMATRIX invTransWorld = XMMatrixTranspose(invWorld);
 			XMMATRIX prevWorld = XMLoadFloat4x4(&(dxPrevTrans->GetValue()));
@@ -1248,13 +1252,11 @@ void GDxRenderer::UpdateSkyPassCB(const GGiGameTimer* gt)
 
 void GDxRenderer::CullSceneObjects(const GGiGameTimer* gt)
 {
-	static auto numThreads = thread::hardware_concurrency();
+	//static auto numThreads = thread::hardware_concurrency();
 	//boost::asio::thread_pool pool(threadNum), poolOC(threadNum);
 	//auto pool = std::make_unique<boost::asio::thread_pool>(threadNum);
-	GGiCpuProfiler::GetInstance().StartCpuProfile("test1");
-	boost::asio::thread_pool poolOC(numThreads);
-	boost::asio::thread_pool pool(numThreads);
-	GGiCpuProfiler::GetInstance().EndCpuProfile("test1");
+	//boost::asio::thread_pool poolOC(numThreads);
+	//boost::asio::thread_pool pool(numThreads);
 
 	// Reset cull state.
 	for (auto so : pSceneObjectLayer[(int)RenderLayer::Deferred])
@@ -1305,36 +1307,41 @@ void GDxRenderer::CullSceneObjects(const GGiGameTimer* gt)
 	BoundingFrustum::CreateFromMatrix(mCameraFrustum, proj);
 #endif
 
-	for (auto so : pSceneObjectLayer[(int)RenderLayer::Deferred])
+	auto fcStep = 30u;
+	for (auto i = 0u; i < pSceneObjectLayer[(int)RenderLayer::Deferred].size(); i += fcStep)
 	{
-		boost::asio::post(pool, [so, &view, &cameraFrustum]
+		mRendererThreadPool->Enqueue([&, i]//pSceneObjectLayer, &viewProj]
 		{
-			GDxFloat4x4* dxTrans = dynamic_cast<GDxFloat4x4*>(so->GetTransform());
-			if (dxTrans == nullptr)
-				ThrowGGiException("Cast failed from GGiFloat4x4* to GDxFloat4x4*.");
-
-			XMMATRIX world = XMLoadFloat4x4(&(dxTrans->GetValue()));
-			delete dxTrans;
-
-			XMMATRIX localToView = XMMatrixMultiply(world, view);
-
-			BoundingBox bounds;
-			bounds.Center = DirectX::XMFLOAT3(so->GetMesh()->bounds.Center);
-			bounds.Extents = DirectX::XMFLOAT3(so->GetMesh()->bounds.Extents);
-
-			BoundingBox worldBounds;
-			bounds.Transform(worldBounds, localToView);
-
-			// Perform the box/frustum intersection test in local space.
-			if ((cameraFrustum.Contains(worldBounds) == DirectX::DISJOINT))
+			for (auto j = i; j < i + fcStep && j < pSceneObjectLayer[(int)RenderLayer::Deferred].size(); j++)
 			{
-				so->SetCullState(CullState::FrustumCulled);
+				auto so = pSceneObjectLayer[(int)RenderLayer::Deferred][j];
+
+				auto dxTrans = dynamic_pointer_cast<GDxFloat4x4>(so->GetTransform());
+				if (dxTrans == nullptr)
+					ThrowGGiException("Cast failed from shared_ptr<GGiFloat4x4> to shared_ptr<GDxFloat4x4>.");
+
+				XMMATRIX world = XMLoadFloat4x4(&(dxTrans->GetValue()));
+
+				XMMATRIX localToView = XMMatrixMultiply(world, view);
+
+				BoundingBox bounds;
+				bounds.Center = DirectX::XMFLOAT3(so->GetMesh()->bounds.Center);
+				bounds.Extents = DirectX::XMFLOAT3(so->GetMesh()->bounds.Extents);
+
+				BoundingBox worldBounds;
+				bounds.Transform(worldBounds, localToView);
+
+				// Perform the box/frustum intersection test in local space.
+				if ((cameraFrustum.Contains(worldBounds) == DirectX::DISJOINT))
+				{
+					so->SetCullState(CullState::FrustumCulled);
+				}
 			}
 		}
 		);
 	}
 
-	pool.join();
+	mRendererThreadPool->Flush();
 
 	GGiCpuProfiler::GetInstance().EndCpuProfile("Frustum Culling");
 
@@ -1395,46 +1402,55 @@ void GDxRenderer::CullSceneObjects(const GGiGameTimer* gt)
 
 		//XMMATRIX worldViewProj;
 
-		//*
-		for (auto so : pSceneObjectLayer[(int)RenderLayer::Deferred])
+		GGiCpuProfiler::GetInstance().StartCpuProfile("Rasterization");
+
+		auto ocStep = 90u;
+		for (auto i = 0u; i < pSceneObjectLayer[(int)RenderLayer::Deferred].size(); i += ocStep)
 		{
-			if (so->GetCullState() == CullState::FrustumCulled)
-				continue;
-
-			boost::asio::post(poolOC, [so, &viewProj]
+			mRendererThreadPool->Enqueue([&, i]//pSceneObjectLayer, &viewProj]
 			{
-				GDxFloat4x4* dxTrans = dynamic_cast<GDxFloat4x4*>(so->GetTransform());
-				if (dxTrans == nullptr)
-					ThrowGGiException("Cast failed from GGiFloat4x4* to GDxFloat4x4*.");
+				for (auto j = i; j < i + ocStep && j < pSceneObjectLayer[(int)RenderLayer::Deferred].size(); j++)
+				{
+					auto so = pSceneObjectLayer[(int)RenderLayer::Deferred][j];
 
-				XMMATRIX sceneObjectTrans = XMLoadFloat4x4(&(dxTrans->GetValue()));
-				delete dxTrans;
+					if (so->GetCullState() == CullState::FrustumCulled)
+						continue;
 
-				XMMATRIX worldViewProj = XMMatrixMultiply(sceneObjectTrans, viewProj);
+					auto dxTrans = dynamic_pointer_cast<GDxFloat4x4>(so->GetTransform());
+					if (dxTrans == nullptr)
+						ThrowGGiException("Cast failed from shared_ptr<GGiFloat4x4> to shared_ptr<GDxFloat4x4>.");
+
+					XMMATRIX sceneObjectTrans = XMLoadFloat4x4(&(dxTrans->GetValue()));
+
+					XMMATRIX worldViewProj = XMMatrixMultiply(sceneObjectTrans, viewProj);
 
 #if USE_MASKED_DEPTH_BUFFER
-				auto bOccCulled = !GRiOcclusionCullingRasterizer::GetInstance().RectTestBBoxMasked(
-					so->GetMesh()->bounds,
-					worldViewProj.r
-				);
+					auto bOccCulled = !GRiOcclusionCullingRasterizer::GetInstance().RectTestBBoxMasked(
+						so->GetMesh()->bounds,
+						worldViewProj.r
+					);
 #else
-				auto bOccCulled = !GRiOcclusionCullingRasterizer::GetInstance().RasterizeAndTestBBox(
-					so->GetMesh()->bounds,
-					worldViewProj.r,
-					reprojectedDepthBuffer,
-					outputTest
-				);
+					auto bOccCulled = !GRiOcclusionCullingRasterizer::GetInstance().RasterizeAndTestBBox(
+						so->GetMesh()->bounds,
+						worldViewProj.r,
+						reprojectedDepthBuffer,
+						outputTest
+					);
 #endif
 
-				if (bOccCulled)
-				{
-					so->SetCullState(CullState::OcclusionCulled);
+					if (bOccCulled)
+					{
+						so->SetCullState(CullState::OcclusionCulled);
+					}
+
 				}
 			}
 			);
 		}
 
-		poolOC.join();
+		mRendererThreadPool->Flush();
+
+		GGiCpuProfiler::GetInstance().EndCpuProfile("Rasterization");
 
 		for (auto so : pSceneObjectLayer[(int)RenderLayer::Deferred])
 		{
@@ -1451,7 +1467,6 @@ void GDxRenderer::CullSceneObjects(const GGiGameTimer* gt)
 				numVisible++;
 			}
 		}
-		//*/
 
 #if 0
 		std::ofstream testOut;
@@ -1470,12 +1485,11 @@ void GDxRenderer::CullSceneObjects(const GGiGameTimer* gt)
 
 void GDxRenderer::Task_FrustumCull(GRiSceneObject* so, DirectX::XMMATRIX& view, DirectX::BoundingFrustum& cameraFrustum)
 {
-	GDxFloat4x4* dxTrans = dynamic_cast<GDxFloat4x4*>(so->GetTransform());
+	auto dxTrans = dynamic_pointer_cast<GDxFloat4x4>(so->GetTransform());
 	if (dxTrans == nullptr)
-		ThrowGGiException("Cast failed from GGiFloat4x4* to GDxFloat4x4*.");
+		ThrowGGiException("Cast failed from shared_ptr<GGiFloat4x4> to shared_ptr<GDxFloat4x4>.");
 
 	XMMATRIX world = XMLoadFloat4x4(&(dxTrans->GetValue()));
-	delete dxTrans;
 
 	XMMATRIX localToView = XMMatrixMultiply(world, view);
 
@@ -2870,13 +2884,15 @@ void GDxRenderer::CubemapPreIntegration()
 	auto currObjectCB = mCurrFrameResource->ObjectCB.get();
 	for (auto& e : pSceneObjects)
 	{
-		GDxFloat4x4* dxTrans = dynamic_cast<GDxFloat4x4*>(e.second->GetTransform());
-		if (dxTrans == nullptr)
-			ThrowGGiException("Cast failed from GGiFloat4x4* to GDxFloat4x4*.");
+		e.second->UpdateTransform();
 
-		GDxFloat4x4* dxTexTrans = dynamic_cast<GDxFloat4x4*>(e.second->GetTexTransform());
+		auto dxTrans = dynamic_pointer_cast<GDxFloat4x4>(e.second->GetTransform());
+		if (dxTrans == nullptr)
+			ThrowGGiException("Cast failed from shared_ptr<GGiFloat4x4> to shared_ptr<GDxFloat4x4>.");
+
+		auto dxTexTrans = dynamic_pointer_cast<GDxFloat4x4>(e.second->GetTexTransform());
 		if (dxTexTrans == nullptr)
-			ThrowGGiException("Cast failed from GGiFloat4x4* to GDxFloat4x4*.");
+			ThrowGGiException("Cast failed from shared_ptr<GGiFloat4x4> to shared_ptr<GDxFloat4x4>.");
 
 		// Only update the cbuffer data if the constants have changed.  
 		// This needs to be tracked per frame resource.
@@ -3221,14 +3237,12 @@ GRiSceneObject* GDxRenderer::SelectSceneObject(int sx, int sy)
 	{
 		auto mesh = so->GetMesh();
 
-		GGiFloat4x4* soTrans = so->GetTransform();
-		GDxFloat4x4* dxSoTrans = dynamic_cast<GDxFloat4x4*>(soTrans);
+		auto dxSoTrans = dynamic_pointer_cast<GDxFloat4x4>(so->GetTransform());
 		if (dxSoTrans == nullptr)
-		{
-			ThrowGGiException("cast fail.");
-		}
+			ThrowGGiException("Cast failed from shared_ptr<GGiFloat4x4> to shared_ptr<GDxFloat4x4>.");
+
 		XMMATRIX W = XMLoadFloat4x4(&dxSoTrans->GetValue());
-		delete soTrans;
+
 		XMMATRIX invWorld = XMMatrixInverse(&XMMatrixDeterminant(W), W);
 
 		// Tranform ray to vi space of Mesh.

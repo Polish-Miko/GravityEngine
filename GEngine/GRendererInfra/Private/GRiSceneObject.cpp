@@ -42,6 +42,7 @@ void GRiSceneObject::SetLocation(float x, float y, float z)
 	Location[1] = y;
 	Location[2] = z;
 	MarkDirty();
+	bTransformDirty = true;
 }
 
 void GRiSceneObject::SetRotation(float pitch, float yaw, float roll)
@@ -50,6 +51,7 @@ void GRiSceneObject::SetRotation(float pitch, float yaw, float roll)
 	Rotation[1] = yaw;
 	Rotation[2] = roll;
 	MarkDirty();
+	bTransformDirty = true;
 }
 
 void GRiSceneObject::SetScale(float x, float y, float z)
@@ -58,6 +60,7 @@ void GRiSceneObject::SetScale(float x, float y, float z)
 	Scale[1] = y;
 	Scale[2] = z;
 	MarkDirty();
+	bTransformDirty = true;
 }
 
 void GRiSceneObject::SetTexTransform(GGiFloat4x4* texTrans)
@@ -68,9 +71,9 @@ void GRiSceneObject::SetTexTransform(GGiFloat4x4* texTrans)
 	MarkDirty();
 }
 
-GGiFloat4x4* GRiSceneObject::GetTexTransform()
+std::shared_ptr<GGiFloat4x4> GRiSceneObject::GetTexTransform()
 {
-	return TexTransform.get();
+	return TexTransform;
 }
 
 void GRiSceneObject::SetMesh(GRiMesh* mesh)
@@ -106,25 +109,41 @@ UINT GRiSceneObject::GetObjIndex()
 	return ObjIndex;
 }
 
-GGiFloat4x4* GRiSceneObject::GetPrevTransform()
+std::shared_ptr<GGiFloat4x4> GRiSceneObject::GetTransform()
 {
-	return prevTransform.get();
+	if (bTransformDirty)
+		ThrowGGiException("Trying to read dirty transform data. Please make sure UpdateTransform() is called before access transform data.");
+
+	//return mTransform.get();
+	return mTransform;
+}
+
+std::shared_ptr<GGiFloat4x4> GRiSceneObject::GetPrevTransform()
+{
+	return prevTransform;
 }
 
 void GRiSceneObject::SetPrevTransform(GGiFloat4x4* trans)
 {
 	std::shared_ptr<GGiFloat4x4> temp(trans);
 	prevTransform = temp;
-	//prevTransform = std::make_shared<GGiFloat4x4>(*trans);
+
+	MarkDirty();
+}
+
+void GRiSceneObject::SetPrevTransform(std::shared_ptr<GGiFloat4x4> trans)
+{
+	prevTransform = trans;
+
 	MarkDirty();
 }
 
 void GRiSceneObject::ResetPrevTransform()
 {
-	std::shared_ptr<GGiFloat4x4> temp(GetTransform());
-	prevTransform = temp;
-	//GGiFloat4x4* temp = GetTransform();
-	//prevTransform = std::make_shared<GGiFloat4x4>(*temp);
+	prevTransform = mTransform;
+	//std::shared_ptr<GGiFloat4x4> temp(GetTransform());
+	//prevTransform = temp;
+
 	MarkDirty();
 }
 
@@ -137,6 +156,11 @@ void GRiSceneObject::SetCullState(CullState cullState)
 {
 	mCullState = cullState;
 	//there's no need to mark dirty.
+}
+
+bool GRiSceneObject::IsTransformDirty()
+{
+	return bTransformDirty;
 }
 
 
