@@ -37,11 +37,19 @@ public:
 
 	void ReprojectToMaskedBuffer(float* src, __m128* viewProj, __m128* invPrevViewProj);
 
+	void ReprojectMT(GGiThreadPool* tp, float* src, float* dst, __m128* viewProj, __m128* invPrevViewProj);
+
+	void ReprojectToMaskedBufferMT(GGiThreadPool* tp, float* src, __m128* viewProj, __m128* invPrevViewProj);
+
 	bool RasterizeAndTestBBox(GRiBoundingBox& box, __m128* worldViewProj, float* buffer, float* output);
 
 	bool RectTestBBoxMasked(GRiBoundingBox& box, __m128* worldViewProj);
 
 	void GenerateMaskedBufferDebugImage(float* output);
+
+	static __m128 SSETransformCoords(__m128 *v, __m128 *m);
+
+	void GenerateMaskedBuffer();
 
 private:
 
@@ -68,8 +76,6 @@ private:
 	GRiOcclusionCullingRasterizer() {}
 
 	static const int sBBIndexList[36];
-
-	__m128 SSETransformCoords(__m128 *v, __m128 *m);
 
 	__forceinline __m128i Min(const __m128i &v0, const __m128i &v1);
 

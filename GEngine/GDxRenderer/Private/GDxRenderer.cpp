@@ -1252,13 +1252,10 @@ void GDxRenderer::UpdateSkyPassCB(const GGiGameTimer* gt)
 
 void GDxRenderer::CullSceneObjects(const GGiGameTimer* gt)
 {
-	//static auto numThreads = thread::hardware_concurrency();
-	//boost::asio::thread_pool pool(threadNum), poolOC(threadNum);
-	//auto pool = std::make_unique<boost::asio::thread_pool>(threadNum);
-	//boost::asio::thread_pool poolOC(numThreads);
-	//boost::asio::thread_pool pool(numThreads);
-
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Reset cull state.
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 	for (auto so : pSceneObjectLayer[(int)RenderLayer::Deferred])
 	{
 		so->SetCullState(CullState::Visible);
@@ -1268,10 +1265,10 @@ void GDxRenderer::CullSceneObjects(const GGiGameTimer* gt)
 	numFrustumCulled = 0;
 	numOcclusionCulled = 0;
 
-	//testpool.Enqueue([&testNum]() {testNum++;});
-	//testpool.JoinAll();
-
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Frustum culling.
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 	GGiCpuProfiler::GetInstance().StartCpuProfile("Frustum Culling");
 
 	auto viewMat = dynamic_cast<GDxFloat4x4*>(pCamera->GetView());
@@ -1307,7 +1304,11 @@ void GDxRenderer::CullSceneObjects(const GGiGameTimer* gt)
 	BoundingFrustum::CreateFromMatrix(mCameraFrustum, proj);
 #endif
 
-	auto fcStep = 30u;
+	UINT32 fcStep;
+	if (pSceneObjectLayer[(int)RenderLayer::Deferred].size() > 100)
+		fcStep = (UINT32)(pSceneObjectLayer[(int)RenderLayer::Deferred].size() / mRendererThreadPool->GetThreadNum()) + 1;
+	else
+		fcStep = 100;
 	for (auto i = 0u; i < pSceneObjectLayer[(int)RenderLayer::Deferred].size(); i += fcStep)
 	{
 		mRendererThreadPool->Enqueue([&, i]//pSceneObjectLayer, &viewProj]
@@ -1345,7 +1346,10 @@ void GDxRenderer::CullSceneObjects(const GGiGameTimer* gt)
 
 	GGiCpuProfiler::GetInstance().EndCpuProfile("Frustum Culling");
 
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Occlusion culling
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 	if (mFrameCount != 0)
 	{
 
@@ -1380,7 +1384,8 @@ void GDxRenderer::CullSceneObjects(const GGiGameTimer* gt)
 		GGiCpuProfiler::GetInstance().StartCpuProfile("Reprojection");
 
 #if USE_MASKED_DEPTH_BUFFER
-		GRiOcclusionCullingRasterizer::GetInstance().ReprojectToMaskedBuffer(
+		GRiOcclusionCullingRasterizer::GetInstance().ReprojectToMaskedBufferMT(
+			mRendererThreadPool.get(),
 			depthReadbackBuffer,
 			viewProj.r,
 			invPrevViewProj.r
@@ -1404,7 +1409,11 @@ void GDxRenderer::CullSceneObjects(const GGiGameTimer* gt)
 
 		GGiCpuProfiler::GetInstance().StartCpuProfile("Rasterization");
 
-		auto ocStep = 90u;
+		UINT32 ocStep;
+		if (pSceneObjectLayer[(int)RenderLayer::Deferred].size() > 100)
+			ocStep = (UINT32)(pSceneObjectLayer[(int)RenderLayer::Deferred].size() / mRendererThreadPool->GetThreadNum()) + 1;
+		else
+			ocStep = 100;
 		for (auto i = 0u; i < pSceneObjectLayer[(int)RenderLayer::Deferred].size(); i += ocStep)
 		{
 			mRendererThreadPool->Enqueue([&, i]//pSceneObjectLayer, &viewProj]
@@ -1480,30 +1489,6 @@ void GDxRenderer::CullSceneObjects(const GGiGameTimer* gt)
 #endif
 
 		GGiCpuProfiler::GetInstance().EndCpuProfile("Occlusion Culling");
-	}
-}
-
-void GDxRenderer::Task_FrustumCull(GRiSceneObject* so, DirectX::XMMATRIX& view, DirectX::BoundingFrustum& cameraFrustum)
-{
-	auto dxTrans = dynamic_pointer_cast<GDxFloat4x4>(so->GetTransform());
-	if (dxTrans == nullptr)
-		ThrowGGiException("Cast failed from shared_ptr<GGiFloat4x4> to shared_ptr<GDxFloat4x4>.");
-
-	XMMATRIX world = XMLoadFloat4x4(&(dxTrans->GetValue()));
-
-	XMMATRIX localToView = XMMatrixMultiply(world, view);
-
-	BoundingBox bounds;
-	bounds.Center = DirectX::XMFLOAT3(so->GetMesh()->bounds.Center);
-	bounds.Extents = DirectX::XMFLOAT3(so->GetMesh()->bounds.Extents);
-
-	BoundingBox worldBounds;
-	bounds.Transform(worldBounds, localToView);
-
-	// Perform the box/frustum intersection test in local space.
-	if ((cameraFrustum.Contains(worldBounds) == DirectX::DISJOINT))
-	{
-		so->SetCullState(CullState::FrustumCulled);
 	}
 }
 

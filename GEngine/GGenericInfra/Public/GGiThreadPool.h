@@ -21,6 +21,11 @@ public:
 
 	void Flush();
 
+	// synchronization
+	std::mutex task_mutex;
+
+	size_t GetThreadNum();
+
 private:
 
 	// need to keep track of threads so we can join them
@@ -38,12 +43,16 @@ private:
 
 	std::atomic<int> numRunningTasks = 0;
 
+	size_t numThread = 1;
+
 };
 
 // the constructor just launches some amount of workers
 inline GGiThreadPool::GGiThreadPool(size_t threads)
 	: stop(false)
 {
+	numThread = threads;
+
 	for (size_t i = 0; i < threads; ++i)
 		workers.emplace_back(
 			[this]

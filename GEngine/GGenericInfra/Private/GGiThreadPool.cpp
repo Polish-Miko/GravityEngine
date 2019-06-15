@@ -22,4 +22,9 @@ void GGiThreadPool::Flush()
 		std::this_thread::yield();
 }
 
+size_t GGiThreadPool::GetThreadNum()
+{
+	return numThread;
+}
+
 

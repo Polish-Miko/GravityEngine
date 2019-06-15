@@ -21,16 +21,6 @@ Clustered Deferred (1000 lights)
 
 ![Clustered](https://github.com/MrySwk/GravityEngine/blob/master/screenshot/Clustered.jpg)
 
-Temporal AA
-
-Before
-
-![Before](https://github.com/MrySwk/GravityEngine/blob/master/screenshot/TAA_Before.jpg)
-
-After
-
-![After](https://github.com/MrySwk/GravityEngine/blob/master/screenshot/TAA_After.jpg)
-
 ## Dependencies
 
 <br>
@@ -59,6 +49,7 @@ to
   - [x] Scene Serialization
   - [x] Manipulation Gizmo
 - [x] Temporal AA
-- [ ] Culling
+- [x] Masked Occlusion Culling
 - [ ] Shadowing
 - [ ] AO
+- [ ] SSR

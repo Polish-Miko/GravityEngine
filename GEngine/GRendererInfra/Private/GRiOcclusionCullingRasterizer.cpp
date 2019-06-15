@@ -11,6 +11,8 @@ typedef float Vec3[3];
 
 #define USE_DISCARD_HEURISTIC 0
 
+#define USE_SSE_REPROJECT 1
+
 #define OUTPUT_TEST 0
 
 #define TILE_SIZE_X 32
@@ -27,6 +29,8 @@ typedef float Vec3[3];
 #define Z_IGNORE_BOUND 0.00005f
 #define LAYER_BOUND 1.35f
 #define TOTAL_MASK_BIT_THRESHOLD 20
+
+#define USE_FIXED_THREAD_TASK_NUM 0
 
 
 
@@ -165,6 +169,7 @@ void GRiOcclusionCullingRasterizer::Reproject(float* src, float* dst, __m128* vi
 {
 	std::fill_n((float*)dst, mBufferWidth * mBufferHeight, 0.0f);
 
+#if USE_SSE_REPROJECT
 	__m128 readbackPos, worldPos, vertW, reprojectedPos;
 	static const __m128 sign_mask = _mm_set1_ps(-0.f); // -0.f = 1 << 31
 	const __m128 sadd = _mm_setr_ps(mBufferWidth * 0.5, mBufferHeight * 0.5, 0, 0);
@@ -200,6 +205,73 @@ void GRiOcclusionCullingRasterizer::Reproject(float* src, float* dst, __m128* vi
 				dst[v * mBufferWidth + u] = reprojectedPos.m128_f32[2];
 		}
 	}
+#else
+	float ipvpF[4][4] = {
+		{invPrevViewProj[0].m128_f32[0], invPrevViewProj[0].m128_f32[1], invPrevViewProj[0].m128_f32[2], invPrevViewProj[0].m128_f32[3]},
+		{invPrevViewProj[1].m128_f32[0], invPrevViewProj[1].m128_f32[1], invPrevViewProj[1].m128_f32[2], invPrevViewProj[1].m128_f32[3]},
+		{invPrevViewProj[2].m128_f32[0], invPrevViewProj[2].m128_f32[1], invPrevViewProj[2].m128_f32[2], invPrevViewProj[2].m128_f32[3]},
+		{invPrevViewProj[3].m128_f32[0], invPrevViewProj[3].m128_f32[1], invPrevViewProj[3].m128_f32[2], invPrevViewProj[3].m128_f32[3]}
+	};
+
+	float vpF[4][4] = {
+		{viewProj[0].m128_f32[0], viewProj[0].m128_f32[1], viewProj[0].m128_f32[2], viewProj[0].m128_f32[3]},
+		{viewProj[1].m128_f32[0], viewProj[1].m128_f32[1], viewProj[1].m128_f32[2], viewProj[1].m128_f32[3]},
+		{viewProj[2].m128_f32[0], viewProj[2].m128_f32[1], viewProj[2].m128_f32[2], viewProj[2].m128_f32[3]},
+		{viewProj[3].m128_f32[0], viewProj[3].m128_f32[1], viewProj[3].m128_f32[2], viewProj[3].m128_f32[3]}
+	};
+
+	float readbackPos[4] = { 0.f, 0.f, 0.f, 1.f };
+	float worldPos[4] = { 0.f, 0.f, 0.f, 1.f };
+	float reprojectedPos[4] = { 0.f, 0.f, 0.f, 1.f };
+
+	for (auto i = 0u; i < mBufferWidth; i++)
+	{
+		for (auto j = 0u; j < mBufferHeight; j++)
+		{
+			readbackPos[0] = ((float)i / ((float)mBufferWidth - 1.0f)) * 2.0f - 1.0f;
+			readbackPos[1] = 1.0f - ((float)j / ((float)mBufferHeight - 1.0f)) * 2.0f;
+			readbackPos[2] = src[j * mBufferWidth + i];
+
+			for (auto c = 0u; c < 4; c++)
+			{
+				worldPos[c] = 0;
+				for (auto r = 0u; r < 4; r++)
+				{
+					worldPos[c] += readbackPos[r] * ipvpF[r][c];
+				}
+			}
+
+			worldPos[3] = abs(worldPos[3]);
+			worldPos[0] /= worldPos[3];
+			worldPos[1] /= worldPos[3];
+			worldPos[2] /= worldPos[3];
+			worldPos[3] = 1.0f;
+
+			for (auto c = 0u; c < 4; c++)
+			{
+				reprojectedPos[c] = 0;
+				for (auto r = 0u; r < 4; r++)
+				{
+					reprojectedPos[c] += worldPos[r] * vpF[r][c];
+				}
+			}
+
+			reprojectedPos[3] = abs(reprojectedPos[3]);
+			reprojectedPos[0] /= reprojectedPos[3];
+			reprojectedPos[1] /= reprojectedPos[3];
+			reprojectedPos[2] /= reprojectedPos[3];
+			reprojectedPos[3] = 1.0f;
+
+			reprojectedPos[0] = (reprojectedPos[0] + 1.0f) * 0.5f * mBufferWidth;
+			reprojectedPos[1] = (1.0f - reprojectedPos[1]) * 0.5f * mBufferHeight;
+
+			int u = (int)reprojectedPos[0];
+			int v = (int)reprojectedPos[1];
+			if (u >= 0 && u < mBufferWidth && v >= 0 && v < mBufferHeight)
+				dst[v * mBufferWidth + u] = reprojectedPos[2];
+		}
+	}
+#endif
 }
 
 bool GRiOcclusionCullingRasterizer::RasterizeAndTestBBox(GRiBoundingBox& box, __m128* worldViewProj, float* buffer, float* output)
@@ -405,6 +477,7 @@ void GRiOcclusionCullingRasterizer::ReprojectToMaskedBuffer(float* src, __m128* 
 		mMaskedDepthBuffer[i].mZMin[0] = _mm_set1_ps(0.0f);
 		mMaskedDepthBuffer[i].mZMin[1] = _mm_set1_ps(1.0f);
 	}
+
 	/*
 	__m128 readbackPos, worldPos, vertW, reprojectedPos;
 	//__m128i reprojectedPosI;
@@ -499,7 +572,85 @@ void GRiOcclusionCullingRasterizer::ReprojectToMaskedBuffer(float* src, __m128* 
 
 	Reproject(src, mIntermediateBuffer, viewProj, invPrevViewProj);
 
-	//generate mask
+	GenerateMaskedBuffer();
+
+}
+
+void GRiOcclusionCullingRasterizer::ReprojectMT(GGiThreadPool* tp, float* src, float* dst, __m128* viewProj, __m128* invPrevViewProj)
+{
+	std::fill_n((float*)dst, mBufferWidth * mBufferHeight, 0.0f);
+
+	static const __m128 sign_mask = _mm_set1_ps(-0.f); // -0.f = 1 << 31
+	const __m128 sadd = _mm_setr_ps(mBufferWidth * 0.5, mBufferHeight * 0.5, 0, 0);
+	const __m128 smult = _mm_setr_ps(mBufferWidth * 0.5, mBufferHeight * (-0.5), 1, 1);
+
+#if USE_FIXED_THREAD_TASK_NUM
+	auto repStep = 11u;
+#else
+	auto repStep = (UINT32)(mBufferHeight / tp->GetThreadNum() + 1);
+#endif
+	for (auto ti = 0u; ti < mBufferHeight; ti += repStep)
+	{
+		tp->Enqueue([&, ti, src, dst, invPrevViewProj, viewProj]
+		{
+			__m128 readbackPos, worldPos, vertW, reprojectedPos;
+
+			for (auto i = ti; i < mBufferHeight && i < ti + repStep; i++)
+			{
+				for (auto j = 0; j < mBufferWidth; j++)
+				{
+					readbackPos = _mm_setr_ps(((float)j / ((float)mBufferWidth - 1.0f)) * 2.0f - 1.0f, 1.0f - ((float)i / ((float)mBufferHeight - 1.0f)) * 2, src[i * mBufferWidth + j], 1.0f);
+
+					worldPos = GRiOcclusionCullingRasterizer::SSETransformCoords(&readbackPos, invPrevViewProj);
+
+					vertW = _mm_shuffle_ps(worldPos, worldPos, _MM_SHUFFLE(3, 3, 3, 3)); // wwww
+					vertW = _mm_andnot_ps(sign_mask, vertW); // abs
+					worldPos = _mm_div_ps(worldPos, vertW);
+
+					reprojectedPos = GRiOcclusionCullingRasterizer::SSETransformCoords(&worldPos, viewProj);
+
+					vertW = _mm_shuffle_ps(reprojectedPos, reprojectedPos, _MM_SHUFFLE(3, 3, 3, 3)); // wwww
+					vertW = _mm_andnot_ps(sign_mask, vertW); // abs
+					reprojectedPos = _mm_div_ps(reprojectedPos, vertW);
+
+					// now vertices are between -1 and 1
+					//const __m128 sadd = _mm_setr_ps(mBufferWidth * 0.5, mBufferHeight * 0.5, 0, 0);
+					//const __m128 smult = _mm_setr_ps(mBufferWidth * 0.5, mBufferHeight * (-0.5), 1, 1);
+
+					reprojectedPos = _mm_add_ps(sadd, _mm_mul_ps(reprojectedPos, smult));
+
+					int u = (int)reprojectedPos.m128_f32[0];
+					int v = (int)reprojectedPos.m128_f32[1];
+					if (u >= 0 && u < mBufferWidth && v >= 0 && v < mBufferHeight)
+					{
+						//std::lock_guard<std::mutex> lock(tp->task_mutex);
+						dst[v * mBufferWidth + u] = reprojectedPos.m128_f32[2];
+					}
+				}
+			}
+		}
+		);
+	}
+
+	tp->Flush();
+}
+
+void GRiOcclusionCullingRasterizer::ReprojectToMaskedBufferMT(GGiThreadPool* tp, float* src, __m128* viewProj, __m128* invPrevViewProj)
+{
+	for (auto i = 0u; i < mTileNum; i++)
+	{
+		mMaskedDepthBuffer[i].mMask = _mm_set1_epi32(0);
+		mMaskedDepthBuffer[i].mZMin[0] = _mm_set1_ps(0.0f);
+		mMaskedDepthBuffer[i].mZMin[1] = _mm_set1_ps(1.0f);
+	}
+
+	ReprojectMT(tp, src, mIntermediateBuffer, viewProj, invPrevViewProj);
+
+	GenerateMaskedBuffer();
+}
+
+void GRiOcclusionCullingRasterizer::GenerateMaskedBuffer()
+{
 	int tileIdX, tileId, subIdInTile, mask, u, v, uv;
 	float depth;
 	float lowerZ, upperZ;
@@ -596,7 +747,7 @@ void GRiOcclusionCullingRasterizer::ReprojectToMaskedBuffer(float* src, __m128* 
 							lowerMask |= mask;
 						}
 					}
-					
+
 				}
 			}
 
@@ -745,6 +896,7 @@ bool GRiOcclusionCullingRasterizer::RectTestBBoxMasked(GRiBoundingBox& box, __m1
 		vertices[i][2] = 1 / vertices[i][2];
 	}
 	*/
+
 	float wvpF[4][4] = {
 		{worldViewProj[0].m128_f32[0], worldViewProj[0].m128_f32[1], worldViewProj[0].m128_f32[2], worldViewProj[0].m128_f32[3]},
 		{worldViewProj[1].m128_f32[0], worldViewProj[1].m128_f32[1], worldViewProj[1].m128_f32[2], worldViewProj[1].m128_f32[3]},
@@ -819,11 +971,11 @@ bool GRiOcclusionCullingRasterizer::RectTestBBoxMasked(GRiBoundingBox& box, __m1
 	// Pad bounding box to (32xN) tiles. Tile BB is used for looping / traversal
 	//////////////////////////////////////////////////////////////////////////////
 
-	__m128i tileBBoxi = _mm_and_si128(_mm_add_epi32(pixelBBoxi, SIMD_TILE_PAD), SIMD_TILE_PAD_MASK);//类似于进一的对齐tile。只对xmax和ymin做了这个操作，这里y大概是反的，所以ymin应该就是上界，ymax是下界
-	int txMin = tileBBoxi.m128i_i32[0] >> TILE_WIDTH_SHIFT;//计算tilexMin，除了32得到x的最小块号
-	int txMax = tileBBoxi.m128i_i32[1] >> TILE_WIDTH_SHIFT;//计算tilexMax，计算最大块号
-	int tileRowIdx = (tileBBoxi.m128i_i32[2] >> TILE_HEIGHT_SHIFT) * mTileNumX;//竖着的最小块号乘以横着的总块数
-	int tileRowIdxEnd = (tileBBoxi.m128i_i32[3] >> TILE_HEIGHT_SHIFT) * mTileNumX;//竖着的最大块号乘以横着的总块数
+	__m128i tileBBoxi = _mm_and_si128(_mm_add_epi32(pixelBBoxi, SIMD_TILE_PAD), SIMD_TILE_PAD_MASK);
+	int txMin = tileBBoxi.m128i_i32[0] >> TILE_WIDTH_SHIFT;
+	int txMax = tileBBoxi.m128i_i32[1] >> TILE_WIDTH_SHIFT;
+	int tileRowIdx = (tileBBoxi.m128i_i32[2] >> TILE_HEIGHT_SHIFT) * mTileNumX;
+	int tileRowIdxEnd = (tileBBoxi.m128i_i32[3] >> TILE_HEIGHT_SHIFT) * mTileNumX;
 
 	/*
 	if (tileBBoxi.m128i_i32[0] == tileBBoxi.m128i_i32[1] || tileBBoxi.m128i_i32[2] == tileBBoxi.m128i_i32[3])
@@ -836,21 +988,21 @@ bool GRiOcclusionCullingRasterizer::RectTestBBoxMasked(GRiBoundingBox& box, __m1
 	// Pad bounding box to (8x4) subtiles. Skip SIMD lanes outside the subtile BB
 	///////////////////////////////////////////////////////////////////////////////
 
-	__m128i subTileBBoxi = _mm_and_si128(_mm_add_epi32(pixelBBoxi, SIMD_SUB_TILE_PAD), SIMD_SUB_TILE_PAD_MASK);//进一地对齐tile，算出subtile的bounding box，下面四个式子提取出x和y的最大最小像素值
+	__m128i subTileBBoxi = _mm_and_si128(_mm_add_epi32(pixelBBoxi, SIMD_SUB_TILE_PAD), SIMD_SUB_TILE_PAD_MASK);
 	__m128i stxmin = _mm_set1_epi32(subTileBBoxi.m128i_i32[0] - 1); // - 1 to be able to use GT test
 	__m128i stymin = _mm_set1_epi32(subTileBBoxi.m128i_i32[2] - 1); // - 1 to be able to use GT test
 	__m128i stxmax = _mm_set1_epi32(subTileBBoxi.m128i_i32[1]);
 	__m128i stymax = _mm_set1_epi32(subTileBBoxi.m128i_i32[3]);
 
 	// Setup pixel coordinates used to discard lanes outside subtile BB
-	__m128i startPixelX = _mm_add_epi32(SIMD_SUB_TILE_COL_OFFSET, _mm_set1_epi32(tileBBoxi.m128i_i32[0]));//注意这个是没有对齐的
-	__m128i pixelY = _mm_add_epi32(SIMD_SUB_TILE_ROW_OFFSET, _mm_set1_epi32(tileBBoxi.m128i_i32[2]));//注意这个是没有对齐的
+	__m128i startPixelX = _mm_add_epi32(SIMD_SUB_TILE_COL_OFFSET, _mm_set1_epi32(tileBBoxi.m128i_i32[0]));
+	__m128i pixelY = _mm_add_epi32(SIMD_SUB_TILE_ROW_OFFSET, _mm_set1_epi32(tileBBoxi.m128i_i32[2]));
 
 	//////////////////////////////////////////////////////////////////////////////
 	// Compute z from w. Note that z is reversed order, 0 = far, 1 = near, which
 	// means we use a greater than test, so zMax is used to test for visibility.
 	//////////////////////////////////////////////////////////////////////////////
-	__m128 zMax = _mm_set1_ps(maxZ);//_mm_div_ps(_mm_set1_ps(1.0f), _mm_set1_ps(wmin));//我们要用rect的最小深度来测试才能保守
+	__m128 zMax = _mm_set1_ps(maxZ);
 
 	for (;;)
 	{
@@ -898,282 +1050,4 @@ bool GRiOcclusionCullingRasterizer::RectTestBBoxMasked(GRiBoundingBox& box, __m1
 
 	return false;
 }
-
-/*
-bool GRiOcclusionCullingRasterizer::RasterizeTestBBoxSSE(GRiBoundingBox& box, __m128* matrix, float* buffer, int clientWidth, int clientHeight, float zUpperBound, float zLowerBound)
-{
-	//TODO: performance
-	LARGE_INTEGER frequency;        // ticks per second
-	LARGE_INTEGER t1, t2;           // ticks
-	double elapsedTime;
-
-	// get ticks per second
-	QueryPerformanceFrequency(&frequency);
-
-	// start timer
-	QueryPerformanceCounter(&t1);
-
-
-	//verts and flags
-	__m128 verticesSSE[8];
-	//int flags[8];
-	//static float xformedPos[3][4];
-	//static int flagsLoc[3];
-
-	// Set DAZ and FZ MXCSR bits to flush denormals to zero (i.e., make it faster)
-	// Denormal are zero (DAZ) is bit 6 and Flush to zero (FZ) is bit 15. 
-	// so to enable the two to have to set bits 6 and 15 which 1000 0000 0100 0000 = 0x8040
-	_mm_setcsr(_mm_getcsr() | 0x8040);
-
-
-	// init vertices
-	//Point3F center = box.getCenter();
-	//Point3F extent = box.getExtents();
-	//Point4F vCenter = Point4F(center.x, center.y, center.z, 1.0);
-	//Point4F vHalf = Point4F(extent.x*0.5, extent.y*0.5, extent.z*0.5, 1.0);
-	float center[3] = { box.Center[0], box.Center[1], box.Center[2] };
-	float half[3] = { box.Extents[0] * 0.5f, box.Extents[1] * 0.5f, box.Extents[2] * 0.5f };
-
-	//Point4F vMin = vCenter - vHalf;
-	//Point4F vMax = vCenter + vHalf;
-	float vMin[3] = { center[0] - half[0], center[1] - half[1], center[2] - half[2] };
-	float vMax[3] = { center[0] + half[0], center[1] + half[1], center[2] + half[2] };
-
-	// fill vertices
-	static float vertices[8][4] = {
-		{vMin[0], vMin[1], vMin[2], 1.0f},
-		{vMax[0], vMin[1], vMin[2], 1.0f},
-		{vMax[0], vMax[1], vMin[2], 1.0f},
-		{vMin[0], vMax[1], vMin[2], 1.0f},
-		{vMin[0], vMin[1], vMax[2], 1.0f},
-		{vMax[0], vMin[1], vMax[2], 1.0f},
-		{vMax[0], vMax[1], vMax[2], 1.0f},
-		{vMin[0], vMax[1], vMax[2], 1.0f}
-	};
-	//vertices[0] = Point4F(vMin.x, vMin.y, vMin.z, 1);
-	//vertices[1] = Point4F(vMax.x, vMin.y, vMin.z, 1);
-	//vertices[2] = Point4F(vMax.x, vMax.y, vMin.z, 1);
-	//vertices[3] = Point4F(vMin.x, vMax.y, vMin.z, 1);
-	//vertices[4] = Point4F(vMin.x, vMin.y, vMax.z, 1);
-	//vertices[5] = Point4F(vMax.x, vMin.y, vMax.z, 1);
-	//vertices[6] = Point4F(vMax.x, vMax.y, vMax.z, 1);
-	//vertices[7] = Point4F(vMin.x, vMax.y, vMax.z, 1);
-
-	// transforms
-	for (int i = 0; i < 8; i++)
-	{
-		verticesSSE[i] = _mm_loadu_ps(vertices[i]);
-
-		verticesSSE[i] = SSETransformCoords(&verticesSSE[i], matrix);
-
-		__m128 vertX = _mm_shuffle_ps(verticesSSE[i], verticesSSE[i], _MM_SHUFFLE(0, 0, 0, 0)); // xxxx
-		__m128 vertY = _mm_shuffle_ps(verticesSSE[i], verticesSSE[i], _MM_SHUFFLE(1, 1, 1, 1)); // yyyy
-		__m128 vertZ = _mm_shuffle_ps(verticesSSE[i], verticesSSE[i], _MM_SHUFFLE(2, 2, 2, 2)); // zzzz
-		__m128 vertW = _mm_shuffle_ps(verticesSSE[i], verticesSSE[i], _MM_SHUFFLE(3, 3, 3, 3)); // wwww
-		static const __m128 sign_mask = _mm_set1_ps(-0.f); // -0.f = 1 << 31
-		vertW = _mm_andnot_ps(sign_mask, vertW); // abs
-		vertW = _mm_shuffle_ps(vertW, _mm_set1_ps(1.0f), _MM_SHUFFLE(0, 0, 0, 0)); //w,w,1,1
-		vertW = _mm_shuffle_ps(vertW, vertW, _MM_SHUFFLE(3, 0, 0, 0)); //w,w,w,1
-
-		// project
-		verticesSSE[i] = _mm_div_ps(verticesSSE[i], vertW);
-
-		// now vertices are between -1 and 1
-		const __m128 sadd = _mm_setr_ps(clientWidth * 0.5f, clientHeight * 0.5f, 0.0f, 0.0f);
-		const __m128 smult = _mm_setr_ps(clientWidth * 0.5f, clientHeight * (-0.5f), 1.0f, 1.0f);
-
-		verticesSSE[i] = _mm_add_ps(sadd, _mm_mul_ps(verticesSSE[i], smult));
-	}
-
-	// Rasterize the AABB triangles 4 at a time
-	for (int i = 0; i < 12; i += 4)
-	{
-		SSEVFloat4 xformedPos[3];
-		SSEGather(xformedPos, i, verticesSSE);
-
-		// by 3 vertices
-		// fxPtX[0] = X0 X1 X2 X3 of 1st vert in 4 triangles
-		// fxPtX[1] = X0 X1 X2 X3 of 2nd vert in 4 triangles
-		// and so on
-		__m128i fxPtX[3], fxPtY[3];
-		for (int m = 0; m < 3; m++)
-		{
-			fxPtX[m] = _mm_cvtps_epi32(xformedPos[m].X);
-			fxPtY[m] = _mm_cvtps_epi32(xformedPos[m].Y);
-		}
-
-		// Fab(x, y) =     Ax       +       By     +      C              = 0
-		// Fab(x, y) = (ya - yb)x   +   (xb - xa)y + (xa * yb - xb * ya) = 0
-		// Compute A = (ya - yb) for the 3 line segments that make up each triangle
-		__m128i A0 = _mm_sub_epi32(fxPtY[1], fxPtY[2]);
-		__m128i A1 = _mm_sub_epi32(fxPtY[2], fxPtY[0]);
-		__m128i A2 = _mm_sub_epi32(fxPtY[0], fxPtY[1]);
-
-		// Compute B = (xb - xa) for the 3 line segments that make up each triangle
-		__m128i B0 = _mm_sub_epi32(fxPtX[2], fxPtX[1]);
-		__m128i B1 = _mm_sub_epi32(fxPtX[0], fxPtX[2]);
-		__m128i B2 = _mm_sub_epi32(fxPtX[1], fxPtX[0]);
-
-		// Compute C = (xa * yb - xb * ya) for the 3 line segments that make up each triangle
-		__m128i C0 = _mm_sub_epi32(_mm_mullo_epi32(fxPtX[1], fxPtY[2]), _mm_mullo_epi32(fxPtX[2], fxPtY[1]));
-		__m128i C1 = _mm_sub_epi32(_mm_mullo_epi32(fxPtX[2], fxPtY[0]), _mm_mullo_epi32(fxPtX[0], fxPtY[2]));
-		__m128i C2 = _mm_sub_epi32(_mm_mullo_epi32(fxPtX[0], fxPtY[1]), _mm_mullo_epi32(fxPtX[1], fxPtY[0]));
-
-		// Compute triangle area
-		__m128i triArea = _mm_mullo_epi32(B2, A1);
-		triArea = _mm_sub_epi32(triArea, _mm_mullo_epi32(B1, A2));
-		__m128 oneOverTriArea = _mm_div_ps(_mm_set1_ps(1.0f), _mm_cvtepi32_ps(triArea));
-
-		__m128 Z[3];
-		Z[0] = xformedPos[0].W;//因为当时齐次除法除的是(w,w,w,1)，所以这里的W就是view depth。
-		Z[1] = _mm_mul_ps(_mm_sub_ps(xformedPos[1].W, Z[0]), oneOverTriArea);//1点和0点的view depth之差除以三角形面积
-		Z[2] = _mm_mul_ps(_mm_sub_ps(xformedPos[2].W, Z[0]), oneOverTriArea);//2点和0点的view depth之差除以三角形面积
-
-		// Use bounding box traversal strategy to determine which pixels to rasterize 
-		__m128i startX = _mm_and_si128(Max(Min(Min(fxPtX[0], fxPtX[1]), fxPtX[2]), _mm_set1_epi32(0)), _mm_set1_epi32(~1));
-		__m128i endX = Min(Max(Max(fxPtX[0], fxPtX[1]), fxPtX[2]), _mm_set1_epi32(clientWidth - 1));
-
-		__m128i startY = _mm_and_si128(Max(Min(Min(fxPtY[0], fxPtY[1]), fxPtY[2]), _mm_set1_epi32(0)), _mm_set1_epi32(~1));
-		__m128i endY = Min(Max(Max(fxPtY[0], fxPtY[1]), fxPtY[2]), _mm_set1_epi32(clientHeight - 1));
-
-		// Now we have 4 triangles set up.  Rasterize them each individually.
-		for (int lane = 0; lane < 4; lane++)
-		{
-			// Skip triangle if area is zero 
-			if (triArea.m128i_i32[lane] <= 0)
-			{
-				continue;
-			}
-
-			// Extract this triangle's properties from the SIMD versions
-			__m128 zz[3];
-			for (int vv = 0; vv < 3; vv++)
-			{
-				zz[vv] = _mm_set1_ps(Z[vv].m128_f32[lane]);
-			}
-
-			//drop culled triangle
-
-			int startXx = startX.m128i_i32[lane];
-			int endXx = endX.m128i_i32[lane];
-			int startYy = startY.m128i_i32[lane];
-			int endYy = endY.m128i_i32[lane];
-
-			__m128i aa0 = _mm_set1_epi32(A0.m128i_i32[lane]);
-			__m128i aa1 = _mm_set1_epi32(A1.m128i_i32[lane]);
-			__m128i aa2 = _mm_set1_epi32(A2.m128i_i32[lane]);
-
-			__m128i bb0 = _mm_set1_epi32(B0.m128i_i32[lane]);
-			__m128i bb1 = _mm_set1_epi32(B1.m128i_i32[lane]);
-			__m128i bb2 = _mm_set1_epi32(B2.m128i_i32[lane]);
-
-			__m128i cc0 = _mm_set1_epi32(C0.m128i_i32[lane]);
-			__m128i cc1 = _mm_set1_epi32(C1.m128i_i32[lane]);
-			__m128i cc2 = _mm_set1_epi32(C2.m128i_i32[lane]);
-
-			__m128i aa0Inc = _mm_mul_epi32(aa0, _mm_setr_epi32(1, 2, 3, 4));
-			__m128i aa1Inc = _mm_mul_epi32(aa1, _mm_setr_epi32(1, 2, 3, 4));
-			__m128i aa2Inc = _mm_mul_epi32(aa2, _mm_setr_epi32(1, 2, 3, 4));
-
-			__m128i alpha0 = _mm_add_epi32(_mm_mul_epi32(aa0, _mm_set1_epi32(startXx)), _mm_mul_epi32(bb0, _mm_set1_epi32(startYy)));
-			alpha0 = _mm_add_epi32(cc0, alpha0);
-			__m128i beta0 = _mm_add_epi32(_mm_mul_epi32(aa1, _mm_set1_epi32(startXx)), _mm_mul_epi32(bb1, _mm_set1_epi32(startYy)));
-			beta0 = _mm_add_epi32(cc1, beta0);
-			__m128i gama0 = _mm_add_epi32(_mm_mul_epi32(aa2, _mm_set1_epi32(startXx)), _mm_mul_epi32(bb2, _mm_set1_epi32(startYy)));
-			gama0 = _mm_add_epi32(cc2, gama0);
-
-			int  rowIdx = (startYy * clientWidth + startXx);
-
-			__m128 zx = _mm_mul_ps(_mm_cvtepi32_ps(aa1), zz[1]);
-			zx = _mm_add_ps(zx, _mm_mul_ps(_mm_cvtepi32_ps(aa2), zz[2]));//aa1*zz1+aa2*zz2
-			zx = _mm_mul_ps(zx, _mm_setr_ps(1.f, 2.f, 3.f, 4.f));//aa1*zz1+aa2*zz2的1,2,3,4倍
-
-			// Texels traverse
-			for (int r = startYy; r < endYy; r++,
-				rowIdx += clientWidth,
-				alpha0 = _mm_add_epi32(alpha0, bb0),
-				beta0 = _mm_add_epi32(beta0, bb1),
-				gama0 = _mm_add_epi32(gama0, bb2))
-			{
-				// Compute barycentric coordinates
-				// Z0 as an origin
-				int index = rowIdx;
-				__m128i alpha = alpha0;
-				__m128i beta = beta0;
-				__m128i gama = gama0;
-
-				//Compute barycentric-interpolated depth
-				__m128 depth = zz[0];
-				depth = _mm_add_ps(depth, _mm_mul_ps(_mm_cvtepi32_ps(beta), zz[1]));
-				depth = _mm_add_ps(depth, _mm_mul_ps(_mm_cvtepi32_ps(gama), zz[2]));
-				__m128i anyOut = _mm_setzero_si128();
-
-				__m128i mask;
-				__m128 previousDepth;
-				__m128 depthMask;
-				__m128i finalMask;
-				for (int c = startXx; c < endXx;
-					c += 4,
-					index += 4,
-					alpha = _mm_add_epi32(alpha, aa0Inc),
-					beta = _mm_add_epi32(beta, aa1Inc),
-					gama = _mm_add_epi32(gama, aa2Inc),
-					depth = _mm_add_ps(depth, zx))
-				{
-					/*
-					mask = _mm_or_si128(_mm_or_si128(alpha, beta), gama);
-					previousDepth = _mm_loadu_ps(&(buffer[index]));
-
-					//calculate current depth
-					//(log(depth) - -6.907755375) * 0.048254941;
-					for (auto ind = 0u; ind < 4; ind++)
-						depth.m128_f32[ind] = log(depth.m128_f32[ind]);
-					__m128 logDepth = depth;
-					//__m128 curdepth = _mm_mul_ps(_mm_sub_ps(log_ps(depth), _mm_set1_ps(-6.907755375)), _mm_set1_ps(0.048254941));
-					__m128 curdepth = _mm_mul_ps(_mm_sub_ps(logDepth, _mm_set1_ps(-6.907755375f)), _mm_set1_ps(0.048254941f));
-					curdepth = _mm_sub_ps(curdepth, _mm_set1_ps(0.05f));
-
-					depthMask = _mm_cmplt_ps(curdepth, previousDepth);//这个像素的当前深度小于前一帧回读的深度的话，depthMask就是全1，否则全0
-					finalMask = _mm_andnot_si128(mask, _mm_castps_si128(depthMask));
-					anyOut = _mm_or_si128(anyOut, finalMask);//测试是否有任何未被遮蔽的像素，只要有一个像素没被遮蔽，anyOut就不是全0
-					*/
-/*
-					mask = _mm_or_si128(_mm_or_si128(alpha, beta), gama);
-					previousDepth = _mm_loadu_ps(&(buffer[index]));
-
-					//calculate current depth
-					//(log(depth) - -6.907755375) * 0.048254941;
-					for (auto ind = 0u; ind < 4; ind++)
-						depth.m128_f32[ind] = log(depth.m128_f32[ind]);
-					__m128 logDepth = depth;
-					__m128 curdepth = _mm_mul_ps(_mm_sub_ps(logDepth, _mm_set1_ps(-6.907755375f)), _mm_set1_ps(0.048254941f));
-					curdepth = _mm_sub_ps(curdepth, _mm_set1_ps(0.05f));
-
-					depthMask = _mm_cmplt_ps(curdepth, previousDepth);//这个像素的当前深度小于前一帧回读的深度的话，depthMask就是全1，否则全0
-					finalMask = _mm_andnot_si128(mask, _mm_castps_si128(depthMask));
-					anyOut = _mm_or_si128(anyOut, finalMask);//测试是否有任何未被遮蔽的像素，只要有一个像素没被遮蔽，anyOut就不是全0
-
-				}//for each column  
-
-				if (!_mm_testz_si128(anyOut, _mm_set1_epi32(0x80000000)))//如果有任何像素没被遮蔽
-				{
-					// stop timer
-					QueryPerformanceCounter(&t2);
-
-					// compute and print the elapsed time in millisec
-					elapsedTime = (t2.QuadPart - t1.QuadPart) * 1000.0 / frequency.QuadPart;
-
-					//RasterizationStats::RasterizeSSETimeSpent += elapsedTime;
-
-					return true; //early exit，有未被遮蔽的像素，需要draw这个scene object
-				}
-
-			}// for each row
-
-		}// for each triangle
-	}// for each set of SIMD# triangles
-
-	return false;//所有像素都被遮蔽了，所以这个scene object被遮蔽了，返回的是bVisible。
-}
-//*/
 

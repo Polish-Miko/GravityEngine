@@ -118,10 +118,6 @@ public:
 
 	virtual std::vector<ProfileData> GetGpuProfiles() override;
 
-public:
-
-	static void Task_FrustumCull(GRiSceneObject* so, DirectX::XMMATRIX& view, DirectX::BoundingFrustum& cameraFrustum);
-
 protected:
 
 	virtual void CreateRtvAndDsvDescriptorHeaps();
