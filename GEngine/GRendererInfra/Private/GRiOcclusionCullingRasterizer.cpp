@@ -965,7 +965,7 @@ bool GRiOcclusionCullingRasterizer::RectTestBBoxMasked(GRiBoundingBox& box, __m1
 	//////////////////////////////////////////////////////////////////////////////
 	
 	__m128i pixelBBoxi = _mm_cvttps_epi32(_mm_setr_ps(minX, maxX, minY, maxY));
-	pixelBBoxi = _mm_max_epi32(_mm_setzero_si128(), _mm_min_epi32(_mm_setr_epi32(mBufferWidth - 1, mBufferWidth - 1, mBufferHeight - 1, mBufferHeight - 1), pixelBBoxi));//screen clip.
+	pixelBBoxi = _mm_max_epi32(_mm_setzero_si128(), _mm_min_epi32(_mm_setr_epi32(mBufferWidth - 1, mBufferWidth - 1, mBufferHeight - 1, mBufferHeight - 1), pixelBBoxi));
 
 	//////////////////////////////////////////////////////////////////////////////
 	// Pad bounding box to (32xN) tiles. Tile BB is used for looping / traversal

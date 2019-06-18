@@ -141,7 +141,7 @@ float3 ToneMap(float3 color)
 	}
 	else
 	{
-		return color * (MIXED_TONE_MAP_LINEAR_UPPER_BOUND * MIXED_TONE_MAP_LINEAR_UPPER_BOUND - luma) / (luma*(2 * MIXED_TONE_MAP_LINEAR_UPPER_BOUND - 1 - luma));
+		return color * (MIXED_TONE_MAP_LINEAR_UPPER_BOUND * MIXED_TONE_MAP_LINEAR_UPPER_BOUND - luma) / (luma * (2 * MIXED_TONE_MAP_LINEAR_UPPER_BOUND - 1 - luma));
 	}
 #else
 	return color / (1 + Luminance(color));
@@ -158,7 +158,7 @@ float3 UnToneMap(float3 color)
 	}
 	else
 	{
-		return color * (MIXED_TONE_MAP_LINEAR_UPPER_BOUND * MIXED_TONE_MAP_LINEAR_UPPER_BOUND - (2 * MIXED_TONE_MAP_LINEAR_UPPER_BOUND - 1) * luma) / (luma*(1 - luma));
+		return color * (MIXED_TONE_MAP_LINEAR_UPPER_BOUND * MIXED_TONE_MAP_LINEAR_UPPER_BOUND - (2 * MIXED_TONE_MAP_LINEAR_UPPER_BOUND - 1) * luma) / (luma * (1 - luma));
 	}
 #else
 	return color / (1 - Luminance(color));
