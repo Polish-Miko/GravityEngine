@@ -1,6 +1,5 @@
 #pragma once
 #include "GRiPreInclude.h"
-#include "GRiMaterial.h"
 #include "GRiMesh.h"
 
 
@@ -74,7 +73,7 @@ protected:
 	// Index into GPU constant buffer corresponding to the ObjectCB for this render item.
 	UINT ObjIndex = -1;
 
-	GRiMaterial* Mat = nullptr;
+	//GRiMaterial* Mat = nullptr;
 
 	GRiMesh* Mesh;
 

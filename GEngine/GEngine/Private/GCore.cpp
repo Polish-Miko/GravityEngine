@@ -606,7 +606,7 @@ void GCore::LoadMaterials()
 		}
 	}
 }
-
+ 
 void GCore::LoadMeshes()
 {
 
@@ -807,6 +807,7 @@ void GCore::LoadSceneObjects()
 	}
 
 	// Load test objects.
+	/*
 	int sizeX = 32, sizeY = 32;
 
 	for (int x = -sizeX / 2; x < sizeX / 2; x++)
@@ -840,6 +841,7 @@ void GCore::LoadSceneObjects()
 	testSO->SetMesh(mMeshes[L"Box"].get());
 	mSceneObjectLayer[(int)RenderLayer::Deferred].push_back(testSO.get());
 	mSceneObjects[testSO->UniqueName] = std::move(testSO);
+	*/
 }
 
 void GCore::LoadCameras()
@@ -1351,6 +1353,7 @@ void GCore::CreateSceneObject(wchar_t* sceneObjectName, wchar_t* meshUniqueName)
 	}
 	std::unique_ptr<GRiSceneObject> newSceneObject(pRendererFactory->CreateSceneObject());
 	newSceneObject->UniqueName = SceneObjectNameStr;
+	newSceneObject->UpdateTransform();
 	newSceneObject->ResetPrevTransform();
 	newSceneObject->SetTexTransform(pRendererFactory->CreateFloat4x4());
 	newSceneObject->SetObjIndex(mSceneObjectIndex++);
