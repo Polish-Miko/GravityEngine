@@ -87,6 +87,7 @@ GRiMesh* GRiSceneObject::GetMesh()
 	return Mesh;
 }
 
+/*
 void GRiSceneObject::SetMaterial(GRiMaterial* mat)
 {
 	Mat = mat;
@@ -97,6 +98,7 @@ GRiMaterial* GRiSceneObject::GetMaterial()
 {
 	return Mat;
 }
+*/
 
 void GRiSceneObject::SetObjIndex(UINT ind)
 {

@@ -38,8 +38,8 @@ public:
 	void SetMesh(GRiMesh* mesh);
 	GRiMesh* GetMesh();
 
-	void SetMaterial(GRiMaterial* mat);
-	GRiMaterial* GetMaterial();
+	//void SetMaterial(GRiMaterial* mat);
+	//GRiMaterial* GetMaterial();
 
 	void SetObjIndex(UINT ind);
 	UINT GetObjIndex();

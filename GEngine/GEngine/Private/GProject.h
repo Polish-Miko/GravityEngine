@@ -24,7 +24,7 @@ private:
 struct GProjectSceneObjectInfo
 {
 	std::wstring UniqueName = L"none";
-	std::wstring MaterialUniqueName = L"none";
+	//std::wstring MaterialUniqueName = L"none";
 	std::wstring MeshUniqueName = L"none";
 	float Location[3] = { 0.0f, 0.0f, 0.0f };
 	float Rotation[3] = { 0.0f, 0.0f, 0.0f };
@@ -38,11 +38,28 @@ private:
 	void serialize(Archive & ar, const unsigned int version)
 	{
 		ar & BOOST_SERIALIZATION_NVP(UniqueName);
-		ar & BOOST_SERIALIZATION_NVP(MaterialUniqueName);
+		//ar & BOOST_SERIALIZATION_NVP(MaterialUniqueName);
 		ar & BOOST_SERIALIZATION_NVP(MeshUniqueName);
 		ar & BOOST_SERIALIZATION_NVP(Location);
 		ar & BOOST_SERIALIZATION_NVP(Rotation);
 		ar & BOOST_SERIALIZATION_NVP(Scale);
+	}
+};
+
+struct GProjectMeshInfo
+{
+	std::wstring MeshUniqueName = L"none";
+	std::map<std::wstring, std::wstring> MaterialUniqueName;
+
+private:
+
+	friend class boost::serialization::access;
+
+	template<class Archive>
+	void serialize(Archive & ar, const unsigned int version)
+	{
+		ar & BOOST_SERIALIZATION_NVP(MeshUniqueName);
+		ar & BOOST_SERIALIZATION_NVP(MaterialUniqueName);
 	}
 };
 
@@ -57,15 +74,21 @@ public:
 	std::wstring mSkyCubemapUniqueName;
 	std::list<GProjectTextureInfo> mTextureInfo;
 	std::list<GProjectSceneObjectInfo> mSceneObjectInfo;
+	std::list<GProjectMeshInfo> mMeshInfo;
 
-	void SaveProject(std::wstring filename, std::wstring skyCubemapUniqueName, std::unordered_map<std::wstring, std::unique_ptr<GRiTexture>>& pTextures, std::vector<GRiSceneObject*>& pSceneObjects)
+	void SaveProject(
+		std::wstring filename,
+		std::wstring skyCubemapUniqueName,
+		std::unordered_map<std::wstring, std::unique_ptr<GRiTexture>>& pTextures,
+		std::vector<GRiSceneObject*>& pSceneObjects,
+		std::unordered_map<std::wstring, std::unique_ptr<GRiMesh>>& pMeshes
+	)
 	{
 		mSkyCubemapUniqueName = skyCubemapUniqueName;
 
 		mTextureInfo.clear();
 
-		std::unordered_map<std::wstring, std::unique_ptr<GRiTexture>>::iterator it;
-		for (it = pTextures.begin(); it != pTextures.end(); it++)
+		for (auto it = pTextures.begin(); it != pTextures.end(); it++)
 		{
 			GProjectTextureInfo tInfo;
 			tInfo.UniqueFileName = (*it).second->UniqueFileName;
@@ -80,7 +103,7 @@ public:
 			GProjectSceneObjectInfo soInfo;
 			soInfo.UniqueName = pSceneObjects[i]->UniqueName;
 			soInfo.MeshUniqueName = pSceneObjects[i]->GetMesh()->UniqueName;
-			soInfo.MaterialUniqueName = pSceneObjects[i]->GetMaterial()->UniqueName;
+			//soInfo.MaterialUniqueName = pSceneObjects[i]->GetMaterial()->UniqueName;
 			std::vector<float> loc = pSceneObjects[i]->GetLocation();
 			soInfo.Location[0] = loc[0];
 			soInfo.Location[1] = loc[1];
@@ -94,6 +117,19 @@ public:
 			soInfo.Scale[1] = scale[1];
 			soInfo.Scale[2] = scale[2];
 			mSceneObjectInfo.push_back(soInfo);
+		}
+
+		mMeshInfo.clear();
+
+		for (auto it = pMeshes.begin(); it != pMeshes.end(); it++)
+		{
+			GProjectMeshInfo mInfo;
+			mInfo.MeshUniqueName = (*it).second->UniqueName;
+			for (auto submesh : (*it).second->Submeshes)
+			{
+				mInfo.MaterialUniqueName[submesh.first] = submesh.second.mMaterial->UniqueName;
+			}
+			mMeshInfo.push_back(mInfo);
 		}
 
 		std::ofstream ofs;
@@ -158,6 +194,7 @@ private:
 		ar & BOOST_SERIALIZATION_NVP(mSkyCubemapUniqueName);
 		ar & BOOST_SERIALIZATION_NVP(mTextureInfo);
 		ar & BOOST_SERIALIZATION_NVP(mSceneObjectInfo);
+		ar & BOOST_SERIALIZATION_NVP(mMeshInfo);
 	}
 
 };

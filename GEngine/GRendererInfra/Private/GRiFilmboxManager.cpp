@@ -60,10 +60,64 @@ bool GRiFilmboxManager::ImportFbxFile_Mesh(std::wstring FileName, std::vector<GR
 		return false;
 	}
 
+	//if (!ImportNode_Material(root, outMeshDataList))
+		//return false;
+
 	if (!ImportNode_Mesh(root, outMeshDataList))
 		return false;
 
 	return true;
+}
+
+bool GRiFilmboxManager::ImportNode_Material(FbxNode* pNode, std::vector<GRiMeshData>& outMeshDataList)
+{
+	if (auto pMesh = pNode->GetMesh())
+	{
+		if (!ImportMaterial(pNode, outMeshDataList))
+			return false;
+	}
+
+	for (int i = 0, e = pNode->GetChildCount(); i < e; i++)
+	{
+		if (!ImportNode_Material(pNode->GetChild(i), outMeshDataList))
+		{
+			return false;
+		}
+	}
+	return true;
+}
+
+bool GRiFilmboxManager::ImportMaterial(FbxNode* pNode, std::vector<GRiMeshData>& outMeshDataList)
+{
+	auto materialCount = pNode->GetMaterialCount();
+
+	for (int materialIndex = 0; materialIndex < materialCount; materialIndex++)
+	{
+		FbxSurfaceMaterial* pSurfaceMaterial = pNode->GetMaterial(materialIndex);
+
+		auto cMatName = pSurfaceMaterial->GetName();
+		std::string sMatName(cMatName);
+		auto wMatName = GGiEngineUtil::StringToWString(sMatName);
+
+		bool bFound = false;
+		for (auto meshData : outMeshDataList)
+		{
+			if (meshData.SubmeshName == wMatName)
+			{
+				bFound = true;
+				break;
+			}
+		}
+
+		if (!bFound)
+		{
+			GRiMeshData newMeshData;
+			newMeshData.SubmeshName = wMatName;
+			newMeshData.Vertices.clear();
+			newMeshData.Indices.clear();
+			outMeshDataList.push_back(newMeshData);
+		}
+	}
 }
 
 bool GRiFilmboxManager::ImportNode_Mesh(FbxNode* pNode, std::vector<GRiMeshData>& outMeshDataList)
@@ -86,7 +140,8 @@ bool GRiFilmboxManager::ImportNode_Mesh(FbxNode* pNode, std::vector<GRiMeshData>
 
 bool GRiFilmboxManager::ImportMesh(FbxNode* pNode, std::vector<GRiMeshData>& outMeshDataList)
 {
-	auto pMesh = pNode->GetMesh();
+	auto pMesh = pNode->GetMesh();	
+
 	if (!pMesh->IsTriangleMesh())
 	{
 		printf("error: We only support triangle meshes.\n");
@@ -96,26 +151,92 @@ bool GRiFilmboxManager::ImportMesh(FbxNode* pNode, std::vector<GRiMeshData>& out
 	uint32_t numTriangles = uint32_t(pMesh->GetPolygonCount());
 	uint32_t numPoints = pMesh->GetControlPointsCount();
 
-	GRiMeshData mdata;
+	FbxLayerElementArrayTemplate<int>* pMaterialIndices;
+	FbxGeometryElement::EMappingMode   materialMappingMode = FbxGeometryElement::eNone;
+	pMaterialIndices = &pMesh->GetElementMaterial()->GetIndexArray();
+	materialMappingMode = pMesh->GetElementMaterial()->GetMappingMode();
+	/*
+	int* pTriangleMtlIndex = new int[numTriangles];
+	if (pMesh->GetElementMaterial())
+	{
+		pMaterialIndices = &pMesh->GetElementMaterial()->GetIndexArray();
+		materialMappingMode = pMesh->GetElementMaterial()->GetMappingMode();
+		if (pMaterialIndices)
+		{
+			switch (materialMappingMode)
+			{
+			case FbxGeometryElement::eByPolygon:
+			{
+				if (pMaterialIndices->GetCount() == numTriangles)
+				{
+					for (int triangleIndex = 0; triangleIndex < numTriangles; ++triangleIndex)
+					{
+						int materialIndex = pMaterialIndices->GetAt(triangleIndex);
 
-	mdata.SubmeshName = GGiEngineUtil::StringToWString(std::string(pNode->GetName()));
-	mdata.Vertices = std::vector<GRiVertex>(numTriangles * 3);
-	mdata.Indices = std::vector<uint32_t>(numTriangles * 3);
+						pTriangleMtlIndex[triangleIndex] = materialIndex;
+					}
+				}
+			}
+			break;
+
+			case FbxGeometryElement::eAllSame:
+			{
+				int lMaterialIndex = pMaterialIndices->GetAt(0);
+
+				for (int triangleIndex = 0; triangleIndex < numTriangles; ++triangleIndex)
+				{
+					int materialIndex = pMaterialIndices->GetAt(triangleIndex);
+
+					pTriangleMtlIndex[triangleIndex] = materialIndex;
+				}
+			}
+			}
+		}
+	}
+	*/
+
+	//GRiMeshData mdata;
+
+	//mdata.SubmeshName = GGiEngineUtil::StringToWString(std::string(pNode->GetName()));
+	//mdata.Vertices = std::vector<GRiVertex>(numTriangles * 3);
+	//mdata.Indices = std::vector<uint32_t>(numTriangles * 3);
+
+	auto materialCount = pNode->GetMaterialCount();
+	auto mdata = new GRiMeshData*[materialCount];
+
+	for (int materialIndex = 0; materialIndex < materialCount; materialIndex++)
+	{
+		FbxSurfaceMaterial* pSurfaceMaterial = pNode->GetMaterial(materialIndex);
+
+		auto cMatName = pSurfaceMaterial->GetName();
+		std::string sMatName(cMatName);
+		auto wMatName = GGiEngineUtil::StringToWString(sMatName);
+
+		bool bFound = false;
+		for (auto meshData : outMeshDataList)
+		{
+			if (meshData.SubmeshName == wMatName)
+			{
+				mdata[materialIndex] = &meshData;
+				bFound = true;
+				break;
+			}
+		}
+
+		if (!bFound)
+		{
+			GRiMeshData newMeshData;
+			newMeshData.SubmeshName = wMatName;
+			newMeshData.Vertices.clear();
+			newMeshData.Indices.clear();
+			outMeshDataList.push_back(newMeshData);
+			mdata[materialIndex] = &outMeshDataList[outMeshDataList.size() - 1];
+		}
+	}
 
 	FbxAMatrix submeshTrans = pNode->EvaluateGlobalTransform() * GetGeometryTransform(pNode);
 
 	GGiFloat4x4* vertTrans = ToGMatrix(submeshTrans);
-
-	//mdata.Transform = MathHelper::Identity4x4();
-	// Import the materials.
-	//int materialCount = pNode->GetMaterialCount();
-	//for (int n = 0; n < materialCount; n++)
-	//{
-	//	FbxSurfaceMaterial* material = pNode->GetMaterial(n);
-	//	if (!importMaterial(state, mesh, material)) {
-	//		return false;
-	//	}
-	//}
 
 	pMesh->GenerateNormals();
 	const FbxGeometryElementNormal* pNormals = pMesh->GetElementNormal(0);
@@ -125,40 +246,60 @@ bool GRiFilmboxManager::ImportMesh(FbxNode* pNode, std::vector<GRiMeshData>& out
 
 	const FbxGeometryElementUV* pUVs = pMesh->GetElementUV(0);
 
-	//const FbxLayerElementMaterial* pPolygonMaterials = pMesh->GetElementMaterial();
-	//assert(pPolygonMaterials != nullptr);
-	//assert(pPolygonMaterials->GetReferenceMode() == FbxGeometryElement::eIndex ||
-	//	pPolygonMaterials->GetReferenceMode() == FbxGeometryElement::eIndexToDirect);
-	//FbxGeometryElement::EMappingMode mappingMode = pPolygonMaterials->GetMappingMode();
-	//auto getMaterialIndex = [pPolygonMaterials, mappingMode, materialCount](uint32_t triangleIndex) {
-	//	int lookupIndex = 0;
-	//	switch (mappingMode) {
-	//	case FbxGeometryElement::eByPolygon:
-	//		lookupIndex = triangleIndex;
-	//		break;
-	//	case FbxGeometryElement::eAllSame:
-	//		lookupIndex = 0;
-	//		break;
-	//	default:
-	//		assert(false);
-	//		break;
-	//	}
+	if (!pMesh->GetElementMaterial() || !pMaterialIndices)
+		ThrowGGiException("Material not found!");
 
-	//	int materialIndex = pPolygonMaterials->mIndexArray->GetAt(lookupIndex);
-	//	assert(materialIndex >= 0 && materialIndex < materialCount);
-	//	return uint32_t(materialIndex);
-	//};
-
-	// vertex deduplication
-	//UnorderedMapGenerator<hvvr::ShadingVertex, uint32_t>::Type hashMap;
-
-	//mesh.data.verts.reserve(numTriangles * 3);
-	//mesh.data.triShade.resize(numTriangles);
+	if (materialMappingMode == FbxGeometryElement::eByPolygon && pMaterialIndices->GetCount() != numTriangles)
+		ThrowGGiException("Material indices matching error!");
 
 	for (uint32_t t = 0; t < numTriangles; t++)
 	{
+		int materialIndex = 0;
+		switch (materialMappingMode)
+		{
+		case FbxGeometryElement::eByPolygon:
+			materialIndex = pMaterialIndices->GetAt(t);
+			break;
+
+		case FbxGeometryElement::eAllSame:
+			materialIndex = pMaterialIndices->GetAt(t);
+			break;
+
+		default:
+			ThrowGGiException("Material mapping mode error!");
+		}
+
 		for (uint32_t v = 0; v < 3; v++)
 		{
+			int iPoint = pMesh->GetPolygonVertex(t, v);
+			int index = mdata[materialIndex]->Indices.size();
+			mdata[materialIndex]->Indices.push_back(index);
+
+			FbxVector4 position = pMesh->GetControlPointAt(iPoint);
+			FbxVector4 normal = GetVertexElement(pNormals, iPoint, t, v, FbxVector4(0, 0, 0, 0));
+			FbxVector4 tangent = GetVertexElement(pTangents, iPoint, t, v, FbxVector4(0, 0, 0, 0));
+			FbxVector2 uv = GetVertexElement(pUVs, iPoint, t, v, FbxVector2(0, 0));
+
+			// Transform the vertex.
+			GGiFloat4* vertPos = pRendererFactory->CreateFloat4(float(position[0]), float(position[1]), float(position[2]), 1.0f);
+			GGiFloat4* finalVertPos = &((*vertPos) * (*vertTrans));
+
+			GRiVertex vertex;
+			vertex.Position[0] = finalVertPos->GetX();
+			vertex.Position[1] = finalVertPos->GetY();
+			vertex.Position[2] = finalVertPos->GetZ();
+			vertex.Normal[0] = (float)normal[0];
+			vertex.Normal[1] = (float)normal[1];
+			vertex.Normal[2] = (float)normal[2];
+			vertex.TangentU[0] = (float)tangent[0];
+			vertex.TangentU[1] = (float)tangent[1];
+			vertex.TangentU[2] = (float)tangent[2];
+			vertex.UV[0] = (float)uv[0];
+			vertex.UV[1] = 1.0f - (float)uv[1];
+
+			mdata[materialIndex]->Vertices[index] = vertex;
+
+			/*
 			int iPoint = pMesh->GetPolygonVertex(t, v);
 			mdata.Indices[3 * t + v] = 3 * t + v;
 
@@ -185,11 +326,12 @@ bool GRiFilmboxManager::ImportMesh(FbxNode* pNode, std::vector<GRiMeshData>& out
 			vertex.UV[1] = 1.0f - (float)uv[1];
 
 			mdata.Vertices[3 * t + v] = vertex;
+			*/
 		}
 
 	}
 
-	outMeshDataList.push_back(mdata);
+	//outMeshDataList.push_back(mdata);
 
 	return true;
 }

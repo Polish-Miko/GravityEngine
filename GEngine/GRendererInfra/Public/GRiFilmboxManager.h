@@ -44,6 +44,10 @@ private:
 
 	bool ImportMesh(FbxNode* pNode, std::vector<GRiMeshData>& outMeshDataList);
 
+	bool ImportNode_Material(FbxNode* pNode, std::vector<GRiMeshData>& outMeshDataList);
+
+	bool ImportMaterial(FbxNode* pNode, std::vector<GRiMeshData>& outMeshDataList);
+
 	template <typename TGeometryElement, typename TValue> TValue GetVertexElement(TGeometryElement* pElement, int iPoint, int iTriangle, int iVertex, TValue defaultValue);
 
 	GGiFloat4x4* ToGMatrix(const FbxAMatrix &fbxMat);

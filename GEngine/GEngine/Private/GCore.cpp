@@ -669,10 +669,31 @@ void GCore::LoadMeshes()
 		meshData.clear();
 		mRenderer->GetFilmboxManager()->ImportFbxFile_Mesh(WorkDirectory + file, meshData);
 		geo = pRendererFactory->CreateMesh(meshData);
+		for (auto subMesh : geo->Submeshes)
+		{
+			subMesh.second.SetMaterial(mMaterials[L"Default"].get());
+		}
 		geo->UniqueName = file;
 		geo->Name = GGiEngineUtil::GetFileName(file);
 		std::unique_ptr<GRiMesh> temp(geo);
 		mMeshes[geo->UniqueName] = std::move(temp);
+	}
+	for (auto info : mProject->mMeshInfo)
+	{
+		if (mMeshes.find(info.MeshUniqueName) != mMeshes.end())
+		{
+			for (auto submesh : mMeshes[info.MeshUniqueName]->Submeshes)
+			{
+				auto it = info.MaterialUniqueName.find(submesh.first);
+				if (it != info.MaterialUniqueName.end())
+				{
+					if (mMaterials.find((*it).second) != mMaterials.end())
+					{
+						submesh.second.SetMaterial(mMaterials[(*it).second].get());
+					}
+				}
+			}
+		}
 	}
 }
 
@@ -780,6 +801,8 @@ void GCore::LoadSceneObjects()
 			newSO->UniqueName = info.UniqueName;
 			newSO->SetTexTransform(pRendererFactory->CreateFloat4x4());
 			newSO->SetObjIndex(mSceneObjectIndex++);
+
+			/*
 			if (mMaterials.find(info.MaterialUniqueName) != mMaterials.end())
 			{
 				newSO->SetMaterial(mMaterials[info.MaterialUniqueName].get());
@@ -788,6 +811,8 @@ void GCore::LoadSceneObjects()
 			{
 				newSO->SetMaterial(mMaterials[L"Default"].get());
 			}
+			*/
+
 			if (mMeshes.find(info.MeshUniqueName) != mMeshes.end())
 			{
 				newSO->SetMesh(mMeshes[info.MeshUniqueName].get());
@@ -796,6 +821,7 @@ void GCore::LoadSceneObjects()
 			{
 				newSO->SetMesh(mMeshes[L"Sphere"].get());
 			}
+
 			newSO->SetLocation(info.Location[0], info.Location[1], info.Location[2]);
 			newSO->SetRotation(info.Rotation[0], info.Rotation[1], info.Rotation[2]);
 			newSO->SetScale(info.Scale[0], info.Scale[1], info.Scale[2]);
@@ -1167,7 +1193,7 @@ void GCore::SaveProject()
 	{
 		(*it).second->SaveMaterial(WorkDirectory);
 	}
-	mProject->SaveProject(WorkDirectory + ProjectName + L".gproj", mSkyCubemapUniqueName, mTextures, mSceneObjectLayer[(int)RenderLayer::Deferred]);
+	mProject->SaveProject(WorkDirectory + ProjectName + L".gproj", mSkyCubemapUniqueName, mTextures, mSceneObjectLayer[(int)RenderLayer::Deferred], mMeshes);
 }
 
 void GCore::LoadProject()

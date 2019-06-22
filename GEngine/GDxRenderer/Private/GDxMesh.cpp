@@ -29,6 +29,7 @@ void GDxMesh::Create(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, s
 		indices.insert(indices.end(), std::begin(mdata.Indices), std::end(mdata.Indices));
 
 		Submeshes[mdata.SubmeshName] = submesh;
+		Submeshes[mdata.SubmeshName].Name = mdata.SubmeshName;
 
 		vertexOffset += (UINT)mdata.Vertices.size();
 		indexOffset += (UINT)mdata.Indices.size();
@@ -61,7 +62,7 @@ void GDxMesh::Create(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, s
 
 	mVIBuffer = std::make_shared<GDxStaticVIBuffer>(device, cmdList, vertices, indices);
 	if (mVIBuffer == nullptr)
-		ThrowDxException(L"GStaticVIBuffer Cast Fail");
+		ThrowDxException(L"Cast Fail : GDxStaticVIBuffer.");
 
 }
 

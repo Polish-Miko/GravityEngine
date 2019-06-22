@@ -18,7 +18,13 @@ public:
 	UINT StartIndexLocation = 0;
 	INT BaseVertexLocation = 0;
 
-	GRiMaterial* Mat = nullptr;
+	void SetMaterial(GRiMaterial* material);
+
+	GRiMaterial* GetMaterial();
+
+private:
+
+	GRiMaterial* pMaterial = nullptr;
 
 };
 
