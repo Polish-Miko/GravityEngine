@@ -4,6 +4,23 @@
 
 
 
+struct GStrPair
+{
+	std::wstring str1;
+	std::wstring str2;
+
+private:
+
+	friend class boost::serialization::access;
+
+	template<class Archive>
+	void serialize(Archive & ar, const unsigned int version)
+	{
+		ar & BOOST_SERIALIZATION_NVP(str1);
+		ar & BOOST_SERIALIZATION_NVP(str2);
+	}
+};
+
 struct GProjectTextureInfo
 {
 	std::wstring UniqueFileName;
@@ -25,6 +42,8 @@ struct GProjectSceneObjectInfo
 {
 	std::wstring UniqueName = L"none";
 	//std::wstring MaterialUniqueName = L"none";
+	//std::map<std::wstring, std::wstring> OverrideMaterialUniqueName;
+	std::list<GStrPair> OverrideMaterialUniqueName;
 	std::wstring MeshUniqueName = L"none";
 	float Location[3] = { 0.0f, 0.0f, 0.0f };
 	float Rotation[3] = { 0.0f, 0.0f, 0.0f };
@@ -38,7 +57,7 @@ private:
 	void serialize(Archive & ar, const unsigned int version)
 	{
 		ar & BOOST_SERIALIZATION_NVP(UniqueName);
-		//ar & BOOST_SERIALIZATION_NVP(MaterialUniqueName);
+		ar & BOOST_SERIALIZATION_NVP(OverrideMaterialUniqueName);
 		ar & BOOST_SERIALIZATION_NVP(MeshUniqueName);
 		ar & BOOST_SERIALIZATION_NVP(Location);
 		ar & BOOST_SERIALIZATION_NVP(Rotation);
@@ -49,7 +68,8 @@ private:
 struct GProjectMeshInfo
 {
 	std::wstring MeshUniqueName = L"none";
-	std::map<std::wstring, std::wstring> MaterialUniqueName;
+	//std::map<std::wstring, std::wstring> MaterialUniqueName;
+	std::list<GStrPair> MaterialUniqueName;
 
 private:
 
@@ -104,6 +124,15 @@ public:
 			soInfo.UniqueName = pSceneObjects[i]->UniqueName;
 			soInfo.MeshUniqueName = pSceneObjects[i]->GetMesh()->UniqueName;
 			//soInfo.MaterialUniqueName = pSceneObjects[i]->GetMaterial()->UniqueName;
+			soInfo.OverrideMaterialUniqueName.clear();
+			auto ovrdMatNames = pSceneObjects[i]->GetOverrideMaterialNames();
+			for (auto pair : ovrdMatNames)
+			{
+				GStrPair pr;
+				pr.str1 = pair.first;
+				pr.str2 = pair.second;
+				soInfo.OverrideMaterialUniqueName.push_back(pr);
+			}
 			std::vector<float> loc = pSceneObjects[i]->GetLocation();
 			soInfo.Location[0] = loc[0];
 			soInfo.Location[1] = loc[1];
@@ -125,9 +154,15 @@ public:
 		{
 			GProjectMeshInfo mInfo;
 			mInfo.MeshUniqueName = (*it).second->UniqueName;
-			for (auto submesh : (*it).second->Submeshes)
+			mInfo.MaterialUniqueName.clear();
+			for (auto& submesh : (*it).second->Submeshes)
 			{
-				mInfo.MaterialUniqueName[submesh.first] = submesh.second.mMaterial->UniqueName;
+				GStrPair pr;
+				pr.str1 = submesh.first;
+				pr.str2 = submesh.second.GetMaterial()->UniqueName;
+				mInfo.MaterialUniqueName.push_back(pr);
+
+				//mInfo.MaterialUniqueName[submesh.first] = submesh.second.GetMaterial()->UniqueName;
 			}
 			mMeshInfo.push_back(mInfo);
 		}

@@ -229,13 +229,13 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 		auto objectCB = mCurrFrameResource->ObjectCB->Resource();
 
 		auto passCB = mCurrFrameResource->PassCB->Resource();
-		mCommandList->SetGraphicsRootConstantBufferView(1, passCB->GetGPUVirtualAddress());
+		mCommandList->SetGraphicsRootConstantBufferView(2, passCB->GetGPUVirtualAddress());
 
 		//mCommandList->SetGraphicsRootDescriptorTable(2, mSrvDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
-		mCommandList->SetGraphicsRootDescriptorTable(2, GetGpuSrv(mTextrueHeapIndex));
+		mCommandList->SetGraphicsRootDescriptorTable(3, GetGpuSrv(mTextrueHeapIndex));
 
 		matBuffer = mCurrFrameResource->MaterialBuffer->Resource();
-		mCommandList->SetGraphicsRootShaderResourceView(3, matBuffer->GetGPUVirtualAddress());
+		mCommandList->SetGraphicsRootShaderResourceView(4, matBuffer->GetGPUVirtualAddress());
 
 		mCommandList->OMSetStencilRef(1);
 
@@ -262,7 +262,7 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 		mCommandList->OMSetRenderTargets(mRtvHeaps["GBuffer"]->mRtvHeap.HeapDesc.NumDescriptors, &(mRtvHeaps["GBuffer"]->mRtvHeap.hCPUHeapStart), true, &DepthStencilView());
 
 		// For each render item...
-		DrawSceneObjects(mCommandList.Get(), RenderLayer::Deferred, true, true);
+		DrawSceneObjects(mCommandList.Get(), RenderLayer::Deferred, true, true, true);
 
 		for (size_t i = 0; i < mRtvHeaps["GBuffer"]->mRtv.size(); i++)
 		{
@@ -402,7 +402,7 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 
 		mCommandList->ClearRenderTargetView(mRtvHeaps["LightPass"]->mRtvHeap.handleCPU(0), clearColor, 0, nullptr);
 
-		DrawSceneObjects(mCommandList.Get(), RenderLayer::ScreenQuad, false);
+		DrawSceneObjects(mCommandList.Get(), RenderLayer::ScreenQuad, false, false);
 
 		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["LightPass"]->mRtv[0]->mResource.Get(),
 			D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_GENERIC_READ));
@@ -443,7 +443,7 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 		//mCommandList->SetGraphicsRootDescriptorTable(2, GetGpuSrv(mIblIndex + 4)); //Irradiance cubemap debug.
 
 		mCommandList->SetPipelineState(mPSOs["Sky"].Get());
-		DrawSceneObjects(mCommandList.Get(), RenderLayer::Sky, true);
+		DrawSceneObjects(mCommandList.Get(), RenderLayer::Sky, true, false);
 
 		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["LightPass"]->mRtv[0]->mResource.Get(),
 			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ));
@@ -512,7 +512,7 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 		mCommandList->OMSetRenderTargets(2, taaRtvs, false, nullptr);
 
 		// For each render item...
-		DrawSceneObjects(mCommandList.Get(), RenderLayer::ScreenQuad, false);
+		DrawSceneObjects(mCommandList.Get(), RenderLayer::ScreenQuad, false, false);
 
 		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["TaaPass"]->mRtv[2]->mResource.Get(),
 			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ));
@@ -556,7 +556,7 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 		mCommandList->OMSetRenderTargets(1, &(mRtvHeaps["MotionBlurPass"]->mRtvHeap.handleCPU(0)), false, nullptr);
 
 		// For each render item...
-		DrawSceneObjects(mCommandList.Get(), RenderLayer::ScreenQuad, false);
+		DrawSceneObjects(mCommandList.Get(), RenderLayer::ScreenQuad, false, false);
 
 		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["MotionBlurPass"]->mRtv[0]->mResource.Get(),
 			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ));
@@ -583,7 +583,7 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 		mCommandList->OMSetRenderTargets(1, &CurrentBackBufferView(), true, nullptr);
 
 		// For each render item...
-		DrawSceneObjects(mCommandList.Get(), RenderLayer::ScreenQuad, false);
+		DrawSceneObjects(mCommandList.Get(), RenderLayer::ScreenQuad, false, false);
 
 		GDxGpuProfiler::GetGpuProfiler().EndGpuProfile();
 	}
@@ -604,17 +604,17 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 		auto objectCB = mCurrFrameResource->ObjectCB->Resource();
 
 		auto passCB = mCurrFrameResource->PassCB->Resource();
-		mCommandList->SetGraphicsRootConstantBufferView(1, passCB->GetGPUVirtualAddress());
+		mCommandList->SetGraphicsRootConstantBufferView(2, passCB->GetGPUVirtualAddress());
 
-		mCommandList->SetGraphicsRootDescriptorTable(2, mRtvHeaps["GBuffer"]->GetSrvGpuStart());
+		mCommandList->SetGraphicsRootDescriptorTable(3, mRtvHeaps["GBuffer"]->GetSrvGpuStart());
 
 		matBuffer = mCurrFrameResource->MaterialBuffer->Resource();
-		mCommandList->SetGraphicsRootShaderResourceView(3, matBuffer->GetGPUVirtualAddress());
+		mCommandList->SetGraphicsRootShaderResourceView(4, matBuffer->GetGPUVirtualAddress());
 
 		mCommandList->OMSetRenderTargets(1, &CurrentBackBufferView(), true, nullptr);
 
 		// For each render item...
-		DrawSceneObjects(mCommandList.Get(), RenderLayer::Debug, true);
+		DrawSceneObjects(mCommandList.Get(), RenderLayer::Debug, true, true);
 
 		GDxGpuProfiler::GetGpuProfiler().EndGpuProfile();
 	}
@@ -914,7 +914,12 @@ void GDxRenderer::UpdateObjectCBs(const GGiGameTimer* gt)
 			XMStoreFloat4x4(&objConstants.PrevWorld, XMMatrixTranspose(prevWorld));
 			XMStoreFloat4x4(&objConstants.InvTransWorld, XMMatrixTranspose(invTransWorld));
 			XMStoreFloat4x4(&objConstants.TexTransform, XMMatrixTranspose(texTransform));
-			objConstants.MaterialIndex = e.second->GetMaterial()->MatIndex;
+			/*
+			if (e.second->GetMesh()->NumFramesDirty > 0)
+			{
+				objConstants.MaterialIndex = e.second->GetMaterial()->MatIndex;
+			}
+			*/
 
 			currObjectCB->CopyData(e.second->GetObjIndex(), objConstants);
 
@@ -1512,14 +1517,15 @@ void GDxRenderer::BuildRootSignature()
 		CD3DX12_DESCRIPTOR_RANGE range;
 		range.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, MAX_TEXTURE_NUM, 0);
 
-		CD3DX12_ROOT_PARAMETER gBufferRootParameters[4];
+		CD3DX12_ROOT_PARAMETER gBufferRootParameters[5];
 		gBufferRootParameters[0].InitAsConstantBufferView(0);
-		gBufferRootParameters[1].InitAsConstantBufferView(1);
-		gBufferRootParameters[2].InitAsDescriptorTable(1, &range, D3D12_SHADER_VISIBILITY_ALL);
-		gBufferRootParameters[3].InitAsShaderResourceView(0, 1);
+		gBufferRootParameters[1].InitAsConstants(1, 0, 1);
+		gBufferRootParameters[2].InitAsConstantBufferView(1);
+		gBufferRootParameters[3].InitAsDescriptorTable(1, &range, D3D12_SHADER_VISIBILITY_ALL);
+		gBufferRootParameters[4].InitAsShaderResourceView(0, 1);
 
 		// A root signature is an array of root parameters.
-		CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(4, gBufferRootParameters,
+		CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(5, gBufferRootParameters,
 			0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
 		CD3DX12_STATIC_SAMPLER_DESC StaticSamplers[2];
@@ -1605,14 +1611,15 @@ void GDxRenderer::BuildRootSignature()
 		CD3DX12_DESCRIPTOR_RANGE range;
 		range.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, mRtvHeaps["GBuffer"]->mRtvHeap.HeapDesc.NumDescriptors, 0);
 
-		CD3DX12_ROOT_PARAMETER gBufferDebugRootParameters[4];
+		CD3DX12_ROOT_PARAMETER gBufferDebugRootParameters[5];
 		gBufferDebugRootParameters[0].InitAsConstantBufferView(0);
-		gBufferDebugRootParameters[1].InitAsConstantBufferView(1);
-		gBufferDebugRootParameters[2].InitAsDescriptorTable(1, &range, D3D12_SHADER_VISIBILITY_ALL);
-		gBufferDebugRootParameters[3].InitAsShaderResourceView(0, 1);
+		gBufferDebugRootParameters[1].InitAsConstants(1, 0, 1);
+		gBufferDebugRootParameters[2].InitAsConstantBufferView(1);
+		gBufferDebugRootParameters[3].InitAsDescriptorTable(1, &range, D3D12_SHADER_VISIBILITY_ALL);
+		gBufferDebugRootParameters[4].InitAsShaderResourceView(0, 1);
 
 		// A root signature is an array of root parameters.
-		CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(4, gBufferDebugRootParameters,
+		CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(5, gBufferDebugRootParameters,
 			0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
 		CD3DX12_STATIC_SAMPLER_DESC StaticSamplers[2];
@@ -2889,10 +2896,10 @@ void GDxRenderer::CubemapPreIntegration()
 		XMStoreFloat4x4(&objConstants.PrevWorld, XMMatrixTranspose(world));
 		XMStoreFloat4x4(&objConstants.InvTransWorld, XMMatrixTranspose(world));
 		XMStoreFloat4x4(&objConstants.TexTransform, XMMatrixTranspose(texTransform));
-		objConstants.MaterialIndex = e.second->GetMaterial()->MatIndex;
-		objConstants.ObjPad0 = 0;
-		objConstants.ObjPad1 = 0;
-		objConstants.ObjPad2 = 0;
+		//objConstants.MaterialIndex = e.second->GetMaterial()->MatIndex;
+		//objConstants.ObjPad0 = 0;
+		//objConstants.ObjPad1 = 0;
+		//objConstants.ObjPad2 = 0;
 
 		currObjectCB->CopyData(e.second->GetObjIndex(), objConstants);
 	}
@@ -2942,7 +2949,7 @@ void GDxRenderer::CubemapPreIntegration()
 
 		mCommandList->OMSetRenderTargets(1, &(mCubeRtvs["Irradiance"]->mRtvHeap.handleCPU(i)), true, nullptr);
 
-		DrawSceneObjects(mCommandList.Get(), RenderLayer::Sky, true);
+		DrawSceneObjects(mCommandList.Get(), RenderLayer::Sky, true, false);
 	}
 
 	mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mCubeRtvs["Irradiance"]->mResource.Get(),
@@ -2979,7 +2986,7 @@ void GDxRenderer::CubemapPreIntegration()
 
 			mCommandList->OMSetRenderTargets(1, &(mCubeRtvs["Prefilter_" + std::to_string(i)]->mRtvHeap.handleCPU(j)), true, nullptr);
 
-			DrawSceneObjects(mCommandList.Get(), RenderLayer::Sky, true);
+			DrawSceneObjects(mCommandList.Get(), RenderLayer::Sky, true, false);
 
 			mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mCubeRtvs["Prefilter_" + std::to_string(i)]->mResource.Get(),
 				D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ));
@@ -3117,18 +3124,18 @@ void GDxRenderer::InitializeGpuProfiler()
 
 #pragma region Draw
 
-void GDxRenderer::DrawSceneObjects(ID3D12GraphicsCommandList* cmdList, const RenderLayer layer, bool bSetCBV, bool bCheckCullState)
+void GDxRenderer::DrawSceneObjects(ID3D12GraphicsCommandList* cmdList, const RenderLayer layer, bool bSetObjCb, bool bSetSubmeshCb, bool bCheckCullState)
 {
 	// For each render item...
 	for (size_t i = 0; i < pSceneObjectLayer[((int)layer)].size(); ++i)
 	{
 		auto sObject = pSceneObjectLayer[((int)layer)][i];
 		if (!bCheckCullState || (bCheckCullState && (sObject->GetCullState() == CullState::Visible)))
-			DrawSceneObject(cmdList, sObject, bSetCBV);
+			DrawSceneObject(cmdList, sObject, bSetObjCb, bSetSubmeshCb);
 	}
 }
 
-void GDxRenderer::DrawSceneObject(ID3D12GraphicsCommandList* cmdList, GRiSceneObject* sObject, bool bSetCBV, bool bCheckCullState)
+void GDxRenderer::DrawSceneObject(ID3D12GraphicsCommandList* cmdList, GRiSceneObject* sObject, bool bSetObjCb, bool bSetSubmeshCb, bool bCheckCullState)
 {
 	GDxSceneObject* dxSO = dynamic_cast<GDxSceneObject*>(sObject);
 	if (dxSO == NULL)
@@ -3146,7 +3153,7 @@ void GDxRenderer::DrawSceneObject(ID3D12GraphicsCommandList* cmdList, GRiSceneOb
 	cmdList->IASetIndexBuffer(&dxMesh->mVIBuffer->IndexBufferView());
 	cmdList->IASetPrimitiveTopology(dxSO->GetPrimitiveTopology());
 
-	if (bSetCBV)
+	if (bSetObjCb)
 	{
 		UINT objCBByteSize = GDxUtil::CalcConstantBufferByteSize(sizeof(ObjectConstants));
 		auto objectCB = mCurrFrameResource->ObjectCB->Resource();
@@ -3155,7 +3162,21 @@ void GDxRenderer::DrawSceneObject(ID3D12GraphicsCommandList* cmdList, GRiSceneOb
 	}
 
 	if (!bCheckCullState || (bCheckCullState && (sObject->GetCullState() == CullState::Visible)))
-		cmdList->DrawIndexedInstanced(dxMesh->mVIBuffer->IndexCount, 1, 0, 0, 0);
+	{
+		//cmdList->DrawIndexedInstanced(dxMesh->mVIBuffer->IndexCount, 1, 0, 0, 0);
+		for (auto& submesh : dxMesh->Submeshes)
+		{
+			if (bSetSubmeshCb)
+			{
+				auto overrideMat = dxSO->GetOverrideMaterial(submesh.first);
+				if (overrideMat != nullptr)
+					cmdList->SetGraphicsRoot32BitConstants(1, 1, &(overrideMat->MatIndex), 0);
+				else
+					cmdList->SetGraphicsRoot32BitConstants(1, 1, &(submesh.second.GetMaterial()->MatIndex), 0);
+			}
+			cmdList->DrawIndexedInstanced(submesh.second.IndexCount, 1, submesh.second.StartIndexLocation, submesh.second.BaseVertexLocation, 0);
+		}
+	}
 }
 
 #pragma endregion

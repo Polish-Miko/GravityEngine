@@ -12,10 +12,10 @@ cbuffer cbPerObject : register(b0)
 	float4x4 gPrevWorld;
 	float4x4 gInvTransWorld;
 	float4x4 gTexTransform;
-	uint gMaterialIndex;
-	uint gObjPad0;
-	uint gObjPad1;
-	uint gObjPad2;
+	//uint gMaterialIndex;
+	//uint gObjPad0;
+	//uint gObjPad1;
+	//uint gObjPad2;
 };
 
 #endif 

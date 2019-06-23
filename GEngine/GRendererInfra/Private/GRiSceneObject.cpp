@@ -87,18 +87,35 @@ GRiMesh* GRiSceneObject::GetMesh()
 	return Mesh;
 }
 
-/*
-void GRiSceneObject::SetMaterial(GRiMaterial* mat)
+void GRiSceneObject::SetOverrideMaterial(std::wstring submeshName, GRiMaterial* mat)
 {
-	Mat = mat;
-	MarkDirty();
+	if (pOverrideMaterial.find(submeshName) != pOverrideMaterial.end())
+	{
+		pOverrideMaterial[submeshName] = mat;
+		MarkDirty();
+	}
 }
 
-GRiMaterial* GRiSceneObject::GetMaterial()
+GRiMaterial* GRiSceneObject::GetOverrideMaterial(std::wstring submeshName)
 {
-	return Mat;
+	if (pOverrideMaterial.find(submeshName) != pOverrideMaterial.end())
+		return pOverrideMaterial[submeshName];
+	else
+		return nullptr;
 }
-*/
+
+std::map<std::wstring, std::wstring> GRiSceneObject::GetOverrideMaterialNames()
+{
+	std::map<std::wstring, std::wstring> ret;
+	ret.clear();
+
+	for (auto ovrdMat : pOverrideMaterial)
+	{
+		ret[ovrdMat.first] = ovrdMat.second->UniqueName;
+	}
+
+	return ret;
+}
 
 void GRiSceneObject::SetObjIndex(UINT ind)
 {

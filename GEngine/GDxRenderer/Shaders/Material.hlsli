@@ -12,6 +12,13 @@
 
 #define MAX_TEXTURE_NUM 1024
 
+cbuffer cbPerSubmesh : register(b0, space1)
+{
+	uint gMaterialIndex;
+	//uint gObjPad0;
+	//uint gObjPad1;
+	//uint gObjPad2;
+};
 
 struct MaterialData
 {

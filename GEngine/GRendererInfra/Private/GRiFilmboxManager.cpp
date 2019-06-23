@@ -118,6 +118,7 @@ bool GRiFilmboxManager::ImportMaterial(FbxNode* pNode, std::vector<GRiMeshData>&
 			outMeshDataList.push_back(newMeshData);
 		}
 	}
+	return true;
 }
 
 bool GRiFilmboxManager::ImportNode_Mesh(FbxNode* pNode, std::vector<GRiMeshData>& outMeshDataList)
@@ -202,7 +203,8 @@ bool GRiFilmboxManager::ImportMesh(FbxNode* pNode, std::vector<GRiMeshData>& out
 	//mdata.Indices = std::vector<uint32_t>(numTriangles * 3);
 
 	auto materialCount = pNode->GetMaterialCount();
-	auto mdata = new GRiMeshData*[materialCount];
+	//auto mdata = new GRiMeshData*[materialCount];
+	auto mDataIndex = new int[materialCount];
 
 	for (int materialIndex = 0; materialIndex < materialCount; materialIndex++)
 	{
@@ -213,11 +215,11 @@ bool GRiFilmboxManager::ImportMesh(FbxNode* pNode, std::vector<GRiMeshData>& out
 		auto wMatName = GGiEngineUtil::StringToWString(sMatName);
 
 		bool bFound = false;
-		for (auto meshData : outMeshDataList)
+		for (auto i = 0u; i < outMeshDataList.size(); i++)
 		{
-			if (meshData.SubmeshName == wMatName)
+			if (outMeshDataList[i].SubmeshName == wMatName)
 			{
-				mdata[materialIndex] = &meshData;
+				mDataIndex[materialIndex] = i;
 				bFound = true;
 				break;
 			}
@@ -230,7 +232,7 @@ bool GRiFilmboxManager::ImportMesh(FbxNode* pNode, std::vector<GRiMeshData>& out
 			newMeshData.Vertices.clear();
 			newMeshData.Indices.clear();
 			outMeshDataList.push_back(newMeshData);
-			mdata[materialIndex] = &outMeshDataList[outMeshDataList.size() - 1];
+			mDataIndex[materialIndex] = outMeshDataList.size() - 1;
 		}
 	}
 
@@ -272,8 +274,8 @@ bool GRiFilmboxManager::ImportMesh(FbxNode* pNode, std::vector<GRiMeshData>& out
 		for (uint32_t v = 0; v < 3; v++)
 		{
 			int iPoint = pMesh->GetPolygonVertex(t, v);
-			int index = mdata[materialIndex]->Indices.size();
-			mdata[materialIndex]->Indices.push_back(index);
+			int index = outMeshDataList[mDataIndex[materialIndex]].Indices.size();
+			outMeshDataList[mDataIndex[materialIndex]].Indices.push_back(index);
 
 			FbxVector4 position = pMesh->GetControlPointAt(iPoint);
 			FbxVector4 normal = GetVertexElement(pNormals, iPoint, t, v, FbxVector4(0, 0, 0, 0));
@@ -297,7 +299,7 @@ bool GRiFilmboxManager::ImportMesh(FbxNode* pNode, std::vector<GRiMeshData>& out
 			vertex.UV[0] = (float)uv[0];
 			vertex.UV[1] = 1.0f - (float)uv[1];
 
-			mdata[materialIndex]->Vertices[index] = vertex;
+			outMeshDataList[mDataIndex[materialIndex]].Vertices.push_back(vertex);
 
 			/*
 			int iPoint = pMesh->GetPolygonVertex(t, v);

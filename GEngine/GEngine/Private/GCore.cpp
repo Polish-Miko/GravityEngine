@@ -618,6 +618,7 @@ void GCore::LoadMeshes()
 	auto geo = pRendererFactory->CreateMesh(meshData);
 	geo->UniqueName = L"Box";
 	geo->Name = L"Box";
+	geo->Submeshes[L"Box"].SetMaterial(mMaterials[L"Default"].get());
 	std::unique_ptr<GRiMesh> temp1(geo);
 	mMeshes[geo->UniqueName] = std::move(temp1);
 
@@ -627,6 +628,7 @@ void GCore::LoadMeshes()
 	geo = pRendererFactory->CreateMesh(meshData);
 	geo->UniqueName = L"Grid";
 	geo->Name = L"Grid";
+	geo->Submeshes[L"Grid"].SetMaterial(mMaterials[L"Default"].get());
 	std::unique_ptr<GRiMesh> temp2(geo);
 	mMeshes[geo->UniqueName] = std::move(temp2);
 
@@ -636,6 +638,7 @@ void GCore::LoadMeshes()
 	geo = pRendererFactory->CreateMesh(meshData);
 	geo->UniqueName = L"Sphere";
 	geo->Name = L"Sphere";
+	geo->Submeshes[L"Sphere"].SetMaterial(mMaterials[L"Default"].get());
 	std::unique_ptr<GRiMesh> temp3(geo);
 	mMeshes[geo->UniqueName] = std::move(temp3);
 
@@ -645,6 +648,7 @@ void GCore::LoadMeshes()
 	geo = pRendererFactory->CreateMesh(meshData);
 	geo->UniqueName = L"Cylinder";
 	geo->Name = L"Cylinder";
+	geo->Submeshes[L"Cylinder"].SetMaterial(mMaterials[L"Default"].get());
 	std::unique_ptr<GRiMesh> temp4(geo);
 	mMeshes[geo->UniqueName] = std::move(temp4);
 
@@ -658,6 +662,7 @@ void GCore::LoadMeshes()
 	geo = pRendererFactory->CreateMesh(meshData);
 	geo->UniqueName = L"Quad";
 	geo->Name = L"Quad";
+	geo->Submeshes[L"Quad"].SetMaterial(mMaterials[L"Default"].get());
 	std::unique_ptr<GRiMesh> temp5(geo);
 	mMeshes[geo->UniqueName] = std::move(temp5);
 
@@ -669,7 +674,7 @@ void GCore::LoadMeshes()
 		meshData.clear();
 		mRenderer->GetFilmboxManager()->ImportFbxFile_Mesh(WorkDirectory + file, meshData);
 		geo = pRendererFactory->CreateMesh(meshData);
-		for (auto subMesh : geo->Submeshes)
+		for (auto& subMesh : geo->Submeshes)
 		{
 			subMesh.second.SetMaterial(mMaterials[L"Default"].get());
 		}
@@ -682,14 +687,25 @@ void GCore::LoadMeshes()
 	{
 		if (mMeshes.find(info.MeshUniqueName) != mMeshes.end())
 		{
-			for (auto submesh : mMeshes[info.MeshUniqueName]->Submeshes)
+			bool bFound = false;
+			std::wstring matName;
+			for (auto& submesh : mMeshes[info.MeshUniqueName]->Submeshes)
 			{
-				auto it = info.MaterialUniqueName.find(submesh.first);
-				if (it != info.MaterialUniqueName.end())
+				bFound = false;
+				for (auto it = info.MaterialUniqueName.begin(); it != info.MaterialUniqueName.end(); it++)
 				{
-					if (mMaterials.find((*it).second) != mMaterials.end())
+					if ((*it).str1 == submesh.first)
 					{
-						submesh.second.SetMaterial(mMaterials[(*it).second].get());
+						bFound = true;
+						matName = (*it).str2;
+					}
+				}
+
+				if (bFound)
+				{
+					if (mMaterials.find(matName) != mMaterials.end())
+					{
+						submesh.second.SetMaterial(mMaterials[matName].get());
 					}
 				}
 			}
@@ -708,7 +724,7 @@ void GCore::LoadSceneObjects()
 	fullScreenQuadSO->ResetPrevTransform();
 	fullScreenQuadSO->SetTexTransform(pRendererFactory->CreateFloat4x4());
 	fullScreenQuadSO->SetObjIndex(mSceneObjectIndex++);
-	fullScreenQuadSO->SetMaterial(mMaterials[L"Default"].get());
+	fullScreenQuadSO->SetOverrideMaterial(L"Quad", mMaterials[L"Default"].get());
 	fullScreenQuadSO->SetMesh(mMeshes[L"Quad"].get());
 	mSceneObjectLayer[(int)RenderLayer::ScreenQuad].push_back(fullScreenQuadSO.get());
 	mSceneObjects[fullScreenQuadSO->UniqueName] = std::move(fullScreenQuadSO);
@@ -720,7 +736,7 @@ void GCore::LoadSceneObjects()
 	skySO->ResetPrevTransform();
 	skySO->SetTexTransform(pRendererFactory->CreateFloat4x4());
 	skySO->SetObjIndex(mSceneObjectIndex++);
-	skySO->SetMaterial(mMaterials[L"sky"].get());
+	skySO->SetOverrideMaterial(L"Sphere", mMaterials[L"Default"].get());
 	skySO->SetMesh(mMeshes[L"Sphere"].get());
 	mSceneObjectLayer[(int)RenderLayer::Sky].push_back(skySO.get());
 	mSceneObjects[skySO->UniqueName] = std::move(skySO);
@@ -735,7 +751,7 @@ void GCore::LoadSceneObjects()
 		albedoQuadSO->ResetPrevTransform();
 		albedoQuadSO->SetTexTransform(pRendererFactory->CreateFloat4x4());
 		albedoQuadSO->SetObjIndex(mSceneObjectIndex++);
-		albedoQuadSO->SetMaterial(mMaterials[L"debug_albedo"].get());
+		albedoQuadSO->SetOverrideMaterial(L"Quad", mMaterials[L"debug_albedo"].get());
 		albedoQuadSO->SetMesh(mMeshes[L"Quad"].get());
 		mSceneObjectLayer[(int)RenderLayer::Debug].push_back(albedoQuadSO.get());
 		mSceneObjects[albedoQuadSO->UniqueName] = std::move(albedoQuadSO);
@@ -748,7 +764,7 @@ void GCore::LoadSceneObjects()
 		normalQuadSO->ResetPrevTransform();
 		normalQuadSO->SetTexTransform(pRendererFactory->CreateFloat4x4());
 		normalQuadSO->SetObjIndex(mSceneObjectIndex++);
-		normalQuadSO->SetMaterial(mMaterials[L"debug_normal"].get());
+		normalQuadSO->SetOverrideMaterial(L"Quad", mMaterials[L"debug_normal"].get());
 		normalQuadSO->SetMesh(mMeshes[L"Quad"].get());
 		mSceneObjectLayer[(int)RenderLayer::Debug].push_back(normalQuadSO.get());
 		mSceneObjects[normalQuadSO->UniqueName] = std::move(normalQuadSO);
@@ -761,7 +777,7 @@ void GCore::LoadSceneObjects()
 		worldPosQuadSO->ResetPrevTransform();
 		worldPosQuadSO->SetTexTransform(pRendererFactory->CreateFloat4x4());
 		worldPosQuadSO->SetObjIndex(mSceneObjectIndex++);
-		worldPosQuadSO->SetMaterial(mMaterials[L"debug_velocity"].get());
+		worldPosQuadSO->SetOverrideMaterial(L"Quad", mMaterials[L"debug_velocity"].get());
 		worldPosQuadSO->SetMesh(mMeshes[L"Quad"].get());
 		mSceneObjectLayer[(int)RenderLayer::Debug].push_back(worldPosQuadSO.get());
 		mSceneObjects[worldPosQuadSO->UniqueName] = std::move(worldPosQuadSO);
@@ -774,7 +790,7 @@ void GCore::LoadSceneObjects()
 		roughnessQuadSO->ResetPrevTransform();
 		roughnessQuadSO->SetTexTransform(pRendererFactory->CreateFloat4x4());
 		roughnessQuadSO->SetObjIndex(mSceneObjectIndex++);
-		roughnessQuadSO->SetMaterial(mMaterials[L"debug_roughness"].get());
+		roughnessQuadSO->SetOverrideMaterial(L"Quad", mMaterials[L"debug_roughness"].get());
 		roughnessQuadSO->SetMesh(mMeshes[L"Quad"].get());
 		mSceneObjectLayer[(int)RenderLayer::Debug].push_back(roughnessQuadSO.get());
 		mSceneObjects[roughnessQuadSO->UniqueName] = std::move(roughnessQuadSO);
@@ -787,7 +803,7 @@ void GCore::LoadSceneObjects()
 		metallicQuadSO->ResetPrevTransform();
 		metallicQuadSO->SetTexTransform(pRendererFactory->CreateFloat4x4());
 		metallicQuadSO->SetObjIndex(mSceneObjectIndex++);
-		metallicQuadSO->SetMaterial(mMaterials[L"debug_metallic"].get());
+		metallicQuadSO->SetOverrideMaterial(L"Quad", mMaterials[L"debug_metallic"].get());
 		metallicQuadSO->SetMesh(mMeshes[L"Quad"].get());
 		mSceneObjectLayer[(int)RenderLayer::Debug].push_back(metallicQuadSO.get());
 		mSceneObjects[metallicQuadSO->UniqueName] = std::move(metallicQuadSO);
@@ -820,6 +836,26 @@ void GCore::LoadSceneObjects()
 			else
 			{
 				newSO->SetMesh(mMeshes[L"Sphere"].get());
+			}
+
+			for (auto it = info.OverrideMaterialUniqueName.begin(); it != info.OverrideMaterialUniqueName.end(); it++)
+			{
+				if (mMaterials.find((*it).str1) != mMaterials.end())
+				{
+					bool bFound = false;
+
+					for (auto& submesh : newSO->GetMesh()->Submeshes)
+					{
+						if (submesh.first == (*it).str1)
+						{
+							bFound = true;
+							break;
+						}
+					}
+
+					if (bFound)
+						newSO->SetOverrideMaterial((*it).str1, mMaterials[(*it).str2].get());
+				}
 			}
 
 			newSO->SetLocation(info.Location[0], info.Location[1], info.Location[2]);
@@ -1188,8 +1224,7 @@ void GCore::SetProjectName(wchar_t* projName)
 
 void GCore::SaveProject()
 {
-	std::unordered_map<std::wstring, std::unique_ptr<GMaterial>>::iterator it;
-	for (it = mMaterialFiles.begin(); it != mMaterialFiles.end(); it++)
+	for (auto it = mMaterialFiles.begin(); it != mMaterialFiles.end(); it++)
 	{
 		(*it).second->SaveMaterial(WorkDirectory);
 	}
@@ -1336,7 +1371,7 @@ void GCore::SetSceneObjectMaterial(wchar_t* sceneObjectName, wchar_t* matUniqueN
 	{
 		return;
 	}
-	mSceneObjects[SceneObjectNameStr]->SetMaterial(mMaterials[MatNameStr].get());
+	//mSceneObjects[SceneObjectNameStr]->SetMaterial(mMaterials[MatNameStr].get());
 }
 
 const wchar_t* GCore::GetSceneObjectMeshName(wchar_t* sceneObjectName)
@@ -1356,7 +1391,8 @@ const wchar_t* GCore::GetSceneObjectMaterialName(wchar_t* sceneObjectName)
 	{
 		return L"None";
 	}
-	return mSceneObjects[SceneObjectNameStr]->GetMaterial()->UniqueName.c_str();
+	//return mSceneObjects[SceneObjectNameStr]->GetMaterial()->UniqueName.c_str();
+	return L"None";
 }
 
 bool GCore::SceneObjectExists(wchar_t* sceneObjectName)
@@ -1383,7 +1419,7 @@ void GCore::CreateSceneObject(wchar_t* sceneObjectName, wchar_t* meshUniqueName)
 	newSceneObject->ResetPrevTransform();
 	newSceneObject->SetTexTransform(pRendererFactory->CreateFloat4x4());
 	newSceneObject->SetObjIndex(mSceneObjectIndex++);
-	newSceneObject->SetMaterial(mMaterials[L"Default"].get());
+	//newSceneObject->SetMaterial(mMaterials[L"Default"].get());
 	newSceneObject->SetMesh(mMeshes[MeshUniqueNameStr].get());
 	mSceneObjectLayer[(int)RenderLayer::Deferred].push_back(newSceneObject.get());
 	mSceneObjects[newSceneObject->UniqueName] = std::move(newSceneObject);

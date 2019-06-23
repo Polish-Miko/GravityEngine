@@ -38,8 +38,9 @@ public:
 	void SetMesh(GRiMesh* mesh);
 	GRiMesh* GetMesh();
 
-	//void SetMaterial(GRiMaterial* mat);
-	//GRiMaterial* GetMaterial();
+	void SetOverrideMaterial(std::wstring submeshName, GRiMaterial* mat);
+	GRiMaterial* GetOverrideMaterial(std::wstring submeshName);
+	std::map<std::wstring, std::wstring> GetOverrideMaterialNames();
 
 	void SetObjIndex(UINT ind);
 	UINT GetObjIndex();
@@ -74,6 +75,8 @@ protected:
 	UINT ObjIndex = -1;
 
 	//GRiMaterial* Mat = nullptr;
+
+	std::unordered_map<std::wstring, GRiMaterial*> pOverrideMaterial;
 
 	GRiMesh* Mesh;
 
