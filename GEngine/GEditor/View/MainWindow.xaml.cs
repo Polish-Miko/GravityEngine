@@ -38,6 +38,7 @@ namespace GEditor
         Properties_SceneObject properties_SceneObject;
         Properties_Texture properties_Texture;
         Properties_Material properties_Material;
+        Properties_Mesh properties_Mesh;
         Properties_ProjectSettings properties_ProjectSettings;
 
         public object WinInterop { get; private set; }
@@ -205,6 +206,16 @@ namespace GEditor
             properties_Material.SetMaterialUniqueName(matUniqueName);
             PropertiesPanel.Children.Add(properties_Material);
             properties_Material.GetMaterialProperties();
+        }
+
+        public void GetMeshPropertiesByUniqueName(string meshName)
+        {
+            PropertiesPanel.Children.Clear();
+            properties_Mesh = new Properties_Mesh();
+            properties_Mesh.SetMainWindow(this);
+            properties_Mesh.SetMeshName(meshName);
+            PropertiesPanel.Children.Add(properties_Mesh);
+            properties_Mesh.GetMeshProperties();
         }
 
         public string GetBrowserSelectedFilePath()

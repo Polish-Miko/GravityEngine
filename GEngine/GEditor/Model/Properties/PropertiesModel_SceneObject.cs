@@ -22,7 +22,7 @@ namespace GEditor.Model.Properties
         private string _scaleY;
         private string _scaleZ;
         private string _meshUniqueName;
-        private string _materialUniqueName;
+        //private string _materialUniqueName;
 
         private Properties_SceneObject PropertiesPanel;
 
@@ -175,6 +175,7 @@ namespace GEditor.Model.Properties
             }
         }
 
+        /*
         public string MaterialUniqueName
         {
             get => _materialUniqueName;
@@ -184,6 +185,7 @@ namespace GEditor.Model.Properties
                 OnPropertyChanged("Material");
             }
         }
+        */
 
         public void InitName(string sObjName)
         {
@@ -197,11 +199,13 @@ namespace GEditor.Model.Properties
             OnPropertyChanged();
         }
 
+        /*
         public void InitMaterialName(string matName)
         {
             _materialUniqueName = matName;
             OnPropertyChanged();
         }
+        */
 
         public void SetName(object sender, PropertyChangedEventArgs e)
         {
@@ -219,11 +223,13 @@ namespace GEditor.Model.Properties
             OnPropertyChanged();
         }
 
+        /*
         public void SetMaterial(object sender, PropertyChangedEventArgs e)
         {
             PropertiesPanel.SetSceneObjectMaterial();
             OnPropertyChanged();
         }
+        */
 
         public event PropertyChangedEventHandler PropertyChanged;
         protected void OnPropertyChanged(string propertyName = "")
@@ -233,8 +239,8 @@ namespace GEditor.Model.Properties
                 handler += SetTransform;
             else if (propertyName == "Mesh")
                 handler += SetMesh;
-            else if (propertyName == "Material")
-                handler += SetMaterial;
+            //else if (propertyName == "Material")
+                //handler += SetMaterial;
             else if (propertyName == "Name")
                 handler += SetName;
             if (handler != null)

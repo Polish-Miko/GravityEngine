@@ -107,20 +107,20 @@ void __stdcall SetSceneObjectMesh(wchar_t* sceneObjectName, wchar_t* meshUniqueN
 	GCore::GetCore().SetSceneObjectMesh(sceneObjectName, meshUniqueName);
 }
 
-void __stdcall SetSceneObjectMaterial(wchar_t* sceneObjectName, wchar_t* matUniqueName)
-{
-	GCore::GetCore().SetSceneObjectMaterial(sceneObjectName, matUniqueName);
-}
+//void __stdcall SetSceneObjectMaterial(wchar_t* sceneObjectName, wchar_t* matUniqueName)
+//{
+//	GCore::GetCore().SetSceneObjectMaterial(sceneObjectName, matUniqueName);
+//}
 
 const wchar_t* __stdcall GetSceneObjectMeshName(wchar_t* sceneObjectName)
 {
 	return GCore::GetCore().GetSceneObjectMeshName(sceneObjectName);
 }
 
-const wchar_t* __stdcall GetSceneObjectMaterialName(wchar_t* sceneObjectName)
-{
-	return GCore::GetCore().GetSceneObjectMaterialName(sceneObjectName);
-}
+//const wchar_t* __stdcall GetSceneObjectMaterialName(wchar_t* sceneObjectName)
+//{
+//	return GCore::GetCore().GetSceneObjectMaterialName(sceneObjectName);
+//}
 
 bool __stdcall SceneObjectExists(wchar_t* sceneObjectName)
 {
@@ -175,6 +175,36 @@ void __stdcall SelectSceneObject(wchar_t* sceneObjectName)
 void __stdcall SetRefreshSceneObjectTransformCallback(VoidFuncPointerType pRefreshSceneObjectTransformCallback)
 {
 	GCore::GetCore().SetRefreshSceneObjectTransformCallback(pRefreshSceneObjectTransformCallback);
+}
+
+int __stdcall GetMeshSubmeshCount(wchar_t* meshName)
+{
+	return GCore::GetCore().GetMeshSubmeshCount(meshName);
+}
+
+wchar_t** __stdcall GetMeshSubmeshNames(wchar_t* meshName)
+{
+	return GCore::GetCore().GetMeshSubmeshNames(meshName);
+}
+
+const wchar_t* __stdcall GetMeshSubmeshMaterialUniqueName(wchar_t* meshName, wchar_t* submeshName)
+{
+	return GCore::GetCore().GetMeshSubmeshMaterialUniqueName(meshName, submeshName);
+}
+
+void __stdcall SetMeshSubmeshMaterialUniqueName(wchar_t* meshName, wchar_t* submeshName, wchar_t* materialName)
+{
+	GCore::GetCore().SetMeshSubmeshMaterialUniqueName(meshName, submeshName, materialName);
+}
+
+const wchar_t* __stdcall GetSceneObjectOverrideMaterial(wchar_t* soName, wchar_t* submeshName)
+{
+	return GCore::GetCore().GetSceneObjectOverrideMaterial(soName, submeshName);
+}
+
+void __stdcall SetSceneObjectOverrideMaterial(wchar_t* soName, wchar_t* submeshName, wchar_t* materialName)
+{
+	GCore::GetCore().SetSceneObjectOverrideMaterial(soName, submeshName, materialName);
 }
 
 

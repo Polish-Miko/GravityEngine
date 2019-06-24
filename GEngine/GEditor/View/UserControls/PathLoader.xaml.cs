@@ -12,6 +12,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using GEditor.Model.Properties;
 
 namespace GEditor.View.UserControls
 {
@@ -34,21 +35,32 @@ namespace GEditor.View.UserControls
 
         public string Id;
 
-        public string LabelText = " Default :";
+        //public string LabelText = " Default :";
 
-        public string MaterialUniqueName = "None";
+        //public string MaterialUniqueName = "None";
+
+        public PropertiesModel_PathLoader model;
 
         public PathLoader()
         {
             InitializeComponent();
         }
 
-        void Set()
+        public void Init()
+        {
+            model = new PropertiesModel_PathLoader();
+            model.SetParent(this);
+            MainStackPanel.DataContext = model;
+            //SubmeshLabel.DataContext = this;
+            //MaterialTextBox.DataContext = this;
+        }
+
+        void Set(object sender, RoutedEventArgs e)
         {
             parent.Set(this, "", Id);
         }
 
-        void Reset()
+        void Reset(object sender, RoutedEventArgs e)
         {
             parent.Reset(this, "", Id);
         }

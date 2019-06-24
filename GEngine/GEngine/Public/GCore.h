@@ -71,11 +71,11 @@ public:
 
 	void SetSceneObjectMesh(wchar_t* sceneObjectName, wchar_t* meshUniqueName);
 
-	void SetSceneObjectMaterial(wchar_t* sceneObjectName, wchar_t* matUniqueName);
+	//void SetSceneObjectMaterial(wchar_t* sceneObjectName, wchar_t* matUniqueName);
 
 	const wchar_t* GetSceneObjectMeshName(wchar_t* sceneObjectName);
 
-	const wchar_t* GetSceneObjectMaterialName(wchar_t* sceneObjectName);
+	//const wchar_t* GetSceneObjectMaterialName(wchar_t* sceneObjectName);
 
 	bool SceneObjectExists(wchar_t* sceneObjectName);
 
@@ -98,6 +98,18 @@ public:
 	void SelectSceneObject(wchar_t* sceneObjectName);
 
 	void SetRefreshSceneObjectTransformCallback(VoidFuncPointerType pRefreshSceneObjectTransformCallback);
+
+	int GetMeshSubmeshCount(wchar_t* meshName);
+
+	wchar_t** GetMeshSubmeshNames(wchar_t* meshName);
+
+	const wchar_t* GetMeshSubmeshMaterialUniqueName(wchar_t* meshName, wchar_t* submeshName);
+
+	void SetMeshSubmeshMaterialUniqueName(wchar_t* meshName, wchar_t* submeshName, wchar_t* materialName);
+
+	const wchar_t* GetSceneObjectOverrideMaterial(wchar_t* soName, wchar_t* submeshName);
+
+	void SetSceneObjectOverrideMaterial(wchar_t* soName, wchar_t* submeshName, wchar_t* materialName);
 
 #pragma endregion
 

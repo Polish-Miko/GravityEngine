@@ -89,11 +89,14 @@ GRiMesh* GRiSceneObject::GetMesh()
 
 void GRiSceneObject::SetOverrideMaterial(std::wstring submeshName, GRiMaterial* mat)
 {
-	if (pOverrideMaterial.find(submeshName) != pOverrideMaterial.end())
-	{
+	//if (pOverrideMaterial.find(submeshName) != pOverrideMaterial.end())
+	//{
+	if (mat == nullptr)
+		pOverrideMaterial.erase(submeshName);
+	else
 		pOverrideMaterial[submeshName] = mat;
-		MarkDirty();
-	}
+	MarkDirty();
+	//}
 }
 
 GRiMaterial* GRiSceneObject::GetOverrideMaterial(std::wstring submeshName)
@@ -115,6 +118,12 @@ std::map<std::wstring, std::wstring> GRiSceneObject::GetOverrideMaterialNames()
 	}
 
 	return ret;
+}
+
+void GRiSceneObject::ClearOverrideMaterials()
+{
+	pOverrideMaterial.clear();
+	MarkDirty();
 }
 
 void GRiSceneObject::SetObjIndex(UINT ind)

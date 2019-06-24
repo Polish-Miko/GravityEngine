@@ -89,6 +89,7 @@
     <Compile Include="Model\Properties\PropertiesModel_Material.cs" />
     <Compile Include="Model\Properties\PropertiesModel_ProjectSettings.cs" />
     <Compile Include="Model\Properties\PropertiesModel_Mesh.cs" />
+    <Compile Include="Model\Properties\PropertiesModel_PathLoader.cs" />
     <Compile Include="Model\Properties\PropertiesModel_Texture.cs" />
     <Compile Include="Model\Properties\PropertiesModel_SceneObject.cs" />
     <Compile Include="View\FileBrowser.xaml.cs">

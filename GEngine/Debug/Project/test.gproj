@@ -361,39 +361,43 @@
 		<item class_id="4" tracking_level="0" version="0">
 			<UniqueName>NewSceneObject</UniqueName>
 			<OverrideMaterialUniqueName class_id="5" tracking_level="0" version="0">
-				<count>0</count>
+				<count>1</count>
 				<item_version>0</item_version>
+				<item class_id="6" tracking_level="0" version="0">
+					<str1>lambert1</str1>
+					<str2>Content\Material\DarkTiles.gmat</str2>
+				</item>
 			</OverrideMaterialUniqueName>
-			<MeshUniqueName>Sphere</MeshUniqueName>
+			<MeshUniqueName>Content\Models\Helmet\Helmet.fbx</MeshUniqueName>
 			<Location>
 				<count>3</count>
-				<item>8.185574341e+01</item>
-				<item>0.000000000e+00</item>
-				<item>0.000000000e+00</item>
+				<item>1.492049980e+01</item>
+				<item>-6.305826187e+01</item>
+				<item>2.588269958e+02</item>
 			</Location>
 			<Rotation>
 				<count>3</count>
-				<item>0.000000000e+00</item>
-				<item>-0.000000000e+00</item>
-				<item>0.000000000e+00</item>
+				<item>-1.799989777e+02</item>
+				<item>7.438847542e+00</item>
+				<item>1.799985809e+02</item>
 			</Rotation>
 			<Scale>
 				<count>3</count>
-				<item>1.000000000e+00</item>
-				<item>1.000000000e+00</item>
-				<item>1.000000000e+00</item>
+				<item>1.000000000e+01</item>
+				<item>1.000000000e+01</item>
+				<item>1.000000000e+01</item>
 			</Scale>
 		</item>
 	</mSceneObjectInfo>
-	<mMeshInfo class_id="6" tracking_level="0" version="0">
+	<mMeshInfo class_id="7" tracking_level="0" version="0">
 		<count>11</count>
 		<item_version>0</item_version>
-		<item class_id="7" tracking_level="0" version="0">
+		<item class_id="8" tracking_level="0" version="0">
 			<MeshUniqueName>Box</MeshUniqueName>
 			<MaterialUniqueName>
 				<count>1</count>
 				<item_version>0</item_version>
-				<item class_id="8" tracking_level="0" version="0">
+				<item>
 					<str1>Box</str1>
 					<str2>Default</str2>
 				</item>
@@ -428,15 +432,15 @@
 				<item_version>0</item_version>
 				<item>
 					<str1>TEST2</str1>
-					<str2>Default</str2>
+					<str2>Content\Material\RedBricks.gmat</str2>
 				</item>
 				<item>
 					<str1>test1</str1>
-					<str2>Default</str2>
+					<str2>Content\Material\HardWoodBrown.gmat</str2>
 				</item>
 				<item>
 					<str1>test3</str1>
-					<str2>Default</str2>
+					<str2>Content\Material\RedBricks.gmat</str2>
 				</item>
 			</MaterialUniqueName>
 		</item>
@@ -502,7 +506,7 @@
 				<item_version>0</item_version>
 				<item>
 					<str1>lambert1</str1>
-					<str2>Default</str2>
+					<str2>Content\Models\Helmet\Helmet.gmat</str2>
 				</item>
 			</MaterialUniqueName>
 		</item>

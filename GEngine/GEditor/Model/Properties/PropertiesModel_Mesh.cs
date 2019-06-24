@@ -22,16 +22,6 @@ namespace GEditor.Model.Properties
             OnPropertyChanged("material");
         }
 
-        public bool bSrgb
-        {
-            get => _bSrgb;
-            set
-            {
-                _bSrgb = value;
-                OnPropertyChanged("srgb");
-            }
-        }
-
         public void InitMaterials(Dictionary<string, string> initMaterials)
         {
             _materialUniqueName = initMaterials;
@@ -40,7 +30,7 @@ namespace GEditor.Model.Properties
 
         public void SetProperties(object sender, PropertyChangedEventArgs e)
         {
-            PropertiesPanel.SetMeshMaterials();
+            //PropertiesPanel.SetMeshMaterials();
         }
 
         public event PropertyChangedEventHandler PropertyChanged;

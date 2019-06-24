@@ -840,7 +840,7 @@ void GCore::LoadSceneObjects()
 
 			for (auto it = info.OverrideMaterialUniqueName.begin(); it != info.OverrideMaterialUniqueName.end(); it++)
 			{
-				if (mMaterials.find((*it).str1) != mMaterials.end())
+				if (mMaterials.find((*it).str2) != mMaterials.end())
 				{
 					bool bFound = false;
 
@@ -1357,8 +1357,10 @@ void GCore::SetSceneObjectMesh(wchar_t* sceneObjectName, wchar_t* meshUniqueName
 		return;
 	}
 	mSceneObjects[SceneObjectNameStr]->SetMesh(mMeshes[MeshNameStr].get());
+	mSceneObjects[SceneObjectNameStr]->ClearOverrideMaterials();
 }
 
+/*
 void GCore::SetSceneObjectMaterial(wchar_t* sceneObjectName, wchar_t* matUniqueName)
 {
 	std::wstring SceneObjectNameStr(sceneObjectName);
@@ -1373,6 +1375,7 @@ void GCore::SetSceneObjectMaterial(wchar_t* sceneObjectName, wchar_t* matUniqueN
 	}
 	//mSceneObjects[SceneObjectNameStr]->SetMaterial(mMaterials[MatNameStr].get());
 }
+*/
 
 const wchar_t* GCore::GetSceneObjectMeshName(wchar_t* sceneObjectName)
 {
@@ -1384,6 +1387,7 @@ const wchar_t* GCore::GetSceneObjectMeshName(wchar_t* sceneObjectName)
 	return mSceneObjects[SceneObjectNameStr]->GetMesh()->UniqueName.c_str();
 }
 
+/*
 const wchar_t* GCore::GetSceneObjectMaterialName(wchar_t* sceneObjectName)
 {
 	std::wstring SceneObjectNameStr(sceneObjectName);
@@ -1394,6 +1398,7 @@ const wchar_t* GCore::GetSceneObjectMaterialName(wchar_t* sceneObjectName)
 	//return mSceneObjects[SceneObjectNameStr]->GetMaterial()->UniqueName.c_str();
 	return L"None";
 }
+*/
 
 bool GCore::SceneObjectExists(wchar_t* sceneObjectName)
 {
@@ -1509,6 +1514,108 @@ void GCore::SelectSceneObject(wchar_t* sceneObjectName)
 void GCore::SetRefreshSceneObjectTransformCallback(VoidFuncPointerType pRefreshSceneObjectTransformCallback)
 {
 	mGuiCallback->SetRefreshSceneObjectTransformCallback(pRefreshSceneObjectTransformCallback);
+}
+
+int GCore::GetMeshSubmeshCount(wchar_t* meshName)
+{
+	std::wstring strMeshName(meshName);
+	auto it = mMeshes.find(strMeshName);
+	if (it != mMeshes.end())
+	{
+		return (int)((*it).second->Submeshes.size());
+	}
+	else
+		return 0;
+}
+
+wchar_t** GCore::GetMeshSubmeshNames(wchar_t* meshName)
+{
+	std::wstring strMeshName(meshName);
+	auto it = mMeshes.find(strMeshName);
+	if (it == mMeshes.end())
+		return nullptr;
+	auto submeshCount = (*it).second->Submeshes.size();
+	wchar_t** ret = new wchar_t*[submeshCount];
+
+	int i = 0;
+	for (auto submesh : (*it).second->Submeshes)
+	{
+		ret[i] = new wchar_t[256];
+		std::wcsncpy(ret[i], submesh.second.Name.c_str(), 128);
+		i++;
+	}
+
+	return ret;
+}
+
+const wchar_t* GCore::GetMeshSubmeshMaterialUniqueName(wchar_t* meshName, wchar_t* submeshName)
+{
+	std::wstring strMeshName(meshName);
+	auto it = mMeshes.find(strMeshName);
+	if (it == mMeshes.end())
+		return nullptr;
+
+	std::wstring strSubmeshName(submeshName);
+	auto itsub = mMeshes[strMeshName]->Submeshes.find(strSubmeshName);
+	if (itsub == mMeshes[strMeshName]->Submeshes.end())
+		return nullptr;
+
+	return mMeshes[strMeshName]->Submeshes[strSubmeshName].GetMaterial()->UniqueName.c_str();
+}
+
+void GCore::SetMeshSubmeshMaterialUniqueName(wchar_t* meshName, wchar_t* submeshName, wchar_t* materialName)
+{
+	std::wstring strMeshName(meshName);
+	auto it = mMeshes.find(strMeshName);
+	if (it == mMeshes.end())
+		return;
+
+	std::wstring strSubmeshName(submeshName);
+	auto itsub = mMeshes[strMeshName]->Submeshes.find(strSubmeshName);
+	if (itsub == mMeshes[strMeshName]->Submeshes.end())
+		return;
+
+	std::wstring strMatName(materialName);
+	auto itmat = mMaterials.find(strMatName);
+	if (itmat == mMaterials.end())
+		return;
+
+	mMeshes[strMeshName]->Submeshes[strSubmeshName].SetMaterial(mMaterials[strMatName].get());
+}
+
+const wchar_t* GCore::GetSceneObjectOverrideMaterial(wchar_t* soName, wchar_t* submeshName)
+{
+	std::wstring strSceneObjectName(soName);
+	auto it = mSceneObjects.find(strSceneObjectName);
+	if (it == mSceneObjects.end())
+		return nullptr;
+
+	std::wstring strSubmeshName(submeshName);
+	auto mat = mSceneObjects[strSceneObjectName]->GetOverrideMaterial(strSubmeshName);
+	if (mat == nullptr)
+		return L"None";
+	else
+		return mat->UniqueName.c_str();
+}
+
+void GCore::SetSceneObjectOverrideMaterial(wchar_t* soName, wchar_t* submeshName, wchar_t* materialName)
+{
+	std::wstring strSceneObjectName(soName);
+	auto it = mSceneObjects.find(strSceneObjectName);
+	if (it == mSceneObjects.end())
+		return;
+
+	std::wstring strSubmeshName(submeshName);
+
+	std::wstring strMatName(materialName);
+	auto itmat = mMaterials.find(strMatName);
+	if (itmat == mMaterials.end() && strMatName != L"None")
+		return;
+
+	if (strMatName == L"None")
+		mSceneObjects[strSceneObjectName]->SetOverrideMaterial(strSubmeshName, nullptr);
+	else
+		mSceneObjects[strSceneObjectName]->SetOverrideMaterial(strSubmeshName, (*itmat).second.get());
 }
 
 #pragma endregion

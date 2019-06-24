@@ -1404,7 +1404,7 @@ void GDxRenderer::CullSceneObjects(const GGiGameTimer* gt)
 		);
 #endif
 
-#if 1
+#if 0
 		GRiOcclusionCullingRasterizer::GetInstance().GenerateMaskedBufferDebugImage(outputTest);
 #endif
 

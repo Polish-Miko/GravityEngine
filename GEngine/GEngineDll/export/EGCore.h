@@ -108,20 +108,20 @@ extern "C"
 	__declspec(dllexport) void __stdcall SetSceneObjectMesh(wchar_t* sceneObjectName, wchar_t* meshUniqueName);
 }
 
-extern "C"
-{
-	__declspec(dllexport) void __stdcall SetSceneObjectMaterial(wchar_t* sceneObjectName, wchar_t* matUniqueName);
-}
+//extern "C"
+//{
+//	__declspec(dllexport) void __stdcall SetSceneObjectMaterial(wchar_t* sceneObjectName, wchar_t* matUniqueName);
+//}
 
 extern "C"
 {
 	__declspec(dllexport) const wchar_t* __stdcall GetSceneObjectMeshName(wchar_t* sceneObjectName);
 }
 
-extern "C"
-{
-	__declspec(dllexport) const wchar_t* __stdcall GetSceneObjectMaterialName(wchar_t* sceneObjectName);
-}
+//extern "C"
+//{
+//	__declspec(dllexport) const wchar_t* __stdcall GetSceneObjectMaterialName(wchar_t* sceneObjectName);
+//}
 
 extern "C"
 {
@@ -176,6 +176,36 @@ extern "C"
 extern "C"
 {
 	__declspec(dllexport) void __stdcall SetRefreshSceneObjectTransformCallback(VoidFuncPointerType pRefreshSceneObjectTransformCallback);
+}
+
+extern "C"
+{
+	__declspec(dllexport) int __stdcall GetMeshSubmeshCount(wchar_t* meshName);
+}
+
+extern "C"
+{
+	__declspec(dllexport) wchar_t** __stdcall GetMeshSubmeshNames(wchar_t* meshName);
+}
+
+extern "C"
+{
+	__declspec(dllexport) const wchar_t* __stdcall GetMeshSubmeshMaterialUniqueName(wchar_t* meshName, wchar_t* submeshName);
+}
+
+extern "C"
+{
+	__declspec(dllexport) void __stdcall SetMeshSubmeshMaterialUniqueName(wchar_t* meshName, wchar_t* submeshName, wchar_t* materialName);
+}
+
+extern "C"
+{
+	__declspec(dllexport) const wchar_t* __stdcall GetSceneObjectOverrideMaterial(wchar_t* soName, wchar_t* submeshName);
+}
+
+extern "C"
+{
+	__declspec(dllexport) void __stdcall SetSceneObjectOverrideMaterial(wchar_t* soName, wchar_t* submeshName, wchar_t* materialName);
 }
 
 

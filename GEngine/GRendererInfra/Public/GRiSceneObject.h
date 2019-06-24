@@ -41,6 +41,7 @@ public:
 	void SetOverrideMaterial(std::wstring submeshName, GRiMaterial* mat);
 	GRiMaterial* GetOverrideMaterial(std::wstring submeshName);
 	std::map<std::wstring, std::wstring> GetOverrideMaterialNames();
+	void ClearOverrideMaterials();
 
 	void SetObjIndex(UINT ind);
 	UINT GetObjIndex();

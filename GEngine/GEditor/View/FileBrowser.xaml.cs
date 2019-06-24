@@ -330,6 +330,14 @@ namespace GEditor.View
                         mainWindow.GetMaterialPropertiesByUniqueName(matName);
                     }
                 }
+                else if (ftype == ".fbx")
+                {
+                    if (model.FilePath.IndexOf(workDirectory) != -1)
+                    {
+                        string meshName = model.FilePath.Substring(workDirectory.Length);
+                        mainWindow.GetMeshPropertiesByUniqueName(meshName);
+                    }
+                }
 
             }
 

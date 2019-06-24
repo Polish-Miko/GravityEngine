@@ -81,15 +81,21 @@
                 <Label Content=" Mesh : " VerticalAlignment="Center"/>
                 <TextBox Text="{Binding Path=MeshUniqueName, Mode=TwoWay}" HorizontalAlignment="Stretch" Margin="5,0,5,0" IsReadOnly="True"/>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Stretch" Margin="0,5,0,0">
-                    <Button Content="Load" Width="80" Margin="25,0,15,0" Click="LoadMesh"/>
-                    <Button Content="Clear" Width="80" Margin="15,0,30,0" Click="ClearMesh"/>
+                    <Button Content="Set" Width="80" Margin="25,0,15,0" Click="LoadMesh"/>
+                    <Button Content="Reset" Width="80" Margin="15,0,30,0" Click="ClearMesh"/>
                 </StackPanel>
+                <!--
                 <Label Content=" Material : " VerticalAlignment="Center"/>
                 <TextBox Text="{Binding Path=MaterialUniqueName, Mode=TwoWay}" HorizontalAlignment="Stretch" Margin="5,0,5,0" IsReadOnly="True"/>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Stretch" Margin="0,5,0,0">
                     <Button Content="Load" Width="80" Margin="25,0,15,0" Click="LoadMaterial"/>
                     <Button Content="Clear" Width="80" Margin="15,0,30,0" Click="ClearMaterial"/>
                 </StackPanel>
+                -->
+            </StackPanel>
+        </Expander>
+        <Expander Name="MaterialControl" Header="Material" IsExpanded="True">
+            <StackPanel x:Name="MaterialPanel">
             </StackPanel>
         </Expander>
 

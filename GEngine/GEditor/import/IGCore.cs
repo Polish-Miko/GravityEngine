@@ -75,14 +75,14 @@ namespace GEditor
         [DllImport(@"Build\GEngineDll.dll")]
         public static extern void SetSceneObjectMesh([MarshalAs(UnmanagedType.LPWStr)] string sceneObjectName, [MarshalAs(UnmanagedType.LPWStr)] string meshUniqueName);
 
-        [DllImport(@"Build\GEngineDll.dll")]
-        public static extern void SetSceneObjectMaterial([MarshalAs(UnmanagedType.LPWStr)] string sceneObjectName, [MarshalAs(UnmanagedType.LPWStr)] string matUniqueName);
+        //[DllImport(@"Build\GEngineDll.dll")]
+        //public static extern void SetSceneObjectMaterial([MarshalAs(UnmanagedType.LPWStr)] string sceneObjectName, [MarshalAs(UnmanagedType.LPWStr)] string matUniqueName);
 
         [DllImport(@"Build\GEngineDll.dll")]
         public static extern IntPtr GetSceneObjectMeshName([MarshalAs(UnmanagedType.LPWStr)] string sceneObjectName);
 
-        [DllImport(@"Build\GEngineDll.dll")]
-        public static extern IntPtr GetSceneObjectMaterialName([MarshalAs(UnmanagedType.LPWStr)] string sceneObjectName);
+        //[DllImport(@"Build\GEngineDll.dll")]
+        //public static extern IntPtr GetSceneObjectMaterialName([MarshalAs(UnmanagedType.LPWStr)] string sceneObjectName);
 
         [DllImport(@"Build\GEngineDll.dll")]
         public static extern bool SceneObjectExists([MarshalAs(UnmanagedType.LPWStr)] string sceneObjectName);
@@ -116,6 +116,24 @@ namespace GEditor
 
         [DllImport(@"Build\GEngineDll.dll")]
         public static extern void SetRefreshSceneObjectTransformCallback(VoidFuncPointerType pRefreshSceneObjectTransformCallback);
+
+        [DllImport(@"Build\GEngineDll.dll")]
+        public static extern int GetMeshSubmeshCount([MarshalAs(UnmanagedType.LPWStr)] string meshName);
+
+        [DllImport(@"Build\GEngineDll.dll")]
+        public static extern IntPtr GetMeshSubmeshNames([MarshalAs(UnmanagedType.LPWStr)] string meshName);
+
+        [DllImport(@"Build\GEngineDll.dll")]
+        public static extern IntPtr GetMeshSubmeshMaterialUniqueName([MarshalAs(UnmanagedType.LPWStr)] string meshName, [MarshalAs(UnmanagedType.LPWStr)] string submeshName);
+
+        [DllImport(@"Build\GEngineDll.dll")]
+        public static extern void SetMeshSubmeshMaterialUniqueName([MarshalAs(UnmanagedType.LPWStr)] string meshName, [MarshalAs(UnmanagedType.LPWStr)] string submeshName, [MarshalAs(UnmanagedType.LPWStr)] string materialName);
+
+        [DllImport(@"Build\GEngineDll.dll")]
+        public static extern IntPtr GetSceneObjectOverrideMaterial([MarshalAs(UnmanagedType.LPWStr)] string soName, [MarshalAs(UnmanagedType.LPWStr)] string submeshName);
+
+        [DllImport(@"Build\GEngineDll.dll")]
+        public static extern void SetSceneObjectOverrideMaterial([MarshalAs(UnmanagedType.LPWStr)] string soName, [MarshalAs(UnmanagedType.LPWStr)] string submeshName, [MarshalAs(UnmanagedType.LPWStr)] string materialName);
 
     }
 }
