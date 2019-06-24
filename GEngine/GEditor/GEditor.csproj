@@ -88,6 +88,7 @@
     <Compile Include="Model\Outliner\OutlinerItemModel.cs" />
     <Compile Include="Model\Properties\PropertiesModel_Material.cs" />
     <Compile Include="Model\Properties\PropertiesModel_ProjectSettings.cs" />
+    <Compile Include="Model\Properties\PropertiesModel_Mesh.cs" />
     <Compile Include="Model\Properties\PropertiesModel_Texture.cs" />
     <Compile Include="Model\Properties\PropertiesModel_SceneObject.cs" />
     <Compile Include="View\FileBrowser.xaml.cs">
@@ -102,6 +103,9 @@
     <Compile Include="View\Properties_ProjectSettings.xaml.cs">
       <DependentUpon>Properties_ProjectSettings.xaml</DependentUpon>
     </Compile>
+    <Compile Include="View\Properties_Mesh.xaml.cs">
+      <DependentUpon>Properties_Mesh.xaml</DependentUpon>
+    </Compile>
     <Compile Include="View\Properties_Texture.xaml.cs">
       <DependentUpon>Properties_Texture.xaml</DependentUpon>
     </Compile>
@@ -110,6 +114,9 @@
     </Compile>
     <Compile Include="View\TestButton.xaml.cs">
       <DependentUpon>TestButton.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="View\UserControls\PathLoader.xaml.cs">
+      <DependentUpon>PathLoader.xaml</DependentUpon>
     </Compile>
     <Compile Include="View\Viewport.xaml.cs">
       <DependentUpon>Viewport.xaml</DependentUpon>
@@ -142,6 +149,10 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
+    <Page Include="View\Properties_Mesh.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
     <Page Include="View\Properties_Texture.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -159,6 +170,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="View\TestButton.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="View\UserControls\PathLoader.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
