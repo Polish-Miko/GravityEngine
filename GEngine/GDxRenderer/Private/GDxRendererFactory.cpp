@@ -43,6 +43,7 @@ GRiMaterial* GDxRendererFactory::CreateMaterial()
 	return ret;
 }
 
+/*
 GGiFloat4* GDxRendererFactory::CreateFloat4()
 {
 	GGiFloat4* ret = GDxFloat4::ZeroVector();
@@ -60,6 +61,7 @@ GGiFloat4x4* GDxRendererFactory::CreateFloat4x4()
 	GGiFloat4x4* ret = GDxFloat4x4::Identity4x4();
 	return ret;
 }
+*/
 
 GRiMesh* GDxRendererFactory::CreateMesh(std::vector<GRiMeshData> meshData)
 {

@@ -28,12 +28,12 @@ public:
 
 	void MarkDirty();
 
-	std::shared_ptr<GGiFloat4x4> GetTransform();
+	GGiFloat4x4 GetTransform();
 
 	virtual void UpdateTransform() = 0;
 
-	void SetTexTransform(GGiFloat4x4* texTrans);
-	std::shared_ptr<GGiFloat4x4> GetTexTransform();
+	void SetTexTransform(GGiFloat4x4 texTrans);
+	GGiFloat4x4 GetTexTransform();
 
 	void SetMesh(GRiMesh* mesh);
 	GRiMesh* GetMesh();
@@ -46,9 +46,9 @@ public:
 	void SetObjIndex(UINT ind);
 	UINT GetObjIndex();
 
-	std::shared_ptr<GGiFloat4x4> GetPrevTransform();
-	void SetPrevTransform(GGiFloat4x4* trans);
-	void SetPrevTransform(std::shared_ptr<GGiFloat4x4> trans);
+	GGiFloat4x4 GetPrevTransform();
+	void SetPrevTransform(GGiFloat4x4 trans);
+	void SetPrevTransform(GGiFloat4x4 trans);
 	void ResetPrevTransform();
 
 	CullState GetCullState();
@@ -68,9 +68,9 @@ protected:
 	float Rotation[3] = { 0.0f, 0.0f, 0.0f };
 	float Scale[3] = { 1.0f, 1.0f, 1.0f };
 
-	std::shared_ptr<GGiFloat4x4> mTransform;
+	GGiFloat4x4 mTransform;
 
-	std::shared_ptr<GGiFloat4x4> prevTransform;
+	GGiFloat4x4 prevTransform;
 
 	// Index into GPU constant buffer corresponding to the ObjectCB for this render item.
 	UINT ObjIndex = -1;
@@ -81,7 +81,7 @@ protected:
 
 	GRiMesh* Mesh;
 
-	std::shared_ptr<GGiFloat4x4> TexTransform;
+	GGiFloat4x4 TexTransform;
 
 	CullState mCullState = Visible;
 

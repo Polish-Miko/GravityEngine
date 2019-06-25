@@ -43,9 +43,9 @@ public:
 	void LookAt(std::vector<float> pos, std::vector<float> target, std::vector<float> worldUp);
 
 	// Get View/Proj matrices.
-	GGiFloat4x4* GetView()const;
-	GGiFloat4x4* GetProj()const;
-	GGiFloat4x4* GetReversedProj()const;
+	GGiFloat4x4 GetView();//const;
+	GGiFloat4x4 GetProj();// const;
+	GGiFloat4x4 GetReversedProj();// const;
 
 	// Strafe/Walk/Ascend the camera a distance d.
 	void Strafe(float d);
@@ -59,8 +59,8 @@ public:
 	// After modifying camera position/orientation, call to rebuild the view matrix.
 	void UpdateViewMatrix();
 
-	void SetPrevViewProj(GGiFloat4x4* prev);
-	GGiFloat4x4* GetPrevViewProj();
+	void SetPrevViewProj(GGiFloat4x4 prev);
+	GGiFloat4x4 GetPrevViewProj();
 	void InitPrevViewProj();
 
 	void SetPrevPosition(std::vector<float> prev);
@@ -77,7 +77,7 @@ private:
 	float mUp[3] = { 0.0f, 1.0f, 0.0f };
 	float mLook[3] = { 0.0f, 0.0f, 1.0f };
 
-	GGiFloat4x4* prevViewProj;
+	GGiFloat4x4 prevViewProj;
 
 	float mPrevPosition[3] = { 0.0f,0.0f,0.0f };
 
@@ -92,9 +92,9 @@ private:
 	bool mViewDirty = true;
 
 	// Cache View/Proj matrices.
-	GGiFloat4x4* mView;
-	GGiFloat4x4* mProj;
+	GGiFloat4x4 mView;
+	GGiFloat4x4 mProj;
 
-	GGiFloat4x4* mReversedProj;
+	GGiFloat4x4 mReversedProj;
 };
 

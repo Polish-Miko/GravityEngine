@@ -3,6 +3,7 @@
 #include "GDxFloat4x4.h"
 
 
+/*
 GDxFloat4::GDxFloat4()
 {
 	DirectX::XMFLOAT4 zero(0.0f, 0.0f, 0.0f, 0.0f);
@@ -148,3 +149,6 @@ void GDxFloat4::SetValue(DirectX::XMFLOAT4 v)
 {
 	value = v;
 }
+*/
+
+

@@ -37,6 +37,64 @@ typedef const GGiVector4& GGiVector4_H;
 typedef const GGiVector4& GGiVector4_C;
 
 
+//*****************************************************************************************************************************
+// Conversion types for constants.
+//*****************************************************************************************************************************
+__declspec(align(16)) struct GGiVector4F32
+{
+	union
+	{
+		float f[4];
+		GGiVector4 v;
+	};
+
+	inline operator GGiVector4() const { return v; }
+	inline operator const float*() const { return f; }
+	inline operator __m128i() const { return _mm_castps_si128(v); }
+	inline operator __m128d() const { return _mm_castps_pd(v); }
+};
+
+__declspec(align(16)) struct GGiVector4I32
+{
+	union
+	{
+		int32_t i[4];
+		GGiVector4 v;
+	};
+
+	inline operator GGiVector4() const { return v; }
+	inline operator __m128i() const { return _mm_castps_si128(v); }
+	inline operator __m128d() const { return _mm_castps_pd(v); }
+};
+
+__declspec(align(16)) struct GGiVector4U8
+{
+	union
+	{
+		uint8_t u[16];
+		GGiVector4 v;
+	};
+
+	inline operator GGiVector4() const { return v; }
+	inline operator __m128i() const { return _mm_castps_si128(v); }
+	inline operator __m128d() const { return _mm_castps_pd(v); }
+};
+
+__declspec(align(16)) struct GGiVector4U32
+{
+	union
+	{
+		uint32_t u[4];
+		GGiVector4 v;
+	};
+
+	inline operator GGiVector4() const { return v; }
+	inline operator __m128i() const { return _mm_castps_si128(v); }
+	inline operator __m128d() const { return _mm_castps_pd(v); }
+};
+
+//------------------------------------------------------------------------------
+
 
 #ifndef GGIGLOBALCONST
 #define GGIGLOBALCONST extern const __declspec(selectany)
@@ -87,146 +145,146 @@ GGI_CONST size_t GGI_CACHE_LINE_SIZE = 64;
 // Constant Vectors.
 //*****************************************************************************************************************************
 
-GGIGLOBALCONST GGiVector4 g_GGiSinCoefficients0 = { -0.16666667f, +0.0083333310f, -0.00019840874f, +2.7525562e-06f };
-GGIGLOBALCONST GGiVector4 g_GGiSinCoefficients1 = { -2.3889859e-08f, -0.16665852f /*Est1*/, +0.0083139502f /*Est2*/, -0.00018524670f /*Est3*/ };
-GGIGLOBALCONST GGiVector4 g_GGiCosCoefficients0 = { -0.5f, +0.041666638f, -0.0013888378f, +2.4760495e-05f };
-GGIGLOBALCONST GGiVector4 g_GGiCosCoefficients1 = { -2.6051615e-07f, -0.49992746f /*Est1*/, +0.041493919f /*Est2*/, -0.0012712436f /*Est3*/ };
-GGIGLOBALCONST GGiVector4 g_GGiTanCoefficients0 = { 1.0f, 0.333333333f, 0.133333333f, 5.396825397e-2f };
-GGIGLOBALCONST GGiVector4 g_GGiTanCoefficients1 = { 2.186948854e-2f, 8.863235530e-3f, 3.592128167e-3f, 1.455834485e-3f };
-GGIGLOBALCONST GGiVector4 g_GGiTanCoefficients2 = { 5.900274264e-4f, 2.391290764e-4f, 9.691537707e-5f, 3.927832950e-5f };
-GGIGLOBALCONST GGiVector4 g_GGiArcCoefficients0 = { +1.5707963050f, -0.2145988016f, +0.0889789874f, -0.0501743046f };
-GGIGLOBALCONST GGiVector4 g_GGiArcCoefficients1 = { +0.0308918810f, -0.0170881256f, +0.0066700901f, -0.0012624911f };
-GGIGLOBALCONST GGiVector4 g_GGiATanCoefficients0 = { -0.3333314528f, +0.1999355085f, -0.1420889944f, +0.1065626393f };
-GGIGLOBALCONST GGiVector4 g_GGiATanCoefficients1 = { -0.0752896400f, +0.0429096138f, -0.0161657367f, +0.0028662257f };
-GGIGLOBALCONST GGiVector4 g_GGiATanEstCoefficients0 = { +0.999866f, +0.999866f, +0.999866f, +0.999866f };
-GGIGLOBALCONST GGiVector4 g_GGiATanEstCoefficients1 = { -0.3302995f, +0.180141f, -0.085133f, +0.0208351f };
-GGIGLOBALCONST GGiVector4 g_GGiTanEstCoefficients = { 2.484f, -1.954923183e-1f, 2.467401101f, GGI_1DIVPI };
-GGIGLOBALCONST GGiVector4 g_GGiArcEstCoefficients = { +1.5707288f, -0.2121144f, +0.0742610f, -0.0187293f };
-GGIGLOBALCONST GGiVector4 g_GGiPiConstants0 = { GGI_PI, GGI_2PI, GGI_1DIVPI, GGI_1DIV2PI };
-GGIGLOBALCONST GGiVector4 g_GGiIdentityR0 = { 1.0f, 0.0f, 0.0f, 0.0f };
-GGIGLOBALCONST GGiVector4 g_GGiIdentityR1 = { 0.0f, 1.0f, 0.0f, 0.0f };
-GGIGLOBALCONST GGiVector4 g_GGiIdentityR2 = { 0.0f, 0.0f, 1.0f, 0.0f };
-GGIGLOBALCONST GGiVector4 g_GGiIdentityR3 = { 0.0f, 0.0f, 0.0f, 1.0f };
-GGIGLOBALCONST GGiVector4 g_GGiNegIdentityR0 = { -1.0f, 0.0f, 0.0f, 0.0f };
-GGIGLOBALCONST GGiVector4 g_GGiNegIdentityR1 = { 0.0f, -1.0f, 0.0f, 0.0f };
-GGIGLOBALCONST GGiVector4 g_GGiNegIdentityR2 = { 0.0f, 0.0f, -1.0f, 0.0f };
-GGIGLOBALCONST GGiVector4 g_GGiNegIdentityR3 = { 0.0f, 0.0f, 0.0f, -1.0f };
-GGIGLOBALCONST GGiVector4 g_GGiNegativeZero = { 0x80000000, 0x80000000, 0x80000000, 0x80000000 };
-GGIGLOBALCONST GGiVector4 g_GGiNegate3 = { 0x80000000, 0x80000000, 0x80000000, 0x00000000 };
-GGIGLOBALCONST GGiVector4 g_GGiMaskXY = { 0xFFFFFFFF, 0xFFFFFFFF, 0x00000000, 0x00000000 };
-GGIGLOBALCONST GGiVector4 g_GGiMask3 = { 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0x00000000 };
-GGIGLOBALCONST GGiVector4 g_GGiMaskX = { 0xFFFFFFFF, 0x00000000, 0x00000000, 0x00000000 };
-GGIGLOBALCONST GGiVector4 g_GGiMaskY = { 0x00000000, 0xFFFFFFFF, 0x00000000, 0x00000000 };
-GGIGLOBALCONST GGiVector4 g_GGiMaskZ = { 0x00000000, 0x00000000, 0xFFFFFFFF, 0x00000000 };
-GGIGLOBALCONST GGiVector4 g_GGiMaskW = { 0x00000000, 0x00000000, 0x00000000, 0xFFFFFFFF };
-GGIGLOBALCONST GGiVector4 g_GGiOne = { 1.0f, 1.0f, 1.0f, 1.0f };
-GGIGLOBALCONST GGiVector4 g_GGiOne3 = { 1.0f, 1.0f, 1.0f, 0.0f };
-GGIGLOBALCONST GGiVector4 g_GGiZero = { 0.0f, 0.0f, 0.0f, 0.0f };
-GGIGLOBALCONST GGiVector4 g_GGiTwo = { 2.f, 2.f, 2.f, 2.f };
-GGIGLOBALCONST GGiVector4 g_GGiFour = { 4.f, 4.f, 4.f, 4.f };
-GGIGLOBALCONST GGiVector4 g_GGiSix = { 6.f, 6.f, 6.f, 6.f };
-GGIGLOBALCONST GGiVector4 g_GGiNegativeOne = { -1.0f, -1.0f, -1.0f, -1.0f };
-GGIGLOBALCONST GGiVector4 g_GGiOneHalf = { 0.5f, 0.5f, 0.5f, 0.5f };
-GGIGLOBALCONST GGiVector4 g_GGiNegativeOneHalf = { -0.5f, -0.5f, -0.5f, -0.5f };
-GGIGLOBALCONST GGiVector4 g_GGiNegativeTwoPi = { -GGI_2PI, -GGI_2PI, -GGI_2PI, -GGI_2PI };
-GGIGLOBALCONST GGiVector4 g_GGiNegativePi = { -GGI_PI, -GGI_PI, -GGI_PI, -GGI_PI };
-GGIGLOBALCONST GGiVector4 g_GGiHalfPi = { GGI_PIDIV2, GGI_PIDIV2, GGI_PIDIV2, GGI_PIDIV2 };
-GGIGLOBALCONST GGiVector4 g_GGiPi = { GGI_PI, GGI_PI, GGI_PI, GGI_PI };
-GGIGLOBALCONST GGiVector4 g_GGiReciprocalPi = { GGI_1DIVPI, GGI_1DIVPI, GGI_1DIVPI, GGI_1DIVPI };
-GGIGLOBALCONST GGiVector4 g_GGiTwoPi = { GGI_2PI, GGI_2PI, GGI_2PI, GGI_2PI };
-GGIGLOBALCONST GGiVector4 g_GGiReciprocalTwoPi = { GGI_1DIV2PI, GGI_1DIV2PI, GGI_1DIV2PI, GGI_1DIV2PI };
-GGIGLOBALCONST GGiVector4 g_GGiEpsilon = { 1.192092896e-7f, 1.192092896e-7f, 1.192092896e-7f, 1.192092896e-7f };
-GGIGLOBALCONST GGiVector4 g_GGiInfinity = { 0x7F800000, 0x7F800000, 0x7F800000, 0x7F800000 };
-GGIGLOBALCONST GGiVector4 g_GGiQNaN = { 0x7FC00000, 0x7FC00000, 0x7FC00000, 0x7FC00000 };
-GGIGLOBALCONST GGiVector4 g_GGiQNaNTest = { 0x007FFFFF, 0x007FFFFF, 0x007FFFFF, 0x007FFFFF };
-GGIGLOBALCONST GGiVector4 g_GGiAbsMask = { 0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF };
-GGIGLOBALCONST GGiVector4 g_GGiFltMin = { 0x00800000, 0x00800000, 0x00800000, 0x00800000 };
-GGIGLOBALCONST GGiVector4 g_GGiFltMax = { 0x7F7FFFFF, 0x7F7FFFFF, 0x7F7FFFFF, 0x7F7FFFFF };
-GGIGLOBALCONST GGiVector4 g_GGiNegOneMask = { 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF };
-GGIGLOBALCONST GGiVector4 g_GGiMaskA8R8G8B8 = { 0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000 };
-GGIGLOBALCONST GGiVector4 g_GGiFlipA8R8G8B8 = { 0x00000000, 0x00000000, 0x00000000, 0x80000000 };
-GGIGLOBALCONST GGiVector4 g_GGiFixAA8R8G8B8 = { 0.0f, 0.0f, 0.0f, float(0x80000000U) };
-GGIGLOBALCONST GGiVector4 g_GGiNormalizeA8R8G8B8 = { 1.0f / (255.0f*float(0x10000)), 1.0f / (255.0f*float(0x100)), 1.0f / 255.0f, 1.0f / (255.0f*float(0x1000000)) };
-GGIGLOBALCONST GGiVector4 g_GGiMaskA2B10G10R10 = { 0x000003FF, 0x000FFC00, 0x3FF00000, 0xC0000000 };
-GGIGLOBALCONST GGiVector4 g_GGiFlipA2B10G10R10 = { 0x00000200, 0x00080000, 0x20000000, 0x80000000 };
-GGIGLOBALCONST GGiVector4 g_GGiFixAA2B10G10R10 = { -512.0f, -512.0f*float(0x400), -512.0f*float(0x100000), float(0x80000000U) };
-GGIGLOBALCONST GGiVector4 g_GGiNormalizeA2B10G10R10 = { 1.0f / 511.0f, 1.0f / (511.0f*float(0x400)), 1.0f / (511.0f*float(0x100000)), 1.0f / (3.0f*float(0x40000000)) };
-GGIGLOBALCONST GGiVector4 g_GGiMaskX16Y16 = { 0x0000FFFF, 0xFFFF0000, 0x00000000, 0x00000000 };
-GGIGLOBALCONST GGiVector4 g_GGiFlipX16Y16 = { 0x00008000, 0x00000000, 0x00000000, 0x00000000 };
-GGIGLOBALCONST GGiVector4 g_GGiFixX16Y16 = { -32768.0f, 0.0f, 0.0f, 0.0f };
-GGIGLOBALCONST GGiVector4 g_GGiNormalizeX16Y16 = { 1.0f / 32767.0f, 1.0f / (32767.0f*65536.0f), 0.0f, 0.0f };
-GGIGLOBALCONST GGiVector4 g_GGiMaskX16Y16Z16W16 = { 0x0000FFFF, 0x0000FFFF, 0xFFFF0000, 0xFFFF0000 };
-GGIGLOBALCONST GGiVector4 g_GGiFlipX16Y16Z16W16 = { 0x00008000, 0x00008000, 0x00000000, 0x00000000 };
-GGIGLOBALCONST GGiVector4 g_GGiFixX16Y16Z16W16 = { -32768.0f, -32768.0f, 0.0f, 0.0f };
-GGIGLOBALCONST GGiVector4 g_GGiNormalizeX16Y16Z16W16 = { 1.0f / 32767.0f, 1.0f / 32767.0f, 1.0f / (32767.0f*65536.0f), 1.0f / (32767.0f*65536.0f) };
-GGIGLOBALCONST GGiVector4 g_GGiNoFraction = { 8388608.0f, 8388608.0f, 8388608.0f, 8388608.0f };
-GGIGLOBALCONST GGiVector4 g_GGiMaskByte = { 0x000000FF, 0x000000FF, 0x000000FF, 0x000000FF };
-GGIGLOBALCONST GGiVector4 g_GGiNegateX = { -1.0f, 1.0f, 1.0f, 1.0f };
-GGIGLOBALCONST GGiVector4 g_GGiNegateY = { 1.0f, -1.0f, 1.0f, 1.0f };
-GGIGLOBALCONST GGiVector4 g_GGiNegateZ = { 1.0f, 1.0f, -1.0f, 1.0f };
-GGIGLOBALCONST GGiVector4 g_GGiNegateW = { 1.0f, 1.0f, 1.0f, -1.0f };
-GGIGLOBALCONST GGiVector4 g_GGiSelect0101 = { GGI_SELECT_0, GGI_SELECT_1, GGI_SELECT_0, GGI_SELECT_1 };
-GGIGLOBALCONST GGiVector4 g_GGiSelect1010 = { GGI_SELECT_1, GGI_SELECT_0, GGI_SELECT_1, GGI_SELECT_0 };
-GGIGLOBALCONST GGiVector4 g_GGiOneHalfMinusEpsilon = { 0x3EFFFFFD, 0x3EFFFFFD, 0x3EFFFFFD, 0x3EFFFFFD };
-GGIGLOBALCONST GGiVector4 g_GGiSelect1000 = { GGI_SELECT_1, GGI_SELECT_0, GGI_SELECT_0, GGI_SELECT_0 };
-GGIGLOBALCONST GGiVector4 g_GGiSelect1100 = { GGI_SELECT_1, GGI_SELECT_1, GGI_SELECT_0, GGI_SELECT_0 };
-GGIGLOBALCONST GGiVector4 g_GGiSelect1110 = { GGI_SELECT_1, GGI_SELECT_1, GGI_SELECT_1, GGI_SELECT_0 };
-GGIGLOBALCONST GGiVector4 g_GGiSelect1011 = { GGI_SELECT_1, GGI_SELECT_0, GGI_SELECT_1, GGI_SELECT_1 };
-GGIGLOBALCONST GGiVector4 g_GGiFixupY16 = { 1.0f, 1.0f / 65536.0f, 0.0f, 0.0f };
-GGIGLOBALCONST GGiVector4 g_GGiFixupY16W16 = { 1.0f, 1.0f, 1.0f / 65536.0f, 1.0f / 65536.0f };
-GGIGLOBALCONST GGiVector4 g_GGiFlipY = { 0, 0x80000000, 0, 0 };
-GGIGLOBALCONST GGiVector4 g_GGiFlipZ = { 0, 0, 0x80000000, 0 };
-GGIGLOBALCONST GGiVector4 g_GGiFlipW = { 0, 0, 0, 0x80000000 };
-GGIGLOBALCONST GGiVector4 g_GGiFlipYZ = { 0, 0x80000000, 0x80000000, 0 };
-GGIGLOBALCONST GGiVector4 g_GGiFlipZW = { 0, 0, 0x80000000, 0x80000000 };
-GGIGLOBALCONST GGiVector4 g_GGiFlipYW = { 0, 0x80000000, 0, 0x80000000 };
-GGIGLOBALCONST GGiVector4 g_GGiMaskDec4 = { 0x3FF, 0x3FF << 10, 0x3FF << 20, static_cast<int>(0xC0000000) };
-GGIGLOBALCONST GGiVector4 g_GGiXorDec4 = { 0x200, 0x200 << 10, 0x200 << 20, 0 };
-GGIGLOBALCONST GGiVector4 g_GGiAddUDec4 = { 0, 0, 0, 32768.0f*65536.0f };
-GGIGLOBALCONST GGiVector4 g_GGiAddDec4 = { -512.0f, -512.0f*1024.0f, -512.0f*1024.0f*1024.0f, 0 };
-GGIGLOBALCONST GGiVector4 g_GGiMulDec4 = { 1.0f, 1.0f / 1024.0f, 1.0f / (1024.0f*1024.0f), 1.0f / (1024.0f*1024.0f*1024.0f) };
-GGIGLOBALCONST GGiVector4 g_GGiMaskByte4 = { 0xFF, 0xFF00, 0xFF0000, 0xFF000000 };
-GGIGLOBALCONST GGiVector4 g_GGiXorByte4 = { 0x80, 0x8000, 0x800000, 0x00000000 };
-GGIGLOBALCONST GGiVector4 g_GGiAddByte4 = { -128.0f, -128.0f*256.0f, -128.0f*65536.0f, 0 };
-GGIGLOBALCONST GGiVector4 g_GGiFixUnsigned = { 32768.0f*65536.0f, 32768.0f*65536.0f, 32768.0f*65536.0f, 32768.0f*65536.0f };
-GGIGLOBALCONST GGiVector4 g_GGiMaxInt = { 65536.0f*32768.0f - 128.0f, 65536.0f*32768.0f - 128.0f, 65536.0f*32768.0f - 128.0f, 65536.0f*32768.0f - 128.0f };
-GGIGLOBALCONST GGiVector4 g_GGiMaxUInt = { 65536.0f*65536.0f - 256.0f, 65536.0f*65536.0f - 256.0f, 65536.0f*65536.0f - 256.0f, 65536.0f*65536.0f - 256.0f };
-GGIGLOBALCONST GGiVector4 g_GGiUnsignedFix = { 32768.0f*65536.0f, 32768.0f*65536.0f, 32768.0f*65536.0f, 32768.0f*65536.0f };
-GGIGLOBALCONST GGiVector4 g_GGisrgbScale = { 12.92f, 12.92f, 12.92f, 1.0f };
-GGIGLOBALCONST GGiVector4 g_GGisrgbA = { 0.055f, 0.055f, 0.055f, 0.0f };
-GGIGLOBALCONST GGiVector4 g_GGisrgbA1 = { 1.055f, 1.055f, 1.055f, 1.0f };
-GGIGLOBALCONST GGiVector4 g_GGiExponentBias = { 127, 127, 127, 127 };
-GGIGLOBALCONST GGiVector4 g_GGiSubnormalExponent = { -126, -126, -126, -126 };
-GGIGLOBALCONST GGiVector4 g_GGiNumTrailing = { 23, 23, 23, 23 };
-GGIGLOBALCONST GGiVector4 g_GGiMinNormal = { 0x00800000, 0x00800000, 0x00800000, 0x00800000 };
-GGIGLOBALCONST GGiVector4 g_GGiNegInfinity = { 0xFF800000, 0xFF800000, 0xFF800000, 0xFF800000 };
-GGIGLOBALCONST GGiVector4 g_GGiNegQNaN = { 0xFFC00000, 0xFFC00000, 0xFFC00000, 0xFFC00000 };
-GGIGLOBALCONST GGiVector4 g_GGiBin128 = { 0x43000000, 0x43000000, 0x43000000, 0x43000000 };
-GGIGLOBALCONST GGiVector4 g_GGiBinNeg150 = { 0xC3160000, 0xC3160000, 0xC3160000, 0xC3160000 };
-GGIGLOBALCONST GGiVector4 g_GGi253 = { 253, 253, 253, 253 };
-GGIGLOBALCONST GGiVector4 g_GGiExpEst1 = { -6.93147182e-1f, -6.93147182e-1f, -6.93147182e-1f, -6.93147182e-1f };
-GGIGLOBALCONST GGiVector4 g_GGiExpEst2 = { +2.40226462e-1f, +2.40226462e-1f, +2.40226462e-1f, +2.40226462e-1f };
-GGIGLOBALCONST GGiVector4 g_GGiExpEst3 = { -5.55036440e-2f, -5.55036440e-2f, -5.55036440e-2f, -5.55036440e-2f };
-GGIGLOBALCONST GGiVector4 g_GGiExpEst4 = { +9.61597636e-3f, +9.61597636e-3f, +9.61597636e-3f, +9.61597636e-3f };
-GGIGLOBALCONST GGiVector4 g_GGiExpEst5 = { -1.32823968e-3f, -1.32823968e-3f, -1.32823968e-3f, -1.32823968e-3f };
-GGIGLOBALCONST GGiVector4 g_GGiExpEst6 = { +1.47491097e-4f, +1.47491097e-4f, +1.47491097e-4f, +1.47491097e-4f };
-GGIGLOBALCONST GGiVector4 g_GGiExpEst7 = { -1.08635004e-5f, -1.08635004e-5f, -1.08635004e-5f, -1.08635004e-5f };
-GGIGLOBALCONST GGiVector4 g_GGiLogEst0 = { +1.442693f, +1.442693f, +1.442693f, +1.442693f };
-GGIGLOBALCONST GGiVector4 g_GGiLogEst1 = { -0.721242f, -0.721242f, -0.721242f, -0.721242f };
-GGIGLOBALCONST GGiVector4 g_GGiLogEst2 = { +0.479384f, +0.479384f, +0.479384f, +0.479384f };
-GGIGLOBALCONST GGiVector4 g_GGiLogEst3 = { -0.350295f, -0.350295f, -0.350295f, -0.350295f };
-GGIGLOBALCONST GGiVector4 g_GGiLogEst4 = { +0.248590f, +0.248590f, +0.248590f, +0.248590f };
-GGIGLOBALCONST GGiVector4 g_GGiLogEst5 = { -0.145700f, -0.145700f, -0.145700f, -0.145700f };
-GGIGLOBALCONST GGiVector4 g_GGiLogEst6 = { +0.057148f, +0.057148f, +0.057148f, +0.057148f };
-GGIGLOBALCONST GGiVector4 g_GGiLogEst7 = { -0.010578f, -0.010578f, -0.010578f, -0.010578f };
-GGIGLOBALCONST GGiVector4 g_GGiLgE = { +1.442695f, +1.442695f, +1.442695f, +1.442695f };
-GGIGLOBALCONST GGiVector4 g_GGiInvLgE = { +6.93147182e-1f, +6.93147182e-1f, +6.93147182e-1f, +6.93147182e-1f };
-GGIGLOBALCONST GGiVector4 g_UByteMax = { 255.0f, 255.0f, 255.0f, 255.0f };
-GGIGLOBALCONST GGiVector4 g_ByteMin = { -127.0f, -127.0f, -127.0f, -127.0f };
-GGIGLOBALCONST GGiVector4 g_ByteMax = { 127.0f, 127.0f, 127.0f, 127.0f };
-GGIGLOBALCONST GGiVector4 g_ShortMin = { -32767.0f, -32767.0f, -32767.0f, -32767.0f };
-GGIGLOBALCONST GGiVector4 g_ShortMax = { 32767.0f, 32767.0f, 32767.0f, 32767.0f };
-GGIGLOBALCONST GGiVector4 g_UShortMax = { 65535.0f, 65535.0f, 65535.0f, 65535.0f };
+GGIGLOBALCONST GGiVector4F32 g_GGiSinCoefficients0 = { { { -0.16666667f, +0.0083333310f, -0.00019840874f, +2.7525562e-06f } } };
+GGIGLOBALCONST GGiVector4F32 g_GGiSinCoefficients1 = { { { -2.3889859e-08f, -0.16665852f /*Est1*/, +0.0083139502f /*Est2*/, -0.00018524670f /*Est3*/ } } };
+GGIGLOBALCONST GGiVector4F32 g_GGiCosCoefficients0 = { { { -0.5f, +0.041666638f, -0.0013888378f, +2.4760495e-05f } } };
+GGIGLOBALCONST GGiVector4F32 g_GGiCosCoefficients1 = { { { -2.6051615e-07f, -0.49992746f /*Est1*/, +0.041493919f /*Est2*/, -0.0012712436f /*Est3*/ } } };
+GGIGLOBALCONST GGiVector4F32 g_GGiTanCoefficients0 = { { { 1.0f, 0.333333333f, 0.133333333f, 5.396825397e-2f } } };
+GGIGLOBALCONST GGiVector4F32 g_GGiTanCoefficients1 = { { { 2.186948854e-2f, 8.863235530e-3f, 3.592128167e-3f, 1.455834485e-3f } } };
+GGIGLOBALCONST GGiVector4F32 g_GGiTanCoefficients2 = { { { 5.900274264e-4f, 2.391290764e-4f, 9.691537707e-5f, 3.927832950e-5f } } };
+GGIGLOBALCONST GGiVector4F32 g_GGiArcCoefficients0 = { { { +1.5707963050f, -0.2145988016f, +0.0889789874f, -0.0501743046f } } };
+GGIGLOBALCONST GGiVector4F32 g_GGiArcCoefficients1 = { { { +0.0308918810f, -0.0170881256f, +0.0066700901f, -0.0012624911f } } };
+GGIGLOBALCONST GGiVector4F32 g_GGiATanCoefficients0 = { { { -0.3333314528f, +0.1999355085f, -0.1420889944f, +0.1065626393f } } };
+GGIGLOBALCONST GGiVector4F32 g_GGiATanCoefficients1 = { { { -0.0752896400f, +0.0429096138f, -0.0161657367f, +0.0028662257f } } };
+GGIGLOBALCONST GGiVector4F32 g_GGiATanEstCoefficients0 = { { { +0.999866f, +0.999866f, +0.999866f, +0.999866f } } };
+GGIGLOBALCONST GGiVector4F32 g_GGiATanEstCoefficients1 = { { { -0.3302995f, +0.180141f, -0.085133f, +0.0208351f } } };
+GGIGLOBALCONST GGiVector4F32 g_GGiTanEstCoefficients = { { { 2.484f, -1.954923183e-1f, 2.467401101f, GGI_1DIVPI } } };
+GGIGLOBALCONST GGiVector4F32 g_GGiArcEstCoefficients = { { { +1.5707288f, -0.2121144f, +0.0742610f, -0.0187293f } } };
+GGIGLOBALCONST GGiVector4F32 g_GGiPiConstants0 = { { { GGI_PI, GGI_2PI, GGI_1DIVPI, GGI_1DIV2PI } } };
+GGIGLOBALCONST GGiVector4F32 g_GGiIdentityR0 = { { { 1.0f, 0.0f, 0.0f, 0.0f } } };
+GGIGLOBALCONST GGiVector4F32 g_GGiIdentityR1 = { { { 0.0f, 1.0f, 0.0f, 0.0f } } };
+GGIGLOBALCONST GGiVector4F32 g_GGiIdentityR2 = { { { 0.0f, 0.0f, 1.0f, 0.0f } } };
+GGIGLOBALCONST GGiVector4F32 g_GGiIdentityR3 = { { { 0.0f, 0.0f, 0.0f, 1.0f } } };
+GGIGLOBALCONST GGiVector4F32 g_GGiNegIdentityR0 = { { { -1.0f, 0.0f, 0.0f, 0.0f } } };
+GGIGLOBALCONST GGiVector4F32 g_GGiNegIdentityR1 = { { { 0.0f, -1.0f, 0.0f, 0.0f } } };
+GGIGLOBALCONST GGiVector4F32 g_GGiNegIdentityR2 = { { { 0.0f, 0.0f, -1.0f, 0.0f } } };
+GGIGLOBALCONST GGiVector4F32 g_GGiNegIdentityR3 = { { { 0.0f, 0.0f, 0.0f, -1.0f } } };
+GGIGLOBALCONST GGiVector4U32 g_GGiNegativeZero = { { { 0x80000000, 0x80000000, 0x80000000, 0x80000000 } } };
+GGIGLOBALCONST GGiVector4U32 g_GGiNegate3 = { { { 0x80000000, 0x80000000, 0x80000000, 0x00000000 } } };
+GGIGLOBALCONST GGiVector4U32 g_GGiMaskXY = { { { 0xFFFFFFFF, 0xFFFFFFFF, 0x00000000, 0x00000000 } } };
+GGIGLOBALCONST GGiVector4U32 g_GGiMask3 = { { { 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0x00000000 } } };
+GGIGLOBALCONST GGiVector4U32 g_GGiMaskX = { { { 0xFFFFFFFF, 0x00000000, 0x00000000, 0x00000000 } } };
+GGIGLOBALCONST GGiVector4U32 g_GGiMaskY = { { { 0x00000000, 0xFFFFFFFF, 0x00000000, 0x00000000 } } };
+GGIGLOBALCONST GGiVector4U32 g_GGiMaskZ = { { { 0x00000000, 0x00000000, 0xFFFFFFFF, 0x00000000 } } };
+GGIGLOBALCONST GGiVector4U32 g_GGiMaskW = { { { 0x00000000, 0x00000000, 0x00000000, 0xFFFFFFFF } } };
+GGIGLOBALCONST GGiVector4F32 g_GGiOne = { { { 1.0f, 1.0f, 1.0f, 1.0f } } };
+GGIGLOBALCONST GGiVector4F32 g_GGiOne3 = { { { 1.0f, 1.0f, 1.0f, 0.0f } } };
+GGIGLOBALCONST GGiVector4F32 g_GGiZero = { { { 0.0f, 0.0f, 0.0f, 0.0f } } };
+GGIGLOBALCONST GGiVector4F32 g_GGiTwo = { { { 2.f, 2.f, 2.f, 2.f } } };
+GGIGLOBALCONST GGiVector4F32 g_GGiFour = { { { 4.f, 4.f, 4.f, 4.f } } };
+GGIGLOBALCONST GGiVector4F32 g_GGiSix = { { { 6.f, 6.f, 6.f, 6.f } } };
+GGIGLOBALCONST GGiVector4F32 g_GGiNegativeOne = { { { -1.0f, -1.0f, -1.0f, -1.0f } } };
+GGIGLOBALCONST GGiVector4F32 g_GGiOneHalf = { { { 0.5f, 0.5f, 0.5f, 0.5f } } };
+GGIGLOBALCONST GGiVector4F32 g_GGiNegativeOneHalf = { { { -0.5f, -0.5f, -0.5f, -0.5f } } };
+GGIGLOBALCONST GGiVector4F32 g_GGiNegativeTwoPi = { { { -GGI_2PI, -GGI_2PI, -GGI_2PI, -GGI_2PI } } };
+GGIGLOBALCONST GGiVector4F32 g_GGiNegativePi = { { { -GGI_PI, -GGI_PI, -GGI_PI, -GGI_PI } } };
+GGIGLOBALCONST GGiVector4F32 g_GGiHalfPi = { { { GGI_PIDIV2, GGI_PIDIV2, GGI_PIDIV2, GGI_PIDIV2 } } };
+GGIGLOBALCONST GGiVector4F32 g_GGiPi = { { { GGI_PI, GGI_PI, GGI_PI, GGI_PI } } };
+GGIGLOBALCONST GGiVector4F32 g_GGiReciprocalPi = { { { GGI_1DIVPI, GGI_1DIVPI, GGI_1DIVPI, GGI_1DIVPI } } };
+GGIGLOBALCONST GGiVector4F32 g_GGiTwoPi = { { { GGI_2PI, GGI_2PI, GGI_2PI, GGI_2PI } } };
+GGIGLOBALCONST GGiVector4F32 g_GGiReciprocalTwoPi = { { { GGI_1DIV2PI, GGI_1DIV2PI, GGI_1DIV2PI, GGI_1DIV2PI } } };
+GGIGLOBALCONST GGiVector4F32 g_GGiEpsilon = { { { 1.192092896e-7f, 1.192092896e-7f, 1.192092896e-7f, 1.192092896e-7f } } };
+GGIGLOBALCONST GGiVector4I32 g_GGiInfinity = { { { 0x7F800000, 0x7F800000, 0x7F800000, 0x7F800000 } } };
+GGIGLOBALCONST GGiVector4I32 g_GGiQNaN = { { { 0x7FC00000, 0x7FC00000, 0x7FC00000, 0x7FC00000 } } };
+GGIGLOBALCONST GGiVector4I32 g_GGiQNaNTest = { { { 0x007FFFFF, 0x007FFFFF, 0x007FFFFF, 0x007FFFFF } } };
+GGIGLOBALCONST GGiVector4I32 g_GGiAbsMask = { { { 0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF } } };
+GGIGLOBALCONST GGiVector4I32 g_GGiFltMin = { { { 0x00800000, 0x00800000, 0x00800000, 0x00800000 } } };
+GGIGLOBALCONST GGiVector4I32 g_GGiFltMax = { { { 0x7F7FFFFF, 0x7F7FFFFF, 0x7F7FFFFF, 0x7F7FFFFF } } };
+GGIGLOBALCONST GGiVector4U32 g_GGiNegOneMask = { { { 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF } } };
+GGIGLOBALCONST GGiVector4U32 g_GGiMaskA8R8G8B8 = { { { 0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000 } } };
+GGIGLOBALCONST GGiVector4U32 g_GGiFlipA8R8G8B8 = { { { 0x00000000, 0x00000000, 0x00000000, 0x80000000 } } };
+GGIGLOBALCONST GGiVector4F32 g_GGiFixAA8R8G8B8 = { { { 0.0f, 0.0f, 0.0f, float(0x80000000U) } } };
+GGIGLOBALCONST GGiVector4F32 g_GGiNormalizeA8R8G8B8 = { { { 1.0f / (255.0f*float(0x10000)), 1.0f / (255.0f*float(0x100)), 1.0f / 255.0f, 1.0f / (255.0f*float(0x1000000)) } } };
+GGIGLOBALCONST GGiVector4U32 g_GGiMaskA2B10G10R10 = { { { 0x000003FF, 0x000FFC00, 0x3FF00000, 0xC0000000 } } };
+GGIGLOBALCONST GGiVector4U32 g_GGiFlipA2B10G10R10 = { { { 0x00000200, 0x00080000, 0x20000000, 0x80000000 } } };
+GGIGLOBALCONST GGiVector4F32 g_GGiFixAA2B10G10R10 = { { { -512.0f, -512.0f*float(0x400), -512.0f*float(0x100000), float(0x80000000U) } } };
+GGIGLOBALCONST GGiVector4F32 g_GGiNormalizeA2B10G10R10 = { { { 1.0f / 511.0f, 1.0f / (511.0f*float(0x400)), 1.0f / (511.0f*float(0x100000)), 1.0f / (3.0f*float(0x40000000)) } } };
+GGIGLOBALCONST GGiVector4U32 g_GGiMaskX16Y16 = { { { 0x0000FFFF, 0xFFFF0000, 0x00000000, 0x00000000 } } };
+GGIGLOBALCONST GGiVector4I32 g_GGiFlipX16Y16 = { { { 0x00008000, 0x00000000, 0x00000000, 0x00000000 } } };
+GGIGLOBALCONST GGiVector4F32 g_GGiFixX16Y16 = { { { -32768.0f, 0.0f, 0.0f, 0.0f } } };
+GGIGLOBALCONST GGiVector4F32 g_GGiNormalizeX16Y16 = { { { 1.0f / 32767.0f, 1.0f / (32767.0f*65536.0f), 0.0f, 0.0f } } };
+GGIGLOBALCONST GGiVector4U32 g_GGiMaskX16Y16Z16W16 = { { { 0x0000FFFF, 0x0000FFFF, 0xFFFF0000, 0xFFFF0000 } } };
+GGIGLOBALCONST GGiVector4I32 g_GGiFlipX16Y16Z16W16 = { { { 0x00008000, 0x00008000, 0x00000000, 0x00000000 } } };
+GGIGLOBALCONST GGiVector4F32 g_GGiFixX16Y16Z16W16 = { { { -32768.0f, -32768.0f, 0.0f, 0.0f } } };
+GGIGLOBALCONST GGiVector4F32 g_GGiNormalizeX16Y16Z16W16 = { { { 1.0f / 32767.0f, 1.0f / 32767.0f, 1.0f / (32767.0f*65536.0f), 1.0f / (32767.0f*65536.0f) } } };
+GGIGLOBALCONST GGiVector4F32 g_GGiNoFraction = { { { 8388608.0f, 8388608.0f, 8388608.0f, 8388608.0f } } };
+GGIGLOBALCONST GGiVector4I32 g_GGiMaskByte = { { { 0x000000FF, 0x000000FF, 0x000000FF, 0x000000FF } } };
+GGIGLOBALCONST GGiVector4F32 g_GGiNegateX = { { { -1.0f, 1.0f, 1.0f, 1.0f } } };
+GGIGLOBALCONST GGiVector4F32 g_GGiNegateY = { { { 1.0f, -1.0f, 1.0f, 1.0f } } };
+GGIGLOBALCONST GGiVector4F32 g_GGiNegateZ = { { { 1.0f, 1.0f, -1.0f, 1.0f } } };
+GGIGLOBALCONST GGiVector4F32 g_GGiNegateW = { { { 1.0f, 1.0f, 1.0f, -1.0f } } };
+GGIGLOBALCONST GGiVector4U32 g_GGiSelect0101 = { { { GGI_SELECT_0, GGI_SELECT_1, GGI_SELECT_0, GGI_SELECT_1 } } };
+GGIGLOBALCONST GGiVector4U32 g_GGiSelect1010 = { { { GGI_SELECT_1, GGI_SELECT_0, GGI_SELECT_1, GGI_SELECT_0 } } };
+GGIGLOBALCONST GGiVector4I32 g_GGiOneHalfMinusEpsilon = { { { 0x3EFFFFFD, 0x3EFFFFFD, 0x3EFFFFFD, 0x3EFFFFFD } } };
+GGIGLOBALCONST GGiVector4U32 g_GGiSelect1000 = { { { GGI_SELECT_1, GGI_SELECT_0, GGI_SELECT_0, GGI_SELECT_0 } } };
+GGIGLOBALCONST GGiVector4U32 g_GGiSelect1100 = { { { GGI_SELECT_1, GGI_SELECT_1, GGI_SELECT_0, GGI_SELECT_0 } } };
+GGIGLOBALCONST GGiVector4U32 g_GGiSelect1110 = { { { GGI_SELECT_1, GGI_SELECT_1, GGI_SELECT_1, GGI_SELECT_0 } } };
+GGIGLOBALCONST GGiVector4U32 g_GGiSelect1011 = { { { GGI_SELECT_1, GGI_SELECT_0, GGI_SELECT_1, GGI_SELECT_1 } } };
+GGIGLOBALCONST GGiVector4F32 g_GGiFixupY16 = { { { 1.0f, 1.0f / 65536.0f, 0.0f, 0.0f } } };
+GGIGLOBALCONST GGiVector4F32 g_GGiFixupY16W16 = { { { 1.0f, 1.0f, 1.0f / 65536.0f, 1.0f / 65536.0f } } };
+GGIGLOBALCONST GGiVector4U32 g_GGiFlipY = { { { 0, 0x80000000, 0, 0 } } };
+GGIGLOBALCONST GGiVector4U32 g_GGiFlipZ = { { { 0, 0, 0x80000000, 0 } } };
+GGIGLOBALCONST GGiVector4U32 g_GGiFlipW = { { { 0, 0, 0, 0x80000000 } } };
+GGIGLOBALCONST GGiVector4U32 g_GGiFlipYZ = { { { 0, 0x80000000, 0x80000000, 0 } } };
+GGIGLOBALCONST GGiVector4U32 g_GGiFlipZW = { { { 0, 0, 0x80000000, 0x80000000 } } };
+GGIGLOBALCONST GGiVector4U32 g_GGiFlipYW = { { { 0, 0x80000000, 0, 0x80000000 } } };
+GGIGLOBALCONST GGiVector4I32 g_GGiMaskDec4 = { { { 0x3FF, 0x3FF << 10, 0x3FF << 20, static_cast<int>(0xC0000000) } } };
+GGIGLOBALCONST GGiVector4I32 g_GGiXorDec4 = { { { 0x200, 0x200 << 10, 0x200 << 20, 0 } } };
+GGIGLOBALCONST GGiVector4F32 g_GGiAddUDec4 = { { { 0, 0, 0, 32768.0f*65536.0f } } };
+GGIGLOBALCONST GGiVector4F32 g_GGiAddDec4 = { { { -512.0f, -512.0f*1024.0f, -512.0f*1024.0f*1024.0f, 0 } } };
+GGIGLOBALCONST GGiVector4F32 g_GGiMulDec4 = { { { 1.0f, 1.0f / 1024.0f, 1.0f / (1024.0f*1024.0f), 1.0f / (1024.0f*1024.0f*1024.0f) } } };
+GGIGLOBALCONST GGiVector4U32 g_GGiMaskByte4 = { { { 0xFF, 0xFF00, 0xFF0000, 0xFF000000 } } };
+GGIGLOBALCONST GGiVector4I32 g_GGiXorByte4 = { { { 0x80, 0x8000, 0x800000, 0x00000000 } } };
+GGIGLOBALCONST GGiVector4F32 g_GGiAddByte4 = { { { -128.0f, -128.0f*256.0f, -128.0f*65536.0f, 0 } } };
+GGIGLOBALCONST GGiVector4F32 g_GGiFixUnsigned = { { { 32768.0f*65536.0f, 32768.0f*65536.0f, 32768.0f*65536.0f, 32768.0f*65536.0f } } };
+GGIGLOBALCONST GGiVector4F32 g_GGiMaxInt = { { { 65536.0f*32768.0f - 128.0f, 65536.0f*32768.0f - 128.0f, 65536.0f*32768.0f - 128.0f, 65536.0f*32768.0f - 128.0f } } };
+GGIGLOBALCONST GGiVector4F32 g_GGiMaxUInt = { { { 65536.0f*65536.0f - 256.0f, 65536.0f*65536.0f - 256.0f, 65536.0f*65536.0f - 256.0f, 65536.0f*65536.0f - 256.0f } } };
+GGIGLOBALCONST GGiVector4F32 g_GGiUnsignedFix = { { { 32768.0f*65536.0f, 32768.0f*65536.0f, 32768.0f*65536.0f, 32768.0f*65536.0f } } };
+GGIGLOBALCONST GGiVector4F32 g_GGisrgbScale = { { { 12.92f, 12.92f, 12.92f, 1.0f } } };
+GGIGLOBALCONST GGiVector4F32 g_GGisrgbA = { { { 0.055f, 0.055f, 0.055f, 0.0f } } };
+GGIGLOBALCONST GGiVector4F32 g_GGisrgbA1 = { { { 1.055f, 1.055f, 1.055f, 1.0f } } };
+GGIGLOBALCONST GGiVector4I32 g_GGiExponentBias = { { { 127, 127, 127, 127 } } };
+GGIGLOBALCONST GGiVector4I32 g_GGiSubnormalExponent = { { { -126, -126, -126, -126 } } };
+GGIGLOBALCONST GGiVector4I32 g_GGiNumTrailing = { { { 23, 23, 23, 23 } } };
+GGIGLOBALCONST GGiVector4I32 g_GGiMinNormal = { { { 0x00800000, 0x00800000, 0x00800000, 0x00800000 } } };
+GGIGLOBALCONST GGiVector4U32 g_GGiNegInfinity = { { { 0xFF800000, 0xFF800000, 0xFF800000, 0xFF800000 } } };
+GGIGLOBALCONST GGiVector4U32 g_GGiNegQNaN = { { { 0xFFC00000, 0xFFC00000, 0xFFC00000, 0xFFC00000 } } };
+GGIGLOBALCONST GGiVector4I32 g_GGiBin128 = { { { 0x43000000, 0x43000000, 0x43000000, 0x43000000 } } };
+GGIGLOBALCONST GGiVector4U32 g_GGiBinNeg150 = { { { 0xC3160000, 0xC3160000, 0xC3160000, 0xC3160000 } } };
+GGIGLOBALCONST GGiVector4I32 g_GGi253 = { { { 253, 253, 253, 253 } } };
+GGIGLOBALCONST GGiVector4F32 g_GGiExpEst1 = { { { -6.93147182e-1f, -6.93147182e-1f, -6.93147182e-1f, -6.93147182e-1f } } };
+GGIGLOBALCONST GGiVector4F32 g_GGiExpEst2 = { { { +2.40226462e-1f, +2.40226462e-1f, +2.40226462e-1f, +2.40226462e-1f } } };
+GGIGLOBALCONST GGiVector4F32 g_GGiExpEst3 = { { { -5.55036440e-2f, -5.55036440e-2f, -5.55036440e-2f, -5.55036440e-2f } } };
+GGIGLOBALCONST GGiVector4F32 g_GGiExpEst4 = { { { +9.61597636e-3f, +9.61597636e-3f, +9.61597636e-3f, +9.61597636e-3f } } };
+GGIGLOBALCONST GGiVector4F32 g_GGiExpEst5 = { { { -1.32823968e-3f, -1.32823968e-3f, -1.32823968e-3f, -1.32823968e-3f } } };
+GGIGLOBALCONST GGiVector4F32 g_GGiExpEst6 = { { { +1.47491097e-4f, +1.47491097e-4f, +1.47491097e-4f, +1.47491097e-4f } } };
+GGIGLOBALCONST GGiVector4F32 g_GGiExpEst7 = { { { -1.08635004e-5f, -1.08635004e-5f, -1.08635004e-5f, -1.08635004e-5f } } };
+GGIGLOBALCONST GGiVector4F32 g_GGiLogEst0 = { { { +1.442693f, +1.442693f, +1.442693f, +1.442693f } } };
+GGIGLOBALCONST GGiVector4F32 g_GGiLogEst1 = { { { -0.721242f, -0.721242f, -0.721242f, -0.721242f } } };
+GGIGLOBALCONST GGiVector4F32 g_GGiLogEst2 = { { { +0.479384f, +0.479384f, +0.479384f, +0.479384f } } };
+GGIGLOBALCONST GGiVector4F32 g_GGiLogEst3 = { { { -0.350295f, -0.350295f, -0.350295f, -0.350295f } } };
+GGIGLOBALCONST GGiVector4F32 g_GGiLogEst4 = { { { +0.248590f, +0.248590f, +0.248590f, +0.248590f } } };
+GGIGLOBALCONST GGiVector4F32 g_GGiLogEst5 = { { { -0.145700f, -0.145700f, -0.145700f, -0.145700f } } };
+GGIGLOBALCONST GGiVector4F32 g_GGiLogEst6 = { { { +0.057148f, +0.057148f, +0.057148f, +0.057148f } } };
+GGIGLOBALCONST GGiVector4F32 g_GGiLogEst7 = { { { -0.010578f, -0.010578f, -0.010578f, -0.010578f } } };
+GGIGLOBALCONST GGiVector4F32 g_GGiLgE = { { { +1.442695f, +1.442695f, +1.442695f, +1.442695f } } };
+GGIGLOBALCONST GGiVector4F32 g_GGiInvLgE = { { { +6.93147182e-1f, +6.93147182e-1f, +6.93147182e-1f, +6.93147182e-1f } } };
+GGIGLOBALCONST GGiVector4F32 g_UByteMax = { { { 255.0f, 255.0f, 255.0f, 255.0f } } };
+GGIGLOBALCONST GGiVector4F32 g_ByteMin = { { { -127.0f, -127.0f, -127.0f, -127.0f } } };
+GGIGLOBALCONST GGiVector4F32 g_ByteMax = { { { 127.0f, 127.0f, 127.0f, 127.0f } } };
+GGIGLOBALCONST GGiVector4F32 g_ShortMin = { { { -32767.0f, -32767.0f, -32767.0f, -32767.0f } } };
+GGIGLOBALCONST GGiVector4F32 g_ShortMax = { { { 32767.0f, 32767.0f, 32767.0f, 32767.0f } } };
+GGIGLOBALCONST GGiVector4F32 g_UShortMax = { { { 65535.0f, 65535.0f, 65535.0f, 65535.0f } } };
 
 namespace GGiMath
 {

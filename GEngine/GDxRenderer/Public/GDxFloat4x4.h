@@ -2,7 +2,7 @@
 #include "GDxPreInclude.h"
 
 
-
+/*
 class GDxFloat4x4 : public GGiFloat4x4
 {
 
@@ -50,4 +50,5 @@ private:
 	DirectX::XMFLOAT4X4 value;
 
 };
+*/
 

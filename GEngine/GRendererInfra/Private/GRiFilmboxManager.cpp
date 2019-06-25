@@ -238,7 +238,7 @@ bool GRiFilmboxManager::ImportMesh(FbxNode* pNode, std::vector<GRiMeshData>& out
 
 	FbxAMatrix submeshTrans = pNode->EvaluateGlobalTransform() * GetGeometryTransform(pNode);
 
-	GGiFloat4x4* vertTrans = ToGMatrix(submeshTrans);
+	GGiFloat4x4 vertTrans = ToGMatrix(submeshTrans);
 
 	pMesh->GenerateNormals();
 	const FbxGeometryElementNormal* pNormals = pMesh->GetElementNormal(0);
@@ -283,13 +283,15 @@ bool GRiFilmboxManager::ImportMesh(FbxNode* pNode, std::vector<GRiMeshData>& out
 			FbxVector2 uv = GetVertexElement(pUVs, iPoint, t, v, FbxVector2(0, 0));
 
 			// Transform the vertex.
-			GGiFloat4* vertPos = pRendererFactory->CreateFloat4(float(position[0]), float(position[1]), float(position[2]), 1.0f);
-			GGiFloat4* finalVertPos = &((*vertPos) * (*vertTrans));
+			//GGiFloat4* vertPos = pRendererFactory->CreateFloat4(float(position[0]), float(position[1]), float(position[2]), 1.0f);
+			//GGiFloat4* finalVertPos = &((*vertPos) * (*vertTrans));
+			GGiVector4 vertPos = { float(position[0]), float(position[1]), float(position[2]), 1.0f };
+			auto finalVertPos = vertTrans.TransformVector(vertPos);
 
 			GRiVertex vertex;
-			vertex.Position[0] = finalVertPos->GetX();
-			vertex.Position[1] = finalVertPos->GetY();
-			vertex.Position[2] = finalVertPos->GetZ();
+			vertex.Position[0] = finalVertPos.m128_f32[0];
+			vertex.Position[1] = finalVertPos.m128_f32[1];
+			vertex.Position[2] = finalVertPos.m128_f32[2];
 			vertex.Normal[0] = (float)normal[0];
 			vertex.Normal[1] = (float)normal[1];
 			vertex.Normal[2] = (float)normal[2];
@@ -359,7 +361,7 @@ TValue GRiFilmboxManager::GetVertexElement(TGeometryElement* pElement, int iPoin
 	return pElement->GetDirectArray().GetAt(index);
 }
 
-GGiFloat4x4* GRiFilmboxManager::ToGMatrix(const FbxAMatrix& fbxMat)
+GGiFloat4x4 GRiFilmboxManager::ToGMatrix(const FbxAMatrix& fbxMat)
 {
 	FbxVector4 t = fbxMat.GetT();
 	FbxVector4 r = fbxMat.GetR();
@@ -368,18 +370,18 @@ GGiFloat4x4* GRiFilmboxManager::ToGMatrix(const FbxAMatrix& fbxMat)
 	t.Set(-t.mData[0], t.mData[1], t.mData[2]);
 	r.Set(r.mData[0], -r.mData[1], -r.mData[2]);
 
-	GGiFloat4x4* mT = pRendererFactory->CreateFloat4x4();
-	GGiFloat4x4* mR = pRendererFactory->CreateFloat4x4();
-	GGiFloat4x4* mS = pRendererFactory->CreateFloat4x4();
+	GGiFloat4x4 mT;
+	GGiFloat4x4 mR;
+	GGiFloat4x4 mS;
 
-	mT->SetByTranslation(float(t[0]), float(t[1]), float(t[2]));
-	mR->SetByRotationPitchYawRoll(float(r[0]) * GGiEngineUtil::PI / 180, float(r[1]) * GGiEngineUtil::PI / 180, float(r[2]) * GGiEngineUtil::PI / 180);
-	mS->SetByScale(float(s[0]), float(s[1]), float(s[2]));
+	mT.SetByTranslation(float(t[0]), float(t[1]), float(t[2]));
+	mR.SetByRotationPitchYawRoll(float(r[0]) * GGiEngineUtil::PI / 180, float(r[1]) * GGiEngineUtil::PI / 180, float(r[2]) * GGiEngineUtil::PI / 180);
+	mS.SetByScale(float(s[0]), float(s[1]), float(s[2]));
 
 
-	GGiFloat4x4* mTrans = pRendererFactory->CreateFloat4x4();
+	GGiFloat4x4 mTrans;
 
-	*mTrans = (*mT) * (*mR) * (*mS);
+	mTrans = mT * mR * mS;
 
 	return mTrans;
 }

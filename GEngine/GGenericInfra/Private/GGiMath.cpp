@@ -2,6 +2,7 @@
 #include "GGiMath.h"
 
 
+/*
 GGiMath::GGiMath()
 {
 }
@@ -10,3 +11,4 @@ GGiMath::GGiMath()
 GGiMath::~GGiMath()
 {
 }
+*/

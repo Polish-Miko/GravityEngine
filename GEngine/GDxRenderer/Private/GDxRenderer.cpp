@@ -887,6 +887,7 @@ void GDxRenderer::UpdateObjectCBs(const GGiGameTimer* gt)
 		{
 			e.second->UpdateTransform();
 
+			/*
 			auto dxTrans = dynamic_pointer_cast<GDxFloat4x4>(e.second->GetTransform());
 			if (dxTrans == nullptr)
 				ThrowGGiException("Cast failed from shared_ptr<GGiFloat4x4> to shared_ptr<GDxFloat4x4>.");
@@ -898,14 +899,18 @@ void GDxRenderer::UpdateObjectCBs(const GGiGameTimer* gt)
 			auto dxTexTrans = dynamic_pointer_cast<GDxFloat4x4>(e.second->GetTexTransform());
 			if (dxTexTrans == nullptr)
 				ThrowGGiException("Cast failed from shared_ptr<GGiFloat4x4> to shared_ptr<GDxFloat4x4>.");
+			*/
 			
-			XMMATRIX renderObjectTrans = XMLoadFloat4x4(&(dxTrans->GetValue()));
+			//XMMATRIX renderObjectTrans = XMLoadFloat4x4(&(dxTrans->GetValue())); 
+			XMMATRIX renderObjectTrans = GDx::GGiToDxMatrix(e.second->GetTransform());
 			XMMATRIX invWorld = XMMatrixInverse(&XMMatrixDeterminant(renderObjectTrans), renderObjectTrans);
 			XMMATRIX invTransWorld = XMMatrixTranspose(invWorld);
-			XMMATRIX prevWorld = XMLoadFloat4x4(&(dxPrevTrans->GetValue()));
+			//XMMATRIX prevWorld = XMLoadFloat4x4(&(dxPrevTrans->GetValue()));
+			XMMATRIX prevWorld = GDx::GGiToDxMatrix(e.second->GetPrevTransform());
 			//auto tempSubTrans = e->GetSubmesh().Transform;
 			//XMMATRIX submeshTrans = XMLoadFloat4x4(&tempSubTrans);
-			XMMATRIX texTransform = XMLoadFloat4x4(&(dxTexTrans->GetValue()));
+			//XMMATRIX texTransform = XMLoadFloat4x4(&(dxTexTrans->GetValue()));
+			XMMATRIX texTransform = GDx::GGiToDxMatrix(e.second->GetTexTransform());
 			//auto world = submeshTrans * renderObjectTrans;
 			auto world = renderObjectTrans;
 

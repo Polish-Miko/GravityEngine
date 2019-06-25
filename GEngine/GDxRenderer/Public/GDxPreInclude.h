@@ -141,3 +141,34 @@ public:
 #define ReleaseCom(x) { if(x){ x->Release(); x = 0; } }
 #endif
 
+namespace GDx
+{
+	inline GGiFloat4x4 _GGI_VECTOR_CALL DxToGGiMatrix
+	(
+		DirectX::XMMATRIX mat
+	)
+	{
+		GGiFloat4x4 ret;
+		ret.SetRow(0, mat.r[0]);
+		ret.SetRow(1, mat.r[1]);
+		ret.SetRow(2, mat.r[2]);
+		ret.SetRow(3, mat.r[3]);
+		return ret;
+	}
+
+	//------------------------------------------------------------------------------
+
+	inline DirectX::XMMATRIX _GGI_VECTOR_CALL GGiToDxMatrix
+	(
+		GGiFloat4x4 mat
+	)
+	{
+		DirectX::XMMATRIX ret;
+		ret.r[0] = mat.GetRow(0);
+		ret.r[1] = mat.GetRow(1);
+		ret.r[2] = mat.GetRow(2);
+		ret.r[3] = mat.GetRow(3);
+		return ret;
+	}
+}
+

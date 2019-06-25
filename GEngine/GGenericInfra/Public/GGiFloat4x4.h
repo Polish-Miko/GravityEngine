@@ -27,6 +27,8 @@ private:
 
 	__m128 row[4];
 
+	friend class GGiFloat4;
+
 public:
 
 	inline float GetElement
@@ -54,7 +56,23 @@ public:
 		row[i].m128_f32[j] = value;
 	}
 
-	inline GGiFloat4x4& operator =(GGiFloat4x4& mat)
+	inline void SetRow(int index, __m128 r)
+	{
+		if (index < 0 || index > 3)
+			ThrowGGiException("GGiFloat4x4 index error");
+
+		row[index] = r;
+	}
+
+	inline __m128 GetRow(int index)
+	{
+		if (index < 0 || index > 3)
+			ThrowGGiException("GGiFloat4x4 index error");
+
+		return row[index];
+	}
+
+	inline GGiFloat4x4& operator =(GGiFloat4x4 mat)
 	{
 		row[0] = mat.row[0];
 		row[1] = mat.row[1];
@@ -725,6 +743,38 @@ public:
 	)
 	{
 		return M.GetInverse();
+	}
+
+	inline GGiVector4 _GGI_VECTOR_CALL TransformVector
+	(
+		GGiVector4 vec
+	)
+	{
+		// Splat x,y,z and w
+		GGiVector4 vTempX = _GGI_SHUFFLE_PS(vec, _MM_SHUFFLE(0, 0, 0, 0));
+		GGiVector4 vTempY = _GGI_SHUFFLE_PS(vec, _MM_SHUFFLE(1, 1, 1, 1));
+		GGiVector4 vTempZ = _GGI_SHUFFLE_PS(vec, _MM_SHUFFLE(2, 2, 2, 2));
+		GGiVector4 vTempW = _GGI_SHUFFLE_PS(vec, _MM_SHUFFLE(3, 3, 3, 3));
+		// Mul by the matrix
+		vTempX = _mm_mul_ps(vTempX, row[0]);
+		vTempY = _mm_mul_ps(vTempY, row[1]);
+		vTempZ = _mm_mul_ps(vTempZ, row[2]);
+		vTempW = _mm_mul_ps(vTempW, row[3]);
+		// Add them all together
+		vTempX = _mm_add_ps(vTempX, vTempY);
+		vTempZ = _mm_add_ps(vTempZ, vTempW);
+		vTempX = _mm_add_ps(vTempX, vTempZ);
+		// Return value
+		return vTempX;
+	}
+
+	static inline GGiVector4 _GGI_VECTOR_CALL TransformVector
+	(
+		GGiVector4 vec,
+		GGiFloat4x4 mat
+	)
+	{
+		return mat.TransformVector(vec);
 	}
 
 };

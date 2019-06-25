@@ -1,6 +1,7 @@
 #pragma once
 #include "GDxPreInclude.h"
 
+/*
 class GDxFloat4 : public GGiFloat4
 {
 public:
@@ -40,4 +41,5 @@ private:
 	DirectX::XMFLOAT4 value;
 
 };
+*/
 

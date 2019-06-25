@@ -125,12 +125,16 @@ void GRiCamera::SetLens(float fovY, float aspect, float zn, float zf)
 	mNearWindowHeight = 2.0f * mNearZ * tanf(0.5f*mFovY);
 	mFarWindowHeight = 2.0f * mFarZ * tanf(0.5f*mFovY);
 
-	GGiFloat4x4* P = pRendererFactory->CreateFloat4x4();
-	P->SetByPerspectiveFovLH(mFovY, mAspect, mNearZ, mFarZ);
+	GGiFloat4x4 P;
+	P.SetByPerspectiveFovLH(mFovY, mAspect, mNearZ, mFarZ);
 	mProj = P;
 
-	GGiFloat4x4* rP = pRendererFactory->CreateFloat4x4();
-	rP->SetByPerspectiveFovLH(mFovY, mAspect, mFarZ, mNearZ);
+	//GGiFloat4x4* rP = pRendererFactory->CreateFloat4x4();
+	//rP->SetByPerspectiveFovLH(mFovY, mAspect, mFarZ, mNearZ);
+	//mReversedProj = rP;
+
+	GGiFloat4x4 rP;
+	rP.SetByPerspectiveFovLH(mFovY, mAspect, mFarZ, mNearZ);
 	mReversedProj = rP;
 }
 
@@ -157,7 +161,7 @@ void GRiCamera::LookAt(std::vector<float> pos, std::vector<float> target, std::v
 	UpdateViewMatrix();
 }
 
-GGiFloat4x4* GRiCamera::GetView()const
+GGiFloat4x4 GRiCamera::GetView()//const
 {
 	if (mViewDirty)
 	{
@@ -166,7 +170,7 @@ GGiFloat4x4* GRiCamera::GetView()const
 	return mView;
 }
 
-GGiFloat4x4* GRiCamera::GetProj()const
+GGiFloat4x4 GRiCamera::GetProj()//const
 {
 	if (mViewDirty)
 	{
@@ -175,7 +179,7 @@ GGiFloat4x4* GRiCamera::GetProj()const
 	return mProj;
 }
 
-GGiFloat4x4* GRiCamera::GetReversedProj()const
+GGiFloat4x4 GRiCamera::GetReversedProj()//const
 {
 	if (mViewDirty)
 	{
@@ -220,18 +224,19 @@ void GRiCamera::Ascend(float d)
 void GRiCamera::Pitch(float angle)
 {
 	// Rotate up and look vector about the right vector.
-	GGiFloat4x4* R = pRendererFactory->CreateFloat4x4();
-	R->SetByRotationAxis(mRight[0], mRight[1], mRight[2], angle);
+	GGiFloat4x4 R;
+	R.SetByRotationAxis(mRight[0], mRight[1], mRight[2], angle);
 
-	std::vector<float> u = R->TransformNormal(GetUp());
-	mUp[0] = u[0];
-	mUp[1] = u[1];
-	mUp[2] = u[2];
+	
+	auto u = R.TransformNormal(GGiMath::GGiLoadFloat3(mUp[0], mUp[1], mUp[2]));
+	mUp[0] = u.m128_f32[0];
+	mUp[1] = u.m128_f32[1];
+	mUp[2] = u.m128_f32[2];
 
-	std::vector<float> l = R->TransformNormal(GetLook());
-	mLook[0] = l[0];
-	mLook[1] = l[1];
-	mLook[2] = l[2];
+	auto l = R.TransformNormal(GGiMath::GGiLoadFloat3(mLook[0], mLook[1], mLook[2]));
+	mLook[0] = l.m128_f32[0];
+	mLook[1] = l.m128_f32[1];
+	mLook[2] = l.m128_f32[2];
 
 	mViewDirty = true;
 	UpdateViewMatrix();
@@ -240,23 +245,23 @@ void GRiCamera::Pitch(float angle)
 void GRiCamera::RotateY(float angle)
 {
 	// Rotate the basis vectors about the world y-axis.
-	GGiFloat4x4* R = pRendererFactory->CreateFloat4x4();
-	R->SetByRotationY(angle);
+	GGiFloat4x4 R;
+	R.SetByRotationY(angle);
 
-	std::vector<float> r = R->TransformNormal(GetRight());
-	mRight[0] = r[0];
-	mRight[1] = r[1];
-	mRight[2] = r[2];
+	auto r = R.TransformNormal(GGiMath::GGiLoadFloat3(mRight[0], mRight[1], mRight[2]));
+	mRight[0] = r.m128_f32[0];
+	mRight[1] = r.m128_f32[1];
+	mRight[2] = r.m128_f32[2];
 
-	std::vector<float> u = R->TransformNormal(GetUp());
-	mUp[0] = u[0];
-	mUp[1] = u[1];
-	mUp[2] = u[2];
+	auto u = R.TransformNormal(GGiMath::GGiLoadFloat3(mUp[0], mUp[1], mUp[2]));
+	mUp[0] = u.m128_f32[0];
+	mUp[1] = u.m128_f32[1];
+	mUp[2] = u.m128_f32[2];
 
-	std::vector<float> l = R->TransformNormal(GetLook());
-	mLook[0] = l[0];
-	mLook[1] = l[1];
-	mLook[2] = l[2];
+	auto l = R.TransformNormal(GGiMath::GGiLoadFloat3(mLook[0], mLook[1], mLook[2]));
+	mLook[0] = l.m128_f32[0];
+	mLook[1] = l.m128_f32[1];
+	mLook[2] = l.m128_f32[2];
 
 	mViewDirty = true;
 	UpdateViewMatrix();
@@ -289,44 +294,44 @@ void GRiCamera::UpdateViewMatrix()
 		mLook[1] = L[1];
 		mLook[2] = L[2];
 
-		mView = pRendererFactory->CreateFloat4x4();
+		//mView = pRendererFactory->CreateFloat4x4();
 
-		mView->SetElement(0, 0, mRight[0]);
-		mView->SetElement(1, 0, mRight[1]);
-		mView->SetElement(2, 0, mRight[2]);
-		mView->SetElement(3, 0, x);
-		mView->SetElement(0, 1, mUp[0]);
-		mView->SetElement(1, 1, mUp[1]);
-		mView->SetElement(2, 1, mUp[2]);
-		mView->SetElement(3, 1, y);
-		mView->SetElement(0, 2, mLook[0]);
-		mView->SetElement(1, 2, mLook[1]);
-		mView->SetElement(2, 2, mLook[2]);
-		mView->SetElement(3, 2, z);
-		mView->SetElement(0, 3, 0.0f);
-		mView->SetElement(1, 3, 0.0f);
-		mView->SetElement(2, 3, 0.0f);
-		mView->SetElement(3, 3, 1.0f);
+		mView.SetElement(0, 0, mRight[0]);
+		mView.SetElement(1, 0, mRight[1]);
+		mView.SetElement(2, 0, mRight[2]);
+		mView.SetElement(3, 0, x);
+		mView.SetElement(0, 1, mUp[0]);
+		mView.SetElement(1, 1, mUp[1]);
+		mView.SetElement(2, 1, mUp[2]);
+		mView.SetElement(3, 1, y);
+		mView.SetElement(0, 2, mLook[0]);
+		mView.SetElement(1, 2, mLook[1]);
+		mView.SetElement(2, 2, mLook[2]);
+		mView.SetElement(3, 2, z);
+		mView.SetElement(0, 3, 0.0f);
+		mView.SetElement(1, 3, 0.0f);
+		mView.SetElement(2, 3, 0.0f);
+		mView.SetElement(3, 3, 1.0f);
 
 		mViewDirty = false;
 	}
 }
 
-void GRiCamera::SetPrevViewProj(GGiFloat4x4* prev)
+void GRiCamera::SetPrevViewProj(GGiFloat4x4 prev)
 {
-	if (prevViewProj != nullptr)
-		delete prevViewProj;
+	//if (prevViewProj != nullptr)
+		//delete prevViewProj;
 	prevViewProj = prev;
 }
 
-GGiFloat4x4* GRiCamera::GetPrevViewProj()
+GGiFloat4x4 GRiCamera::GetPrevViewProj()
 {
 	return prevViewProj;
 }
 
 void GRiCamera::InitPrevViewProj()
 {
-	prevViewProj = &(*mView * *mProj);
+	prevViewProj = mView * mProj;
 }
 
 void GRiCamera::SetPrevPosition(std::vector<float> prev)

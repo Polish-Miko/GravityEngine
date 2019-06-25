@@ -63,15 +63,15 @@ void GRiSceneObject::SetScale(float x, float y, float z)
 	bTransformDirty = true;
 }
 
-void GRiSceneObject::SetTexTransform(GGiFloat4x4* texTrans)
+void GRiSceneObject::SetTexTransform(GGiFloat4x4 texTrans)
 {
-	std::shared_ptr<GGiFloat4x4> temp(texTrans);
-	TexTransform = temp;
-	//TexTransform = std::make_shared<GGiFloat4x4>(*texTrans);
+	//std::shared_ptr<GGiFloat4x4> temp(texTrans);
+	//TexTransform = temp;
+	TexTransform = texTrans;
 	MarkDirty();
 }
 
-std::shared_ptr<GGiFloat4x4> GRiSceneObject::GetTexTransform()
+GGiFloat4x4 GRiSceneObject::GetTexTransform()
 {
 	return TexTransform;
 }
@@ -137,7 +137,7 @@ UINT GRiSceneObject::GetObjIndex()
 	return ObjIndex;
 }
 
-std::shared_ptr<GGiFloat4x4> GRiSceneObject::GetTransform()
+GGiFloat4x4 GRiSceneObject::GetTransform()
 {
 	if (bTransformDirty)
 		ThrowGGiException("Trying to read dirty transform data. Please make sure UpdateTransform() is called before access transform data.");
@@ -146,20 +146,21 @@ std::shared_ptr<GGiFloat4x4> GRiSceneObject::GetTransform()
 	return mTransform;
 }
 
-std::shared_ptr<GGiFloat4x4> GRiSceneObject::GetPrevTransform()
+GGiFloat4x4 GRiSceneObject::GetPrevTransform()
 {
 	return prevTransform;
 }
 
-void GRiSceneObject::SetPrevTransform(GGiFloat4x4* trans)
+void GRiSceneObject::SetPrevTransform(GGiFloat4x4 trans)
 {
-	std::shared_ptr<GGiFloat4x4> temp(trans);
-	prevTransform = temp;
+	//std::shared_ptr<GGiFloat4x4> temp(trans);
+	//prevTransform = temp;
+	prevTransform = trans;
 
 	MarkDirty();
 }
 
-void GRiSceneObject::SetPrevTransform(std::shared_ptr<GGiFloat4x4> trans)
+void GRiSceneObject::SetPrevTransform(GGiFloat4x4 trans)
 {
 	prevTransform = trans;
 

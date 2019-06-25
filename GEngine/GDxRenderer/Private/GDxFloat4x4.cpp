@@ -2,6 +2,8 @@
 #include "GDxFloat4x4.h"
 
 
+
+/*
 GDxFloat4x4::GDxFloat4x4()
 {
 	DirectX::XMFLOAT4X4 Id(
@@ -150,5 +152,9 @@ GGiFloat4x4* GDxFloat4x4::GetInverse()
 	DirectX::XMStoreFloat4x4(&ret->value, DirectX::XMMatrixInverse(&DirectX::XMMatrixDeterminant(valueMat), valueMat));
 	return ret;
 }
+*/
+
+
+
 
 
