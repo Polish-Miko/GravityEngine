@@ -2,6 +2,11 @@
 #include "GGiPreInclude.h"
 #include "GGiFloat4x4.h"
 #include "GGiException.h"
+#include "GGiMath.h"
+
+
+
+
 
 class GGiFloat4
 {
@@ -74,4 +79,5 @@ public:
 	}
 
 };
+
 

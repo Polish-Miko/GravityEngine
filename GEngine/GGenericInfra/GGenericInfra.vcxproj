@@ -150,6 +150,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="Public\GGiMath.h" />
     <ClInclude Include="Public\GGiThreadPool.h" />
     <ClInclude Include="Public\GGiCpuProfiler.h" />
     <ClInclude Include="Public\GGiEngineUtil.h" />
@@ -163,6 +164,7 @@
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Private\GGiMath.cpp" />
     <ClCompile Include="Private\GGiThreadPool.cpp" />
     <ClCompile Include="Private\GGiCpuProfiler.cpp" />
     <ClCompile Include="Private\GGiEngineUtil.cpp" />
