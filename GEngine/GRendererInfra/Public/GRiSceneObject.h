@@ -48,7 +48,6 @@ public:
 
 	GGiFloat4x4 GetPrevTransform();
 	void SetPrevTransform(GGiFloat4x4 trans);
-	void SetPrevTransform(GGiFloat4x4 trans);
 	void ResetPrevTransform();
 
 	CullState GetCullState();

@@ -70,7 +70,7 @@ float GRiMaterial::GetScalar(int index)
 	return ScalarParams[index];
 }
 
-GGiFloat4 GRiMaterial::GetVector(int index)
+GGiVector4 GRiMaterial::GetVector(int index)
 {
 	return VectorParams[index];
 }
@@ -93,7 +93,7 @@ void GRiMaterial::AddScalar(float scalar)
 	MarkDirty();
 }
 
-void GRiMaterial::AddVector(GGiFloat4 vector)
+void GRiMaterial::AddVector(GGiVector4 vector)
 {
 	VectorParams.push_back(vector);
 	MarkDirty();

@@ -1090,9 +1090,8 @@ void GDxRenderer::UpdateMaterialBuffer(const GGiGameTimer* gt)
 				ThrowDxException(L"Material (CBIndex : " + std::to_wstring(mat->MatIndex) + L" ) vector number exceeds MATERIAL_MAX_VECTOR_NUM.");
 			for (i = 0; i < vectorNum; i++)
 			{
-				GGiFloat4 ggiVec = mat->GetVector(i);
-				GDxFloat4 dxVec = dynamic_cast<GDxFloat4&>(ggiVec);
-				matData.VectorParams[i] = dxVec.GetValue();
+				XMVECTOR ggiVec = mat->GetVector(i);
+				DirectX::XMStoreFloat4(&matData.VectorParams[i], ggiVec);
 			}
 			//matData.DiffuseMapIndex = mat->DiffuseSrvHeapIndex;
 			//matData.NormalMapIndex = mat->NormalSrvHeapIndex;
@@ -1150,6 +1149,7 @@ void GDxRenderer::UpdateShadowTransform(const GGiGameTimer* gt)
 
 void GDxRenderer::UpdateMainPassCB(const GGiGameTimer* gt)
 {
+	/*
 	auto viewMat = dynamic_cast<GDxFloat4x4*>(pCamera->GetView());
 	if (viewMat == nullptr)
 		ThrowGGiException("Cast failed from GGiFloat4x4* to GDxFloat4x4*.");
@@ -1161,21 +1161,22 @@ void GDxRenderer::UpdateMainPassCB(const GGiGameTimer* gt)
 	auto prevViewProjMat = dynamic_cast<GDxFloat4x4*>(pCamera->GetPrevViewProj());
 	if (prevViewProjMat == nullptr)
 		ThrowGGiException("Cast failed from GGiFloat4x4* to GDxFloat4x4*.");
+	*/
 
 	UINT subsampIndex = mFrameCount % TAA_SAMPLE_COUNT;
 	double JitterX = Halton_2[subsampIndex] / (double)mClientWidth * (double)TAA_JITTER_DISTANCE;
 	double JitterY = Halton_3[subsampIndex] / (double)mClientHeight * (double)TAA_JITTER_DISTANCE;
-	XMMATRIX view = DirectX::XMLoadFloat4x4(&(viewMat->GetValue()));
-	XMFLOAT4X4 proj4X4 = projMat->GetValue();
-	proj4X4._31 += (float)JitterX;
-	proj4X4._32 += (float)JitterY;
-	XMMATRIX proj = DirectX::XMLoadFloat4x4(&proj4X4);
+	//XMMATRIX view = DirectX::XMLoadFloat4x4(&(viewMat->GetValue()));
+	XMMATRIX view = GDx::GGiToDxMatrix(pCamera->GetView());
+	XMMATRIX proj = GDx::GGiToDxMatrix(pCamera->GetProj());
+	proj.r[2].m128_f32[0] += (float)JitterX;//_31
+	proj.r[2].m128_f32[1] += (float)JitterY;//_32
 	//XMMATRIX proj = DirectX::XMLoadFloat4x4(&(projMat->GetValue()));
 	//proj.r[2].m128_f32[0] += JitterX;
 	//proj.r[2].m128_f32[1] += JitterY;
 
-	XMMATRIX unjitteredProj = DirectX::XMLoadFloat4x4(&(projMat->GetValue()));
-	XMMATRIX prevViewProj = DirectX::XMLoadFloat4x4(&(prevViewProjMat->GetValue()));
+	XMMATRIX unjitteredProj = GDx::GGiToDxMatrix(pCamera->GetProj());
+	XMMATRIX prevViewProj = GDx::GGiToDxMatrix(pCamera->GetPrevViewProj());
 
 	XMMATRIX viewProj = XMMatrixMultiply(view, proj);
 	XMMATRIX unjitteredViewProj = XMMatrixMultiply(view, unjitteredProj);
@@ -1222,6 +1223,7 @@ void GDxRenderer::UpdateMainPassCB(const GGiGameTimer* gt)
 
 void GDxRenderer::UpdateSkyPassCB(const GGiGameTimer* gt)
 {
+	/*
 	auto viewMat = dynamic_cast<GDxFloat4x4*>(pCamera->GetView());
 	if (viewMat == nullptr)
 		ThrowGGiException("Cast failed from GGiFloat4x4* to GDxFloat4x4*.");
@@ -1233,19 +1235,20 @@ void GDxRenderer::UpdateSkyPassCB(const GGiGameTimer* gt)
 	auto prevViewProjMat = dynamic_cast<GDxFloat4x4*>(pCamera->GetPrevViewProj());
 	if (prevViewProjMat == nullptr)
 		ThrowGGiException("Cast failed from GGiFloat4x4* to GDxFloat4x4*.");
+	*/
 
-	XMMATRIX view = DirectX::XMLoadFloat4x4(&(viewMat->GetValue()));
-	XMMATRIX proj = DirectX::XMLoadFloat4x4(&(projMat->GetValue()));
+	XMMATRIX view = GDx::GGiToDxMatrix(pCamera->GetView());
+	XMMATRIX proj = GDx::GGiToDxMatrix(pCamera->GetProj());
 	UINT subsampIndex = mFrameCount % TAA_SAMPLE_COUNT;
 	double JitterX = Halton_2[subsampIndex] / (double)mClientWidth * (double)TAA_JITTER_DISTANCE;
 	double JitterY = Halton_3[subsampIndex] / (double)mClientHeight * (double)TAA_JITTER_DISTANCE;
 	proj.r[2].m128_f32[0] += (float)JitterX;
 	proj.r[2].m128_f32[1] += (float)JitterY;
 
-	XMMATRIX unjitteredProj = DirectX::XMLoadFloat4x4(&(projMat->GetValue()));
+	XMMATRIX unjitteredProj = GDx::GGiToDxMatrix(pCamera->GetProj());
 	XMMATRIX viewProj = XMMatrixMultiply(view, proj);
 	XMMATRIX unjitteredViewProj = XMMatrixMultiply(view, unjitteredProj);
-	XMMATRIX prevViewProj = DirectX::XMLoadFloat4x4(&(prevViewProjMat->GetValue()));
+	XMMATRIX prevViewProj = GDx::GGiToDxMatrix(pCamera->GetPrevViewProj());
 
 	XMStoreFloat4x4(&mSkyPassCB.ViewProj, XMMatrixTranspose(viewProj));
 	XMStoreFloat4x4(&mSkyPassCB.UnjitteredViewProj, XMMatrixTranspose(unjitteredViewProj));
@@ -1281,6 +1284,7 @@ void GDxRenderer::CullSceneObjects(const GGiGameTimer* gt)
 
 	GGiCpuProfiler::GetInstance().StartCpuProfile("Frustum Culling");
 
+	/*
 	auto viewMat = dynamic_cast<GDxFloat4x4*>(pCamera->GetView());
 	if (viewMat == nullptr)
 		ThrowGGiException("Cast failed from GGiFloat4x4* to GDxFloat4x4*.");
@@ -1296,11 +1300,12 @@ void GDxRenderer::CullSceneObjects(const GGiGameTimer* gt)
 	auto prevViewProjMat = dynamic_cast<GDxFloat4x4*>(pCamera->GetPrevViewProj());
 	if (prevViewProjMat == nullptr)
 		ThrowGGiException("Cast failed from GGiFloat4x4* to GDxFloat4x4*.");
+	*/
 
-	XMMATRIX view = DirectX::XMLoadFloat4x4(&viewMat->GetValue());
-	XMMATRIX proj = DirectX::XMLoadFloat4x4(&projMat->GetValue());
-	XMMATRIX revProj = DirectX::XMLoadFloat4x4(&revProjMat->GetValue());
-	XMMATRIX prevViewProj = DirectX::XMLoadFloat4x4(&prevViewProjMat->GetValue());
+	XMMATRIX view = GDx::GGiToDxMatrix(pCamera->GetView());
+	XMMATRIX proj = GDx::GGiToDxMatrix(pCamera->GetProj());
+	XMMATRIX revProj = GDx::GGiToDxMatrix(pCamera->GetReversedProj());
+	XMMATRIX prevViewProj = GDx::GGiToDxMatrix(pCamera->GetPrevViewProj());
 	XMMATRIX invView = XMMatrixInverse(&XMMatrixDeterminant(view), view);
 	//proj.r[0].m128_f32[0] = (float)((double)proj.r[0].m128_f32[0] * ((double)mClientWidth / (double)mClientHeight) / ((double)DEPTH_READBACK_BUFFER_SIZE_X / (double)DEPTH_READBACK_BUFFER_SIZE_Y));
 
@@ -1327,11 +1332,7 @@ void GDxRenderer::CullSceneObjects(const GGiGameTimer* gt)
 			{
 				auto so = pSceneObjectLayer[(int)RenderLayer::Deferred][j];
 
-				auto dxTrans = dynamic_pointer_cast<GDxFloat4x4>(so->GetTransform());
-				if (dxTrans == nullptr)
-					ThrowGGiException("Cast failed from shared_ptr<GGiFloat4x4> to shared_ptr<GDxFloat4x4>.");
-
-				XMMATRIX world = XMLoadFloat4x4(&(dxTrans->GetValue()));
+				XMMATRIX world = GDx::GGiToDxMatrix(so->GetTransform());
 
 				XMMATRIX localToView = XMMatrixMultiply(world, view);
 
@@ -1435,11 +1436,7 @@ void GDxRenderer::CullSceneObjects(const GGiGameTimer* gt)
 					if (so->GetCullState() == CullState::FrustumCulled)
 						continue;
 
-					auto dxTrans = dynamic_pointer_cast<GDxFloat4x4>(so->GetTransform());
-					if (dxTrans == nullptr)
-						ThrowGGiException("Cast failed from shared_ptr<GGiFloat4x4> to shared_ptr<GDxFloat4x4>.");
-
-					XMMATRIX sceneObjectTrans = XMLoadFloat4x4(&(dxTrans->GetValue()));
+					XMMATRIX sceneObjectTrans = GDx::GGiToDxMatrix(so->GetTransform());
 
 					XMMATRIX worldViewProj = XMMatrixMultiply(sceneObjectTrans, viewProj);
 
@@ -2883,6 +2880,7 @@ void GDxRenderer::CubemapPreIntegration()
 	{
 		e.second->UpdateTransform();
 
+		/*
 		auto dxTrans = dynamic_pointer_cast<GDxFloat4x4>(e.second->GetTransform());
 		if (dxTrans == nullptr)
 			ThrowGGiException("Cast failed from shared_ptr<GGiFloat4x4> to shared_ptr<GDxFloat4x4>.");
@@ -2890,11 +2888,12 @@ void GDxRenderer::CubemapPreIntegration()
 		auto dxTexTrans = dynamic_pointer_cast<GDxFloat4x4>(e.second->GetTexTransform());
 		if (dxTexTrans == nullptr)
 			ThrowGGiException("Cast failed from shared_ptr<GGiFloat4x4> to shared_ptr<GDxFloat4x4>.");
+		*/
 
 		// Only update the cbuffer data if the constants have changed.  
 		// This needs to be tracked per frame resource.
-		XMMATRIX world = XMLoadFloat4x4(&(dxTrans->GetValue()));
-		XMMATRIX texTransform = XMLoadFloat4x4(&(dxTexTrans->GetValue()));
+		XMMATRIX world = GDx::GGiToDxMatrix(e.second->GetTransform());
+		XMMATRIX texTransform = GDx::GGiToDxMatrix(e.second->GetTexTransform());
 
 		ObjectConstants objConstants;
 		XMStoreFloat4x4(&objConstants.World, XMMatrixTranspose(world));
@@ -2916,14 +2915,11 @@ void GDxRenderer::CubemapPreIntegration()
 		{
 			auto view = pCubemapSampleCamera[j]->GetView();
 			auto proj = pCubemapSampleCamera[j]->GetProj();
-			GGiFloat4x4* viewProj = &((*view) * (*proj));
-			GDxFloat4x4* dxVP = dynamic_cast<GDxFloat4x4*>(viewProj);
-			if (dxVP == nullptr)
-				ThrowGGiException("Cast fail from GGiFloat4x4* to GDxFloat4x4*.");
+			GGiFloat4x4 viewProj = view * proj;
 
-			dxVP->Transpose();
-			mSkyPassCB.ViewProj = dxVP->GetValue();
-			mSkyPassCB.PrevViewProj = dxVP->GetValue();
+			viewProj.Transpose();
+			XMStoreFloat4x4(&mSkyPassCB.ViewProj, GDx::GGiToDxMatrix(viewProj));
+			XMStoreFloat4x4(&mSkyPassCB.PrevViewProj, GDx::GGiToDxMatrix(viewProj));
 			mSkyPassCB.pad1 = 0.0f;
 			auto eyePos = pCamera->GetPosition();
 			mSkyPassCB.EyePosW = DirectX::XMFLOAT3(eyePos[0], eyePos[1], eyePos[2]);
@@ -3220,23 +3216,17 @@ void GDxRenderer::RegisterTexture(GRiTexture* text)
 
 GRiSceneObject* GDxRenderer::SelectSceneObject(int sx, int sy)
 {
-	GGiFloat4x4* P = pCamera->GetProj();
+	GGiFloat4x4 P = pCamera->GetProj();
 
 	// Compute picking ray in view space.
-	float vx = (+2.0f*sx / mClientWidth - 1.0f) / P->GetElement(0, 0);
-	float vy = (-2.0f*sy / mClientHeight + 1.0f) / P->GetElement(1, 1);
+	float vx = (+2.0f*sx / mClientWidth - 1.0f) / P.GetElement(0, 0);
+	float vy = (-2.0f*sy / mClientHeight + 1.0f) / P.GetElement(1, 1);
 
 	// Ray definition in view space.
 	XMVECTOR viewRayOrigin = XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);
 	XMVECTOR viewRayDir = XMVectorSet(vx, vy, 1.0f, 0.0f);
 
-	GGiFloat4x4* V = pCamera->GetView();
-	GDxFloat4x4* dxV = dynamic_cast<GDxFloat4x4*>(V);
-	if (dxV == nullptr)
-	{
-		ThrowGGiException("cast fail.");
-	}
-	XMMATRIX dxView = XMLoadFloat4x4(&dxV->GetValue());
+	XMMATRIX dxView = GDx::GGiToDxMatrix(pCamera->GetView());
 	XMMATRIX invView = XMMatrixInverse(&XMMatrixDeterminant(dxView), dxView);
 
 	GRiSceneObject* pickedSceneObject = nullptr;
@@ -3248,11 +3238,7 @@ GRiSceneObject* GDxRenderer::SelectSceneObject(int sx, int sy)
 	{
 		auto mesh = so->GetMesh();
 
-		auto dxSoTrans = dynamic_pointer_cast<GDxFloat4x4>(so->GetTransform());
-		if (dxSoTrans == nullptr)
-			ThrowGGiException("Cast failed from shared_ptr<GGiFloat4x4> to shared_ptr<GDxFloat4x4>.");
-
-		XMMATRIX W = XMLoadFloat4x4(&dxSoTrans->GetValue());
+		XMMATRIX W = GDx::GGiToDxMatrix(so->GetTransform());
 
 		XMMATRIX invWorld = XMMatrixInverse(&XMMatrixDeterminant(W), W);
 

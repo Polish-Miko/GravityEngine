@@ -72,6 +72,16 @@ public:
 		return row[index];
 	}
 
+	static inline GGiFloat4x4 Identity()
+	{
+		GGiFloat4x4 ret;
+		ret.row[0] = GGiIdentityRow0;
+		ret.row[1] = GGiIdentityRow1;
+		ret.row[2] = GGiIdentityRow2;
+		ret.row[3] = GGiIdentityRow3;
+		return ret;
+	}
+
 	inline GGiFloat4x4& operator =(GGiFloat4x4 mat)
 	{
 		row[0] = mat.row[0];

@@ -151,6 +151,7 @@ GGiFloat4x4 GRiSceneObject::GetPrevTransform()
 	return prevTransform;
 }
 
+/*
 void GRiSceneObject::SetPrevTransform(GGiFloat4x4 trans)
 {
 	//std::shared_ptr<GGiFloat4x4> temp(trans);
@@ -159,6 +160,7 @@ void GRiSceneObject::SetPrevTransform(GGiFloat4x4 trans)
 
 	MarkDirty();
 }
+*/
 
 void GRiSceneObject::SetPrevTransform(GGiFloat4x4 trans)
 {

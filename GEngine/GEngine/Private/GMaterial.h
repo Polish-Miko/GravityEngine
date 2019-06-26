@@ -51,11 +51,11 @@ public:
 		}
 		for (i = 0; i < vectorNum; i++)
 		{
-			GGiFloat4 vector = pMaterial->GetVector((int)i);
-			VectorParams.push_back(vector.GetX());
-			VectorParams.push_back(vector.GetY());
-			VectorParams.push_back(vector.GetZ());
-			VectorParams.push_back(vector.GetW());
+			GGiVector4 vector = pMaterial->GetVector((int)i);
+			VectorParams.push_back(vector.m128_f32[0]);
+			VectorParams.push_back(vector.m128_f32[1]);
+			VectorParams.push_back(vector.m128_f32[2]);
+			VectorParams.push_back(vector.m128_f32[3]);
 		}
 		/*
 		for (auto tex : pMaterial->pTextures)

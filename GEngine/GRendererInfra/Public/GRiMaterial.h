@@ -47,7 +47,7 @@ public:
 
 	float GetScalar(int index);
 
-	GGiFloat4 GetVector(int index);
+	GGiVector4 GetVector(int index);
 
 	void AddTexture(GRiTexture* tex);
 
@@ -55,7 +55,7 @@ public:
 
 	void AddScalar(float scalar);
 
-	void AddVector(GGiFloat4 vector);
+	void AddVector(GGiVector4 vector);
 
 	//std::wstring GetTextureUniqueName(int index);
 
@@ -75,7 +75,7 @@ protected:
 
 	// Material constants.
 	std::vector<float> ScalarParams;
-	std::vector<GGiFloat4> VectorParams;
+	std::vector<GGiVector4> VectorParams;
 
 };
 

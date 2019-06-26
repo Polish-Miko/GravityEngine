@@ -584,7 +584,7 @@ void GCore::LoadMaterials()
 			std::list<float>::iterator iter = mMaterialFiles[file]->VectorParams.begin();
 			for (auto i = 0u; i < (UINT)(mMaterialFiles[file]->VectorParams.size() / 4); i++)
 			{
-				GGiFloat4* vec = pRendererFactory->CreateFloat4();
+				GGiVector4 vec;
 				float x = *iter;
 				iter++;
 				float y = *iter;
@@ -593,11 +593,8 @@ void GCore::LoadMaterials()
 				iter++;
 				float w = *iter;
 				iter++;
-				vec->SetElement(0, x);
-				vec->SetElement(1, y);
-				vec->SetElement(2, z);
-				vec->SetElement(3, w);
-				newMat->AddVector(*vec);
+				vec = GGiMath::GGiVectorSet(x, y, z, w);
+				newMat->AddVector(vec);
 			}
 
 			mMaterialFiles[file]->LoadMaterialData();
@@ -722,7 +719,7 @@ void GCore::LoadSceneObjects()
 	fullScreenQuadSO->UniqueName = L"FullScreenQuad";
 	fullScreenQuadSO->UpdateTransform();
 	fullScreenQuadSO->ResetPrevTransform();
-	fullScreenQuadSO->SetTexTransform(pRendererFactory->CreateFloat4x4());
+	fullScreenQuadSO->SetTexTransform(GGiFloat4x4::Identity());
 	fullScreenQuadSO->SetObjIndex(mSceneObjectIndex++);
 	fullScreenQuadSO->SetOverrideMaterial(L"Quad", mMaterials[L"Default"].get());
 	fullScreenQuadSO->SetMesh(mMeshes[L"Quad"].get());
@@ -734,7 +731,7 @@ void GCore::LoadSceneObjects()
 	skySO->SetScale(5000.f, 5000.f, 5000.f);
 	skySO->UpdateTransform();
 	skySO->ResetPrevTransform();
-	skySO->SetTexTransform(pRendererFactory->CreateFloat4x4());
+	skySO->SetTexTransform(GGiFloat4x4::Identity());
 	skySO->SetObjIndex(mSceneObjectIndex++);
 	skySO->SetOverrideMaterial(L"Sphere", mMaterials[L"Default"].get());
 	skySO->SetMesh(mMeshes[L"Sphere"].get());
@@ -749,7 +746,7 @@ void GCore::LoadSceneObjects()
 		albedoQuadSO->SetLocation(0.f, 0.f, 0.f);
 		albedoQuadSO->UpdateTransform();
 		albedoQuadSO->ResetPrevTransform();
-		albedoQuadSO->SetTexTransform(pRendererFactory->CreateFloat4x4());
+		albedoQuadSO->SetTexTransform(GGiFloat4x4::Identity());
 		albedoQuadSO->SetObjIndex(mSceneObjectIndex++);
 		albedoQuadSO->SetOverrideMaterial(L"Quad", mMaterials[L"debug_albedo"].get());
 		albedoQuadSO->SetMesh(mMeshes[L"Quad"].get());
@@ -762,7 +759,7 @@ void GCore::LoadSceneObjects()
 		normalQuadSO->SetLocation(.2f, 0.f, 0.f);
 		normalQuadSO->UpdateTransform();
 		normalQuadSO->ResetPrevTransform();
-		normalQuadSO->SetTexTransform(pRendererFactory->CreateFloat4x4());
+		normalQuadSO->SetTexTransform(GGiFloat4x4::Identity());
 		normalQuadSO->SetObjIndex(mSceneObjectIndex++);
 		normalQuadSO->SetOverrideMaterial(L"Quad", mMaterials[L"debug_normal"].get());
 		normalQuadSO->SetMesh(mMeshes[L"Quad"].get());
@@ -775,7 +772,7 @@ void GCore::LoadSceneObjects()
 		worldPosQuadSO->SetLocation(.4f, 0.f, 0.f);
 		worldPosQuadSO->UpdateTransform();
 		worldPosQuadSO->ResetPrevTransform();
-		worldPosQuadSO->SetTexTransform(pRendererFactory->CreateFloat4x4());
+		worldPosQuadSO->SetTexTransform(GGiFloat4x4::Identity());
 		worldPosQuadSO->SetObjIndex(mSceneObjectIndex++);
 		worldPosQuadSO->SetOverrideMaterial(L"Quad", mMaterials[L"debug_velocity"].get());
 		worldPosQuadSO->SetMesh(mMeshes[L"Quad"].get());
@@ -788,7 +785,7 @@ void GCore::LoadSceneObjects()
 		roughnessQuadSO->SetLocation(.6f, 0.f, 0.f);
 		roughnessQuadSO->UpdateTransform();
 		roughnessQuadSO->ResetPrevTransform();
-		roughnessQuadSO->SetTexTransform(pRendererFactory->CreateFloat4x4());
+		roughnessQuadSO->SetTexTransform(GGiFloat4x4::Identity());
 		roughnessQuadSO->SetObjIndex(mSceneObjectIndex++);
 		roughnessQuadSO->SetOverrideMaterial(L"Quad", mMaterials[L"debug_roughness"].get());
 		roughnessQuadSO->SetMesh(mMeshes[L"Quad"].get());
@@ -801,7 +798,7 @@ void GCore::LoadSceneObjects()
 		metallicQuadSO->SetLocation(.8f, 0.f, 0.f);
 		metallicQuadSO->UpdateTransform();
 		metallicQuadSO->ResetPrevTransform();
-		metallicQuadSO->SetTexTransform(pRendererFactory->CreateFloat4x4());
+		metallicQuadSO->SetTexTransform(GGiFloat4x4::Identity());
 		metallicQuadSO->SetObjIndex(mSceneObjectIndex++);
 		metallicQuadSO->SetOverrideMaterial(L"Quad", mMaterials[L"debug_metallic"].get());
 		metallicQuadSO->SetMesh(mMeshes[L"Quad"].get());
@@ -815,7 +812,7 @@ void GCore::LoadSceneObjects()
 		{
 			std::unique_ptr<GRiSceneObject> newSO(pRendererFactory->CreateSceneObject());
 			newSO->UniqueName = info.UniqueName;
-			newSO->SetTexTransform(pRendererFactory->CreateFloat4x4());
+			newSO->SetTexTransform(GGiFloat4x4::Identity());
 			newSO->SetObjIndex(mSceneObjectIndex++);
 
 			/*
@@ -959,7 +956,9 @@ void GCore::LoadCameras()
 void GCore::RecordPrevFrame(const GGiGameTimer* gt)
 {
 	mRenderer->IncreaseFrameCount();
-	GGiFloat4x4* prevVP = &(*(mCamera->GetView()) * (*mCamera->GetProj()));
+	auto view = mCamera->GetView();
+	auto proj = mCamera->GetProj();
+	GGiFloat4x4 prevVP = view * proj;
 	mCamera->SetPrevViewProj(prevVP);
 	mCamera->SetPrevPosition(mCamera->GetPosition());
 	for (auto so : mSceneObjectLayer[(int)RenderLayer::Deferred])
@@ -987,8 +986,8 @@ void GCore::UpdateGui(const GGiGameTimer* gt)
 		{
 			for (auto j = 0u; j < 4; j++)
 			{
-				view[i * 4 + j] = mCamera->GetView()->GetElement(i, j);
-				proj[i * 4 + j] = mCamera->GetProj()->GetElement(i, j);
+				view[i * 4 + j] = mCamera->GetView().GetElement(i, j);
+				proj[i * 4 + j] = mCamera->GetProj().GetElement(i, j);
 				prevLoc = mSelectedSceneObject->GetLocation();
 				objLoc[0] = prevLoc[0];
 				objLoc[1] = prevLoc[1];
@@ -1422,7 +1421,7 @@ void GCore::CreateSceneObject(wchar_t* sceneObjectName, wchar_t* meshUniqueName)
 	newSceneObject->UniqueName = SceneObjectNameStr;
 	newSceneObject->UpdateTransform();
 	newSceneObject->ResetPrevTransform();
-	newSceneObject->SetTexTransform(pRendererFactory->CreateFloat4x4());
+	newSceneObject->SetTexTransform(GGiFloat4x4::Identity());
 	newSceneObject->SetObjIndex(mSceneObjectIndex++);
 	//newSceneObject->SetMaterial(mMaterials[L"Default"].get());
 	newSceneObject->SetMesh(mMeshes[MeshUniqueNameStr].get());
