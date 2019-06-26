@@ -874,6 +874,13 @@ void GDxRenderer::ScriptUpdate(const GGiGameTimer* gt)
 		pSceneObjects[L"MoveSphere"]->SetLocation(70 * DirectX::XMScalarSin(gt->TotalTime()), loc[1], loc[2]);
 	}
 	*/
+
+	//auto test1 = GGiFloat4x4::Identity();
+	//auto test2 = GGiFloat4x4::Identity();
+	//auto test3 = GGiFloat4x4::Identity();
+	//auto test4 = test1 * test2;
+	//auto test5 = test4 * test3;
+	//test5 = test5;
 }
 
 void GDxRenderer::UpdateObjectCBs(const GGiGameTimer* gt)

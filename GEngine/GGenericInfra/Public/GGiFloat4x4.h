@@ -91,7 +91,7 @@ public:
 		return *this;
 	}
 
-	__forceinline GGiFloat4x4& operator *(GGiFloat4x4& mat)
+	__forceinline GGiFloat4x4 operator *(GGiFloat4x4& mat)
 	{
 		GGiFloat4x4 mResult;
 

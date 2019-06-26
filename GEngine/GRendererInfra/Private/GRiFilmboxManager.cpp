@@ -378,10 +378,9 @@ GGiFloat4x4 GRiFilmboxManager::ToGMatrix(const FbxAMatrix& fbxMat)
 	mR.SetByRotationPitchYawRoll(float(r[0]) * GGiEngineUtil::PI / 180, float(r[1]) * GGiEngineUtil::PI / 180, float(r[2]) * GGiEngineUtil::PI / 180);
 	mS.SetByScale(float(s[0]), float(s[1]), float(s[2]));
 
-
 	GGiFloat4x4 mTrans;
 
-	mTrans = mT * mR * mS;
+	mTrans = mS * mR * mT;
 
 	return mTrans;
 }

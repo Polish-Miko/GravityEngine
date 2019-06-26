@@ -361,19 +361,15 @@
 		<item class_id="4" tracking_level="0" version="0">
 			<UniqueName>NewSceneObject</UniqueName>
 			<OverrideMaterialUniqueName class_id="5" tracking_level="0" version="0">
-				<count>1</count>
+				<count>0</count>
 				<item_version>0</item_version>
-				<item class_id="6" tracking_level="0" version="0">
-					<str1>TEST2</str1>
-					<str2>Content\Material\GoldScuffed.gmat</str2>
-				</item>
 			</OverrideMaterialUniqueName>
 			<MeshUniqueName>Content\Models\test.fbx</MeshUniqueName>
 			<Location>
 				<count>3</count>
-				<item>1.492049980e+01</item>
-				<item>-6.305825806e+01</item>
-				<item>2.588269958e+02</item>
+				<item>2.098394394e+01</item>
+				<item>-6.305926895e+01</item>
+				<item>2.123874664e+02</item>
 			</Location>
 			<Rotation>
 				<count>3</count>
@@ -389,15 +385,15 @@
 			</Scale>
 		</item>
 	</mSceneObjectInfo>
-	<mMeshInfo class_id="7" tracking_level="0" version="0">
+	<mMeshInfo class_id="6" tracking_level="0" version="0">
 		<count>11</count>
 		<item_version>0</item_version>
-		<item class_id="8" tracking_level="0" version="0">
+		<item class_id="7" tracking_level="0" version="0">
 			<MeshUniqueName>Box</MeshUniqueName>
 			<MaterialUniqueName>
 				<count>1</count>
 				<item_version>0</item_version>
-				<item>
+				<item class_id="8" tracking_level="0" version="0">
 					<str1>Box</str1>
 					<str2>Default</str2>
 				</item>
