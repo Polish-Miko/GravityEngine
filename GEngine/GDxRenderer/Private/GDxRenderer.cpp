@@ -3288,44 +3288,52 @@ GRiSceneObject* GDxRenderer::SelectSceneObject(int sx, int sy)
 
 			// Find the nearest ray/triangle intersection.
 			tmin = GGiEngineUtil::Infinity;
-			for (UINT i = 0; i < triCount; ++i)
+			for (auto submesh : so->GetMesh()->Submeshes)
 			{
-				// Indices for this triangle.
-				UINT i0 = indices[i * 3 + 0];
-				UINT i1 = indices[i * 3 + 1];
-				UINT i2 = indices[i * 3 + 2];
+				auto startIndexLocation = submesh.second.StartIndexLocation;
+				auto baseVertexLocation = submesh.second.BaseVertexLocation;
 
-				// Vertices for this triangle.
-				XMFLOAT3 v0f;
-				XMFLOAT3 v1f;
-				XMFLOAT3 v2f;
-				v0f.x = vertices[i0].Position[0];
-				v0f.y = vertices[i0].Position[1];
-				v0f.z = vertices[i0].Position[2];
-				v1f.x = vertices[i1].Position[0];
-				v1f.y = vertices[i1].Position[1];
-				v1f.z = vertices[i1].Position[2];
-				v2f.x = vertices[i2].Position[0];
-				v2f.y = vertices[i2].Position[1];
-				v2f.z = vertices[i2].Position[2];
-				XMVECTOR v0 = XMLoadFloat3(&v0f);
-				XMVECTOR v1 = XMLoadFloat3(&v1f);
-				XMVECTOR v2 = XMLoadFloat3(&v2f);
-
-				// We have to iterate over all the triangles in order to find the nearest intersection.
-				float t = 0.0f;
-				if (TriangleTests::Intersects(rayOrigin, rayDir, v0, v1, v2, t))
+				for (size_t i = 0; i < (submesh.second.IndexCount / 3); i++)
 				{
-					if (t < tmin)
+					// Indices for this triangle.
+					UINT i0 = indices[startIndexLocation + i * 3 + 0] + baseVertexLocation;
+					UINT i1 = indices[startIndexLocation + i * 3 + 1] + baseVertexLocation;
+					UINT i2 = indices[startIndexLocation + i * 3 + 2] + baseVertexLocation;
+
+					// Vertices for this triangle.
+					XMFLOAT3 v0f;
+					XMFLOAT3 v1f;
+					XMFLOAT3 v2f;
+					v0f.x = vertices[i0].Position[0];
+					v0f.y = vertices[i0].Position[1];
+					v0f.z = vertices[i0].Position[2];
+					v1f.x = vertices[i1].Position[0];
+					v1f.y = vertices[i1].Position[1];
+					v1f.z = vertices[i1].Position[2];
+					v2f.x = vertices[i2].Position[0];
+					v2f.y = vertices[i2].Position[1];
+					v2f.z = vertices[i2].Position[2];
+					XMVECTOR v0 = XMLoadFloat3(&v0f);
+					XMVECTOR v1 = XMLoadFloat3(&v1f);
+					XMVECTOR v2 = XMLoadFloat3(&v2f);
+
+					// We have to iterate over all the triangles in order to find the nearest intersection.
+					float t = 0.0f;
+					if (TriangleTests::Intersects(rayOrigin, rayDir, v0, v1, v2, t))
 					{
-						// This is the new nearest picked triangle.
-						tmin = t;
+						if (t < tmin)
+						{
+							// This is the new nearest picked triangle.
+							tmin = t;
+						}
 					}
 				}
 			}
+
 			std::vector<float> soScale = so->GetScale();
 			float relSize = (float)pow(soScale[0] * soScale[0] + soScale[1] * soScale[1] + soScale[2] * soScale[2], 0.5);
 			tmin *= relSize;
+
 			if (tmin < tPicked)
 			{
 				tPicked = tmin;
