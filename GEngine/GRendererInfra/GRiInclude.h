@@ -23,6 +23,7 @@
 #include "Public/imguizmo/ImGuizmo.h"
 #include "Public/GRiBoundingBox.h"
 #include "Public/GRiOcclusionCullingRasterizer.h"
+#include "Public/GRiKdTree.h"
 
 #define MAX_TEXTURE_NUM 1024
 #define MAX_MATERIAL_NUM 1024

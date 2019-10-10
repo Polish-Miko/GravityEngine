@@ -114,6 +114,9 @@
     <ClInclude Include="Public\GRiOcclusionCullingRasterizer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Public\GRiKdTree.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -198,6 +201,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Private\GRiOcclusionCullingRasterizer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Private\GRiKdTree.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

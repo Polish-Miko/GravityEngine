@@ -156,6 +156,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="Public\GRiKdTree.h" />
     <ClInclude Include="Public\GRiOcclusionCullingRasterizer.h" />
     <ClInclude Include="Public\GRiBoundingBox.h" />
     <ClInclude Include="Public\imguizmo\ImCurveEdit.h" />
@@ -191,6 +192,7 @@
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Private\GRiKdTree.cpp" />
     <ClCompile Include="Private\GRiOcclusionCullingRasterizer.cpp" />
     <ClCompile Include="Private\GRiBoundingBox.cpp" />
     <ClCompile Include="Private\GRiImgui.cpp" />
