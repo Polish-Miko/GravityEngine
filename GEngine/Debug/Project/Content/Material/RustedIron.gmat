@@ -12,9 +12,9 @@
 	<TextureNames class_id="1" tracking_level="0" version="0">
 		<count>3</count>
 		<item_version>0</item_version>
-		<item>Content\Textures\Rusted_Iron_Albedo.png</item>
-		<item>Content\Textures\Rusted_Iron_Normal.png</item>
-		<item>Content\Textures\Rusted_Iron_Orm.png</item>
+		<item>Resource\Textures\GE_Default_Albedo.png</item>
+		<item>Resource\Textures\GE_Default_Albedo.png</item>
+		<item>Resource\Textures\GE_Default_Albedo.png</item>
 	</TextureNames>
 	<ScalarParams>
 		<count>0</count>

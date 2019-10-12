@@ -3,6 +3,7 @@
 #include <windows.h>
 #include <wrl.h>
 #include <math.h>
+#include <malloc.h>
 #include <string>
 #include <memory>
 #include <algorithm>

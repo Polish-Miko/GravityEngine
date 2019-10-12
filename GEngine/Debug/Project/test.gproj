@@ -4,7 +4,7 @@
 <Project class_id="0" tracking_level="0" version="0">
 	<mSkyCubemapUniqueName>Content\Textures\Cubemap\Lake.dds</mSkyCubemapUniqueName>
 	<mTextureInfo class_id="1" tracking_level="0" version="0">
-		<count>87</count>
+		<count>69</count>
 		<item_version>0</item_version>
 		<item class_id="2" tracking_level="0" version="0">
 			<UniqueFileName>Content\Models\Rifle_1\Rifle_1_Albedo.png</UniqueFileName>
@@ -15,15 +15,7 @@
 			<bSrgb>0</bSrgb>
 		</item>
 		<item>
-			<UniqueFileName>Content\Textures\test\tga\RustedIron2_Normal.tga</UniqueFileName>
-			<bSrgb>0</bSrgb>
-		</item>
-		<item>
 			<UniqueFileName>Content\Models\Helmet\Helmet_Albedo.png</UniqueFileName>
-			<bSrgb>1</bSrgb>
-		</item>
-		<item>
-			<UniqueFileName>Content\Textures\test\jpg\RustedIron2_Albedo.jpg</UniqueFileName>
 			<bSrgb>1</bSrgb>
 		</item>
 		<item>
@@ -45,6 +37,10 @@
 		<item>
 			<UniqueFileName>Content\Textures\Cerberus_Normal.png</UniqueFileName>
 			<bSrgb>0</bSrgb>
+		</item>
+		<item>
+			<UniqueFileName>Resource\Textures\GE_Default_Albedo.png</UniqueFileName>
+			<bSrgb>1</bSrgb>
 		</item>
 		<item>
 			<UniqueFileName>Content\Textures\Cubemap\Cubemap_SaintPetersBasilica.dds</UniqueFileName>
@@ -71,19 +67,15 @@
 			<bSrgb>0</bSrgb>
 		</item>
 		<item>
-			<UniqueFileName>Content\Textures\test\tga\RustedIron2_Orm.tga</UniqueFileName>
-			<bSrgb>0</bSrgb>
-		</item>
-		<item>
 			<UniqueFileName>Content\Textures\Cerberus_Albedo.png</UniqueFileName>
 			<bSrgb>1</bSrgb>
 		</item>
 		<item>
-			<UniqueFileName>Content\Textures\Cerberus_Orm.png</UniqueFileName>
+			<UniqueFileName>Content\Textures\Test2\SlateCliffRock_Normal.png</UniqueFileName>
 			<bSrgb>0</bSrgb>
 		</item>
 		<item>
-			<UniqueFileName>Content\Textures\test\jpg\RustedIron2_Orm.jpg</UniqueFileName>
+			<UniqueFileName>Content\Textures\Cerberus_Orm.png</UniqueFileName>
 			<bSrgb>0</bSrgb>
 		</item>
 		<item>
@@ -93,10 +85,6 @@
 		<item>
 			<UniqueFileName>Content\Textures\Cubemap\Cubemap_DallasW.dds</UniqueFileName>
 			<bSrgb>0</bSrgb>
-		</item>
-		<item>
-			<UniqueFileName>Content\Textures\test\tga\RustedIron2_Albedo.tga</UniqueFileName>
-			<bSrgb>1</bSrgb>
 		</item>
 		<item>
 			<UniqueFileName>Content\Textures\Cubemap\Cubemap_SantaMariaDeiMiracoli.dds</UniqueFileName>
@@ -115,35 +103,15 @@
 			<bSrgb>1</bSrgb>
 		</item>
 		<item>
-			<UniqueFileName>Content\Textures\Cubemap\sunsetcube1024.dds</UniqueFileName>
-			<bSrgb>0</bSrgb>
-		</item>
-		<item>
-			<UniqueFileName>Content\Textures\Test2\DarkTiles_Albedo.png</UniqueFileName>
+			<UniqueFileName>Content\Textures\Test2\RedBricks_Albedo.png</UniqueFileName>
 			<bSrgb>1</bSrgb>
 		</item>
 		<item>
-			<UniqueFileName>Content\Textures\sphere_2_OcclusionRoughnessMetallic.png</UniqueFileName>
+			<UniqueFileName>Content\Textures\Test2\MetalGird2_Normal.png</UniqueFileName>
 			<bSrgb>0</bSrgb>
 		</item>
 		<item>
-			<UniqueFileName>Content\Textures\Fireplace_Albedo.png</UniqueFileName>
-			<bSrgb>0</bSrgb>
-		</item>
-		<item>
-			<UniqueFileName>Content\Textures\Test2\DarkTiles_Normal.png</UniqueFileName>
-			<bSrgb>0</bSrgb>
-		</item>
-		<item>
-			<UniqueFileName>Content\Textures\Fireplace_Normal.png</UniqueFileName>
-			<bSrgb>0</bSrgb>
-		</item>
-		<item>
-			<UniqueFileName>Content\Textures\Test2\DarkTiles_Orm.png</UniqueFileName>
-			<bSrgb>0</bSrgb>
-		</item>
-		<item>
-			<UniqueFileName>Content\Textures\Fireplace_Orm.png</UniqueFileName>
+			<UniqueFileName>Content\Textures\Cubemap\sunsetcube1024.dds</UniqueFileName>
 			<bSrgb>0</bSrgb>
 		</item>
 		<item>
@@ -155,11 +123,11 @@
 			<bSrgb>0</bSrgb>
 		</item>
 		<item>
-			<UniqueFileName>Content\Textures\Greasy_Pan_Orm.png</UniqueFileName>
-			<bSrgb>0</bSrgb>
+			<UniqueFileName>Resource\Textures\GE_DefaultTexture_Albedo.png</UniqueFileName>
+			<bSrgb>1</bSrgb>
 		</item>
 		<item>
-			<UniqueFileName>Content\Textures\Rusted_Iron_Albedo.png</UniqueFileName>
+			<UniqueFileName>Content\Textures\Greasy_Pan_Orm.png</UniqueFileName>
 			<bSrgb>0</bSrgb>
 		</item>
 		<item>
@@ -167,19 +135,7 @@
 			<bSrgb>1</bSrgb>
 		</item>
 		<item>
-			<UniqueFileName>Content\Textures\Rusted_Iron_Normal.png</UniqueFileName>
-			<bSrgb>0</bSrgb>
-		</item>
-		<item>
 			<UniqueFileName>Content\Textures\Test2\BathroomTile_Normal.png</UniqueFileName>
-			<bSrgb>0</bSrgb>
-		</item>
-		<item>
-			<UniqueFileName>Content\Textures\sphere_1_BaseColor.png</UniqueFileName>
-			<bSrgb>1</bSrgb>
-		</item>
-		<item>
-			<UniqueFileName>Content\Textures\Rusted_Iron_Orm.png</UniqueFileName>
 			<bSrgb>0</bSrgb>
 		</item>
 		<item>
@@ -187,31 +143,15 @@
 			<bSrgb>0</bSrgb>
 		</item>
 		<item>
-			<UniqueFileName>Content\Textures\sphere_1_Normal.png</UniqueFileName>
-			<bSrgb>0</bSrgb>
-		</item>
-		<item>
-			<UniqueFileName>Content\Textures\sphere_1_OcclusionRoughnessMetallic.png</UniqueFileName>
-			<bSrgb>0</bSrgb>
-		</item>
-		<item>
-			<UniqueFileName>Resource\Textures\IBL_BRDF_LUT.png</UniqueFileName>
-			<bSrgb>0</bSrgb>
-		</item>
-		<item>
-			<UniqueFileName>Content\Textures\sphere_2_BaseColor.png</UniqueFileName>
+			<UniqueFileName>Content\Textures\Test2\DarkTiles_Albedo.png</UniqueFileName>
 			<bSrgb>1</bSrgb>
 		</item>
 		<item>
-			<UniqueFileName>Content\Textures\Test2\LayeredRock_Orm.png</UniqueFileName>
+			<UniqueFileName>Content\Textures\Test2\DarkTiles_Normal.png</UniqueFileName>
 			<bSrgb>0</bSrgb>
 		</item>
 		<item>
-			<UniqueFileName>Content\Textures\sphere_2_Normal.png</UniqueFileName>
-			<bSrgb>0</bSrgb>
-		</item>
-		<item>
-			<UniqueFileName>Content\Textures\test\jpg\RustedIron2_Normal.jpg</UniqueFileName>
+			<UniqueFileName>Content\Textures\Test2\DarkTiles_Orm.png</UniqueFileName>
 			<bSrgb>0</bSrgb>
 		</item>
 		<item>
@@ -235,11 +175,23 @@
 			<bSrgb>0</bSrgb>
 		</item>
 		<item>
+			<UniqueFileName>Content\Textures\Test2\MetalGrid_Normal.png</UniqueFileName>
+			<bSrgb>0</bSrgb>
+		</item>
+		<item>
 			<UniqueFileName>Content\Textures\Test2\Gold_Scuffed_Albedo.png</UniqueFileName>
 			<bSrgb>1</bSrgb>
 		</item>
 		<item>
+			<UniqueFileName>Content\Textures\Test2\RedBricks_Orm.png</UniqueFileName>
+			<bSrgb>0</bSrgb>
+		</item>
+		<item>
 			<UniqueFileName>Content\Textures\Test2\Gold_Scuffed_Albedo_boosted.png</UniqueFileName>
+			<bSrgb>1</bSrgb>
+		</item>
+		<item>
+			<UniqueFileName>Content\Textures\Test2\MetalGrid_Albedo.png</UniqueFileName>
 			<bSrgb>1</bSrgb>
 		</item>
 		<item>
@@ -259,6 +211,10 @@
 			<bSrgb>1</bSrgb>
 		</item>
 		<item>
+			<UniqueFileName>Content\Textures\Test2\RedBricks_Normal.png</UniqueFileName>
+			<bSrgb>0</bSrgb>
+		</item>
+		<item>
 			<UniqueFileName>Content\Textures\Test2\MetalGird2_Albedo.png</UniqueFileName>
 			<bSrgb>1</bSrgb>
 		</item>
@@ -271,15 +227,15 @@
 			<bSrgb>1</bSrgb>
 		</item>
 		<item>
-			<UniqueFileName>Content\Textures\Test2\SlateCliffRock_Orm.png</UniqueFileName>
-			<bSrgb>0</bSrgb>
-		</item>
-		<item>
 			<UniqueFileName>Content\Textures\Test2\LayeredRock_Normal.png</UniqueFileName>
 			<bSrgb>0</bSrgb>
 		</item>
 		<item>
-			<UniqueFileName>Content\Textures\Test2\MetalGird2_Normal.png</UniqueFileName>
+			<UniqueFileName>Content\Textures\Test2\SlateCliffRock_Orm.png</UniqueFileName>
+			<bSrgb>0</bSrgb>
+		</item>
+		<item>
+			<UniqueFileName>Content\Textures\Test2\LayeredRock_Orm.png</UniqueFileName>
 			<bSrgb>0</bSrgb>
 		</item>
 		<item>
@@ -287,27 +243,7 @@
 			<bSrgb>0</bSrgb>
 		</item>
 		<item>
-			<UniqueFileName>Content\Textures\Test2\MetalGrid_Albedo.png</UniqueFileName>
-			<bSrgb>1</bSrgb>
-		</item>
-		<item>
-			<UniqueFileName>Content\Textures\Test2\MetalGrid_Normal.png</UniqueFileName>
-			<bSrgb>0</bSrgb>
-		</item>
-		<item>
 			<UniqueFileName>Content\Textures\Test2\MetalGrid_Orm.png</UniqueFileName>
-			<bSrgb>0</bSrgb>
-		</item>
-		<item>
-			<UniqueFileName>Content\Textures\Test2\RedBricks_Albedo.png</UniqueFileName>
-			<bSrgb>1</bSrgb>
-		</item>
-		<item>
-			<UniqueFileName>Content\Textures\Test2\RedBricks_Normal.png</UniqueFileName>
-			<bSrgb>0</bSrgb>
-		</item>
-		<item>
-			<UniqueFileName>Content\Textures\Test2\RedBricks_Orm.png</UniqueFileName>
 			<bSrgb>0</bSrgb>
 		</item>
 		<item>
@@ -327,20 +263,8 @@
 			<bSrgb>1</bSrgb>
 		</item>
 		<item>
-			<UniqueFileName>Content\Textures\Test2\SlateCliffRock_Normal.png</UniqueFileName>
-			<bSrgb>0</bSrgb>
-		</item>
-		<item>
-			<UniqueFileName>Resource\Textures\GE_Default_Albedo.png</UniqueFileName>
-			<bSrgb>1</bSrgb>
-		</item>
-		<item>
 			<UniqueFileName>Resource\Textures\GE_Default_Normal.png</UniqueFileName>
 			<bSrgb>0</bSrgb>
-		</item>
-		<item>
-			<UniqueFileName>Resource\Textures\GE_DefaultTexture_Albedo.png</UniqueFileName>
-			<bSrgb>1</bSrgb>
 		</item>
 		<item>
 			<UniqueFileName>Resource\Textures\GE_DefaultTexture_Normal.png</UniqueFileName>
@@ -351,49 +275,87 @@
 			<bSrgb>0</bSrgb>
 		</item>
 		<item>
+			<UniqueFileName>Resource\Textures\IBL_BRDF_LUT.png</UniqueFileName>
+			<bSrgb>0</bSrgb>
+		</item>
+		<item>
 			<UniqueFileName>Content\Textures\Cubemap\Lake.dds</UniqueFileName>
 			<bSrgb>1</bSrgb>
 		</item>
 	</mTextureInfo>
 	<mSceneObjectInfo class_id="3" tracking_level="0" version="0">
-		<count>1</count>
+		<count>2</count>
 		<item_version>0</item_version>
 		<item class_id="4" tracking_level="0" version="0">
 			<UniqueName>NewSceneObject</UniqueName>
 			<OverrideMaterialUniqueName class_id="5" tracking_level="0" version="0">
-				<count>0</count>
+				<count>1</count>
 				<item_version>0</item_version>
+				<item class_id="6" tracking_level="0" version="0">
+					<str1>Box</str1>
+					<str2>Content\Material\MetalGrid.gmat</str2>
+				</item>
 			</OverrideMaterialUniqueName>
-			<MeshUniqueName>Content\Models\test.fbx</MeshUniqueName>
+			<MeshUniqueName>Box</MeshUniqueName>
 			<Location>
 				<count>3</count>
-				<item>2.098394394e+01</item>
-				<item>-6.305926895e+01</item>
-				<item>2.123874664e+02</item>
+				<item>0.000000000e+00</item>
+				<item>1.803914452e+01</item>
+				<item>0.000000000e+00</item>
 			</Location>
 			<Rotation>
 				<count>3</count>
-				<item>-1.799989777e+02</item>
-				<item>7.438847542e+00</item>
-				<item>1.799985809e+02</item>
+				<item>0.000000000e+00</item>
+				<item>-0.000000000e+00</item>
+				<item>0.000000000e+00</item>
 			</Rotation>
 			<Scale>
 				<count>3</count>
-				<item>1.000000000e+01</item>
-				<item>1.000000000e+01</item>
-				<item>1.000000000e+01</item>
+				<item>1.000000000e+00</item>
+				<item>1.000000000e+00</item>
+				<item>1.000000000e+00</item>
+			</Scale>
+		</item>
+		<item>
+			<UniqueName>NewSceneObject_1</UniqueName>
+			<OverrideMaterialUniqueName>
+				<count>1</count>
+				<item_version>0</item_version>
+				<item>
+					<str1>Grid</str1>
+					<str2>Content\Material\HardWoodBrown.gmat</str2>
+				</item>
+			</OverrideMaterialUniqueName>
+			<MeshUniqueName>Grid</MeshUniqueName>
+			<Location>
+				<count>3</count>
+				<item>0.000000000e+00</item>
+				<item>-1.716332912e+00</item>
+				<item>0.000000000e+00</item>
+			</Location>
+			<Rotation>
+				<count>3</count>
+				<item>0.000000000e+00</item>
+				<item>-0.000000000e+00</item>
+				<item>0.000000000e+00</item>
+			</Rotation>
+			<Scale>
+				<count>3</count>
+				<item>6.000000000e+00</item>
+				<item>1.000000000e+00</item>
+				<item>6.000000000e+00</item>
 			</Scale>
 		</item>
 	</mSceneObjectInfo>
-	<mMeshInfo class_id="6" tracking_level="0" version="0">
-		<count>11</count>
+	<mMeshInfo class_id="7" tracking_level="0" version="0">
+		<count>9</count>
 		<item_version>0</item_version>
-		<item class_id="7" tracking_level="0" version="0">
+		<item class_id="8" tracking_level="0" version="0">
 			<MeshUniqueName>Box</MeshUniqueName>
 			<MaterialUniqueName>
 				<count>1</count>
 				<item_version>0</item_version>
-				<item class_id="8" tracking_level="0" version="0">
+				<item>
 					<str1>Box</str1>
 					<str2>Default</str2>
 				</item>
@@ -418,25 +380,6 @@
 				<item>
 					<str1>Grid</str1>
 					<str2>Default</str2>
-				</item>
-			</MaterialUniqueName>
-		</item>
-		<item>
-			<MeshUniqueName>Content\Models\test.fbx</MeshUniqueName>
-			<MaterialUniqueName>
-				<count>3</count>
-				<item_version>0</item_version>
-				<item>
-					<str1>TEST2</str1>
-					<str2>Content\Material\RedBricks.gmat</str2>
-				</item>
-				<item>
-					<str1>test1</str1>
-					<str2>Content\Material\HardWoodBrown.gmat</str2>
-				</item>
-				<item>
-					<str1>test3</str1>
-					<str2>Content\Material\RedBricks.gmat</str2>
 				</item>
 			</MaterialUniqueName>
 		</item>
@@ -474,12 +417,12 @@
 			</MaterialUniqueName>
 		</item>
 		<item>
-			<MeshUniqueName>Content\Models\Fireplace.FBX</MeshUniqueName>
+			<MeshUniqueName>Content\Models\Rifle_2\Rifle_2.fbx</MeshUniqueName>
 			<MaterialUniqueName>
 				<count>1</count>
 				<item_version>0</item_version>
 				<item>
-					<str1>Inst_Fireplace_01</str1>
+					<str1>lambert1</str1>
 					<str2>Default</str2>
 				</item>
 			</MaterialUniqueName>
@@ -497,17 +440,6 @@
 		</item>
 		<item>
 			<MeshUniqueName>Content\Models\Helmet\Helmet.fbx</MeshUniqueName>
-			<MaterialUniqueName>
-				<count>1</count>
-				<item_version>0</item_version>
-				<item>
-					<str1>lambert1</str1>
-					<str2>Content\Models\Helmet\Helmet.gmat</str2>
-				</item>
-			</MaterialUniqueName>
-		</item>
-		<item>
-			<MeshUniqueName>Content\Models\Rifle_2\Rifle_2.fbx</MeshUniqueName>
 			<MaterialUniqueName>
 				<count>1</count>
 				<item_version>0</item_version>

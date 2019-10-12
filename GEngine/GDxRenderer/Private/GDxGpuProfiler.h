@@ -22,7 +22,7 @@ public:
 	void Initialize(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, ID3D12CommandQueue* cmdQueue);
 
 	void StartGpuProfile(std::string profileName);
-	void EndGpuProfile();
+	void EndGpuProfile(std::string profileName);
 
 	float GetProfileByName(std::string name);
 	std::vector<ProfileData> GetProfiles();
@@ -35,7 +35,7 @@ protected:
 	std::vector<std::string> mProfileNameList;
 	Microsoft::WRL::ComPtr<ID3D12QueryHeap> queryHeap = nullptr;
 	std::unique_ptr<GDxReadbackBuffer<UINT64>> readbackBuffer;
-	bool bActive = false;
+	//bool bActive = false;
 
 	ID3D12Device* pDevice = nullptr;
 	ID3D12GraphicsCommandList* pCommandList = nullptr;

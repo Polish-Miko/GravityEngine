@@ -540,8 +540,8 @@ void GCore::LoadMaterials()
 	sky->UniqueName = L"sky";
 	sky->Name = L"sky";
 	sky->MatIndex = mMaterialIndex++;
-	sky->AddTexture(mTextures[L"Content\\Textures\\sphere_1_BaseColor.png"].get());//Diffuse
-	sky->AddTexture(mTextures[L"Content\\Textures\\sphere_1_BaseColor.png"].get());//Normal
+	sky->AddTexture(mTextures[L"Resource\\Textures\\GE_Default_Albedo.png"].get());//Diffuse
+	sky->AddTexture(mTextures[L"Resource\\Textures\\GE_Default_Normal.png"].get());//Normal
 	mMaterials[L"sky"] = std::move(sky);
 
 	// Load materials from file.

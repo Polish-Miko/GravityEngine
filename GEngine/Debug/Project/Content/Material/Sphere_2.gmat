@@ -12,9 +12,9 @@
 	<TextureNames class_id="1" tracking_level="0" version="0">
 		<count>3</count>
 		<item_version>0</item_version>
-		<item>Content\Textures\sphere_2_BaseColor.png</item>
-		<item>Content\Textures\sphere_2_Normal.png</item>
-		<item>Content\Textures\sphere_2_OcclusionRoughnessMetallic.png</item>
+		<item>Resource\Textures\GE_Default_Albedo.png</item>
+		<item>Resource\Textures\GE_Default_Albedo.png</item>
+		<item>Resource\Textures\GE_Default_Albedo.png</item>
 	</TextureNames>
 	<ScalarParams>
 		<count>0</count>

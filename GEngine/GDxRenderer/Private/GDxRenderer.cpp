@@ -180,6 +180,8 @@ void GDxRenderer::Initialize()
 
 	auto numThreads = thread::hardware_concurrency();
 	mRendererThreadPool = std::make_unique<GGiThreadPool>(numThreads);
+
+	BuildAcceleratorTree();
 }
 
 void GDxRenderer::Draw(const GGiGameTimer* gt)
@@ -273,7 +275,7 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mDepthStencilBuffer.Get(),
 			D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_GENERIC_READ));
 
-		GDxGpuProfiler::GetGpuProfiler().EndGpuProfile();
+		GDxGpuProfiler::GetGpuProfiler().EndGpuProfile("G-Buffer Pass");
 	}
 
 	// Depth Downsample Pass
@@ -310,7 +312,7 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mUavs["DepthDownsamplePass"]->GetResource(),
 			D3D12_RESOURCE_STATE_COPY_SOURCE, D3D12_RESOURCE_STATE_GENERIC_READ));
 
-		GDxGpuProfiler::GetGpuProfiler().EndGpuProfile();
+		GDxGpuProfiler::GetGpuProfiler().EndGpuProfile("Depth Downsample Pass");
 	}
 
 	// Tile/Cluster Pass
@@ -360,7 +362,13 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mUavs["TileClusterPass"]->GetResource(),
 			D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_GENERIC_READ));
 
-		GDxGpuProfiler::GetGpuProfiler().EndGpuProfile();
+#if USE_TBDR
+		GDxGpuProfiler::GetGpuProfiler().EndGpuProfile("Tile Pass");
+#elif USE_CBDR
+		GDxGpuProfiler::GetGpuProfiler().EndGpuProfile("Cluster Pass");
+#else
+		ThrowGGiException("TBDR/CBDR not enabled.");
+#endif
 	}
 
 	// Light Pass
@@ -407,7 +415,7 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["LightPass"]->mRtv[0]->mResource.Get(),
 			D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_GENERIC_READ));
 
-		GDxGpuProfiler::GetGpuProfiler().EndGpuProfile();
+		GDxGpuProfiler::GetGpuProfiler().EndGpuProfile("Light Pass");
 	}
 
 	// Sky Pass
@@ -454,7 +462,7 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mDepthStencilBuffer.Get(),
 			D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_GENERIC_READ));
 
-		GDxGpuProfiler::GetGpuProfiler().EndGpuProfile();
+		GDxGpuProfiler::GetGpuProfiler().EndGpuProfile("Sky Pass");
 	}
 
 	// TAA Pass
@@ -520,7 +528,7 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["TaaPass"]->mRtv[mTaaHistoryIndex]->mResource.Get(),
 			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ));
 
-		GDxGpuProfiler::GetGpuProfiler().EndGpuProfile();
+		GDxGpuProfiler::GetGpuProfiler().EndGpuProfile("TAA Pass");
 	}
 
 	// Motion Blur Pass
@@ -561,7 +569,7 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["MotionBlurPass"]->mRtv[0]->mResource.Get(),
 			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ));
 
-		GDxGpuProfiler::GetGpuProfiler().EndGpuProfile();
+		GDxGpuProfiler::GetGpuProfiler().EndGpuProfile("Motion Blur Pass");
 	}
 
 	// Post Process Pass
@@ -585,7 +593,7 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 		// For each render item...
 		DrawSceneObjects(mCommandList.Get(), RenderLayer::ScreenQuad, false, false);
 
-		GDxGpuProfiler::GetGpuProfiler().EndGpuProfile();
+		GDxGpuProfiler::GetGpuProfiler().EndGpuProfile("Post Processing Pass");
 	}
 
 	// Debug Pass
@@ -616,7 +624,7 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 		// For each render item...
 		DrawSceneObjects(mCommandList.Get(), RenderLayer::Debug, true, true);
 
-		GDxGpuProfiler::GetGpuProfiler().EndGpuProfile();
+		GDxGpuProfiler::GetGpuProfiler().EndGpuProfile("Debug Pass");
 	}
 #endif
 
@@ -629,7 +637,7 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 
 		pImgui->Render(mCommandList.Get());
 
-		GDxGpuProfiler::GetGpuProfiler().EndGpuProfile();
+		GDxGpuProfiler::GetGpuProfiler().EndGpuProfile("GUI Pass");
 
 #endif
 
@@ -1399,7 +1407,7 @@ void GDxRenderer::CullSceneObjects(const GGiGameTimer* gt)
 		mDepthReadbackBuffer->Unmap(0, &emptyRange);
 
 		// Reproject depth buffer.
-		GGiCpuProfiler::GetInstance().StartCpuProfile("Reprojection");
+		//GGiCpuProfiler::GetInstance().StartCpuProfile("Reprojection");
 
 #if USE_MASKED_DEPTH_BUFFER
 		GRiOcclusionCullingRasterizer::GetInstance().ReprojectToMaskedBufferMT(
@@ -1421,11 +1429,11 @@ void GDxRenderer::CullSceneObjects(const GGiGameTimer* gt)
 		GRiOcclusionCullingRasterizer::GetInstance().GenerateMaskedBufferDebugImage(outputTest);
 #endif
 
-		GGiCpuProfiler::GetInstance().EndCpuProfile("Reprojection");
+		//GGiCpuProfiler::GetInstance().EndCpuProfile("Reprojection");
 
 		//XMMATRIX worldViewProj;
 
-		GGiCpuProfiler::GetInstance().StartCpuProfile("Rasterization");
+		//GGiCpuProfiler::GetInstance().StartCpuProfile("Rasterization");
 
 		UINT32 ocStep;
 		if (pSceneObjectLayer[(int)RenderLayer::Deferred].size() > 100)
@@ -1473,7 +1481,7 @@ void GDxRenderer::CullSceneObjects(const GGiGameTimer* gt)
 
 		mRendererThreadPool->Flush();
 
-		GGiCpuProfiler::GetInstance().EndCpuProfile("Rasterization");
+		//GGiCpuProfiler::GetInstance().EndCpuProfile("Rasterization");
 
 		for (auto so : pSceneObjectLayer[(int)RenderLayer::Deferred])
 		{
@@ -3347,6 +3355,80 @@ GRiSceneObject* GDxRenderer::SelectSceneObject(int sx, int sy)
 std::vector<ProfileData> GDxRenderer::GetGpuProfiles()
 {
 	return GDxGpuProfiler::GetGpuProfiler().GetProfiles();
+}
+
+void GDxRenderer::BuildAcceleratorTree()
+{
+	std::vector<std::shared_ptr<GRiKdPrimitive>> prims;
+	prims.clear();
+
+	for (auto so : pSceneObjectLayer[(int)RenderLayer::Deferred])
+	{
+		auto mesh = so->GetMesh();
+
+		XMMATRIX soWorld = GDx::GGiToDxMatrix(so->GetTransform());
+
+		GDxMesh* dxMesh = dynamic_cast<GDxMesh*>(so->GetMesh());
+		if (dxMesh == nullptr)
+			ThrowGGiException("cast failed from GRiMesh* to GDxMesh*.");
+		shared_ptr<GDxStaticVIBuffer> dxViBuffer = dynamic_pointer_cast<GDxStaticVIBuffer>(dxMesh->mVIBuffer);
+		if (dxViBuffer == nullptr)
+			ThrowGGiException("cast failed from shared_ptr<GDxStaticVIBuffer> to shared_ptr<GDxStaticVIBuffer>.");
+
+		auto vertices = (GRiVertex*)dxViBuffer->VertexBufferCPU->GetBufferPointer();
+		auto indices = (std::uint32_t*)dxViBuffer->IndexBufferCPU->GetBufferPointer();
+		UINT triCount = dxMesh->mVIBuffer->IndexCount / 3;
+ 
+		for (auto &submesh : so->GetMesh()->Submeshes)
+		{
+			auto startIndexLocation = submesh.second.StartIndexLocation;
+			auto baseVertexLocation = submesh.second.BaseVertexLocation;
+
+			for (size_t i = 0; i < (submesh.second.IndexCount / 3); i++)
+			{
+				// Indices for this triangle.
+				UINT i0 = indices[startIndexLocation + i * 3 + 0] + baseVertexLocation;
+				//UINT i1 = indices[startIndexLocation + i * 3 + 1] + baseVertexLocation;
+				//UINT i2 = indices[startIndexLocation + i * 3 + 2] + baseVertexLocation;
+
+				GRiVertex verticesWorld[3];
+				auto vert1 = XMFLOAT4(vertices[i0].Position[0], vertices[i0].Position[1], vertices[i0].Position[2], 1.0f);
+				auto vert2 = XMFLOAT4(vertices[i0 + 1].Position[0], vertices[i0 + 1].Position[1], vertices[i0 + 1].Position[2], 1.0f);
+				auto vert3 = XMFLOAT4(vertices[i0 + 2].Position[0], vertices[i0 + 2].Position[1], vertices[i0 + 2].Position[2], 1.0f);
+				auto vertVec1 = XMLoadFloat4(&vert1);
+				auto vertVec2 = XMLoadFloat4(&vert2);
+				auto vertVec3 = XMLoadFloat4(&vert3);
+				auto vert1WorldPos = DirectX::XMVector4Transform(vertVec1, soWorld);
+				auto vert2WorldPos = DirectX::XMVector4Transform(vertVec2, soWorld);
+				auto vert3WorldPos = DirectX::XMVector4Transform(vertVec3, soWorld);
+				GRiVertex vert1World, vert2World, vert3World;
+				vert1World.Position[0] = vert1WorldPos.m128_f32[0];
+				vert1World.Position[1] = vert1WorldPos.m128_f32[1];
+				vert1World.Position[2] = vert1WorldPos.m128_f32[2];
+				vert2World.Position[0] = vert2WorldPos.m128_f32[0];
+				vert2World.Position[1] = vert2WorldPos.m128_f32[1];
+				vert2World.Position[2] = vert2WorldPos.m128_f32[2];
+				vert3World.Position[0] = vert3WorldPos.m128_f32[0];
+				vert3World.Position[1] = vert3WorldPos.m128_f32[1];
+				vert3World.Position[2] = vert3WorldPos.m128_f32[2];
+				verticesWorld[0] = vert1World;
+				verticesWorld[1] = vert2World;
+				verticesWorld[2] = vert3World;
+
+				auto prim = std::make_shared<GRiKdPrimitive>(verticesWorld);
+
+				prims.push_back(prim);
+			}
+		}
+	}
+	int isectCost = 80;
+	int travCost = 1;
+	float emptyBonus = 0.5f;
+	int maxPrims = 1;
+	int maxDepth = -1;
+
+	mAcceleratorTree = std::make_shared<GRiKdTree>(std::move(prims), isectCost, travCost, emptyBonus,
+		maxPrims, maxDepth);
 }
 
 #pragma endregion

@@ -142,6 +142,8 @@ protected:
 
 	void CubemapPreIntegration();
 
+	void BuildAcceleratorTree();
+
 	//void SaveBakedCubemap(std::wstring workDir, std::wstring CubemapPath);
 
 	std::array<const CD3DX12_STATIC_SAMPLER_DESC, 7> GetStaticSamplers();
@@ -282,6 +284,8 @@ protected:
 	POINT mLastMousePos;
 
 	std::unique_ptr<GGiThreadPool> mRendererThreadPool = nullptr;
+
+	std::shared_ptr<GRiKdTree> mAcceleratorTree = nullptr;
 
 private:
 	

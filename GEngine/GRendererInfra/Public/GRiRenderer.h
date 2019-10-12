@@ -3,6 +3,7 @@
 #include "GRiRendererFactory.h"
 #include "GRiFilmboxManager.h"
 #include "GRiCamera.h"
+#include "GRiKdTree.h"
 
 class GRiRenderer
 {

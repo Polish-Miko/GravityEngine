@@ -1,19 +1,15 @@
 #include "stdafx.h"
 #include "GRiKdTree.h"
 
-#include "paramset.h"
-#include "interaction.h"
-#include "stats.h"
-#include <algorithm>
 
-/*
-GRiKdTree::GRiKdTree()
-{
-}
-*/
+//#include "paramset.h"
+//#include "interaction.h"
+//#include "stats.h"
+//#include <algorithm>
 
 GRiKdTree::~GRiKdTree()
 {
+	FreeAligned(nodes);
 }
 
 // KdTreeAccel Local Declarations
@@ -91,9 +87,14 @@ struct BoundEdge
 	EdgeType type;
 };
 
+struct GRiKdRay
+{
+	GRiKdRay() {}
+};
+
 // KdTreeAccel Method Definitions
 GRiKdTree::GRiKdTree(
-	std::vector<std::shared_ptr<Primitive>> p,
+	std::vector<std::shared_ptr<GRiKdPrimitive>> p,
 	int isectCost,
 	int traversalCost,
 	float emptyBonus,
@@ -106,7 +107,6 @@ GRiKdTree::GRiKdTree(
 	primitives(std::move(p))
 {
 	// Build kd-tree for accelerator
-	ProfilePhase _(Prof::AccelConstruction);
 	nextFreeNode = nAllocedNodes = 0;
 	if (maxDepth <= 0)
 		maxDepth = std::round(8 + 1.3f * log2(int64_t(primitives.size())));
@@ -114,9 +114,10 @@ GRiKdTree::GRiKdTree(
 	// Compute bounds for kd-tree construction
 	std::vector<GRiBoundingBox> primBounds;
 	primBounds.reserve(primitives.size());
-	for (const std::shared_ptr<Primitive> &prim : primitives) {
-		Bounds3f b = prim->WorldBound();
-		bounds = Union(bounds, b);
+	for (const std::shared_ptr<GRiKdPrimitive> &prim : primitives)
+	{
+		GRiBoundingBox b = prim->WorldBound();
+		bounds = GRiBoundingBox::Union(bounds, b);
 		primBounds.push_back(b);
 	}
 
@@ -136,8 +137,12 @@ GRiKdTree::GRiKdTree(
 		maxDepth, edges, prims0.get(), prims1.get());
 }
 
-void KdAccelNode::InitLeaf(int *primNums, int np,
-	std::vector<int> *primitiveIndices) {
+void KdTreeNode::InitLeaf(
+	int *primNums,
+	int np,
+	std::vector<int> *primitiveIndices
+) 
+{
 	flags = 3;
 	nPrims |= (np << 2);
 	// Store primitive ids for leaf node
@@ -145,26 +150,34 @@ void KdAccelNode::InitLeaf(int *primNums, int np,
 		onePrimitive = 0;
 	else if (np == 1)
 		onePrimitive = primNums[0];
-	else {
+	else 
+	{
 		primitiveIndicesOffset = primitiveIndices->size();
 		for (int i = 0; i < np; ++i) primitiveIndices->push_back(primNums[i]);
 	}
 }
 
-KdTreeAccel::~KdTreeAccel() { FreeAligned(nodes); }
-
-void KdTreeAccel::buildTree(int nodeNum, const Bounds3f &nodeBounds,
-	const std::vector<Bounds3f> &allPrimBounds,
-	int *primNums, int nPrimitives, int depth,
+void GRiKdTree::buildTree(
+	int nodeNum,
+	const GRiBoundingBox &nodeBounds,
+	const std::vector<GRiBoundingBox> &allPrimBounds,
+	int *primNums, 
+	int nPrimitives, 
+	int depth,
 	const std::unique_ptr<BoundEdge[]> edges[3],
-	int *prims0, int *prims1, int badRefines) {
-	CHECK_EQ(nodeNum, nextFreeNode);
+	int *prims0, 
+	int *prims1, 
+	int badRefines
+)
+{
 	// Get next free node from _nodes_ array
-	if (nextFreeNode == nAllocedNodes) {
-		int nNewAllocNodes = std::max(2 * nAllocedNodes, 512);
-		KdAccelNode *n = AllocAligned<KdAccelNode>(nNewAllocNodes);
-		if (nAllocedNodes > 0) {
-			memcpy(n, nodes, nAllocedNodes * sizeof(KdAccelNode));
+	if (nextFreeNode == nAllocedNodes)
+	{
+		int nNewAllocNodes = max(2 * nAllocedNodes, 512);
+		KdTreeNode *n = AllocAligned<KdTreeNode>(nNewAllocNodes);
+		if (nAllocedNodes > 0) 
+		{
+			memcpy(n, nodes, nAllocedNodes * sizeof(KdTreeNode));
 			FreeAligned(nodes);
 		}
 		nodes = n;
@@ -173,7 +186,8 @@ void KdTreeAccel::buildTree(int nodeNum, const Bounds3f &nodeBounds,
 	++nextFreeNode;
 
 	// Initialize leaf node if termination criteria met
-	if (nPrimitives <= maxPrims || depth == 0) {
+	if (nPrimitives <= maxPrims || depth == 0) 
+	{
 		nodes[nodeNum].InitLeaf(primNums, nPrimitives, &primitiveIndices);
 		return;
 	}
@@ -182,28 +196,34 @@ void KdTreeAccel::buildTree(int nodeNum, const Bounds3f &nodeBounds,
 
 	// Choose split axis position for interior node
 	int bestAxis = -1, bestOffset = -1;
-	Float bestCost = Infinity;
-	Float oldCost = isectCost * Float(nPrimitives);
-	Float totalSA = nodeBounds.SurfaceArea();
-	Float invTotalSA = 1 / totalSA;
-	Vector3f d = nodeBounds.pMax - nodeBounds.pMin;
+	float bestCost = GGiEngineUtil::Infinity;
+	float oldCost = isectCost * (float)nPrimitives;
+	float totalSA = nodeBounds.SurfaceArea();
+	float invTotalSA = 1 / totalSA;
+	float d[3];
+	d[0] = nodeBounds.Extents[0] * 2;
+	d[1] = nodeBounds.Extents[1] * 2;
+	d[2] = nodeBounds.Extents[2] * 2;
 
 	// Choose which axis to split along
 	int axis = nodeBounds.MaximumExtent();
 	int retries = 0;
+
 retrySplit:
 
 	// Initialize edges for _axis_
-	for (int i = 0; i < nPrimitives; ++i) {
+	for (int i = 0; i < nPrimitives; ++i) 
+	{
 		int pn = primNums[i];
-		const Bounds3f &bounds = allPrimBounds[pn];
-		edges[axis][2 * i] = BoundEdge(bounds.pMin[axis], pn, true);
-		edges[axis][2 * i + 1] = BoundEdge(bounds.pMax[axis], pn, false);
+		const GRiBoundingBox &bounds = allPrimBounds[pn];
+		edges[axis][2 * i] = BoundEdge(bounds.Center[axis] - bounds.Extents[axis], pn, true);
+		edges[axis][2 * i + 1] = BoundEdge(bounds.Center[axis] + bounds.Extents[axis], pn, false);
 	}
 
 	// Sort _edges_ for _axis_
 	std::sort(&edges[axis][0], &edges[axis][2 * nPrimitives],
-		[](const BoundEdge &e0, const BoundEdge &e1) -> bool {
+		[](const BoundEdge &e0, const BoundEdge &e1) -> bool 
+		{
 			if (e0.t == e1.t)
 				return (int)e0.type < (int)e1.type;
 			else
@@ -212,24 +232,25 @@ retrySplit:
 
 	// Compute cost of all splits for _axis_ to find best
 	int nBelow = 0, nAbove = nPrimitives;
-	for (int i = 0; i < 2 * nPrimitives; ++i) {
+	for (int i = 0; i < 2 * nPrimitives; ++i) 
+	{
 		if (edges[axis][i].type == EdgeType::End) --nAbove;
-		Float edgeT = edges[axis][i].t;
-		if (edgeT > nodeBounds.pMin[axis] && edgeT < nodeBounds.pMax[axis]) {
+		float edgeT = edges[axis][i].t;
+		if (edgeT > nodeBounds.BoundMin(axis) && edgeT < nodeBounds.BoundMax(axis)) {
 			// Compute cost for split at _i_th edge
 
 			// Compute child surface areas for split at _edgeT_
 			int otherAxis0 = (axis + 1) % 3, otherAxis1 = (axis + 2) % 3;
-			Float belowSA = 2 * (d[otherAxis0] * d[otherAxis1] +
-				(edgeT - nodeBounds.pMin[axis]) *
+			float belowSA = 2 * (d[otherAxis0] * d[otherAxis1] +
+				(edgeT - nodeBounds.BoundMin(axis)) *
 				(d[otherAxis0] + d[otherAxis1]));
-			Float aboveSA = 2 * (d[otherAxis0] * d[otherAxis1] +
-				(nodeBounds.pMax[axis] - edgeT) *
+			float aboveSA = 2 * (d[otherAxis0] * d[otherAxis1] +
+				(nodeBounds.BoundMax(axis) - edgeT) *
 				(d[otherAxis0] + d[otherAxis1]));
-			Float pBelow = belowSA * invTotalSA;
-			Float pAbove = aboveSA * invTotalSA;
-			Float eb = (nAbove == 0 || nBelow == 0) ? emptyBonus : 0;
-			Float cost =
+			float pBelow = belowSA * invTotalSA;
+			float pAbove = aboveSA * invTotalSA;
+			float eb = (nAbove == 0 || nBelow == 0) ? emptyBonus : 0;
+			float cost =
 				traversalCost +
 				isectCost * (1 - eb) * (pBelow * nBelow + pAbove * nAbove);
 
@@ -242,7 +263,9 @@ retrySplit:
 		}
 		if (edges[axis][i].type == EdgeType::Start) ++nBelow;
 	}
-	CHECK(nBelow == nPrimitives && nAbove == 0);
+	//CHECK(nBelow == nPrimitives && nAbove == 0);
+	if (!(nBelow == nPrimitives && nAbove == 0))
+		ThrowGGiException("KdTree Error.");
 
 	// Create leaf if no good splits were found
 	if (bestAxis == -1 && retries < 2) {
@@ -267,9 +290,13 @@ retrySplit:
 			prims1[n1++] = edges[bestAxis][i].primNum;
 
 	// Recursively initialize children nodes
-	Float tSplit = edges[bestAxis][bestOffset].t;
-	Bounds3f bounds0 = nodeBounds, bounds1 = nodeBounds;
-	bounds0.pMax[bestAxis] = bounds1.pMin[bestAxis] = tSplit;
+	float tSplit = edges[bestAxis][bestOffset].t;
+	GRiBoundingBox bounds0 = nodeBounds, bounds1 = nodeBounds;
+	//bounds0.pMax[bestAxis] = bounds1.pMin[bestAxis] = tSplit;
+	bounds0.Center[bestAxis] = (tSplit + nodeBounds.BoundMin(bestAxis)) / 2;
+	bounds0.Extents[bestAxis] = (tSplit - nodeBounds.BoundMin(bestAxis)) / 2;
+	bounds1.Center[bestAxis] = (tSplit + nodeBounds.BoundMax(bestAxis)) / 2;
+	bounds1.Extents[bestAxis] = (nodeBounds.BoundMax(bestAxis) - tSplit) / 2;
 	buildTree(nodeNum + 1, bounds0, allPrimBounds, prims0, n0, depth - 1, edges,
 		prims0, prims1 + nPrimitives, badRefines);
 	int aboveChild = nextFreeNode;
@@ -278,6 +305,7 @@ retrySplit:
 		prims0, prims1 + nPrimitives, badRefines);
 }
 
+/*
 bool KdTreeAccel::Intersect(const Ray &ray, SurfaceInteraction *isect) const {
 	ProfilePhase p(Prof::AccelIntersect);
 	// Compute initial parametric range of ray inside kd-tree extent
@@ -464,3 +492,5 @@ std::shared_ptr<KdTreeAccel> CreateKdTreeAccelerator(
 	return std::make_shared<KdTreeAccel>(std::move(prims), isectCost, travCost, emptyBonus,
 		maxPrims, maxDepth);
 }
+*/
+

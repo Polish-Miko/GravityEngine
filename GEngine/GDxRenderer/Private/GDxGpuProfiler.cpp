@@ -35,13 +35,13 @@ void GDxGpuProfiler::Initialize(ID3D12Device* device, ID3D12GraphicsCommandList*
 
 void GDxGpuProfiler::StartGpuProfile(std::string profileName)
 {
-	if (bActive == true)
-		ThrowGGiException("Cannot start two gpu profile query at the same time.");
+	//if (bActive == true)
+		//ThrowGGiException("Cannot start two gpu profile query at the same time.");
 
 	if (mProfileNameList.size() >= MAX_GPU_PROFILE_NUM)
 		ThrowGGiException("Cannot start more than MAX_GPU_PROFILE_NUM gpu profiles.");
 
-	bActive = true;
+	//bActive = true;
 
 	mProfileNameList.push_back(profileName);
 
@@ -49,13 +49,24 @@ void GDxGpuProfiler::StartGpuProfile(std::string profileName)
 	pCommandList->EndQuery(queryHeap.Get(), D3D12_QUERY_TYPE_TIMESTAMP, (UINT)(mProfileNameList.size() - 1) * 2);
 }
 
-void GDxGpuProfiler::EndGpuProfile()
+void GDxGpuProfiler::EndGpuProfile(std::string profileName)
 {
-	if (bActive == false)
-		ThrowGGiException("Cannot end gpu profile query if no one has been started.");
+	//if (bActive == false)
+		//ThrowGGiException("Cannot end gpu profile query if no one has been started.");
+
+	// Found profile in the name list
+	size_t i = 0;
+	for (; i < mProfileNameList.size(); i++)
+	{
+		if (mProfileNameList[i] == profileName)
+			break;
+	}
+	if (i >= mProfileNameList.size())
+		ThrowGGiException("Gpu profile not found.")
 
 	// Insert the end timestamp
-	UINT startQueryIdx = UINT((mProfileNameList.size() - 1) * 2);
+
+	UINT startQueryIdx = UINT(i * 2);
 	UINT endQueryIdx = startQueryIdx + 1;
 	pCommandList->EndQuery(queryHeap.Get(), D3D12_QUERY_TYPE_TIMESTAMP, endQueryIdx);
 
@@ -63,7 +74,7 @@ void GDxGpuProfiler::EndGpuProfile()
 	UINT64 dstOffset = startQueryIdx * sizeof(UINT64);
 	pCommandList->ResolveQueryData(queryHeap.Get(), D3D12_QUERY_TYPE_TIMESTAMP, startQueryIdx, 2, readbackBuffer->mReadbackBuffer.Get(), dstOffset);
 
-	bActive = false;
+	//bActive = false;
 }
 
 void GDxGpuProfiler::BeginFrame()
