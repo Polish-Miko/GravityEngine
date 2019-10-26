@@ -60,6 +60,18 @@ struct LightList
 	unsigned int NumSpotlights;
 };
 
+struct MeshSdfDescriptor
+{
+	float Radius;
+	int Resolution;
+};
+
+struct SceneObjectSdfDescriptor
+{
+	DirectX::XMFLOAT4X4 Transform;
+	int SdfIndex;
+};
+
 // 8x TAA
 static const double Halton_2[8] =
 {
@@ -142,7 +154,7 @@ protected:
 
 	void CubemapPreIntegration();
 
-	void BuildAcceleratorTree();
+	void BuildMeshSDF();
 
 	//void SaveBakedCubemap(std::wstring workDir, std::wstring CubemapPath);
 
@@ -217,6 +229,7 @@ protected:
 	ComPtr<ID3D12RootSignature> mSsaoRootSignature = nullptr;
 
 	ComPtr<ID3D12DescriptorHeap> mSrvDescriptorHeap = nullptr;
+	ComPtr<ID3D12DescriptorHeap> mSdfSrvDescriptorHeap = nullptr;
 
 	std::unordered_map<std::string, std::unique_ptr<GDxUav>> mUavs;
 	std::unordered_map<std::string, std::unique_ptr<GDxRtvHeap>> mRtvHeaps;
@@ -264,6 +277,12 @@ protected:
 
 	std::vector<std::unique_ptr<GDxUploadBuffer<SkyPassConstants>>> PreIntegrationPassCbs;
 
+	MeshSdfDescriptor mMeshSdfDescriptors[MAX_MESH_NUM];
+	SceneObjectSdfDescriptor mSceneObjectSdfDescriptors[MAX_SCENE_OBJECT_NUM];
+
+	std::unique_ptr<GDxUploadBuffer<MeshSdfDescriptor>> mMeshSdfDescriptorBuffer;
+	std::unique_ptr<GDxUploadBuffer<SceneObjectSdfDescriptor>> mSceneObjectSdfDescriptorBuffer;
+
 	DirectX::BoundingSphere mSceneBounds;
 
 	float mLightNearZ = 0.0f;
@@ -285,7 +304,7 @@ protected:
 
 	std::unique_ptr<GGiThreadPool> mRendererThreadPool = nullptr;
 
-	std::shared_ptr<GRiKdTree> mAcceleratorTree = nullptr;
+	//std::shared_ptr<GRiKdTree> mAcceleratorTree = nullptr;
 
 private:
 	

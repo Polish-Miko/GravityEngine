@@ -123,6 +123,9 @@ void GDxRenderer::PreInitialize(HWND OutputWindow, double width, double height)
 
 void GDxRenderer::Initialize()
 {
+	auto numThreads = thread::hardware_concurrency();
+	mRendererThreadPool = std::make_unique<GGiThreadPool>(numThreads);
+
 	InitializeGpuProfiler();
 	BuildDescriptorHeaps();
 	BuildRootSignature();
@@ -158,6 +161,8 @@ void GDxRenderer::Initialize()
 
 	CubemapPreIntegration();
 
+	BuildMeshSDF();
+
 	// Execute the initialization commands.
 	ThrowIfFailed(mCommandList->Close());
 	ID3D12CommandList* cmdsLists[] = { mCommandList.Get() };
@@ -177,11 +182,6 @@ void GDxRenderer::Initialize()
 		false
 #endif
 	);
-
-	auto numThreads = thread::hardware_concurrency();
-	mRendererThreadPool = std::make_unique<GGiThreadPool>(numThreads);
-
-	BuildAcceleratorTree();
 }
 
 void GDxRenderer::Draw(const GGiGameTimer* gt)
@@ -2112,7 +2112,15 @@ void GDxRenderer::BuildDescriptorHeaps()
 	srvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 	ThrowIfFailed(md3dDevice->CreateDescriptorHeap(&srvHeapDesc, IID_PPV_ARGS(&mSrvDescriptorHeap)));
 
-
+	//
+	// Create the SRV heap for SDF.
+	//
+	D3D12_DESCRIPTOR_HEAP_DESC sdfSrvHeapDesc = {};
+	sdfSrvHeapDesc.NumDescriptors = MAX_SCENE_OBJECT_NUM;
+	sdfSrvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+	sdfSrvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+	ThrowIfFailed(md3dDevice->CreateDescriptorHeap(&sdfSrvHeapDesc, IID_PPV_ARGS(&mSdfSrvDescriptorHeap)));
+	
 	//
 	// Fill out the heap with actual descriptors.
 	//
@@ -3357,11 +3365,220 @@ std::vector<ProfileData> GDxRenderer::GetGpuProfiles()
 	return GDxGpuProfiler::GetGpuProfiler().GetProfiles();
 }
 
-void GDxRenderer::BuildAcceleratorTree()
+void GDxRenderer::BuildMeshSDF()
 {
 	std::vector<std::shared_ptr<GRiKdPrimitive>> prims;
 	prims.clear();
 
+	CD3DX12_CPU_DESCRIPTOR_HANDLE hDescriptor(mSdfSrvDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
+
+	int sdfIndex = 0;
+
+	mMeshSdfDescriptorBuffer = std::make_unique<GDxUploadBuffer<MeshSdfDescriptor>>(md3dDevice.Get(), MAX_MESH_NUM, true);
+	mSceneObjectSdfDescriptorBuffer = std::make_unique<GDxUploadBuffer<SceneObjectSdfDescriptor>>(md3dDevice.Get(), MAX_SCENE_OBJECT_NUM, true);
+
+	for (auto mesh : pMeshes)
+	{
+		if (mesh.second->Name == L"Box" ||
+			mesh.second->Name == L"Sphere" ||
+			mesh.second->Name == L"Cylinder" ||
+			mesh.second->Name == L"Grid" ||
+			mesh.second->Name == L"Quad" ||
+			mesh.second->Name == L"Cerberus"||
+			mesh.second->Name != L"Cube"
+			)
+			continue;
+
+		GDxMesh* dxMesh = dynamic_cast<GDxMesh*>(mesh.second);
+		if (dxMesh == nullptr)
+			ThrowGGiException("cast failed from GRiMesh* to GDxMesh*.");
+		shared_ptr<GDxStaticVIBuffer> dxViBuffer = dynamic_pointer_cast<GDxStaticVIBuffer>(dxMesh->mVIBuffer);
+		if (dxViBuffer == nullptr)
+			ThrowGGiException("cast failed from shared_ptr<GDxStaticVIBuffer> to shared_ptr<GDxStaticVIBuffer>.");
+
+		auto vertices = (GRiVertex*)dxViBuffer->VertexBufferCPU->GetBufferPointer();
+		auto indices = (std::uint32_t*)dxViBuffer->IndexBufferCPU->GetBufferPointer();
+		UINT triCount = dxMesh->mVIBuffer->IndexCount / 3;
+
+		// Collect primitives.
+		for (auto &submesh : dxMesh->Submeshes)
+		{
+			auto startIndexLocation = submesh.second.StartIndexLocation;
+			auto baseVertexLocation = submesh.second.BaseVertexLocation;
+
+			for (size_t i = 0; i < (submesh.second.IndexCount / 3); i++)
+			{
+				// Indices for this triangle.
+				UINT i0 = indices[startIndexLocation + i * 3 + 0] + baseVertexLocation;
+
+				auto prim = std::make_shared<GRiKdPrimitive>(&vertices[i0], &vertices[i0 + 1], &vertices[i0 + 2]);
+
+				prims.push_back(prim);
+			}
+		}
+
+		int isectCost = 80;
+		int travCost = 1;
+		float emptyBonus = 0.5f;
+		int maxPrims = 1;
+		int maxDepth = -1;
+
+		auto pAcceleratorTree = std::make_shared<GRiKdTree>(std::move(prims), isectCost, travCost, emptyBonus,
+			maxPrims, maxDepth);
+
+		auto sdfRes = dxMesh->GetSdfResolution();
+		auto sdf = std::vector<float>(sdfRes * sdfRes * sdfRes);
+
+		auto sdfExtent = 1.4f * dxMesh->bounds.Extents[dxMesh->bounds.MaximumExtent()] * 2.0f;
+		auto sdfUnit = sdfExtent / (float)sdfRes;
+		auto initMinDisFront = 1.414f * sdfExtent;
+		auto initMaxDisBack = -1.414f * sdfExtent;
+
+		for (int z = 0; z < sdfRes; z++)
+		{
+			for (int y = 0; y < sdfRes; y++)
+			{
+				for (int x = 0; x < sdfRes; x++)
+				{
+					mRendererThreadPool->Enqueue([&, x, y, z]
+						{
+							int index = z * sdfRes * sdfRes + y * sdfRes + x;
+							sdf[index] = 0.0f;
+
+							GGiFloat3 rayOrigin(
+								((float)x - sdfRes / 2 + 0.5f) * sdfUnit,
+								((float)y - sdfRes / 2 + 0.5f) * sdfUnit,
+								((float)z - sdfRes / 2 + 0.5f) * sdfUnit
+							);
+
+							static int rayNum = 64;
+							static float fibParam = 2 * GGiEngineUtil::PI * 0.618f;
+							float fibInter = 0.0f;
+							GRiRay ray;
+							float minDist = initMinDisFront;
+							float outDis = 999.0f;
+							int numFront = 0;
+							int numBack = 0;
+							bool bBackFace;
+
+							ray.Origin[0] = rayOrigin.x;
+							ray.Origin[1] = rayOrigin.y;
+							ray.Origin[2] = rayOrigin.z;
+
+							// Fibonacci lattices.
+							for (int n = 0; n < rayNum; n++)
+							{
+								ray.Direction[1] = (float)(2 * n + 1) / (float)rayNum - 1;
+								fibInter = sqrt(1.0f - ray.Direction[1] * ray.Direction[1]);
+								ray.Direction[0] = fibInter * cos(fibParam * n);
+								ray.Direction[2] = fibInter * sin(fibParam * n);
+
+								ray.tMax = 99999.0f;
+
+								if (pAcceleratorTree->IntersectDis(ray, &outDis, bBackFace))
+								{
+									if (bBackFace)
+									{
+										numBack++;
+									}
+									else
+									{
+										numFront++;
+									}
+									if (outDis < minDist)
+										minDist = outDis;
+								}
+							}
+
+							sdf[index] = minDist;
+							if (numBack > numFront)
+								sdf[index] *= -1;
+						}
+					);
+				}
+			}
+		}
+
+		mRendererThreadPool->Flush();
+
+		dxMesh->InitializeSdf(sdf);
+
+		Microsoft::WRL::ComPtr<ID3D12Resource> sdfTexture = nullptr;
+		Microsoft::WRL::ComPtr<ID3D12Resource> sdfTextureUploadBuffer = nullptr;
+		D3D12_RESOURCE_DESC texDesc;
+		ZeroMemory(&texDesc, sizeof(D3D12_RESOURCE_DESC));
+		texDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE3D;
+		texDesc.Alignment = 0;
+		texDesc.DepthOrArraySize = 1;
+		texDesc.MipLevels = 1;
+		texDesc.SampleDesc.Count = 1;
+		texDesc.SampleDesc.Quality = 0;
+		texDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+		texDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
+		texDesc.Width = (UINT)(sdfRes);
+		texDesc.Height = (UINT)(sdfRes);
+		texDesc.DepthOrArraySize = (UINT)(sdfRes);
+		texDesc.Format = DXGI_FORMAT::DXGI_FORMAT_R32_FLOAT;
+
+		ThrowIfFailed(md3dDevice->CreateCommittedResource(
+			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+			D3D12_HEAP_FLAG_NONE,
+			&texDesc,
+			D3D12_RESOURCE_STATE_COPY_DEST,
+			nullptr,
+			IID_PPV_ARGS(&sdfTexture)));
+
+		const UINT64 uploadBufferSize = GetRequiredIntermediateSize(sdfTexture.Get(), 0, 1);
+
+		ThrowIfFailed(md3dDevice->CreateCommittedResource(
+			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
+			D3D12_HEAP_FLAG_NONE,
+			&CD3DX12_RESOURCE_DESC::Buffer(uploadBufferSize),
+			D3D12_RESOURCE_STATE_GENERIC_READ,
+			nullptr,
+			IID_PPV_ARGS(&sdfTextureUploadBuffer)));
+
+		D3D12_SUBRESOURCE_DATA textureData = {};
+		textureData.pData = sdf.data();
+		textureData.RowPitch = static_cast<LONG_PTR>((4 * sdfRes));
+		textureData.SlicePitch = textureData.RowPitch * sdfRes;
+
+		UpdateSubresources(mCommandList.Get(), sdfTexture.Get(), sdfTextureUploadBuffer.Get(), 0, 0, 1, &textureData);
+		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(sdfTexture.Get(),
+			D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE));
+
+		D3D12_SHADER_RESOURCE_VIEW_DESC sdfSrvDesc = {};
+		sdfSrvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+		sdfSrvDesc.Format = DXGI_FORMAT_R32_FLOAT;
+		sdfSrvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE3D;
+		sdfSrvDesc.Texture3D.MipLevels = 1;
+		md3dDevice->CreateShaderResourceView(sdfTexture.Get(), &sdfSrvDesc, hDescriptor);
+		hDescriptor.Offset(mCbvSrvUavDescriptorSize);
+
+		dxMesh->mSdfIndex = sdfIndex;
+		sdfIndex++;
+		mMeshSdfDescriptors[sdfIndex].Radius = 0.707f * sdfExtent;
+		mMeshSdfDescriptors[sdfIndex].Resolution = sdfRes;
+	}
+
+	int soSdfIndex = 0;
+	for (auto so : pSceneObjectLayer[(int)RenderLayer::Deferred])
+	{
+		if (so->GetMesh()->GetSdf()->size() > 0)
+		{
+			mSceneObjectSdfDescriptors[soSdfIndex].SdfIndex = so->GetMesh()->mSdfIndex;
+			XMMATRIX trans = GDx::GGiToDxMatrix(so->GetTransform());
+			DirectX::XMStoreFloat4x4(&mSceneObjectSdfDescriptors[soSdfIndex].Transform, trans);
+			soSdfIndex++;
+		}
+	}
+
+	auto meshSdfBuffer = mMeshSdfDescriptorBuffer.get();
+	meshSdfBuffer->CopyData(0, mMeshSdfDescriptors[0]);
+	auto soSdfBuffer = mSceneObjectSdfDescriptorBuffer.get();
+	soSdfBuffer->CopyData(0, mSceneObjectSdfDescriptors[0]);
+	
+	/*
 	for (auto so : pSceneObjectLayer[(int)RenderLayer::Deferred])
 	{
 		auto mesh = so->GetMesh();
@@ -3415,7 +3632,7 @@ void GDxRenderer::BuildAcceleratorTree()
 				verticesWorld[1] = vert2World;
 				verticesWorld[2] = vert3World;
 
-				auto prim = std::make_shared<GRiKdPrimitive>(verticesWorld);
+				auto prim = std::make_shared<GRiKdPrimitive>(verticesWorld[0], verticesWorld[1], verticesWorld[2]);
 
 				prims.push_back(prim);
 			}
@@ -3427,8 +3644,65 @@ void GDxRenderer::BuildAcceleratorTree()
 	int maxPrims = 1;
 	int maxDepth = -1;
 
-	mAcceleratorTree = std::make_shared<GRiKdTree>(std::move(prims), isectCost, travCost, emptyBonus,
+	auto mAcceleratorTree = std::make_shared<GRiKdTree>(std::move(prims), isectCost, travCost, emptyBonus,
 		maxPrims, maxDepth);
+
+	GRiRay ray;
+	ray.Direction[0] = 0.0f;
+	ray.Direction[1] = -1.0f;
+	ray.Direction[2] = 0.0f;
+	ray.Origin[0] = 0.0f;
+	ray.Origin[1] = 100.0f;
+	ray.Origin[2] = 0.0f;
+	float distance = -1.0f;
+	bool bBackface = false;
+	mAcceleratorTree->IntersectDis(ray, &distance, bBackface);
+	distance = distance;//80
+
+	ray.Direction[0] = 0.0f;
+	ray.Direction[1] = 0.0f;
+	ray.Direction[2] = 1.0f;
+	ray.Origin[0] = 0.0f;
+	ray.Origin[1] = 70.0f;
+	ray.Origin[2] = 0.0f;
+	distance = -1.0f;
+	ray.tMax = 99999.0f;
+	mAcceleratorTree->IntersectDis(ray, &distance, bBackface);
+	distance = distance;//~100
+
+	ray.Direction[0] = 0.0f;
+	ray.Direction[1] = -1.0f;
+	ray.Direction[2] = 0.0f;
+	ray.Origin[0] = -80.0f;
+	ray.Origin[1] = 65.0f;
+	ray.Origin[2] = -80.0f;
+	distance = -1.0f;
+	ray.tMax = 99999.0f;
+	mAcceleratorTree->IntersectDis(ray, &distance, bBackface);
+	distance = distance;//15
+
+	ray.Direction[0] = 0.0f;
+	ray.Direction[1] = 1.0f;
+	ray.Direction[2] = 0.0f;
+	ray.Origin[0] = 100.0f;
+	ray.Origin[1] = 0.0f;
+	ray.Origin[2] = 0.0f;
+	distance = -1.0f;
+	ray.tMax = 99999.0f;
+	mAcceleratorTree->IntersectDis(ray, &distance, bBackface);
+	distance = distance;//-25
+
+	ray.Direction[0] = 0.0f;
+	ray.Direction[1] = 0.717f;
+	ray.Direction[2] = 0.717f;
+	ray.Origin[0] = 100.0f;
+	ray.Origin[1] = 0.0f;
+	ray.Origin[2] = 0.0f;
+	distance = -1.0f;
+	ray.tMax = 99999.0f;
+	mAcceleratorTree->IntersectDis(ray, &distance, bBackface);
+	distance = distance;//-35
+	*/
 }
 
 #pragma endregion

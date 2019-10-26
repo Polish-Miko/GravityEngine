@@ -41,5 +41,19 @@ private:
 
 	std::unordered_map<std::wstring, GRiSubmesh> Submeshes;
 
+	int GetSdfResolution();
+	void SetSdfResolution(int res);
+
+	std::shared_ptr<std::vector<float>> GetSdf();
+	void InitializeSdf(std::vector<float>& sdf);
+
+	int mSdfIndex = 0;
+
+protected:
+
+	std::shared_ptr<std::vector<float>> SignedDistanceField;
+
+	int SdfResolution = 32;
+
 };
 

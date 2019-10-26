@@ -40,6 +40,26 @@ GRiMaterial* GRiMesh::GetMaterial(std::wstring submeshName)
 }
 */
 
+int GRiMesh::GetSdfResolution()
+{
+	return SdfResolution;
+}
+
+void GRiMesh::SetSdfResolution(int res)
+{
+	SdfResolution = res;
+}
+
+std::shared_ptr<std::vector<float>> GRiMesh::GetSdf()
+{
+	return SignedDistanceField;
+}
+
+void GRiMesh::InitializeSdf(std::vector<float>& sdf)
+{
+	SignedDistanceField = std::make_shared<std::vector<float>>(sdf);
+}
+
 
 
 

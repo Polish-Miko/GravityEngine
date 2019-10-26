@@ -33,3 +33,4 @@ GRiBoundingBox GRiBoundingBox::Union(GRiBoundingBox a, GRiBoundingBox b)
 
 	return ret;
 }
+

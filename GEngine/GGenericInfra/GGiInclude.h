@@ -10,6 +10,7 @@
 #include "Public/GGiCpuProfiler.h"
 #include "Public/GGiThreadPool.h"
 #include "Public/GGiMath.h"
+#include "Public/GGiFloat3.h"
 
 template<typename T1, typename T2>
 inline T1 DynamicCast(T2 toCast, const std::string& fileName = __FILE__, int lineNumber = __LINE__)

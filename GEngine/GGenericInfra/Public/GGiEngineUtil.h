@@ -2,6 +2,8 @@
 #include "GGiPreInclude.h"
 
 
+#define MachineEpsilon (std::numeric_limits<float>::epsilon() * 0.5)
+
 #define GGI_L1_CACHE_LINE_SIZE 64
 
 void *AllocAligned(size_t size);
@@ -43,6 +45,11 @@ public:
 			return "";
 		}
 		return str;
+	}
+
+	static inline float gamma(int n)
+	{
+		return (n * MachineEpsilon) / (1 - n * MachineEpsilon);
 	}
 
 	static void NormalizeFloat3(float& x, float& y, float& z)

@@ -13,84 +13,6 @@ GRiKdTree::~GRiKdTree()
 }
 
 // KdTreeAccel Local Declarations
-struct KdTreeNode
-{
-	void InitLeaf(int *primNums, int np, std::vector<int> *primitiveIndices);
-	
-	void InitInterior(int axis, int ac, float s)
-	{
-		split = s;
-		flags = axis;
-		aboveChild |= (ac << 2);
-	}
-
-	float SplitPos() const
-	{ 
-		return split;
-	}
-
-	int nPrimitives() const 
-	{ 
-		return nPrims >> 2;
-	}
-
-	int SplitAxis() const 
-	{
-		return flags & 3;
-	}
-
-	bool IsLeaf() const 
-	{
-		return (flags & 3) == 3; 
-	}
-
-	int AboveChild() const 
-	{ 
-		return aboveChild >> 2; 
-	}
-
-	union
-	{
-		float split;                 // Interior
-		int onePrimitive;            // Leaf
-		int primitiveIndicesOffset;  // Leaf
-	};
-
-private:
-
-	union
-	{
-		int flags;       // Both
-		int nPrims;      // Leaf
-		int aboveChild;  // Interior
-	};
-};
-
-enum class EdgeType 
-{
-	Start,
-	End
-};
-
-struct BoundEdge 
-{
-	// BoundEdge Public Methods
-	BoundEdge() {}
-
-	BoundEdge(float t, int primNum, bool starting) : t(t), primNum(primNum) 
-	{
-		type = starting ? EdgeType::Start : EdgeType::End;
-	}
-
-	float t;
-	int primNum;
-	EdgeType type;
-};
-
-struct GRiKdRay
-{
-	GRiKdRay() {}
-};
 
 // KdTreeAccel Method Definitions
 GRiKdTree::GRiKdTree(
@@ -114,6 +36,8 @@ GRiKdTree::GRiKdTree(
 	// Compute bounds for kd-tree construction
 	std::vector<GRiBoundingBox> primBounds;
 	primBounds.reserve(primitives.size());
+	if (!primitives.empty())
+		bounds = primitives[0]->WorldBound();
 	for (const std::shared_ptr<GRiKdPrimitive> &prim : primitives)
 	{
 		GRiBoundingBox b = prim->WorldBound();
@@ -236,7 +160,8 @@ retrySplit:
 	{
 		if (edges[axis][i].type == EdgeType::End) --nAbove;
 		float edgeT = edges[axis][i].t;
-		if (edgeT > nodeBounds.BoundMin(axis) && edgeT < nodeBounds.BoundMax(axis)) {
+		if (edgeT > nodeBounds.BoundMin(axis) && edgeT < nodeBounds.BoundMax(axis))
+		{
 			// Compute cost for split at _i_th edge
 
 			// Compute child surface areas for split at _edgeT_
@@ -255,7 +180,8 @@ retrySplit:
 				isectCost * (1 - eb) * (pBelow * nBelow + pAbove * nAbove);
 
 			// Update best split if this is lowest cost so far
-			if (cost < bestCost) {
+			if (cost < bestCost)
+			{
 				bestCost = cost;
 				bestAxis = axis;
 				bestOffset = i;
@@ -268,14 +194,16 @@ retrySplit:
 		ThrowGGiException("KdTree Error.");
 
 	// Create leaf if no good splits were found
-	if (bestAxis == -1 && retries < 2) {
+	if (bestAxis == -1 && retries < 2)
+	{
 		++retries;
 		axis = (axis + 1) % 3;
 		goto retrySplit;
 	}
 	if (bestCost > oldCost) ++badRefines;
 	if ((bestCost > 4 * oldCost && nPrimitives < 16) || bestAxis == -1 ||
-		badRefines == 3) {
+		badRefines == 3) 
+	{
 		nodes[nodeNum].InitLeaf(primNums, nPrimitives, &primitiveIndices);
 		return;
 	}
@@ -306,43 +234,50 @@ retrySplit:
 }
 
 /*
-bool KdTreeAccel::Intersect(const Ray &ray, SurfaceInteraction *isect) const {
-	ProfilePhase p(Prof::AccelIntersect);
+bool GRiKdTree::Intersect(const GRiRay &ray, SurfaceInteraction *isect) const
+{
 	// Compute initial parametric range of ray inside kd-tree extent
-	Float tMin, tMax;
-	if (!bounds.IntersectP(ray, &tMin, &tMax)) {
+	float tMin, tMax;
+	if (!bounds.Intersect(ray, &tMin, &tMax))
+	{
 		return false;
 	}
 
 	// Prepare to traverse kd-tree for ray
-	Vector3f invDir(1 / ray.d.x, 1 / ray.d.y, 1 / ray.d.z);
-	PBRT_CONSTEXPR int maxTodo = 64;
+	GGiFloat3 invDir(1.0f / ray.Direction[0], 1.0f / ray.Direction[1], 1.0f / ray.Direction[2]);
+	const int maxTodo = 64;
+	//Vector3f invDir(1 / ray.d.x, 1 / ray.d.y, 1 / ray.d.z);
+	//PBRT_CONSTEXPR int maxTodo = 64;
 	KdToDo todo[maxTodo];
 	int todoPos = 0;
 
 	// Traverse kd-tree nodes in order for ray
 	bool hit = false;
-	const KdAccelNode *node = &nodes[0];
-	while (node != nullptr) {
+	const KdTreeNode *node = &nodes[0];
+	while (node != nullptr) 
+	{
 		// Bail out if we found a hit closer than the current node
 		if (ray.tMax < tMin) break;
-		if (!node->IsLeaf()) {
+		if (!node->IsLeaf()) 
+		{
 			// Process kd-tree interior node
 
 			// Compute parametric distance along ray to split plane
 			int axis = node->SplitAxis();
-			Float tPlane = (node->SplitPos() - ray.o[axis]) * invDir[axis];
+			float tPlane = (node->SplitPos() - ray.Origin[axis]) * invDir[axis];
 
 			// Get node children pointers for ray
-			const KdAccelNode *firstChild, *secondChild;
+			const KdTreeNode *firstChild, *secondChild;
 			int belowFirst =
-				(ray.o[axis] < node->SplitPos()) ||
-				(ray.o[axis] == node->SplitPos() && ray.d[axis] <= 0);
-			if (belowFirst) {
+				(ray.Origin[axis] < node->SplitPos()) ||
+				(ray.Origin[axis] == node->SplitPos() && ray.Direction[axis] <= 0);
+			if (belowFirst) 
+			{
 				firstChild = node + 1;
 				secondChild = &nodes[node->AboveChild()];
 			}
-			else {
+			else 
+			{
 				firstChild = &nodes[node->AboveChild()];
 				secondChild = node + 1;
 			}
@@ -352,7 +287,8 @@ bool KdTreeAccel::Intersect(const Ray &ray, SurfaceInteraction *isect) const {
 				node = firstChild;
 			else if (tPlane < tMin)
 				node = secondChild;
-			else {
+			else
+			{
 				// Enqueue _secondChild_ in todo list
 				todo[todoPos].node = secondChild;
 				todo[todoPos].tMin = tPlane;
@@ -362,27 +298,247 @@ bool KdTreeAccel::Intersect(const Ray &ray, SurfaceInteraction *isect) const {
 				tMax = tPlane;
 			}
 		}
-		else {
+		else
+		{
 			// Check for intersections inside leaf node
 			int nPrimitives = node->nPrimitives();
-			if (nPrimitives == 1) {
-				const std::shared_ptr<Primitive> &p =
+			if (nPrimitives == 1)
+			{
+				const std::shared_ptr<GRiKdPrimitive> &p =
 					primitives[node->onePrimitive];
 				// Check one primitive inside leaf node
 				if (p->Intersect(ray, isect)) hit = true;
 			}
-			else {
-				for (int i = 0; i < nPrimitives; ++i) {
+			else 
+			{
+				for (int i = 0; i < nPrimitives; ++i)
+				{
 					int index =
 						primitiveIndices[node->primitiveIndicesOffset + i];
-					const std::shared_ptr<Primitive> &p = primitives[index];
+					const std::shared_ptr<GRiKdPrimitive> &p = primitives[index];
 					// Check one primitive inside leaf node
 					if (p->Intersect(ray, isect)) hit = true;
 				}
 			}
 
 			// Grab next node to process from todo list
-			if (todoPos > 0) {
+			if (todoPos > 0) 
+			{
+				--todoPos;
+				node = todo[todoPos].node;
+				tMin = todo[todoPos].tMin;
+				tMax = todo[todoPos].tMax;
+			}
+			else
+				break;
+		}
+	}
+	return hit;
+}
+*/
+
+bool GRiKdTree::IntersectDis(const GRiRay &ray, float* OutDis, bool& bBackface)
+{
+	/*
+	// Compute initial parametric range of ray inside kd-tree extent
+	float tMin, tMax;
+	if (!bounds.Intersect(ray, &tMin, &tMax))
+	{
+		return false;
+	}
+
+	// Prepare to traverse kd-tree for ray
+	GGiFloat3 invDir(1.0f / ray.Direction[0], 1.0f / ray.Direction[1], 1.0f / ray.Direction[2]);
+	const int maxTodo = 64;
+	//Vector3f invDir(1 / ray.d.x, 1 / ray.d.y, 1 / ray.d.z);
+	//PBRT_CONSTEXPR int maxTodo = 64;
+	KdToDo todo[maxTodo];
+	int todoPos = 0;
+	const KdTreeNode *node = &nodes[0];
+	while (node != nullptr)
+	{
+		if (node->IsLeaf()) 
+		{
+			// Check for shadow ray intersections inside leaf node
+			int nPrimitives = node->nPrimitives();
+			if (nPrimitives == 1) 
+			{
+				const std::shared_ptr<GRiKdPrimitive> &p =
+					primitives[node->onePrimitive];
+				if (p->Intersect(ray, OutDis))
+				{
+					return true;
+				}
+			}
+			else
+			{
+				for (int i = 0; i < nPrimitives; ++i)
+				{
+					int primitiveIndex =
+						primitiveIndices[node->primitiveIndicesOffset + i];
+					const std::shared_ptr<GRiKdPrimitive> &prim =
+						primitives[primitiveIndex];
+					if (prim->Intersect(ray, OutDis))
+					{
+						return true;
+					}
+				}
+			}
+
+			// Grab next node to process from todo list
+			if (todoPos > 0)
+			{
+				--todoPos;
+				node = todo[todoPos].node;
+				tMin = todo[todoPos].tMin;
+				tMax = todo[todoPos].tMax;
+			}
+			else
+				break;
+		}
+		else
+		{
+			// Process kd-tree interior node
+
+			// Compute parametric distance along ray to split plane
+			int axis = node->SplitAxis();
+			float tPlane = (node->SplitPos() - ray.Origin[axis]) * invDir[axis];
+
+			// Get node children pointers for ray
+			const KdTreeNode *firstChild, *secondChild;
+			int belowFirst =
+				(ray.Origin[axis] < node->SplitPos()) ||
+				(ray.Origin[axis] == node->SplitPos() && ray.Direction[axis] <= 0);
+			if (belowFirst)
+			{
+				firstChild = node + 1;
+				secondChild = &nodes[node->AboveChild()];
+			}
+			else 
+			{
+				firstChild = &nodes[node->AboveChild()];
+				secondChild = node + 1;
+			}
+
+			// Advance to next child node, possibly enqueue other child
+			if (tPlane > tMax || tPlane <= 0)
+				node = firstChild;
+			else if (tPlane < tMin)
+				node = secondChild;
+			else 
+			{
+				// Enqueue _secondChild_ in todo list
+				todo[todoPos].node = secondChild;
+				todo[todoPos].tMin = tPlane;
+				todo[todoPos].tMax = tMax;
+				++todoPos;
+				node = firstChild;
+				tMax = tPlane;
+			}
+		}
+	}
+	return false;
+	*/
+
+	// Compute initial parametric range of ray inside kd-tree extent
+	float tMin, tMax;
+	if (!bounds.Intersect(ray, &tMin, &tMax))
+	{
+		return false;
+	}
+
+	// Prepare to traverse kd-tree for ray
+	GGiFloat3 invDir(1.0f / ray.Direction[0], 1.0f / ray.Direction[1], 1.0f / ray.Direction[2]);
+	const int maxTodo = 64;
+	KdToDo todo[maxTodo];
+	int todoPos = 0;
+
+	// Traverse kd-tree nodes in order for ray
+	bool hit = false;
+	const KdTreeNode *node = &nodes[0];
+	while (node != nullptr) 
+	{
+		// Bail out if we found a hit closer than the current node
+		if (ray.tMax < tMin)
+			break;
+		if (!node->IsLeaf())
+		{
+			// Process kd-tree interior node
+
+			// Compute parametric distance along ray to split plane
+			int axis = node->SplitAxis();
+			float tPlane = (node->SplitPos() - ray.Origin[axis]) * invDir[axis];
+
+			// Get node children pointers for ray
+			const KdTreeNode *firstChild, *secondChild;
+			int belowFirst =
+				(ray.Origin[axis] < node->SplitPos()) ||
+				(ray.Origin[axis] == node->SplitPos() && ray.Direction[axis] <= 0);
+			if (belowFirst) 
+			{
+				firstChild = node + 1;
+				secondChild = &nodes[node->AboveChild()];
+			}
+			else 
+			{
+				firstChild = &nodes[node->AboveChild()];
+				secondChild = node + 1;
+			}
+
+			// Advance to next child node, possibly enqueue other child
+			if (tPlane > tMax || tPlane <= 0)
+				node = firstChild;
+			else if (tPlane < tMin)
+				node = secondChild;
+			else
+			{
+				// Enqueue _secondChild_ in todo list
+				todo[todoPos].node = secondChild;
+				todo[todoPos].tMin = tPlane;
+				todo[todoPos].tMax = tMax;
+				++todoPos;
+				node = firstChild;
+				tMax = tPlane;
+			}
+		}
+		else 
+		{
+			// Check for intersections inside leaf node
+			int nPrimitives = node->nPrimitives();
+			if (nPrimitives == 1)
+			{
+				const std::shared_ptr<GRiKdPrimitive> &p =
+					primitives[node->onePrimitive];
+				// Check one primitive inside leaf node
+				if (p->Intersect(ray, OutDis, bBackface)) hit = true;
+			}
+			else
+			{
+				float lowestDis = ray.tMax;
+				bool lowestBackface = ray.bBackface;
+				for (int i = 0; i < nPrimitives; ++i)
+				{
+					int index =
+						primitiveIndices[node->primitiveIndicesOffset + i];
+					const std::shared_ptr<GRiKdPrimitive> &p = primitives[index];
+					// Check one primitive inside leaf node
+					if (p->Intersect(ray, OutDis, bBackface))
+					{
+						hit = true;
+						if (*OutDis < lowestDis)
+						{
+							lowestDis = *OutDis;
+							lowestBackface = bBackface;
+						}
+					}
+				}
+				*OutDis = lowestDis;
+				bBackface = lowestBackface;
+			}
+
+			// Grab next node to process from todo list
+			if (todoPos > 0)
+			{
 				--todoPos;
 				node = todo[todoPos].node;
 				tMin = todo[todoPos].tMin;
@@ -395,93 +551,111 @@ bool KdTreeAccel::Intersect(const Ray &ray, SurfaceInteraction *isect) const {
 	return hit;
 }
 
-bool KdTreeAccel::IntersectP(const Ray &ray) const {
-	ProfilePhase p(Prof::AccelIntersectP);
-	// Compute initial parametric range of ray inside kd-tree extent
-	Float tMin, tMax;
-	if (!bounds.IntersectP(ray, &tMin, &tMax)) {
+// Moller¨CTrumbore intersection.
+bool GRiKdPrimitive::Intersect(const GRiRay &ray, float *tHit, bool& bBackface)
+{
+	/*
+	static const float EPSILON = 0.0000001;
+	static GGiFloat3 edge1, edge2, h, s, q, rayDir, rayOrigin, outIntersectionPoint;
+	static GGiFloat3 vPos[3];
+	static float a, f, u, v, t;
+	vPos[0] = GGiFloat3(vertices[0].Position[0], vertices[0].Position[1], vertices[0].Position[2]);
+	vPos[1] = GGiFloat3(vertices[1].Position[0], vertices[1].Position[1], vertices[1].Position[2]);
+	vPos[2] = GGiFloat3(vertices[2].Position[0], vertices[2].Position[1], vertices[2].Position[2]);
+	rayDir = GGiFloat3(ray.Direction[0], ray.Direction[1], ray.Direction[2]);
+	rayOrigin = GGiFloat3(ray.Origin[0], ray.Origin[1], ray.Origin[2]);
+	edge1 = vPos[1] - vPos[0];
+	edge2 = vPos[2] - vPos[0];
+
+	h = GGiFloat3::Cross(rayDir, edge2);
+	a = GGiFloat3::Dot(edge1, h);
+	if (a > -EPSILON && a < EPSILON)
+		return false;    // This ray is parallel to this triangle.
+	f = 1.0 / a;
+	s = rayOrigin - vPos[0];
+	u = f * GGiFloat3::Dot(s, h);
+	if (u < 0.0 || u > 1.0)
 		return false;
+	q = GGiFloat3::Cross(s, edge1);
+	v = f * GGiFloat3::Dot(rayDir, q);
+	if (v < 0.0 || u + v > 1.0)
+		return false;
+	// At this stage we can compute t to find out where the intersection point is on the line.
+	t = f * GGiFloat3::Dot(edge2, q);
+	if (t > EPSILON && t < 1 / EPSILON) // ray intersection
+	{
+		*tHit = t;
+		return true;
 	}
+	else // This means that there is a line intersection but not a ray intersection.
+		return false;
+	*/
+	static GGiFloat3 vPos[3], rayDir, rayOrigin, u, v, norm, w0, interPoint, w;
+	static float b, a, r, uu, uv, vv, wu, wv, D, s, t;
+	vPos[0] = GGiFloat3(vertices[0]->Position[0], vertices[0]->Position[1], vertices[0]->Position[2]);
+	vPos[1] = GGiFloat3(vertices[1]->Position[0], vertices[1]->Position[1], vertices[1]->Position[2]);
+	vPos[2] = GGiFloat3(vertices[2]->Position[0], vertices[2]->Position[1], vertices[2]->Position[2]);
+	rayDir = GGiFloat3(ray.Direction[0], ray.Direction[1], ray.Direction[2]);
+	rayOrigin = GGiFloat3(ray.Origin[0], ray.Origin[1], ray.Origin[2]);
 
-	// Prepare to traverse kd-tree for ray
-	Vector3f invDir(1 / ray.d.x, 1 / ray.d.y, 1 / ray.d.z);
-	PBRT_CONSTEXPR int maxTodo = 64;
-	KdToDo todo[maxTodo];
-	int todoPos = 0;
-	const KdAccelNode *node = &nodes[0];
-	while (node != nullptr) {
-		if (node->IsLeaf()) {
-			// Check for shadow ray intersections inside leaf node
-			int nPrimitives = node->nPrimitives();
-			if (nPrimitives == 1) {
-				const std::shared_ptr<Primitive> &p =
-					primitives[node->onePrimitive];
-				if (p->IntersectP(ray)) {
-					return true;
-				}
-			}
-			else {
-				for (int i = 0; i < nPrimitives; ++i) {
-					int primitiveIndex =
-						primitiveIndices[node->primitiveIndicesOffset + i];
-					const std::shared_ptr<Primitive> &prim =
-						primitives[primitiveIndex];
-					if (prim->IntersectP(ray)) {
-						return true;
-					}
-				}
-			}
+	// is the ray parallel to the triangle? 
+	u = vPos[1] - vPos[0];    // edge1.
+	v = vPos[2] - vPos[0];    // edge2.
+	norm = GGiFloat3::Cross(u, v);  // normal.
 
-			// Grab next node to process from todo list
-			if (todoPos > 0) {
-				--todoPos;
-				node = todo[todoPos].node;
-				tMin = todo[todoPos].tMin;
-				tMax = todo[todoPos].tMax;
-			}
-			else
-				break;
-		}
-		else {
-			// Process kd-tree interior node
+	//if (norm.x == 0.0f && norm.y == 0.0f && norm.z == 0.0f)  // triangle is degenerate.
+		//return false;
 
-			// Compute parametric distance along ray to split plane
-			int axis = node->SplitAxis();
-			Float tPlane = (node->SplitPos() - ray.o[axis]) * invDir[axis];
+	// calculate the angle between the ray and the triangle normal.
+	b = GGiFloat3::Dot(norm, rayDir);
+	if (fabs(b) < 1e-5)      // ray is parallel to triangle plane.
+		return false;
 
-			// Get node children pointers for ray
-			const KdAccelNode *firstChild, *secondChild;
-			int belowFirst =
-				(ray.o[axis] < node->SplitPos()) ||
-				(ray.o[axis] == node->SplitPos() && ray.d[axis] <= 0);
-			if (belowFirst) {
-				firstChild = node + 1;
-				secondChild = &nodes[node->AboveChild()];
-			}
-			else {
-				firstChild = &nodes[node->AboveChild()];
-				secondChild = node + 1;
-			}
+	// calculate the vector from v0 to the ray origin.
+	w0 = rayOrigin - vPos[0];
+	a = -GGiFloat3::Dot(norm, w0);
 
-			// Advance to next child node, possibly enqueue other child
-			if (tPlane > tMax || tPlane <= 0)
-				node = firstChild;
-			else if (tPlane < tMin)
-				node = secondChild;
-			else {
-				// Enqueue _secondChild_ in todo list
-				todo[todoPos].node = secondChild;
-				todo[todoPos].tMin = tPlane;
-				todo[todoPos].tMax = tMax;
-				++todoPos;
-				node = firstChild;
-				tMax = tPlane;
-			}
-		}
+	// get intersect point of ray with triangle plane.
+	r = a / b;
+	if (r < 0.0f)                 // ray goes away from triangle.
+		return false;                 // => no intersect.
+	*tHit = r;
+	if (b > 0)
+		bBackface = true;
+	else
+		bBackface = false;
+	// for a segment, also test if (r > 1.0) => no intersect.   
+
+	// calculate intersect point.
+	interPoint = rayOrigin + rayDir * r;
+
+	// is the intersect point inside the triangle?   
+	uu = GGiFloat3::Dot(u, u);
+	uv = GGiFloat3::Dot(u, v);
+	vv = GGiFloat3::Dot(v, v);
+	w = interPoint - vPos[0];
+	wu = GGiFloat3::Dot(w, u);
+	wv = GGiFloat3::Dot(w, v);
+	D = uv * uv - uu * vv;
+
+	// get and test parametric coords.
+	s = (uv * wv - vv * wu) / D;
+	if (s < 0.0f || s > 1.0f)       // I is outside T.
+		return false;
+
+	t = (uv * wu - uu * wv) / D;
+	if (t < 0.0f || (s + t) > 1.0f) // I is outside T.
+		return false;
+
+	if (r < ray.tMax)
+	{
+		ray.tMax = r;
+		ray.bBackface = bBackface;
 	}
-	return false;
+	return true;   // intersect point is inside the triangle.
 }
 
+/*                            
 std::shared_ptr<KdTreeAccel> CreateKdTreeAccelerator(
 	std::vector<std::shared_ptr<Primitive>> prims, const ParamSet &ps) {
 	int isectCost = ps.FindOneInt("intersectcost", 80);

@@ -284,78 +284,44 @@
 		</item>
 	</mTextureInfo>
 	<mSceneObjectInfo class_id="3" tracking_level="0" version="0">
-		<count>2</count>
+		<count>1</count>
 		<item_version>0</item_version>
 		<item class_id="4" tracking_level="0" version="0">
-			<UniqueName>NewSceneObject</UniqueName>
+			<UniqueName>NewSceneObject_4</UniqueName>
 			<OverrideMaterialUniqueName class_id="5" tracking_level="0" version="0">
-				<count>1</count>
+				<count>0</count>
 				<item_version>0</item_version>
-				<item class_id="6" tracking_level="0" version="0">
-					<str1>Box</str1>
-					<str2>Content\Material\MetalGrid.gmat</str2>
-				</item>
 			</OverrideMaterialUniqueName>
-			<MeshUniqueName>Box</MeshUniqueName>
+			<MeshUniqueName>Content\Models\Cube.fbx</MeshUniqueName>
 			<Location>
 				<count>3</count>
 				<item>0.000000000e+00</item>
-				<item>1.803914452e+01</item>
+				<item>0.000000000e+00</item>
 				<item>0.000000000e+00</item>
 			</Location>
 			<Rotation>
 				<count>3</count>
 				<item>0.000000000e+00</item>
-				<item>-0.000000000e+00</item>
+				<item>0.000000000e+00</item>
 				<item>0.000000000e+00</item>
 			</Rotation>
 			<Scale>
 				<count>3</count>
-				<item>1.000000000e+00</item>
-				<item>1.000000000e+00</item>
-				<item>1.000000000e+00</item>
-			</Scale>
-		</item>
-		<item>
-			<UniqueName>NewSceneObject_1</UniqueName>
-			<OverrideMaterialUniqueName>
-				<count>1</count>
-				<item_version>0</item_version>
-				<item>
-					<str1>Grid</str1>
-					<str2>Content\Material\HardWoodBrown.gmat</str2>
-				</item>
-			</OverrideMaterialUniqueName>
-			<MeshUniqueName>Grid</MeshUniqueName>
-			<Location>
-				<count>3</count>
-				<item>0.000000000e+00</item>
-				<item>-1.716332912e+00</item>
-				<item>0.000000000e+00</item>
-			</Location>
-			<Rotation>
-				<count>3</count>
-				<item>0.000000000e+00</item>
-				<item>-0.000000000e+00</item>
-				<item>0.000000000e+00</item>
-			</Rotation>
-			<Scale>
-				<count>3</count>
-				<item>6.000000000e+00</item>
-				<item>1.000000000e+00</item>
-				<item>6.000000000e+00</item>
+				<item>4.000000060e-01</item>
+				<item>4.000000060e-01</item>
+				<item>4.000000060e-01</item>
 			</Scale>
 		</item>
 	</mSceneObjectInfo>
-	<mMeshInfo class_id="7" tracking_level="0" version="0">
-		<count>9</count>
+	<mMeshInfo class_id="6" tracking_level="0" version="0">
+		<count>11</count>
 		<item_version>0</item_version>
-		<item class_id="8" tracking_level="0" version="0">
+		<item class_id="7" tracking_level="0" version="0">
 			<MeshUniqueName>Box</MeshUniqueName>
 			<MaterialUniqueName>
 				<count>1</count>
 				<item_version>0</item_version>
-				<item>
+				<item class_id="8" tracking_level="0" version="0">
 					<str1>Box</str1>
 					<str2>Default</str2>
 				</item>
@@ -368,7 +334,7 @@
 				<item_version>0</item_version>
 				<item>
 					<str1>08 - Default</str1>
-					<str2>Default</str2>
+					<str2>Content\Material\Cerberus.gmat</str2>
 				</item>
 			</MaterialUniqueName>
 		</item>
@@ -417,7 +383,7 @@
 			</MaterialUniqueName>
 		</item>
 		<item>
-			<MeshUniqueName>Content\Models\Rifle_2\Rifle_2.fbx</MeshUniqueName>
+			<MeshUniqueName>Content\Models\Cube.fbx</MeshUniqueName>
 			<MaterialUniqueName>
 				<count>1</count>
 				<item_version>0</item_version>
@@ -446,6 +412,28 @@
 				<item>
 					<str1>lambert1</str1>
 					<str2>Default</str2>
+				</item>
+			</MaterialUniqueName>
+		</item>
+		<item>
+			<MeshUniqueName>Content\Models\Rifle_2\Rifle_2.fbx</MeshUniqueName>
+			<MaterialUniqueName>
+				<count>1</count>
+				<item_version>0</item_version>
+				<item>
+					<str1>lambert1</str1>
+					<str2>Default</str2>
+				</item>
+			</MaterialUniqueName>
+		</item>
+		<item>
+			<MeshUniqueName>Content\Models\UserQuad.fbx</MeshUniqueName>
+			<MaterialUniqueName>
+				<count>1</count>
+				<item_version>0</item_version>
+				<item>
+					<str1>lambert1</str1>
+					<str2>Content\Material\MetalGrid.gmat</str2>
 				</item>
 			</MaterialUniqueName>
 		</item>

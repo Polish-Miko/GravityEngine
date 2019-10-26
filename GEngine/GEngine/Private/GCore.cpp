@@ -133,7 +133,8 @@ void GCore::Initialize(HWND OutputWindow, double width, double height)
 				LoadSceneObjects();
 				mRenderer->SyncSceneObjects(mSceneObjects, mSceneObjectLayer);
 				LoadCameras();
-				std::vector<GRiCamera*> cam = {
+				std::vector<GRiCamera*> cam =
+				{
 					mCamera.get(),
 					mCubemapSampleCamera[0].get(),
 					mCubemapSampleCamera[1].get(),
@@ -145,7 +146,6 @@ void GCore::Initialize(HWND OutputWindow, double width, double height)
 				mRenderer->SyncCameras(cam);
 
 				mRenderer->Initialize();
-
 			}
 			catch (DxException& e)
 			{

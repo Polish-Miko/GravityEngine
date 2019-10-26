@@ -24,7 +24,9 @@
 #include "Public/GRiBoundingBox.h"
 #include "Public/GRiOcclusionCullingRasterizer.h"
 #include "Public/GRiKdTree.h"
+#include "Public/GRiRay.h"
 
 #define MAX_TEXTURE_NUM 1024
 #define MAX_MATERIAL_NUM 1024
 #define MAX_SCENE_OBJECT_NUM 2048
+#define MAX_MESH_NUM 2048
