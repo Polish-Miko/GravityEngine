@@ -40,7 +40,7 @@ VertexOut main(VertexIn vin)
 
 	// Set z = w so that z/w = 1 (i.e., skydome always on far plane).
 	vout.PosH = mul(posW, gViewProj).xyww;
-	vout.PosH.z = vout.PosH.w * FAR_Z_UNORM;
+	vout.PosH.z = vout.PosH.w * FAR_Z_NORM;
 	vout.curPos = mul(posW, gUnjitteredViewProj);
 	vout.prevPos = mul(prevPosW, gPrevViewProj);
 	

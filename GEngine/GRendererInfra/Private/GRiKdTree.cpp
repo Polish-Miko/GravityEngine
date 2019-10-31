@@ -590,8 +590,8 @@ bool GRiKdPrimitive::Intersect(const GRiRay &ray, float *tHit, bool& bBackface)
 	else // This means that there is a line intersection but not a ray intersection.
 		return false;
 	*/
-	static GGiFloat3 vPos[3], rayDir, rayOrigin, u, v, norm, w0, interPoint, w;
-	static float b, a, r, uu, uv, vv, wu, wv, D, s, t;
+	GGiFloat3 vPos[3], rayDir, rayOrigin, u, v, norm, w0, interPoint, w;
+	float b, a, r, uu, uv, vv, wu, wv, D, s, t;
 	vPos[0] = GGiFloat3(vertices[0]->Position[0], vertices[0]->Position[1], vertices[0]->Position[2]);
 	vPos[1] = GGiFloat3(vertices[1]->Position[0], vertices[1]->Position[1], vertices[1]->Position[2]);
 	vPos[2] = GGiFloat3(vertices[2]->Position[0], vertices[2]->Position[1], vertices[2]->Position[2]);

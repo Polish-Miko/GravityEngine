@@ -289,8 +289,12 @@
 		<item class_id="4" tracking_level="0" version="0">
 			<UniqueName>NewSceneObject_4</UniqueName>
 			<OverrideMaterialUniqueName class_id="5" tracking_level="0" version="0">
-				<count>0</count>
+				<count>1</count>
 				<item_version>0</item_version>
+				<item class_id="6" tracking_level="0" version="0">
+					<str1>lambert1</str1>
+					<str2>Content\Material\DarkTiles.gmat</str2>
+				</item>
 			</OverrideMaterialUniqueName>
 			<MeshUniqueName>Content\Models\Cube.fbx</MeshUniqueName>
 			<Location>
@@ -313,15 +317,15 @@
 			</Scale>
 		</item>
 	</mSceneObjectInfo>
-	<mMeshInfo class_id="6" tracking_level="0" version="0">
+	<mMeshInfo class_id="7" tracking_level="0" version="0">
 		<count>11</count>
 		<item_version>0</item_version>
-		<item class_id="7" tracking_level="0" version="0">
+		<item class_id="8" tracking_level="0" version="0">
 			<MeshUniqueName>Box</MeshUniqueName>
 			<MaterialUniqueName>
 				<count>1</count>
 				<item_version>0</item_version>
-				<item class_id="8" tracking_level="0" version="0">
+				<item>
 					<str1>Box</str1>
 					<str2>Default</str2>
 				</item>

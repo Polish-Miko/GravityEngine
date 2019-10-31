@@ -161,8 +161,6 @@ void GDxRenderer::Initialize()
 
 	CubemapPreIntegration();
 
-	BuildMeshSDF();
-
 	// Execute the initialization commands.
 	ThrowIfFailed(mCommandList->Close());
 	ID3D12CommandList* cmdsLists[] = { mCommandList.Get() };
@@ -182,6 +180,8 @@ void GDxRenderer::Initialize()
 		false
 #endif
 	);
+
+	BuildMeshSDF();
 }
 
 void GDxRenderer::Draw(const GGiGameTimer* gt)
@@ -628,6 +628,45 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 	}
 #endif
 
+	// SDF Debug Pass
+#if 1
+	{
+		GDxGpuProfiler::GetGpuProfiler().StartGpuProfile("SDF Debug Pass");
+
+		ID3D12DescriptorHeap* sdfSrvDescriptorHeaps[] = { mSdfSrvDescriptorHeap.Get() };
+		mCommandList->SetDescriptorHeaps(_countof(sdfSrvDescriptorHeaps), sdfSrvDescriptorHeaps);
+
+		mCommandList->RSSetViewports(1, &mScreenViewport);
+		mCommandList->RSSetScissorRects(1, &mScissorRect);
+
+		mCommandList->SetGraphicsRootSignature(mRootSignatures["SdfDebug"].Get());
+
+		mCommandList->SetPipelineState(mPSOs["SdfDebug"].Get());
+
+		mCommandList->SetGraphicsRoot32BitConstant(0, mSceneObjectSdfNum, 0);
+
+		auto meshSdfDesBuffer = mMeshSdfDescriptorBuffer->Resource();
+		mCommandList->SetGraphicsRootShaderResourceView(1, meshSdfDesBuffer->GetGPUVirtualAddress());
+
+		auto soSdfDesBuffer = mCurrFrameResource->SceneObjectSdfDescriptorBuffer->Resource();
+		mCommandList->SetGraphicsRootShaderResourceView(2, soSdfDesBuffer->GetGPUVirtualAddress());
+
+		mCommandList->SetGraphicsRootDescriptorTable(3, CD3DX12_GPU_DESCRIPTOR_HANDLE(mSdfSrvDescriptorHeap->GetGPUDescriptorHandleForHeapStart()));
+
+		auto passCB = mCurrFrameResource->PassCB->Resource();
+		mCommandList->SetGraphicsRootConstantBufferView(4, passCB->GetGPUVirtualAddress());
+
+		mCommandList->OMSetRenderTargets(1, &CurrentBackBufferView(), true, nullptr);
+
+		DrawSceneObjects(mCommandList.Get(), RenderLayer::ScreenQuad, false, false);
+
+		ID3D12DescriptorHeap* srvDescriptorHeaps[] = { mSrvDescriptorHeap.Get() };
+		mCommandList->SetDescriptorHeaps(_countof(srvDescriptorHeaps), srvDescriptorHeaps);
+
+		GDxGpuProfiler::GetGpuProfiler().EndGpuProfile("SDF Debug Pass");
+	}
+#endif
+
 	// Immediate Mode GUI Pass
 	{
 
@@ -709,6 +748,7 @@ void GDxRenderer::Update(const GGiGameTimer* gt)
 
 	UpdateObjectCBs(gt);
 	UpdateMaterialBuffer(gt);
+	UpdateSdfDescriptorBuffer(gt);
 	UpdateShadowTransform(gt);
 	UpdateMainPassCB(gt);
 	UpdateSkyPassCB(gt);
@@ -1120,6 +1160,30 @@ void GDxRenderer::UpdateMaterialBuffer(const GGiGameTimer* gt)
 			mat->NumFramesDirty--;
 		}
 	}
+}
+
+void GDxRenderer::UpdateSdfDescriptorBuffer(const GGiGameTimer* gt)
+{
+	auto currDescBuffer = mCurrFrameResource->SceneObjectSdfDescriptorBuffer.get();
+
+	int soSdfIndex = 0;
+	for (auto so : pSceneObjectLayer[(int)RenderLayer::Deferred])
+	{
+		if (so->GetMesh()->GetSdf() != nullptr && so->GetMesh()->GetSdf()->size() > 0)
+		{
+			mSceneObjectSdfDescriptors[soSdfIndex].SdfIndex = so->GetMesh()->mSdfIndex;
+			auto trans = GDx::GGiToDxMatrix(so->GetTransform());
+			DirectX::XMStoreFloat4x4(&mSceneObjectSdfDescriptors[soSdfIndex].objWorld, XMMatrixTranspose(trans));
+			auto invTrans = DirectX::XMMatrixInverse(&XMMatrixDeterminant(trans), trans);
+			DirectX::XMStoreFloat4x4(&mSceneObjectSdfDescriptors[soSdfIndex].objInvWorld, XMMatrixTranspose(invTrans));
+			auto invTrans_IT = XMMatrixTranspose(trans);
+			DirectX::XMStoreFloat4x4(&mSceneObjectSdfDescriptors[soSdfIndex].objInvWorld_IT, XMMatrixTranspose(invTrans_IT));
+			soSdfIndex++;
+		}
+	}
+	mSceneObjectSdfNum = soSdfIndex;
+
+	currDescBuffer->CopyData(0, mSceneObjectSdfDescriptors[0]);
 }
 
 void GDxRenderer::UpdateShadowTransform(const GGiGameTimer* gt)
@@ -1927,6 +1991,51 @@ void GDxRenderer::BuildRootSignature()
 			IID_PPV_ARGS(mRootSignatures["PostProcess"].GetAddressOf())));
 	}
 
+	// SDF debug signature
+	{
+		CD3DX12_DESCRIPTOR_RANGE range;
+		range.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, MAX_SCENE_OBJECT_NUM, 0, 1);
+
+		CD3DX12_ROOT_PARAMETER gSdfDebugRootParameters[5];
+		gSdfDebugRootParameters[0].InitAsConstants(1, 0);
+		gSdfDebugRootParameters[1].InitAsShaderResourceView(0, 0);
+		gSdfDebugRootParameters[2].InitAsShaderResourceView(1, 0);
+		gSdfDebugRootParameters[3].InitAsDescriptorTable(1, &range, D3D12_SHADER_VISIBILITY_ALL);
+		gSdfDebugRootParameters[4].InitAsConstantBufferView(1);
+
+		// A root signature is an array of root parameters.
+		CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(5, gSdfDebugRootParameters,
+			0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+
+		CD3DX12_STATIC_SAMPLER_DESC StaticSamplers[2];
+		StaticSamplers[0].Init(0, D3D12_FILTER_ANISOTROPIC);
+		StaticSamplers[1].Init(1, D3D12_FILTER_COMPARISON_MIN_MAG_MIP_LINEAR,
+			D3D12_TEXTURE_ADDRESS_MODE_BORDER,
+			D3D12_TEXTURE_ADDRESS_MODE_BORDER,
+			D3D12_TEXTURE_ADDRESS_MODE_BORDER,
+			0.f, 16u, D3D12_COMPARISON_FUNC_LESS_EQUAL);
+		rootSigDesc.NumStaticSamplers = 2;
+		rootSigDesc.pStaticSamplers = StaticSamplers;
+
+		// create a root signature with a single slot which points to a descriptor range consisting of a single constant buffer
+		ComPtr<ID3DBlob> serializedRootSig = nullptr;
+		ComPtr<ID3DBlob> errorBlob = nullptr;
+		HRESULT hr = D3D12SerializeRootSignature(&rootSigDesc, D3D_ROOT_SIGNATURE_VERSION_1,
+			serializedRootSig.GetAddressOf(), errorBlob.GetAddressOf());
+
+		if (errorBlob != nullptr)
+		{
+			::OutputDebugStringA((char*)errorBlob->GetBufferPointer());
+		}
+		ThrowIfFailed(hr);
+
+		ThrowIfFailed(md3dDevice->CreateRootSignature(
+			0,
+			serializedRootSig->GetBufferPointer(),
+			serializedRootSig->GetBufferSize(),
+			IID_PPV_ARGS(mRootSignatures["SdfDebug"].GetAddressOf())));
+	}
+
 	// Sky root signature
 	{
 		CD3DX12_DESCRIPTOR_RANGE texTable0;
@@ -2680,6 +2789,39 @@ void GDxRenderer::BuildPSOs()
 		ThrowIfFailed(md3dDevice->CreateGraphicsPipelineState(&PostProcessPsoDesc, IID_PPV_ARGS(&mPSOs["PostProcess"])));
 	}
 
+	// PSO for SDF debug.
+	{
+		D3D12_GRAPHICS_PIPELINE_STATE_DESC SdfDebugPsoDesc;
+
+		D3D12_DEPTH_STENCIL_DESC SdfDebugDSD;
+		SdfDebugDSD.DepthEnable = true;
+		SdfDebugDSD.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
+#if USE_REVERSE_Z
+		SdfDebugDSD.DepthFunc = D3D12_COMPARISON_FUNC_GREATER;
+#else
+		SdfDebugDSD.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
+#endif
+		SdfDebugDSD.StencilEnable = false;
+
+		ZeroMemory(&SdfDebugPsoDesc, sizeof(D3D12_GRAPHICS_PIPELINE_STATE_DESC));
+		SdfDebugPsoDesc.InputLayout.pInputElementDescs = GDxInputLayout::DefaultLayout;
+		SdfDebugPsoDesc.InputLayout.NumElements = _countof(GDxInputLayout::DefaultLayout);
+		SdfDebugPsoDesc.pRootSignature = mRootSignatures["SdfDebug"].Get();
+		SdfDebugPsoDesc.VS = GDxShaderManager::LoadShader(L"Shaders\\FullScreenVS.cso");
+		SdfDebugPsoDesc.PS = GDxShaderManager::LoadShader(L"Shaders\\SdfDebugPS.cso");
+		SdfDebugPsoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+		SdfDebugPsoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+		SdfDebugPsoDesc.DepthStencilState = SdfDebugDSD;
+		SdfDebugPsoDesc.SampleMask = UINT_MAX;
+		SdfDebugPsoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+		SdfDebugPsoDesc.NumRenderTargets = 1;
+		SdfDebugPsoDesc.RTVFormats[0] = mBackBufferFormat;
+		SdfDebugPsoDesc.SampleDesc.Count = 1;//m4xMsaaState ? 4 : 1;
+		SdfDebugPsoDesc.SampleDesc.Quality = 0;//m4xMsaaState ? (m4xMsaaQuality - 1) : 0;
+		SdfDebugPsoDesc.DSVFormat = mDepthStencilFormat;
+		ThrowIfFailed(md3dDevice->CreateGraphicsPipelineState(&SdfDebugPsoDesc, IID_PPV_ARGS(&mPSOs["SdfDebug"])));
+	}
+
 	// PSO for GBuffer debug layer.
 	{
 		D3D12_DEPTH_STENCIL_DESC gBufferDebugDSD;
@@ -3375,7 +3517,6 @@ void GDxRenderer::BuildMeshSDF()
 	int sdfIndex = 0;
 
 	mMeshSdfDescriptorBuffer = std::make_unique<GDxUploadBuffer<MeshSdfDescriptor>>(md3dDevice.Get(), MAX_MESH_NUM, true);
-	mSceneObjectSdfDescriptorBuffer = std::make_unique<GDxUploadBuffer<SceneObjectSdfDescriptor>>(md3dDevice.Get(), MAX_SCENE_OBJECT_NUM, true);
 
 	for (auto mesh : pMeshes)
 	{
@@ -3503,8 +3644,10 @@ void GDxRenderer::BuildMeshSDF()
 
 		dxMesh->InitializeSdf(sdf);
 
-		Microsoft::WRL::ComPtr<ID3D12Resource> sdfTexture = nullptr;
-		Microsoft::WRL::ComPtr<ID3D12Resource> sdfTextureUploadBuffer = nullptr;
+		ResetCommandList();
+
+		//Microsoft::WRL::ComPtr<ID3D12Resource> sdfTexture = nullptr;
+		//Microsoft::WRL::ComPtr<ID3D12Resource> sdfTextureUploadBuffer = nullptr;
 		D3D12_RESOURCE_DESC texDesc;
 		ZeroMemory(&texDesc, sizeof(D3D12_RESOURCE_DESC));
 		texDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE3D;
@@ -3526,9 +3669,9 @@ void GDxRenderer::BuildMeshSDF()
 			&texDesc,
 			D3D12_RESOURCE_STATE_COPY_DEST,
 			nullptr,
-			IID_PPV_ARGS(&sdfTexture)));
+			IID_PPV_ARGS(&mSdfTextures[sdfIndex])));
 
-		const UINT64 uploadBufferSize = GetRequiredIntermediateSize(sdfTexture.Get(), 0, 1);
+		const UINT64 uploadBufferSize = GetRequiredIntermediateSize(mSdfTextures[sdfIndex].Get(), 0, 1);
 
 		ThrowIfFailed(md3dDevice->CreateCommittedResource(
 			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
@@ -3536,15 +3679,15 @@ void GDxRenderer::BuildMeshSDF()
 			&CD3DX12_RESOURCE_DESC::Buffer(uploadBufferSize),
 			D3D12_RESOURCE_STATE_GENERIC_READ,
 			nullptr,
-			IID_PPV_ARGS(&sdfTextureUploadBuffer)));
+			IID_PPV_ARGS(&mSdfTextureUploadBuffer[sdfIndex])));
 
 		D3D12_SUBRESOURCE_DATA textureData = {};
 		textureData.pData = sdf.data();
 		textureData.RowPitch = static_cast<LONG_PTR>((4 * sdfRes));
 		textureData.SlicePitch = textureData.RowPitch * sdfRes;
 
-		UpdateSubresources(mCommandList.Get(), sdfTexture.Get(), sdfTextureUploadBuffer.Get(), 0, 0, 1, &textureData);
-		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(sdfTexture.Get(),
+		UpdateSubresources(mCommandList.Get(), mSdfTextures[sdfIndex].Get(), mSdfTextureUploadBuffer[sdfIndex].Get(), 0, 0, 1, &textureData);
+		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mSdfTextures[sdfIndex].Get(),
 			D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE));
 
 		D3D12_SHADER_RESOURCE_VIEW_DESC sdfSrvDesc = {};
@@ -3552,15 +3695,19 @@ void GDxRenderer::BuildMeshSDF()
 		sdfSrvDesc.Format = DXGI_FORMAT_R32_FLOAT;
 		sdfSrvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE3D;
 		sdfSrvDesc.Texture3D.MipLevels = 1;
-		md3dDevice->CreateShaderResourceView(sdfTexture.Get(), &sdfSrvDesc, hDescriptor);
+		md3dDevice->CreateShaderResourceView(mSdfTextures[sdfIndex].Get(), &sdfSrvDesc, hDescriptor);
 		hDescriptor.Offset(mCbvSrvUavDescriptorSize);
 
 		dxMesh->mSdfIndex = sdfIndex;
-		sdfIndex++;
+		mMeshSdfDescriptors[sdfIndex].HalfExtent = 0.5f * sdfExtent;
 		mMeshSdfDescriptors[sdfIndex].Radius = 0.707f * sdfExtent;
 		mMeshSdfDescriptors[sdfIndex].Resolution = sdfRes;
+		sdfIndex++;
+
+		ExecuteCommandList();
 	}
 
+	/*
 	int soSdfIndex = 0;
 	for (auto so : pSceneObjectLayer[(int)RenderLayer::Deferred])
 	{
@@ -3572,11 +3719,13 @@ void GDxRenderer::BuildMeshSDF()
 			soSdfIndex++;
 		}
 	}
+	mSceneObjectSdfNum = soSdfIndex;
+	*/
 
 	auto meshSdfBuffer = mMeshSdfDescriptorBuffer.get();
 	meshSdfBuffer->CopyData(0, mMeshSdfDescriptors[0]);
-	auto soSdfBuffer = mSceneObjectSdfDescriptorBuffer.get();
-	soSdfBuffer->CopyData(0, mSceneObjectSdfDescriptors[0]);
+	//auto soSdfBuffer = mSceneObjectSdfDescriptorBuffer.get();
+	//soSdfBuffer->CopyData(0, mSceneObjectSdfDescriptors[0]);
 	
 	/*
 	for (auto so : pSceneObjectLayer[(int)RenderLayer::Deferred])
@@ -3832,6 +3981,24 @@ void GDxRenderer::FlushCommandQueue()
 		WaitForSingleObject(eventHandle, INFINITE);
 		CloseHandle(eventHandle);
 	}
+}
+
+void GDxRenderer::ResetCommandList()
+{
+	auto cmdListAlloc = mCurrFrameResource->CmdListAlloc;
+	ThrowIfFailed(cmdListAlloc->Reset());
+	ThrowIfFailed(mCommandList->Reset(cmdListAlloc.Get(), mPSOs["GBuffer"].Get()));
+}
+
+void GDxRenderer::ExecuteCommandList()
+{
+	// Execute the commands.
+	ThrowIfFailed(mCommandList->Close());
+	ID3D12CommandList* cmdsLists[] = { mCommandList.Get() };
+	mCommandQueue->ExecuteCommandLists(_countof(cmdsLists), cmdsLists);
+
+	// Wait until command queue is complete.
+	FlushCommandQueue();
 }
 
 CD3DX12_CPU_DESCRIPTOR_HANDLE GDxRenderer::GetCpuSrv(int index)const

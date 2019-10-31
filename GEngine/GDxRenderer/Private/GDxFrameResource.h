@@ -98,6 +98,14 @@ struct MaterialData
 	DirectX::XMFLOAT4 VectorParams[MATERIAL_MAX_VECTOR_NUM];
 };
 
+struct SceneObjectSdfDescriptor
+{
+	DirectX::XMFLOAT4X4 objWorld;
+	DirectX::XMFLOAT4X4 objInvWorld;
+	DirectX::XMFLOAT4X4 objInvWorld_IT;
+	int SdfIndex;
+};
+
 struct Vertex
 {
 	DirectX::XMFLOAT3 Pos;
@@ -130,6 +138,7 @@ public:
 	std::unique_ptr<GDxUploadBuffer<SkyPassConstants>> SkyCB = nullptr;
 
 	std::unique_ptr<GDxUploadBuffer<MaterialData>> MaterialBuffer = nullptr;
+	std::unique_ptr<GDxUploadBuffer<SceneObjectSdfDescriptor>> SceneObjectSdfDescriptorBuffer = nullptr;
 
 	// Fence value to mark commands up to this fence point.  This lets us
 	// check if these frame resources are still in use by the GPU.

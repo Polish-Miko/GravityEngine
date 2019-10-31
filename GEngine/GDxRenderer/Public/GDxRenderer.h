@@ -62,14 +62,9 @@ struct LightList
 
 struct MeshSdfDescriptor
 {
+	float HalfExtent;
 	float Radius;
 	int Resolution;
-};
-
-struct SceneObjectSdfDescriptor
-{
-	DirectX::XMFLOAT4X4 Transform;
-	int SdfIndex;
 };
 
 // 8x TAA
@@ -140,6 +135,7 @@ protected:
 
 	void UpdateObjectCBs(const GGiGameTimer* gt);
 	void UpdateMaterialBuffer(const GGiGameTimer* gt);
+	void UpdateSdfDescriptorBuffer(const GGiGameTimer* gt);
 	void UpdateShadowTransform(const GGiGameTimer* gt);
 	void UpdateMainPassCB(const GGiGameTimer* gt);
 	void UpdateSkyPassCB(const GGiGameTimer* gt);
@@ -175,6 +171,9 @@ protected:
 	void CreateSwapChain();
 
 	void FlushCommandQueue();
+
+	void ResetCommandList();
+	void ExecuteCommandList();
 
 	ID3D12Resource* CurrentBackBuffer()const;
 	D3D12_CPU_DESCRIPTOR_HANDLE CurrentBackBufferView()const;
@@ -281,7 +280,11 @@ protected:
 	SceneObjectSdfDescriptor mSceneObjectSdfDescriptors[MAX_SCENE_OBJECT_NUM];
 
 	std::unique_ptr<GDxUploadBuffer<MeshSdfDescriptor>> mMeshSdfDescriptorBuffer;
-	std::unique_ptr<GDxUploadBuffer<SceneObjectSdfDescriptor>> mSceneObjectSdfDescriptorBuffer;
+
+	Microsoft::WRL::ComPtr<ID3D12Resource> mSdfTextures[MAX_SCENE_OBJECT_NUM] = { nullptr };
+	Microsoft::WRL::ComPtr<ID3D12Resource> mSdfTextureUploadBuffer[MAX_SCENE_OBJECT_NUM] = { nullptr };
+
+	UINT mSceneObjectSdfNum = 0;
 
 	DirectX::BoundingSphere mSceneBounds;
 
