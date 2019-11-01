@@ -29,6 +29,7 @@ cbuffer cbPass : register(b1)
 	float2 gJitter;
 	uint gPad0;
 	float4 gAmbientLight;
+	float4 gMainDirectionalLightDir;
 };
 
 #endif 

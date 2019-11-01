@@ -23,6 +23,8 @@
 //#define TILE_SIZE_X 16
 //#define TILE_SIZE_Y 16
 
+#define TEST 0
+
 StructuredBuffer<LightList> gLightList : register(t0);
 
 //G-Buffer
@@ -33,11 +35,13 @@ Texture2D gOrmTexture				: register(t4);
 
 Texture2D gDepthBuffer				: register(t5);
 
+Texture2D gShadowTexture			: register(t6);
+
 #define PREFILTER_MIP_LEVEL 5
 
-TextureCube skyIrradianceTexture	: register(t6);
-Texture2D	brdfLUTTexture			: register(t7);
-TextureCube skyPrefilterTexture[PREFILTER_MIP_LEVEL]	: register(t8);
+TextureCube skyIrradianceTexture	: register(t7);
+Texture2D	brdfLUTTexture			: register(t8);
+TextureCube skyPrefilterTexture[PREFILTER_MIP_LEVEL]	: register(t9);
 
 struct VertexToPixel
 {
@@ -183,7 +187,7 @@ float4 main(VertexToPixel pIn) : SV_TARGET
 	// Directional light.
 	for (i = 0; i < dirLightCount; i++)
 	{
-		float shadowAmount = 1.f;
+		float shadowAmount = gShadowTexture.Sample(basicSampler, pIn.uv).r;
 		float lightIntensity = dirLight[i].Intensity;
 		float3 toLight = normalize(-dirLight[i].Direction);
 		float3 lightColor = dirLight[i].DiffuseColor.rgb;
@@ -202,8 +206,8 @@ float4 main(VertexToPixel pIn) : SV_TARGET
 		irradiance, prefilter, brdf, shadowAmount);
 
 #if TEST
-	float test = depth / 50000.0f;
-	finalColor = float3(linearDepth, linearDepth, linearDepth);
+	float test = gShadowTexture.Sample(basicSampler, pIn.uv).r;
+	finalColor = float3(test, test, test);
 #endif
 
 	return float4(finalColor, 1.0f);

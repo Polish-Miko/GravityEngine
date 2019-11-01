@@ -228,7 +228,7 @@ protected:
 	ComPtr<ID3D12RootSignature> mSsaoRootSignature = nullptr;
 
 	ComPtr<ID3D12DescriptorHeap> mSrvDescriptorHeap = nullptr;
-	ComPtr<ID3D12DescriptorHeap> mSdfSrvDescriptorHeap = nullptr;
+	//ComPtr<ID3D12DescriptorHeap> mSdfSrvDescriptorHeap = nullptr;
 
 	std::unordered_map<std::string, std::unique_ptr<GDxUav>> mUavs;
 	std::unordered_map<std::string, std::unique_ptr<GDxRtvHeap>> mRtvHeaps;
@@ -240,6 +240,7 @@ protected:
 	GDxImgui* pImgui = nullptr;
 
 	UINT mTextrueHeapIndex = 0;
+	UINT mSdfTextrueIndex = 0;
 	UINT mSkyTexHeapIndex = 0;
 	UINT mShadowMapHeapIndex = 0;
 	UINT mSsaoHeapIndexStart = 0;
@@ -256,6 +257,7 @@ protected:
 	UINT mVelocityBufferSrvIndex = 0;
 	UINT mGBufferSrvIndex = 0;
 	UINT mTileClusterSrvIndex = 0;
+	UINT mScreenSpaceShadowPassSrvIndex = 0;
 	UINT mLightPassSrvIndex = 0;
 	UINT mSkyPassSrvIndex = 0;
 	UINT mTaaPassSrvIndex = 0;

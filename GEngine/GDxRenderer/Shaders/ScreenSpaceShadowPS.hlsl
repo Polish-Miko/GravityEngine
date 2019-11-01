@@ -5,8 +5,12 @@
 #define MAX_SCENE_OBJECT_NUM 2048
 
 #define MAX_STEP 200
+#define MAX_DISTANCE 2000.0f
 #define ACCUM_DENSITY 0.1f
-#define RAY_MARCH_DIS 10.0f
+#define STEP_LENGTH 10.0f
+#define MIN_STEP_LENGTH 5.0f
+
+#define CONE_TANGENT 10.0f
 
 struct VertexToPixel
 {
@@ -59,48 +63,78 @@ float3 ReconstructWorldPos(float2 uv, float depth)
 float main(VertexToPixel pIn) : SV_TARGET
 {
 
-	/*
-	float3 origin = ReconstructWorldPos(pIn.uv, NEAR_Z_NORM);
-	float3 dest = ReconstructWorldPos(pIn.uv, 0.5f);
-	float3 dir = normalize(dest - origin) * RAY_MARCH_DIS;
+	float depthBuffer = gDepthBuffer.Sample(basicSampler, pIn.uv).r;
+	float3 origin = ReconstructWorldPos(pIn.uv, depthBuffer);
+	float3 dir = -normalize(gMainDirectionalLightDir.xyz) * STEP_LENGTH;
 
-	float alpha = 0.0f;
+	float shadow = 1.0f;
 	for (int i = 0; i < gSceneObjectNum; i++)
 	{
 		int sdfInd = gSceneObjectSdfDescriptors[i].SdfIndex;
 
-		float3 objDir = mul(dir, (float3x3)(gSceneObjectSdfDescriptors[i].objInvWorld_IT));
 		float3 objOrigin = mul(origin, gSceneObjectSdfDescriptors[i].objInvWorld);
 		float3 currPos = objOrigin;
 
+		float3 objDir = mul(dir, (float3x3)(gSceneObjectSdfDescriptors[i].objInvWorld_IT));
+		float stepLength = length(objDir);
+		objDir = normalize(objDir);
+
+		float totalDis = 0.0f;
+
 		// March.
 		float rcpHalfExtent = rcp(gMeshSdfDescriptors[sdfInd].HalfExtent);
-		for (int step = 0; step < MAX_STEP; step++)
+		for (int step = 0; step < MAX_STEP && totalDis < MAX_DISTANCE; step++)
 		{
-			currPos += objDir;
+			currPos = objOrigin + objDir * totalDis;
+
 			float3 pos = (currPos * rcpHalfExtent) * 0.5f + 0.5f;
+
 			if (pos.x < 0 || pos.x > 1 ||
 				pos.y < 0 || pos.y > 1 ||
 				pos.z < 0 || pos.z > 1)
+			{
+				totalDis += stepLength;
 				continue;
+			}
 
-			// Accumulate the distance as a density.
 			float dist = gSdfTextures[sdfInd].Sample(basicSampler, pos).r;
-			float dens = saturate(-dist) * ACCUM_DENSITY;
 
-			alpha += saturate(dens);
+			dist = clamp(dist, MIN_STEP_LENGTH, dist + 1);
+			totalDis += dist;
+			shadow = min(shadow, saturate(CONE_TANGENT * dist / totalDis));
 		}
+
+		/*
+		float prevDist = 1e10;
+
+		float rcpHalfExtent = rcp(gMeshSdfDescriptors[sdfInd].HalfExtent);
+		for (int step = 0; step < MAX_STEP && totalDis < MAX_DISTANCE; step++)
+		{
+			currPos = objOrigin + objDir * totalDis;
+
+			float3 pos = (currPos * rcpHalfExtent) * 0.5f + 0.5f;
+
+			if (pos.x < 0 || pos.x > 1 ||
+				pos.y < 0 || pos.y > 1 ||
+				pos.z < 0 || pos.z > 1)
+			{
+				totalDis += stepLength;
+				continue;
+			}
+
+			float dist = gSdfTextures[sdfInd].Sample(basicSampler, pos).r;
+
+			float y = dist * dist / (2.0 * prevDist);
+			float d = sqrt(dist * dist - y * y);
+
+			totalDis += clamp(dist, MIN_STEP_LENGTH, dist + 1);
+
+			shadow = min(shadow, 10.0 * d / max(0.0, totalDis - y));
+		}
+		*/
 	}
-
-	return float4(alpha, alpha, alpha, 1.0f);
-	*/
-
-	//origin = 深度还原世界坐标;
-	//dir = 光源方向;
-
-	//cone trace.
 	
-	return 1.0f;
+	return shadow;
 
 }
 

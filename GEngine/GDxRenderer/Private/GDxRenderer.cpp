@@ -371,6 +371,60 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 #endif
 	}
 
+	// Screen Space Shadow Pass
+	{
+		GDxGpuProfiler::GetGpuProfiler().StartGpuProfile("Screen Space Shadow Pass");
+
+		//ID3D12DescriptorHeap* sdfSrvDescriptorHeaps[] = { mSdfSrvDescriptorHeap.Get() };
+		//mCommandList->SetDescriptorHeaps(_countof(sdfSrvDescriptorHeaps), sdfSrvDescriptorHeaps);
+
+		mCommandList->RSSetViewports(1, &mScreenViewport);
+		mCommandList->RSSetScissorRects(1, &mScissorRect);
+
+		mCommandList->SetGraphicsRootSignature(mRootSignatures["ScreenSpaceShadowPass"].Get());
+
+		mCommandList->SetPipelineState(mPSOs["ScreenSpaceShadowPass"].Get());
+
+		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["ScreenSpaceShadowPass"]->mRtv[0]->mResource.Get(),
+			D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_RENDER_TARGET));
+
+		mCommandList->SetGraphicsRoot32BitConstant(0, mSceneObjectSdfNum, 0);
+
+		auto meshSdfDesBuffer = mMeshSdfDescriptorBuffer->Resource();
+		mCommandList->SetGraphicsRootShaderResourceView(1, meshSdfDesBuffer->GetGPUVirtualAddress());
+
+		auto soSdfDesBuffer = mCurrFrameResource->SceneObjectSdfDescriptorBuffer->Resource();
+		mCommandList->SetGraphicsRootShaderResourceView(2, soSdfDesBuffer->GetGPUVirtualAddress());
+
+		mCommandList->SetGraphicsRootDescriptorTable(3, GetGpuSrv(mDepthBufferSrvIndex));
+
+		mCommandList->SetGraphicsRootDescriptorTable(4, GetGpuSrv(mSdfTextrueIndex));
+
+		auto passCB = mCurrFrameResource->PassCB->Resource();
+		mCommandList->SetGraphicsRootConstantBufferView(5, passCB->GetGPUVirtualAddress());
+
+		mCommandList->OMSetRenderTargets(1, &mRtvHeaps["ScreenSpaceShadowPass"]->mRtvHeap.handleCPU(0), false, nullptr);
+
+		// Clear the render target.
+		DirectX::XMVECTORF32 clearColor = { mRtvHeaps["ScreenSpaceShadowPass"]->mRtv[0]->mProperties.mClearColor[0],
+		mRtvHeaps["ScreenSpaceShadowPass"]->mRtv[0]->mProperties.mClearColor[1],
+		mRtvHeaps["ScreenSpaceShadowPass"]->mRtv[0]->mProperties.mClearColor[2],
+		mRtvHeaps["ScreenSpaceShadowPass"]->mRtv[0]->mProperties.mClearColor[3]
+		};
+
+		mCommandList->ClearRenderTargetView(mRtvHeaps["ScreenSpaceShadowPass"]->mRtvHeap.handleCPU(0), clearColor, 0, nullptr);
+
+		DrawSceneObjects(mCommandList.Get(), RenderLayer::ScreenQuad, false, false);
+
+		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["ScreenSpaceShadowPass"]->mRtv[0]->mResource.Get(),
+			D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_GENERIC_READ));
+
+		//ID3D12DescriptorHeap* srvDescriptorHeaps[] = { mSrvDescriptorHeap.Get() };
+		//mCommandList->SetDescriptorHeaps(_countof(srvDescriptorHeaps), srvDescriptorHeaps);
+
+		GDxGpuProfiler::GetGpuProfiler().EndGpuProfile("Screen Space Shadow Pass");
+	}
+
 	// Light Pass
 	{
 		GDxGpuProfiler::GetGpuProfiler().StartGpuProfile("Light Pass");
@@ -397,7 +451,9 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 
 		mCommandList->SetGraphicsRootDescriptorTable(4, GetGpuSrv(mDepthBufferSrvIndex));
 
-		mCommandList->SetGraphicsRootDescriptorTable(5, GetGpuSrv(mIblIndex));
+		mCommandList->SetGraphicsRootDescriptorTable(5, mRtvHeaps["ScreenSpaceShadowPass"]->GetSrvGpuStart());
+
+		mCommandList->SetGraphicsRootDescriptorTable(6, GetGpuSrv(mIblIndex));
 
 		mCommandList->OMSetRenderTargets(1, &mRtvHeaps["LightPass"]->mRtvHeap.handleCPU(0), false, nullptr);
 
@@ -629,12 +685,12 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 #endif
 
 	// SDF Debug Pass
-#if 1
+#if 0
 	{
 		GDxGpuProfiler::GetGpuProfiler().StartGpuProfile("SDF Debug Pass");
 
-		ID3D12DescriptorHeap* sdfSrvDescriptorHeaps[] = { mSdfSrvDescriptorHeap.Get() };
-		mCommandList->SetDescriptorHeaps(_countof(sdfSrvDescriptorHeaps), sdfSrvDescriptorHeaps);
+		//ID3D12DescriptorHeap* sdfSrvDescriptorHeaps[] = { mSdfSrvDescriptorHeap.Get() };
+		//mCommandList->SetDescriptorHeaps(_countof(sdfSrvDescriptorHeaps), sdfSrvDescriptorHeaps);
 
 		mCommandList->RSSetViewports(1, &mScreenViewport);
 		mCommandList->RSSetScissorRects(1, &mScissorRect);
@@ -651,7 +707,7 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 		auto soSdfDesBuffer = mCurrFrameResource->SceneObjectSdfDescriptorBuffer->Resource();
 		mCommandList->SetGraphicsRootShaderResourceView(2, soSdfDesBuffer->GetGPUVirtualAddress());
 
-		mCommandList->SetGraphicsRootDescriptorTable(3, CD3DX12_GPU_DESCRIPTOR_HANDLE(mSdfSrvDescriptorHeap->GetGPUDescriptorHandleForHeapStart()));
+		mCommandList->SetGraphicsRootDescriptorTable(3, GetGpuSrv(mSdfTextrueIndex));
 
 		auto passCB = mCurrFrameResource->PassCB->Resource();
 		mCommandList->SetGraphicsRootConstantBufferView(4, passCB->GetGPUVirtualAddress());
@@ -660,8 +716,8 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 
 		DrawSceneObjects(mCommandList.Get(), RenderLayer::ScreenQuad, false, false);
 
-		ID3D12DescriptorHeap* srvDescriptorHeaps[] = { mSrvDescriptorHeap.Get() };
-		mCommandList->SetDescriptorHeaps(_countof(srvDescriptorHeaps), srvDescriptorHeaps);
+		//ID3D12DescriptorHeap* srvDescriptorHeaps[] = { mSrvDescriptorHeap.Get() };
+		//mCommandList->SetDescriptorHeaps(_countof(srvDescriptorHeaps), srvDescriptorHeaps);
 
 		GDxGpuProfiler::GetGpuProfiler().EndGpuProfile("SDF Debug Pass");
 	}
@@ -1295,6 +1351,7 @@ void GDxRenderer::UpdateMainPassCB(const GGiGameTimer* gt)
 	mMainPassCB.FrameCount = mFrameCount;
 	mMainPassCB.Jitter = XMFLOAT2((float)(JitterX / 2), (float)(-JitterY / 2));//negate Y because world coord and tex coord have different Y axis.
 	mMainPassCB.AmbientLight = { 0.4f, 0.4f, 0.6f, 1.0f };
+	mMainPassCB.MainDirectionalLightDir = { 0.57735f, -0.57735f, -0.57735f, 0.0f };
 
 	auto currPassCB = mCurrFrameResource->PassCB.get();
 	currPassCB->CopyData(0, mMainPassCB);
@@ -1781,6 +1838,55 @@ void GDxRenderer::BuildRootSignature()
 			IID_PPV_ARGS(mRootSignatures["TileClusterPass"].GetAddressOf())));
 	}
 
+	// Screen space shadow pass signature
+	{
+		CD3DX12_DESCRIPTOR_RANGE range;
+		range.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, MAX_SCENE_OBJECT_NUM, 0, 1);
+
+		CD3DX12_DESCRIPTOR_RANGE rangeDepth;
+		rangeDepth.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, (UINT)1, 2);
+
+		CD3DX12_ROOT_PARAMETER gScreenSpaceShadowRootParameters[6];
+		gScreenSpaceShadowRootParameters[0].InitAsConstants(1, 0);
+		gScreenSpaceShadowRootParameters[1].InitAsShaderResourceView(0, 0);
+		gScreenSpaceShadowRootParameters[2].InitAsShaderResourceView(1, 0);
+		gScreenSpaceShadowRootParameters[3].InitAsDescriptorTable(1, &rangeDepth, D3D12_SHADER_VISIBILITY_ALL);
+		gScreenSpaceShadowRootParameters[4].InitAsDescriptorTable(1, &range, D3D12_SHADER_VISIBILITY_ALL);
+		gScreenSpaceShadowRootParameters[5].InitAsConstantBufferView(1);
+
+		// A root signature is an array of root parameters.
+		CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(6, gScreenSpaceShadowRootParameters,
+			0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+
+		CD3DX12_STATIC_SAMPLER_DESC StaticSamplers[2];
+		StaticSamplers[0].Init(0, D3D12_FILTER_ANISOTROPIC);
+		StaticSamplers[1].Init(1, D3D12_FILTER_COMPARISON_MIN_MAG_MIP_LINEAR,
+			D3D12_TEXTURE_ADDRESS_MODE_BORDER,
+			D3D12_TEXTURE_ADDRESS_MODE_BORDER,
+			D3D12_TEXTURE_ADDRESS_MODE_BORDER,
+			0.f, 16u, D3D12_COMPARISON_FUNC_LESS_EQUAL);
+		rootSigDesc.NumStaticSamplers = 2;
+		rootSigDesc.pStaticSamplers = StaticSamplers;
+
+		// create a root signature with a single slot which points to a descriptor range consisting of a single constant buffer
+		ComPtr<ID3DBlob> serializedRootSig = nullptr;
+		ComPtr<ID3DBlob> errorBlob = nullptr;
+		HRESULT hr = D3D12SerializeRootSignature(&rootSigDesc, D3D_ROOT_SIGNATURE_VERSION_1,
+			serializedRootSig.GetAddressOf(), errorBlob.GetAddressOf());
+
+		if (errorBlob != nullptr)
+		{
+			::OutputDebugStringA((char*)errorBlob->GetBufferPointer());
+		}
+		ThrowIfFailed(hr);
+
+		ThrowIfFailed(md3dDevice->CreateRootSignature(
+			0,
+			serializedRootSig->GetBufferPointer(),
+			serializedRootSig->GetBufferSize(),
+			IID_PPV_ARGS(mRootSignatures["ScreenSpaceShadowPass"].GetAddressOf())));
+	}
+
 	// Light pass signature
 	{
 		//Output
@@ -1795,20 +1901,25 @@ void GDxRenderer::BuildRootSignature()
 		CD3DX12_DESCRIPTOR_RANGE rangeDepth;
 		rangeDepth.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, (UINT)1, mRtvHeaps["GBuffer"]->mRtvHeap.HeapDesc.NumDescriptors + 1);
 
+		//Shadow inputs
+		CD3DX12_DESCRIPTOR_RANGE rangeShadow;
+		rangeShadow.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, (UINT)1, mRtvHeaps["GBuffer"]->mRtvHeap.HeapDesc.NumDescriptors + 2);
+
 		//IBL inputs
 		CD3DX12_DESCRIPTOR_RANGE rangeIBL;
-		rangeIBL.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, (UINT)mPrefilterLevels + (UINT)1 + (UINT)1, mRtvHeaps["GBuffer"]->mRtvHeap.HeapDesc.NumDescriptors + 2);
+		rangeIBL.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, (UINT)mPrefilterLevels + (UINT)1 + (UINT)1, mRtvHeaps["GBuffer"]->mRtvHeap.HeapDesc.NumDescriptors + 3);
 
-		CD3DX12_ROOT_PARAMETER gLightPassRootParameters[6];
+		CD3DX12_ROOT_PARAMETER gLightPassRootParameters[7];
 		gLightPassRootParameters[0].InitAsConstantBufferView(0);
 		gLightPassRootParameters[1].InitAsConstantBufferView(1);
 		gLightPassRootParameters[2].InitAsDescriptorTable(1, &rangeUav, D3D12_SHADER_VISIBILITY_ALL);
 		gLightPassRootParameters[3].InitAsDescriptorTable(1, &range, D3D12_SHADER_VISIBILITY_ALL);
 		gLightPassRootParameters[4].InitAsDescriptorTable(1, &rangeDepth, D3D12_SHADER_VISIBILITY_ALL);
-		gLightPassRootParameters[5].InitAsDescriptorTable(1, &rangeIBL, D3D12_SHADER_VISIBILITY_ALL);
+		gLightPassRootParameters[5].InitAsDescriptorTable(1, &rangeShadow, D3D12_SHADER_VISIBILITY_ALL);
+		gLightPassRootParameters[6].InitAsDescriptorTable(1, &rangeIBL, D3D12_SHADER_VISIBILITY_ALL);
 
 		// A root signature is an array of root parameters.
-		CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(6, gLightPassRootParameters,
+		CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(7, gLightPassRootParameters,
 			0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
 		CD3DX12_STATIC_SAMPLER_DESC StaticSamplers[2];
@@ -2206,6 +2317,7 @@ void GDxRenderer::BuildDescriptorHeaps()
 	//
 	D3D12_DESCRIPTOR_HEAP_DESC srvHeapDesc = {};
 	srvHeapDesc.NumDescriptors = MAX_TEXTURE_NUM
+		+ MAX_SCENE_OBJECT_NUM //sdf textures
 		+ 1 //imgui
 		+ 1 //sky cubemap
 		+ 1 //depth buffer
@@ -2213,6 +2325,7 @@ void GDxRenderer::BuildDescriptorHeaps()
 		+ 1 //stencil buffer
 		+ 4 //g-buffer
 		+ 2 //tile/cluster pass srv and uav
+		+ 1 //screen space shadow
 		+ 1 //light pass
 		+ 3 //taa
 		+ 1 //motion blur
@@ -2220,15 +2333,6 @@ void GDxRenderer::BuildDescriptorHeaps()
 	srvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 	srvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 	ThrowIfFailed(md3dDevice->CreateDescriptorHeap(&srvHeapDesc, IID_PPV_ARGS(&mSrvDescriptorHeap)));
-
-	//
-	// Create the SRV heap for SDF.
-	//
-	D3D12_DESCRIPTOR_HEAP_DESC sdfSrvHeapDesc = {};
-	sdfSrvHeapDesc.NumDescriptors = MAX_SCENE_OBJECT_NUM;
-	sdfSrvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-	sdfSrvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-	ThrowIfFailed(md3dDevice->CreateDescriptorHeap(&sdfSrvHeapDesc, IID_PPV_ARGS(&mSdfSrvDescriptorHeap)));
 	
 	//
 	// Fill out the heap with actual descriptors.
@@ -2356,9 +2460,36 @@ void GDxRenderer::BuildDescriptorHeaps()
 		mUavs["TileClusterPass"] = std::move(tileClusterPassUav);
 	}
 
+	// Build RTV and SRV for screen space shadow pass.
+	{
+		mScreenSpaceShadowPassSrvIndex = mTileClusterSrvIndex + mUavs["TileClusterPass"]->GetSize();
+
+		std::vector<DXGI_FORMAT> rtvFormats =
+		{
+			DXGI_FORMAT_R32_FLOAT// Direct light and ambient light
+		};
+		std::vector<std::vector<FLOAT>> rtvClearColor =
+		{
+			{ 1,1,1,1 }
+		};
+		std::vector<GRtvProperties> propVec;
+		for (auto i = 0u; i < rtvFormats.size(); i++)
+		{
+			GRtvProperties prop;
+			prop.mRtvFormat = rtvFormats[i];
+			prop.mClearColor[0] = rtvClearColor[i][0];
+			prop.mClearColor[1] = rtvClearColor[i][1];
+			prop.mClearColor[2] = rtvClearColor[i][2];
+			prop.mClearColor[3] = rtvClearColor[i][3];
+			propVec.push_back(prop);
+		}
+		auto screenSpaceShadowPassRtvHeap = std::make_unique<GDxRtvHeap>(md3dDevice.Get(), mClientWidth, mClientHeight, GetCpuSrv(mScreenSpaceShadowPassSrvIndex), GetGpuSrv(mScreenSpaceShadowPassSrvIndex), propVec);
+		mRtvHeaps["ScreenSpaceShadowPass"] = std::move(screenSpaceShadowPassRtvHeap);
+	}
+
 	// Build RTV and SRV for light pass.
 	{
-		mLightPassSrvIndex = mTileClusterSrvIndex + mUavs["TileClusterPass"]->GetSize();
+		mLightPassSrvIndex = mScreenSpaceShadowPassSrvIndex + (UINT)mRtvHeaps["ScreenSpaceShadowPass"]->mRtv.size();
 
 		std::vector<DXGI_FORMAT> rtvFormats =
 		{
@@ -2503,6 +2634,11 @@ void GDxRenderer::BuildDescriptorHeaps()
 			RegisterTexture(tex.second);
 		}
 	}
+
+	// Build SRV for SDF textures.
+	{
+		mSdfTextrueIndex = mTextrueHeapIndex + MAX_TEXTURE_NUM;
+	}
 }
 
 void GDxRenderer::BuildPSOs()
@@ -2628,6 +2764,39 @@ void GDxRenderer::BuildPSOs()
 #endif
 		computePsoDesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
 		ThrowIfFailed(md3dDevice->CreateComputePipelineState(&computePsoDesc, IID_PPV_ARGS(&mPSOs["TileClusterPass"])));
+	}
+
+	// PSO for screen space shadow pass.
+	{
+		D3D12_GRAPHICS_PIPELINE_STATE_DESC ScreenSpaceShadowPsoDesc;
+
+		D3D12_DEPTH_STENCIL_DESC ScreenSpaceShadowDSD;
+		ScreenSpaceShadowDSD.DepthEnable = true;
+		ScreenSpaceShadowDSD.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
+#if USE_REVERSE_Z
+		ScreenSpaceShadowDSD.DepthFunc = D3D12_COMPARISON_FUNC_GREATER;
+#else
+		ScreenSpaceShadowDSD.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
+#endif
+		ScreenSpaceShadowDSD.StencilEnable = false;
+
+		ZeroMemory(&ScreenSpaceShadowPsoDesc, sizeof(D3D12_GRAPHICS_PIPELINE_STATE_DESC));
+		ScreenSpaceShadowPsoDesc.InputLayout.pInputElementDescs = GDxInputLayout::DefaultLayout;
+		ScreenSpaceShadowPsoDesc.InputLayout.NumElements = _countof(GDxInputLayout::DefaultLayout);
+		ScreenSpaceShadowPsoDesc.pRootSignature = mRootSignatures["ScreenSpaceShadowPass"].Get();
+		ScreenSpaceShadowPsoDesc.VS = GDxShaderManager::LoadShader(L"Shaders\\FullScreenVS.cso");
+		ScreenSpaceShadowPsoDesc.PS = GDxShaderManager::LoadShader(L"Shaders\\ScreenSpaceShadowPS.cso");
+		ScreenSpaceShadowPsoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+		ScreenSpaceShadowPsoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+		ScreenSpaceShadowPsoDesc.DepthStencilState = ScreenSpaceShadowDSD;
+		ScreenSpaceShadowPsoDesc.SampleMask = UINT_MAX;
+		ScreenSpaceShadowPsoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+		ScreenSpaceShadowPsoDesc.NumRenderTargets = 1;
+		ScreenSpaceShadowPsoDesc.RTVFormats[0] = mRtvHeaps["ScreenSpaceShadowPass"]->mRtv[0]->mProperties.mRtvFormat;//light pass output
+		ScreenSpaceShadowPsoDesc.SampleDesc.Count = 1;//m4xMsaaState ? 4 : 1;
+		ScreenSpaceShadowPsoDesc.SampleDesc.Quality = 0;//m4xMsaaState ? (m4xMsaaQuality - 1) : 0;
+		ScreenSpaceShadowPsoDesc.DSVFormat = mDepthStencilFormat;
+		ThrowIfFailed(md3dDevice->CreateGraphicsPipelineState(&ScreenSpaceShadowPsoDesc, IID_PPV_ARGS(&mPSOs["ScreenSpaceShadowPass"])));
 	}
 
 	// PSO for light pass.
@@ -3512,7 +3681,7 @@ void GDxRenderer::BuildMeshSDF()
 	std::vector<std::shared_ptr<GRiKdPrimitive>> prims;
 	prims.clear();
 
-	CD3DX12_CPU_DESCRIPTOR_HANDLE hDescriptor(mSdfSrvDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
+	CD3DX12_CPU_DESCRIPTOR_HANDLE hDescriptor = GetCpuSrv(mSdfTextrueIndex);
 
 	int sdfIndex = 0;
 

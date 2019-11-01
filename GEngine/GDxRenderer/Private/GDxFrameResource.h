@@ -44,8 +44,9 @@ struct PassConstants
 	UINT FrameCount = 0u;
 	DirectX::XMFLOAT2 Jitter = { 0.0f,0.0f };
 	UINT     Pad0;
-
+	
 	DirectX::XMFLOAT4 AmbientLight = { 0.0f, 0.0f, 0.0f, 1.0f };
+	DirectX::XMFLOAT4 MainDirectionalLightDir = { 0.0f, -1.0f, 0.0f, 0.0f };
 };
 
 struct LightConstants

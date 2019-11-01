@@ -284,7 +284,7 @@
 		</item>
 	</mTextureInfo>
 	<mSceneObjectInfo class_id="3" tracking_level="0" version="0">
-		<count>1</count>
+		<count>2</count>
 		<item_version>0</item_version>
 		<item class_id="4" tracking_level="0" version="0">
 			<UniqueName>NewSceneObject_4</UniqueName>
@@ -314,6 +314,36 @@
 				<item>4.000000060e-01</item>
 				<item>4.000000060e-01</item>
 				<item>4.000000060e-01</item>
+			</Scale>
+		</item>
+		<item>
+			<UniqueName>NewSceneObject</UniqueName>
+			<OverrideMaterialUniqueName>
+				<count>1</count>
+				<item_version>0</item_version>
+				<item>
+					<str1>Grid</str1>
+					<str2>Content\Material\HardWoodBrown.gmat</str2>
+				</item>
+			</OverrideMaterialUniqueName>
+			<MeshUniqueName>Grid</MeshUniqueName>
+			<Location>
+				<count>3</count>
+				<item>0.000000000e+00</item>
+				<item>-2.000000000e+01</item>
+				<item>0.000000000e+00</item>
+			</Location>
+			<Rotation>
+				<count>3</count>
+				<item>0.000000000e+00</item>
+				<item>0.000000000e+00</item>
+				<item>0.000000000e+00</item>
+			</Rotation>
+			<Scale>
+				<count>3</count>
+				<item>1.000000000e+01</item>
+				<item>1.000000000e+01</item>
+				<item>1.000000000e+01</item>
 			</Scale>
 		</item>
 	</mSceneObjectInfo>
