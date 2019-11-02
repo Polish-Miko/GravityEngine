@@ -17,9 +17,31 @@ PBR
 
 ![PBR_3](https://github.com/MrySwk/GravityEngine/blob/master/screenshot/PBR_3.png)
 
+Manipulation Gizmo
+
+![Manipulation](https://github.com/MrySwk/GravityEngine/blob/master/screenshot/Manipulation.gif)
+
 Clustered Deferred (1000 lights)
 
 ![Clustered](https://github.com/MrySwk/GravityEngine/blob/master/screenshot/Clustered.jpg)
+
+Temporal Anti-Aliasing (before and after)
+
+![TAA_Before](https://github.com/MrySwk/GravityEngine/blob/master/screenshot/TAA_Before.jpg)
+
+![TAA_After](https://github.com/MrySwk/GravityEngine/blob/master/screenshot/TAA_After.jpg)
+
+Signed Distance Field
+
+![SDF_2](https://github.com/MrySwk/GravityEngine/blob/master/screenshot/SDF_Debug_1.png)
+
+![SDF_2](https://github.com/MrySwk/GravityEngine/blob/master/screenshot/SDF_Debug_2.png)
+
+SDF Ray-Traced Shadow
+
+![SDF_Shadow_1](https://github.com/MrySwk/GravityEngine/blob/master/screenshot/SDF_Shadow_1.png)
+
+![SDF_Shadow_2](https://github.com/MrySwk/GravityEngine/blob/master/screenshot/SDF_Shadow_2.gif)
 
 ## Dependencies
 

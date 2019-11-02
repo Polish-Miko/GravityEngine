@@ -4,38 +4,18 @@
 <Project class_id="0" tracking_level="0" version="0">
 	<mSkyCubemapUniqueName>Content\Textures\Cubemap\Lake.dds</mSkyCubemapUniqueName>
 	<mTextureInfo class_id="1" tracking_level="0" version="0">
-		<count>69</count>
+		<count>72</count>
 		<item_version>0</item_version>
 		<item class_id="2" tracking_level="0" version="0">
-			<UniqueFileName>Content\Models\Rifle_1\Rifle_1_Albedo.png</UniqueFileName>
-			<bSrgb>1</bSrgb>
-		</item>
-		<item>
-			<UniqueFileName>Resource\Textures\GE_Default_Orm.png</UniqueFileName>
+			<UniqueFileName>Content\Textures\Test2\Grimy_Metal_Orm.png</UniqueFileName>
 			<bSrgb>0</bSrgb>
 		</item>
 		<item>
-			<UniqueFileName>Content\Models\Helmet\Helmet_Albedo.png</UniqueFileName>
-			<bSrgb>1</bSrgb>
-		</item>
-		<item>
-			<UniqueFileName>Content\Textures\Cubemap\Lake.dds</UniqueFileName>
-			<bSrgb>1</bSrgb>
-		</item>
-		<item>
-			<UniqueFileName>Content\Models\Rifle_1\Rifle_1_Normal.png</UniqueFileName>
+			<UniqueFileName>Content\Models\Chair\Chair_Albedo.tga</UniqueFileName>
 			<bSrgb>0</bSrgb>
 		</item>
 		<item>
-			<UniqueFileName>Content\Models\Helmet\Helmet_Normal.png</UniqueFileName>
-			<bSrgb>0</bSrgb>
-		</item>
-		<item>
-			<UniqueFileName>Content\Models\Rifle_2\Rifle_2_Orm.png</UniqueFileName>
-			<bSrgb>0</bSrgb>
-		</item>
-		<item>
-			<UniqueFileName>Content\Textures\Cerberus_Normal.png</UniqueFileName>
+			<UniqueFileName>Content\Models\Chair\Chair_Normal.tga</UniqueFileName>
 			<bSrgb>0</bSrgb>
 		</item>
 		<item>
@@ -55,6 +35,30 @@
 			<bSrgb>0</bSrgb>
 		</item>
 		<item>
+			<UniqueFileName>Content\Textures\Cubemap\Lake.dds</UniqueFileName>
+			<bSrgb>1</bSrgb>
+		</item>
+		<item>
+			<UniqueFileName>Content\Models\Rifle_1\Rifle_1_Normal.png</UniqueFileName>
+			<bSrgb>0</bSrgb>
+		</item>
+		<item>
+			<UniqueFileName>Content\Models\Helmet\Helmet_Normal.png</UniqueFileName>
+			<bSrgb>0</bSrgb>
+		</item>
+		<item>
+			<UniqueFileName>Content\Models\Chair\Chair_Orm.tga</UniqueFileName>
+			<bSrgb>0</bSrgb>
+		</item>
+		<item>
+			<UniqueFileName>Content\Models\Rifle_1\Rifle_1_Albedo.png</UniqueFileName>
+			<bSrgb>1</bSrgb>
+		</item>
+		<item>
+			<UniqueFileName>Content\Models\Helmet\Helmet_Albedo.png</UniqueFileName>
+			<bSrgb>1</bSrgb>
+		</item>
+		<item>
 			<UniqueFileName>Content\Textures\Test2\HardWoodBrown_Normal.png</UniqueFileName>
 			<bSrgb>0</bSrgb>
 		</item>
@@ -64,6 +68,14 @@
 		</item>
 		<item>
 			<UniqueFileName>Content\Models\Rifle_2\Rifle_2_Normal.jpg</UniqueFileName>
+			<bSrgb>0</bSrgb>
+		</item>
+		<item>
+			<UniqueFileName>Content\Models\Rifle_2\Rifle_2_Orm.png</UniqueFileName>
+			<bSrgb>0</bSrgb>
+		</item>
+		<item>
+			<UniqueFileName>Content\Textures\Cerberus_Normal.png</UniqueFileName>
 			<bSrgb>0</bSrgb>
 		</item>
 		<item>
@@ -121,10 +133,6 @@
 		<item>
 			<UniqueFileName>Content\Textures\Greasy_Pan_Normal.png</UniqueFileName>
 			<bSrgb>0</bSrgb>
-		</item>
-		<item>
-			<UniqueFileName>Resource\Textures\GE_DefaultTexture_Albedo.png</UniqueFileName>
-			<bSrgb>1</bSrgb>
 		</item>
 		<item>
 			<UniqueFileName>Content\Textures\Greasy_Pan_Orm.png</UniqueFileName>
@@ -203,10 +211,6 @@
 			<bSrgb>0</bSrgb>
 		</item>
 		<item>
-			<UniqueFileName>Content\Textures\Test2\Grimy_Metal_Orm.png</UniqueFileName>
-			<bSrgb>0</bSrgb>
-		</item>
-		<item>
 			<UniqueFileName>Content\Textures\Test2\HardWoodBrown_Albedo.png</UniqueFileName>
 			<bSrgb>1</bSrgb>
 		</item>
@@ -267,6 +271,14 @@
 			<bSrgb>0</bSrgb>
 		</item>
 		<item>
+			<UniqueFileName>Resource\Textures\GE_Default_Orm.png</UniqueFileName>
+			<bSrgb>0</bSrgb>
+		</item>
+		<item>
+			<UniqueFileName>Resource\Textures\GE_DefaultTexture_Albedo.png</UniqueFileName>
+			<bSrgb>1</bSrgb>
+		</item>
+		<item>
 			<UniqueFileName>Resource\Textures\GE_DefaultTexture_Normal.png</UniqueFileName>
 			<bSrgb>0</bSrgb>
 		</item>
@@ -292,15 +304,15 @@
 				<count>1</count>
 				<item_version>0</item_version>
 				<item class_id="6" tracking_level="0" version="0">
-					<str1>lambert1</str1>
-					<str2>Content\Material\DarkTiles.gmat</str2>
+					<str1>lambert2</str1>
+					<str2>Content\Material\GrimyMetal.gmat</str2>
 				</item>
 			</OverrideMaterialUniqueName>
-			<MeshUniqueName>Content\Models\Cube.fbx</MeshUniqueName>
+			<MeshUniqueName>Content\Models\Stool\Stool.fbx</MeshUniqueName>
 			<Location>
 				<count>3</count>
 				<item>0.000000000e+00</item>
-				<item>0.000000000e+00</item>
+				<item>5.550981998e+00</item>
 				<item>0.000000000e+00</item>
 			</Location>
 			<Rotation>
@@ -311,9 +323,9 @@
 			</Rotation>
 			<Scale>
 				<count>3</count>
-				<item>4.000000060e-01</item>
-				<item>4.000000060e-01</item>
-				<item>4.000000060e-01</item>
+				<item>1.000000000e+00</item>
+				<item>1.000000000e+00</item>
+				<item>1.000000000e+00</item>
 			</Scale>
 		</item>
 		<item>
@@ -348,7 +360,7 @@
 		</item>
 	</mSceneObjectInfo>
 	<mMeshInfo class_id="7" tracking_level="0" version="0">
-		<count>11</count>
+		<count>13</count>
 		<item_version>0</item_version>
 		<item class_id="8" tracking_level="0" version="0">
 			<MeshUniqueName>Box</MeshUniqueName>
@@ -417,6 +429,28 @@
 			</MaterialUniqueName>
 		</item>
 		<item>
+			<MeshUniqueName>Content\Models\Helmet\Helmet.fbx</MeshUniqueName>
+			<MaterialUniqueName>
+				<count>1</count>
+				<item_version>0</item_version>
+				<item>
+					<str1>lambert1</str1>
+					<str2>Default</str2>
+				</item>
+			</MaterialUniqueName>
+		</item>
+		<item>
+			<MeshUniqueName>Content\Models\Chair\Chair.FBX</MeshUniqueName>
+			<MaterialUniqueName>
+				<count>1</count>
+				<item_version>0</item_version>
+				<item>
+					<str1>VRayMtl_3</str1>
+					<str2>Default</str2>
+				</item>
+			</MaterialUniqueName>
+		</item>
+		<item>
 			<MeshUniqueName>Content\Models\Cube.fbx</MeshUniqueName>
 			<MaterialUniqueName>
 				<count>1</count>
@@ -439,7 +473,7 @@
 			</MaterialUniqueName>
 		</item>
 		<item>
-			<MeshUniqueName>Content\Models\Helmet\Helmet.fbx</MeshUniqueName>
+			<MeshUniqueName>Content\Models\Rifle_2\Rifle_2.fbx</MeshUniqueName>
 			<MaterialUniqueName>
 				<count>1</count>
 				<item_version>0</item_version>
@@ -450,12 +484,12 @@
 			</MaterialUniqueName>
 		</item>
 		<item>
-			<MeshUniqueName>Content\Models\Rifle_2\Rifle_2.fbx</MeshUniqueName>
+			<MeshUniqueName>Content\Models\Stool\Stool.fbx</MeshUniqueName>
 			<MaterialUniqueName>
 				<count>1</count>
 				<item_version>0</item_version>
 				<item>
-					<str1>lambert1</str1>
+					<str1>lambert2</str1>
 					<str2>Default</str2>
 				</item>
 			</MaterialUniqueName>

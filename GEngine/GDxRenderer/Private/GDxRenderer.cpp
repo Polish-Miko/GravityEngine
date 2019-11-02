@@ -1227,6 +1227,7 @@ void GDxRenderer::UpdateSdfDescriptorBuffer(const GGiGameTimer* gt)
 	{
 		if (so->GetMesh()->GetSdf() != nullptr && so->GetMesh()->GetSdf()->size() > 0)
 		{
+			so->UpdateTransform();
 			mSceneObjectSdfDescriptors[soSdfIndex].SdfIndex = so->GetMesh()->mSdfIndex;
 			auto trans = GDx::GGiToDxMatrix(so->GetTransform());
 			DirectX::XMStoreFloat4x4(&mSceneObjectSdfDescriptors[soSdfIndex].objWorld, XMMatrixTranspose(trans));
@@ -1234,12 +1235,13 @@ void GDxRenderer::UpdateSdfDescriptorBuffer(const GGiGameTimer* gt)
 			DirectX::XMStoreFloat4x4(&mSceneObjectSdfDescriptors[soSdfIndex].objInvWorld, XMMatrixTranspose(invTrans));
 			auto invTrans_IT = XMMatrixTranspose(trans);
 			DirectX::XMStoreFloat4x4(&mSceneObjectSdfDescriptors[soSdfIndex].objInvWorld_IT, XMMatrixTranspose(invTrans_IT));
+
+			currDescBuffer->CopyData(soSdfIndex, mSceneObjectSdfDescriptors[soSdfIndex]);
+
 			soSdfIndex++;
 		}
 	}
 	mSceneObjectSdfNum = soSdfIndex;
-
-	currDescBuffer->CopyData(0, mSceneObjectSdfDescriptors[0]);
 }
 
 void GDxRenderer::UpdateShadowTransform(const GGiGameTimer* gt)
@@ -3695,7 +3697,7 @@ void GDxRenderer::BuildMeshSDF()
 			mesh.second->Name == L"Grid" ||
 			mesh.second->Name == L"Quad" ||
 			mesh.second->Name == L"Cerberus"||
-			mesh.second->Name != L"Cube"
+			mesh.second->Name != L"Stool"
 			)
 			continue;
 
@@ -3736,10 +3738,21 @@ void GDxRenderer::BuildMeshSDF()
 		auto pAcceleratorTree = std::make_shared<GRiKdTree>(std::move(prims), isectCost, travCost, emptyBonus,
 			maxPrims, maxDepth);
 
+		dxMesh->SetSdfResolution(64);
 		auto sdfRes = dxMesh->GetSdfResolution();
 		auto sdf = std::vector<float>(sdfRes * sdfRes * sdfRes);
 
-		auto sdfExtent = 1.4f * dxMesh->bounds.Extents[dxMesh->bounds.MaximumExtent()] * 2.0f;
+		float maxExtent = 0.0f;
+		for (int dim = 0; dim < 3; dim++)
+		{
+			float range = abs(dxMesh->bounds.Center[dim] + dxMesh->bounds.Extents[dim]);
+			if (range > maxExtent)
+				maxExtent = range;
+			range = abs(dxMesh->bounds.Center[dim] - dxMesh->bounds.Extents[dim]);
+			if (range > maxExtent)
+				maxExtent = range;
+		}
+		auto sdfExtent = maxExtent * 1.4f * 2.0f;// 1.4f * dxMesh->bounds.Extents[dxMesh->bounds.MaximumExtent()] * 2.0f;
 		auto sdfUnit = sdfExtent / (float)sdfRes;
 		auto initMinDisFront = 1.414f * sdfExtent;
 		auto initMaxDisBack = -1.414f * sdfExtent;
@@ -3761,7 +3774,7 @@ void GDxRenderer::BuildMeshSDF()
 								((float)z - sdfRes / 2 + 0.5f) * sdfUnit
 							);
 
-							static int rayNum = 64;
+							static int rayNum = 128;
 							static float fibParam = 2 * GGiEngineUtil::PI * 0.618f;
 							float fibInter = 0.0f;
 							GRiRay ray;

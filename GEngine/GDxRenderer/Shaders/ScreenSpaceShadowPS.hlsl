@@ -10,7 +10,7 @@
 #define STEP_LENGTH 10.0f
 #define MIN_STEP_LENGTH 5.0f
 
-#define CONE_TANGENT 10.0f
+#define CONE_COTANGENT 8.0f
 
 struct VertexToPixel
 {
@@ -72,7 +72,7 @@ float main(VertexToPixel pIn) : SV_TARGET
 	{
 		int sdfInd = gSceneObjectSdfDescriptors[i].SdfIndex;
 
-		float3 objOrigin = mul(origin, gSceneObjectSdfDescriptors[i].objInvWorld);
+		float3 objOrigin = mul(float4(origin, 1.0f), gSceneObjectSdfDescriptors[i].objInvWorld).xyz;
 		float3 currPos = objOrigin;
 
 		float3 objDir = mul(dir, (float3x3)(gSceneObjectSdfDescriptors[i].objInvWorld_IT));
@@ -101,7 +101,7 @@ float main(VertexToPixel pIn) : SV_TARGET
 
 			dist = clamp(dist, MIN_STEP_LENGTH, dist + 1);
 			totalDis += dist;
-			shadow = min(shadow, saturate(CONE_TANGENT * dist / totalDis));
+			shadow = min(shadow, saturate(CONE_COTANGENT * dist / totalDis));
 		}
 
 		/*

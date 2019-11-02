@@ -70,7 +70,7 @@ float4 main(VertexToPixel pIn) : SV_TARGET
 		int sdfInd = gSceneObjectSdfDescriptors[i].SdfIndex;
 
 		float3 objDir = mul(dir, (float3x3)(gSceneObjectSdfDescriptors[i].objInvWorld_IT));
-		float3 objOrigin = mul(origin, gSceneObjectSdfDescriptors[i].objInvWorld);
+		float3 objOrigin = mul(float4(origin, 1.0f), gSceneObjectSdfDescriptors[i].objInvWorld).xyz;
 		float3 currPos = objOrigin;
 
 		// March.
