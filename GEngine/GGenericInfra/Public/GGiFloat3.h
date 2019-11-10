@@ -79,5 +79,13 @@ public:
 	{
 		return (i1.x * i2.x + i1.y * i2.y + i1.z * i2.z);
 	}
+
+	static inline GGiFloat3 Normalize(GGiFloat3 i)
+	{
+		float len = sqrt(i.x * i.x + i.y * i.y + i.z * i.z);
+		GGiFloat3 o = i;
+		o = o * (1 / len);
+		return o;
+	}
 };
 

@@ -126,6 +126,9 @@
     <ClInclude Include="Private\GDxUav.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Private\GDxCascadedShadowMap.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -224,6 +227,9 @@
     <ClCompile Include="Private\GDxUav.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Private\GDxCascadedShadowMap.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shaders\AnimationDefaultVS.hlsl" />
@@ -250,6 +256,9 @@
     <FxCompile Include="Shaders\DepthDownsampleCS.hlsl" />
     <FxCompile Include="Shaders\SdfDebugPS.hlsl" />
     <FxCompile Include="Shaders\ScreenSpaceShadowPS.hlsl" />
+    <FxCompile Include="Shaders\ShadowMapPS.hlsl" />
+    <FxCompile Include="Shaders\ShadowMapVS.hlsl" />
+    <FxCompile Include="Shaders\SSShadowTemporalPS.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Shaders\Lighting.hlsli" />

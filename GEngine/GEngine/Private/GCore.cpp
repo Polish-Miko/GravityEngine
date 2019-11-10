@@ -447,6 +447,7 @@ void GCore::LoadTextures()
 	files.push_back(L"Resource\\Textures\\GE_DefaultTexture_Normal.png");
 	files.push_back(L"Resource\\Textures\\GE_DefaultTexture_Orm.png");
 	files.push_back(L"Resource\\Textures\\IBL_BRDF_LUT.png");
+	files.push_back(L"Resource\\Textures\\BlueNoise.png");
 	for (auto file : files)
 	{
 		bool bSrgb = false;

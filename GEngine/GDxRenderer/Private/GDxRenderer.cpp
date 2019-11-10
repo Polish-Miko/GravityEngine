@@ -371,6 +371,56 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 #endif
 	}
 
+	// Shadow Map Pass
+	{
+		GDxGpuProfiler::GetGpuProfiler().StartGpuProfile("Shadow Map Pass");
+
+		int shadowMapIndex = mFrameCount % SHADOW_CASCADE_NUM;
+
+		ShadowViewport.TopLeftX = 0.0f;
+		ShadowViewport.TopLeftY = 0.0f;
+		ShadowViewport.Width = (FLOAT)ShadowMapResolution;
+		ShadowViewport.Height = (FLOAT)ShadowMapResolution;
+		ShadowViewport.MinDepth = 0.0f;
+		ShadowViewport.MaxDepth = 1.0f;
+
+		ShadowScissorRect = { 0, 0, (int)(ShadowViewport.Width), (int)(ShadowViewport.Height) };
+
+		mCommandList->RSSetViewports(1, &ShadowViewport);
+		mCommandList->RSSetScissorRects(1, &ShadowScissorRect);
+
+		mCommandList->SetGraphicsRootSignature(mRootSignatures["ShadowMap"].Get());
+
+		mCommandList->SetPipelineState(mPSOs["ShadowMap"].Get());
+
+		UINT objCBByteSize = GDxUtil::CalcConstantBufferByteSize(sizeof(ObjectConstants));
+		auto objectCB = mCurrFrameResource->ObjectCB->Resource();
+
+		auto passCB = mCurrFrameResource->PassCB->Resource();
+		mCommandList->SetGraphicsRootConstantBufferView(1, passCB->GetGPUVirtualAddress());
+
+		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mCascadedShadowMap[shadowMapIndex]->GetShadowmapResource(),
+			D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_DEPTH_WRITE));
+
+		// Clear depth buffer.
+#if USE_REVERSE_Z
+		mCommandList->ClearDepthStencilView(GetDsv(mShadowMapDsvIndex + shadowMapIndex), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 0.0f, 0, 0, nullptr);
+#else
+		mCommandList->ClearDepthStencilView(GetDsv(mShadowMapDsvIndex + shadowMapIndex), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
+#endif
+
+		// Specify the buffers we are going to render to.
+		mCommandList->OMSetRenderTargets(0, nullptr, false, &GetDsv(mShadowMapDsvIndex + shadowMapIndex));
+
+		// For each render item...
+		DrawSceneObjects(mCommandList.Get(), RenderLayer::Deferred, true, false);
+
+		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mCascadedShadowMap[shadowMapIndex]->GetShadowmapResource(),
+			D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_GENERIC_READ));
+
+		GDxGpuProfiler::GetGpuProfiler().EndGpuProfile("Shadow Map Pass");
+	}
+
 	// Screen Space Shadow Pass
 	{
 		GDxGpuProfiler::GetGpuProfiler().StartGpuProfile("Screen Space Shadow Pass");
@@ -403,6 +453,10 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 		auto passCB = mCurrFrameResource->PassCB->Resource();
 		mCommandList->SetGraphicsRootConstantBufferView(5, passCB->GetGPUVirtualAddress());
 
+		mCommandList->SetGraphicsRootDescriptorTable(6, GetGpuSrv(mCascadedShadowMapSrvIndex));
+
+		mCommandList->SetGraphicsRootDescriptorTable(7, GetGpuSrv(mBlueNoiseSrvIndex));
+
 		mCommandList->OMSetRenderTargets(1, &mRtvHeaps["ScreenSpaceShadowPass"]->mRtvHeap.handleCPU(0), false, nullptr);
 
 		// Clear the render target.
@@ -424,6 +478,72 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 
 		GDxGpuProfiler::GetGpuProfiler().EndGpuProfile("Screen Space Shadow Pass");
 	}
+
+#if USE_PCSS_TEMPORAL
+	// Screen Space Shadow Temporal Filter Pass
+	{
+		GDxGpuProfiler::GetGpuProfiler().StartGpuProfile("Shadow Temporal Filter Pass");
+
+		mCommandList->RSSetViewports(1, &(mRtvHeaps["SSShadowTemporalPass"]->mRtv[2]->mViewport));
+		mCommandList->RSSetScissorRects(1, &(mRtvHeaps["SSShadowTemporalPass"]->mRtv[2]->mScissorRect));
+
+		mCommandList->SetGraphicsRootSignature(mRootSignatures["SSShadowTemporalPass"].Get());
+
+		mCommandList->SetPipelineState(mPSOs["SSShadowTemporalPass"].Get());
+
+		auto passCB = mCurrFrameResource->PassCB->Resource();
+		mCommandList->SetGraphicsRootConstantBufferView(0, passCB->GetGPUVirtualAddress());
+
+		mCommandList->SetGraphicsRootDescriptorTable(1, mRtvHeaps["ScreenSpaceShadowPass"]->GetSrvGpu(0));
+
+		mCommandList->SetGraphicsRootDescriptorTable(2, mRtvHeaps["SSShadowTemporalPass"]->GetSrvGpu(mShadowTemporalHistoryIndex));
+		mShadowTemporalHistoryIndex = (mShadowTemporalHistoryIndex + 1) % 2;
+
+		mCommandList->SetGraphicsRootDescriptorTable(3, mRtvHeaps["GBuffer"]->GetSrvGpu(mVelocityBufferSrvIndex - mGBufferSrvIndex));
+
+		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["SSShadowTemporalPass"]->mRtv[2]->mResource.Get(),
+			D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_RENDER_TARGET));
+
+		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["SSShadowTemporalPass"]->mRtv[mShadowTemporalHistoryIndex]->mResource.Get(),
+			D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_RENDER_TARGET));
+
+		// Clear RT.
+		DirectX::XMVECTORF32 clearColor = { mRtvHeaps["SSShadowTemporalPass"]->mRtv[2]->mProperties.mClearColor[0],
+		mRtvHeaps["SSShadowTemporalPass"]->mRtv[2]->mProperties.mClearColor[1],
+		mRtvHeaps["SSShadowTemporalPass"]->mRtv[2]->mProperties.mClearColor[2],
+		mRtvHeaps["SSShadowTemporalPass"]->mRtv[2]->mProperties.mClearColor[3]
+		};
+
+		mCommandList->ClearRenderTargetView(mRtvHeaps["SSShadowTemporalPass"]->mRtvHeap.handleCPU(2), clearColor, 0, nullptr);
+
+		DirectX::XMVECTORF32 hisClearColor = { mRtvHeaps["SSShadowTemporalPass"]->mRtv[mShadowTemporalHistoryIndex]->mProperties.mClearColor[0],
+		mRtvHeaps["SSShadowTemporalPass"]->mRtv[mShadowTemporalHistoryIndex]->mProperties.mClearColor[1],
+		mRtvHeaps["SSShadowTemporalPass"]->mRtv[mShadowTemporalHistoryIndex]->mProperties.mClearColor[2],
+		mRtvHeaps["SSShadowTemporalPass"]->mRtv[mShadowTemporalHistoryIndex]->mProperties.mClearColor[3]
+		};
+
+		mCommandList->ClearRenderTargetView(mRtvHeaps["SSShadowTemporalPass"]->mRtvHeap.handleCPU(mShadowTemporalHistoryIndex), hisClearColor, 0, nullptr);
+
+		D3D12_CPU_DESCRIPTOR_HANDLE shadowTemporalRtvs[2] =
+		{
+			mRtvHeaps["SSShadowTemporalPass"]->mRtvHeap.handleCPU(2),
+			mRtvHeaps["SSShadowTemporalPass"]->mRtvHeap.handleCPU(mShadowTemporalHistoryIndex)
+		};
+		//mCommandList->OMSetRenderTargets(2, taaRtvs, false, &DepthStencilView());
+		mCommandList->OMSetRenderTargets(2, shadowTemporalRtvs, false, nullptr);
+
+		// For each render item...
+		DrawSceneObjects(mCommandList.Get(), RenderLayer::ScreenQuad, false, false);
+
+		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["SSShadowTemporalPass"]->mRtv[2]->mResource.Get(),
+			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ));
+
+		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["SSShadowTemporalPass"]->mRtv[mShadowTemporalHistoryIndex]->mResource.Get(),
+			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ));
+
+		GDxGpuProfiler::GetGpuProfiler().EndGpuProfile("Shadow Temporal Filter Pass");
+	}
+#endif
 
 	// Light Pass
 	{
@@ -451,7 +571,11 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 
 		mCommandList->SetGraphicsRootDescriptorTable(4, GetGpuSrv(mDepthBufferSrvIndex));
 
-		mCommandList->SetGraphicsRootDescriptorTable(5, mRtvHeaps["ScreenSpaceShadowPass"]->GetSrvGpuStart());
+#if USE_PCSS_TEMPORAL
+		mCommandList->SetGraphicsRootDescriptorTable(5, mRtvHeaps["SSShadowTemporalPass"]->GetSrvGpu(2));
+#else
+		mCommandList->SetGraphicsRootDescriptorTable(5, mRtvHeaps["ScreenSpaceShadowPass"]->GetSrvGpu(0));
+#endif
 
 		mCommandList->SetGraphicsRootDescriptorTable(6, GetGpuSrv(mIblIndex));
 
@@ -1246,30 +1370,100 @@ void GDxRenderer::UpdateSdfDescriptorBuffer(const GGiGameTimer* gt)
 
 void GDxRenderer::UpdateShadowTransform(const GGiGameTimer* gt)
 {
-	// Only the first "main" light casts a shadow.
-	XMVECTOR lightDir = XMLoadFloat3(&mRotatedLightDirections[0]);
-	XMVECTOR lightPos = -2.0f*mSceneBounds.Radius*lightDir;
-	XMVECTOR targetPos = XMLoadFloat3(&mSceneBounds.Center);
+	int cascadeInd = mFrameCount % ShadowCascadeNum;
+
+	// Calculate Frustum Corner Position.
+	GGiFloat3 cornerPos[8];
+	cornerPos[0] = pCamera->GetCornerPos(ShadowCascadeDistance[cascadeInd], true, true);
+	cornerPos[1] = pCamera->GetCornerPos(ShadowCascadeDistance[cascadeInd], false, true);
+	cornerPos[2] = pCamera->GetCornerPos(ShadowCascadeDistance[cascadeInd], true, false);
+	cornerPos[3] = pCamera->GetCornerPos(ShadowCascadeDistance[cascadeInd], false, false);
+	cornerPos[4] = pCamera->GetCornerPos(ShadowCascadeDistance[cascadeInd + 1], true, true);
+	cornerPos[5] = pCamera->GetCornerPos(ShadowCascadeDistance[cascadeInd + 1], false, true);
+	cornerPos[6] = pCamera->GetCornerPos(ShadowCascadeDistance[cascadeInd + 1], true, false);
+	cornerPos[7] = pCamera->GetCornerPos(ShadowCascadeDistance[cascadeInd + 1], false, false);
+
+	// Calculate Light Transform Matrix.
+	auto cameraPos = pCamera->GetPosition();
+	auto cameraLook = pCamera->GetLook();
+	auto cameraPosVec = GGiFloat3(cameraPos[0], cameraPos[1], cameraPos[2]);
+	auto cameraLookVec = GGiFloat3(cameraLook[0], cameraLook[1], cameraLook[2]);
+	auto lightLoc = cameraPosVec;//MainDirectionalLightDir * ShadowMapCameraDis + cameraPosVec;
+
+	/*
+	auto lightT = DirectX::XMMatrixTranslation(lightLoc[0], lightLoc[1], lightLoc[2]);
+
+	//auto lightR = DirectX::XMMatrixRotationRollPitchYaw(Rotation[0] * GGiEngineUtil::PI / 180.0f, Rotation[1] * GGiEngineUtil::PI / 180.0f, Rotation[2] * GGiEngineUtil::PI / 180.0f);
+	auto upDir = GGiFloat3(0.0f, 1.0f, 0.0f);
+	auto rightDir = GGiFloat3::Normalize(GGiFloat3::Cross(upDir, MainDirectionalLightDir));
+	//XMMatrixSet(Right.x, Right.y, Right.z, 0.0f, Fwd.x, Fwd.y, Fwd.z, 0.0f, Up.x, Up.y, Up.z, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f);
+	auto lightR = XMMatrixSet(rightDir.x, rightDir.y, rightDir.z, 0, MainDirectionalLightDir.x, MainDirectionalLightDir.y, MainDirectionalLightDir.z, 0, 0.0f, 1.0f, 0.0f, 0.0f, 0, 0, 0, 1);
+
+	auto lightS = DirectX::XMMatrixScaling(1.0f, 1.0f, 1.0f);
+
+	auto lightTransMat = DirectX::XMMatrixMultiply(DirectX::XMMatrixMultiply(lightS, lightR), lightT);
+	auto invLightTransMat = XMMatrixInverse(&XMMatrixDeterminant(lightTransMat), lightTransMat);
+	*/
+	auto lightTargetPosVec = lightLoc + MainDirectionalLightDir * 100.0f;
+	auto eyePos= XMVectorSet(lightLoc.x, lightLoc.y, lightLoc.z, 1.0f);
+	auto focusPos = XMVectorSet(lightTargetPosVec.x, lightTargetPosVec.y, lightTargetPosVec.z, 1.0f);
+	XMMATRIX invLightTransMat = XMMatrixLookAtLH(eyePos, focusPos, XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f));
+	auto lightTransMat = XMMatrixInverse(&XMMatrixDeterminant(invLightTransMat), invLightTransMat);
+
+	// Transform frustum corners to light space to get light space AABB.
+	float xmin, xmax, ymin, ymax, zmin, zmax;
+	for (int i = 0; i < 8; i++)
+	{
+		auto worldSpacePos = XMVectorSet(cornerPos[i].x, cornerPos[i].y, cornerPos[i].z, 1.0f);
+		auto lightSpacePos = XMVector4Transform(worldSpacePos, invLightTransMat);
+		XMFLOAT4 lightSpacePosVec;
+		XMStoreFloat4(&lightSpacePosVec, lightSpacePos);
+		if (i == 0)
+		{
+			xmin = lightSpacePosVec.x;
+			xmax = lightSpacePosVec.x;
+			ymin = lightSpacePosVec.y;
+			ymax = lightSpacePosVec.y;
+			zmin = lightSpacePosVec.z;
+			zmax = lightSpacePosVec.z;
+		}
+		else
+		{
+			if (lightSpacePosVec.x < xmin)
+				xmin = lightSpacePosVec.x;
+			if (lightSpacePosVec.x > xmax)
+				xmax = lightSpacePosVec.x;
+			if (lightSpacePosVec.y < ymin)
+				ymin = lightSpacePosVec.y;
+			if (lightSpacePosVec.y > ymax)
+				ymax = lightSpacePosVec.y;
+			if (lightSpacePosVec.z < zmin)
+				zmin = lightSpacePosVec.z;
+			if (lightSpacePosVec.z > zmax)
+				zmax = lightSpacePosVec.z;
+		}
+	}
+
+	// Calculate shadow camera position.
+	auto lightSpaceCenterPos = XMVectorSet((xmax + xmin) / 2.0f, (ymax + ymin) / 2.0f, 0.0f, 1.0f);
+	auto worldSpaceCenterPos = XMVector4Transform(lightSpaceCenterPos, lightTransMat);
+	auto targetPosVec = GGiFloat3(worldSpaceCenterPos.m128_f32[0], worldSpaceCenterPos.m128_f32[1], worldSpaceCenterPos.m128_f32[2]);
+	auto lightPosVec = targetPosVec + MainDirectionalLightDir * (-ShadowMapCameraDis);
+
+	XMVECTOR lightPos = XMVectorSet(lightPosVec.x, lightPosVec.y, lightPosVec.z, 1.0f);
+	XMVECTOR targetPos = XMVectorSet(targetPosVec.x, targetPosVec.y, targetPosVec.z, 1.0f);
 	XMVECTOR lightUp = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+
+	float shadowWidth = xmax - xmin;
+	float shadowHeight = ymax - ymin;
+
+	// Calculate shadow view and projection matrix.
 	XMMATRIX lightView = XMMatrixLookAtLH(lightPos, targetPos, lightUp);
-
-	XMStoreFloat3(&mLightPosW, lightPos);
-
-	// Transform bounding sphere to light space.
-	XMFLOAT3 sphereCenterLS;
-	XMStoreFloat3(&sphereCenterLS, XMVector3TransformCoord(targetPos, lightView));
-
-	// Ortho frustum in light space encloses scene.
-	float l = sphereCenterLS.x - mSceneBounds.Radius;
-	float b = sphereCenterLS.y - mSceneBounds.Radius;
-	float n = sphereCenterLS.z - mSceneBounds.Radius;
-	float r = sphereCenterLS.x + mSceneBounds.Radius;
-	float t = sphereCenterLS.y + mSceneBounds.Radius;
-	float f = sphereCenterLS.z + mSceneBounds.Radius;
-
-	mLightNearZ = n;
-	mLightFarZ = f;
-	XMMATRIX lightProj = XMMatrixOrthographicOffCenterLH(l, r, b, t, n, f);
+#if USE_REVERSE_Z
+	XMMATRIX lightProj = XMMatrixOrthographicLH(shadowWidth, shadowHeight, LIGHT_NEAR_Z, LIGHT_FAR_Z);
+#else
+	XMMATRIX lightProj = XMMatrixOrthographicLH(shadowWidth, shadowHeight, 0.0f, 2.0f * ShadowMapCameraDis);
+#endif
 
 	// Transform NDC space [-1,+1]^2 to texture space [0,1]^2
 	XMMATRIX T(
@@ -1278,10 +1472,12 @@ void GDxRenderer::UpdateShadowTransform(const GGiGameTimer* gt)
 		0.0f, 0.0f, 1.0f, 0.0f,
 		0.5f, 0.5f, 0.0f, 1.0f);
 
-	XMMATRIX S = lightView * lightProj*T;
-	XMStoreFloat4x4(&mLightView, lightView);
-	XMStoreFloat4x4(&mLightProj, lightProj);
-	XMStoreFloat4x4(&mShadowTransform, S);
+	XMMATRIX VP = lightView * lightProj;
+	XMMATRIX S = VP * T;
+	mShadowView[cascadeInd] = lightView;
+	mShadowProj[cascadeInd] = lightProj;
+	mShadowViewProj[cascadeInd] = VP;
+	mShadowTransform[cascadeInd] = S;
 }
 
 void GDxRenderer::UpdateMainPassCB(const GGiGameTimer* gt)
@@ -1330,7 +1526,7 @@ void GDxRenderer::UpdateMainPassCB(const GGiGameTimer* gt)
 	);
 
 	XMMATRIX viewProjTex = XMMatrixMultiply(viewProj, T);
-	XMMATRIX shadowTransform = XMLoadFloat4x4(&mShadowTransform);
+	XMMATRIX lightTransform = XMLoadFloat4x4(&mLightTransform);
 
 	XMStoreFloat4x4(&mMainPassCB.View, XMMatrixTranspose(view));
 	XMStoreFloat4x4(&mMainPassCB.InvView, XMMatrixTranspose(invView));
@@ -1341,7 +1537,7 @@ void GDxRenderer::UpdateMainPassCB(const GGiGameTimer* gt)
 	XMStoreFloat4x4(&mMainPassCB.InvViewProj, XMMatrixTranspose(invViewProj));
 	XMStoreFloat4x4(&mMainPassCB.PrevViewProj, XMMatrixTranspose(prevViewProj));
 	XMStoreFloat4x4(&mMainPassCB.ViewProjTex, XMMatrixTranspose(viewProjTex));
-	XMStoreFloat4x4(&mMainPassCB.ShadowTransform, XMMatrixTranspose(shadowTransform));
+	XMStoreFloat4x4(&mMainPassCB.LightTransform, XMMatrixTranspose(lightTransform));
 	auto eyePos = pCamera->GetPosition();
 	mMainPassCB.EyePosW = DirectX::XMFLOAT3(eyePos[0], eyePos[1], eyePos[2]);
 	mMainPassCB.RenderTargetSize = XMFLOAT2((float)mClientWidth, (float)mClientHeight);
@@ -1354,6 +1550,19 @@ void GDxRenderer::UpdateMainPassCB(const GGiGameTimer* gt)
 	mMainPassCB.Jitter = XMFLOAT2((float)(JitterX / 2), (float)(-JitterY / 2));//negate Y because world coord and tex coord have different Y axis.
 	mMainPassCB.AmbientLight = { 0.4f, 0.4f, 0.6f, 1.0f };
 	mMainPassCB.MainDirectionalLightDir = { 0.57735f, -0.57735f, -0.57735f, 0.0f };
+
+	for (int i = 0; i < ShadowCascadeNum; i++)
+	{
+		XMStoreFloat4x4(&mMainPassCB.ShadowView[i], XMMatrixTranspose(mShadowView[i]));
+		XMStoreFloat4x4(&mMainPassCB.ShadowProj[i], XMMatrixTranspose(mShadowProj[i]));
+		XMStoreFloat4x4(&mMainPassCB.ShadowViewProj[i], XMMatrixTranspose(mShadowViewProj[i]));
+		XMStoreFloat4x4(&mMainPassCB.ShadowTransform[i], XMMatrixTranspose(mShadowTransform[i]));
+	}
+
+	mMainPassCB.UniformRandom = XMFLOAT4((float)(rand() / double(RAND_MAX)), 
+		(float)(rand() / double(RAND_MAX)), 
+		(float)(rand() / double(RAND_MAX)), 
+		(float)(rand() / double(RAND_MAX)));
 
 	auto currPassCB = mCurrFrameResource->PassCB.get();
 	currPassCB->CopyData(0, mMainPassCB);
@@ -1791,7 +2000,7 @@ void GDxRenderer::BuildRootSignature()
 			IID_PPV_ARGS(mRootSignatures["GBufferDebug"].GetAddressOf())));
 	}
 
-	// Tile/cluster pass signature
+	// Tile/cluster pass root signature
 	{
 
 		//Output
@@ -1840,24 +2049,14 @@ void GDxRenderer::BuildRootSignature()
 			IID_PPV_ARGS(mRootSignatures["TileClusterPass"].GetAddressOf())));
 	}
 
-	// Screen space shadow pass signature
+	// Shadow map root signature
 	{
-		CD3DX12_DESCRIPTOR_RANGE range;
-		range.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, MAX_SCENE_OBJECT_NUM, 0, 1);
-
-		CD3DX12_DESCRIPTOR_RANGE rangeDepth;
-		rangeDepth.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, (UINT)1, 2);
-
-		CD3DX12_ROOT_PARAMETER gScreenSpaceShadowRootParameters[6];
-		gScreenSpaceShadowRootParameters[0].InitAsConstants(1, 0);
-		gScreenSpaceShadowRootParameters[1].InitAsShaderResourceView(0, 0);
-		gScreenSpaceShadowRootParameters[2].InitAsShaderResourceView(1, 0);
-		gScreenSpaceShadowRootParameters[3].InitAsDescriptorTable(1, &rangeDepth, D3D12_SHADER_VISIBILITY_ALL);
-		gScreenSpaceShadowRootParameters[4].InitAsDescriptorTable(1, &range, D3D12_SHADER_VISIBILITY_ALL);
-		gScreenSpaceShadowRootParameters[5].InitAsConstantBufferView(1);
+		CD3DX12_ROOT_PARAMETER gShadowMapRootParameters[2];
+		gShadowMapRootParameters[0].InitAsConstantBufferView(0);
+		gShadowMapRootParameters[1].InitAsConstantBufferView(1);
 
 		// A root signature is an array of root parameters.
-		CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(6, gScreenSpaceShadowRootParameters,
+		CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(2, gShadowMapRootParameters,
 			0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
 		CD3DX12_STATIC_SAMPLER_DESC StaticSamplers[2];
@@ -1886,10 +2085,120 @@ void GDxRenderer::BuildRootSignature()
 			0,
 			serializedRootSig->GetBufferPointer(),
 			serializedRootSig->GetBufferSize(),
+			IID_PPV_ARGS(mRootSignatures["ShadowMap"].GetAddressOf())));
+	}
+
+	// Screen space shadow pass root signature
+	{
+		CD3DX12_DESCRIPTOR_RANGE range;
+		range.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, MAX_SCENE_OBJECT_NUM, 0, 1);
+
+		CD3DX12_DESCRIPTOR_RANGE rangeDepth;
+		rangeDepth.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, (UINT)1, 2);
+
+		CD3DX12_DESCRIPTOR_RANGE rangeBlueNoise;
+		rangeBlueNoise.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, (UINT)1, 3);
+
+		CD3DX12_DESCRIPTOR_RANGE rangeShadowMap;
+		rangeShadowMap.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, (UINT)ShadowCascadeNum, 4);
+
+		CD3DX12_ROOT_PARAMETER gScreenSpaceShadowRootParameters[8];
+		gScreenSpaceShadowRootParameters[0].InitAsConstants(1, 0);
+		gScreenSpaceShadowRootParameters[1].InitAsShaderResourceView(0, 0);
+		gScreenSpaceShadowRootParameters[2].InitAsShaderResourceView(1, 0);
+		gScreenSpaceShadowRootParameters[3].InitAsDescriptorTable(1, &rangeDepth, D3D12_SHADER_VISIBILITY_ALL);
+		gScreenSpaceShadowRootParameters[4].InitAsDescriptorTable(1, &range, D3D12_SHADER_VISIBILITY_ALL);
+		gScreenSpaceShadowRootParameters[5].InitAsConstantBufferView(1);
+		gScreenSpaceShadowRootParameters[6].InitAsDescriptorTable(1, &rangeShadowMap, D3D12_SHADER_VISIBILITY_ALL);
+		gScreenSpaceShadowRootParameters[7].InitAsDescriptorTable(1, &rangeBlueNoise, D3D12_SHADER_VISIBILITY_ALL);
+
+		// A root signature is an array of root parameters.
+		CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(8, gScreenSpaceShadowRootParameters,
+			0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+
+		CD3DX12_STATIC_SAMPLER_DESC StaticSamplers[2];
+		StaticSamplers[0].Init(0, D3D12_FILTER_MIN_MAG_MIP_LINEAR);
+		StaticSamplers[1].Init(1, D3D12_FILTER_COMPARISON_MIN_MAG_MIP_LINEAR,
+			D3D12_TEXTURE_ADDRESS_MODE_BORDER,
+			D3D12_TEXTURE_ADDRESS_MODE_BORDER,
+			D3D12_TEXTURE_ADDRESS_MODE_BORDER,
+			0.f, 16u, D3D12_COMPARISON_FUNC_LESS_EQUAL);
+		rootSigDesc.NumStaticSamplers = 2;
+		rootSigDesc.pStaticSamplers = StaticSamplers;
+
+		// create a root signature with a single slot which points to a descriptor range consisting of a single constant buffer
+		ComPtr<ID3DBlob> serializedRootSig = nullptr;
+		ComPtr<ID3DBlob> errorBlob = nullptr;
+		HRESULT hr = D3D12SerializeRootSignature(&rootSigDesc, D3D_ROOT_SIGNATURE_VERSION_1,
+			serializedRootSig.GetAddressOf(), errorBlob.GetAddressOf());
+
+		if (errorBlob != nullptr)
+		{
+			::OutputDebugStringA((char*)errorBlob->GetBufferPointer());
+		}
+		ThrowIfFailed(hr);
+
+		ThrowIfFailed(md3dDevice->CreateRootSignature(
+			0,
+			serializedRootSig->GetBufferPointer(),
+			serializedRootSig->GetBufferSize(),
 			IID_PPV_ARGS(mRootSignatures["ScreenSpaceShadowPass"].GetAddressOf())));
 	}
 
-	// Light pass signature
+	// Screen space shadow temporal filter pass root signature
+	{
+		//TAA inputs
+		CD3DX12_DESCRIPTOR_RANGE rangeInput;
+		rangeInput.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
+		CD3DX12_DESCRIPTOR_RANGE rangeHistory;
+		rangeHistory.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1);
+		CD3DX12_DESCRIPTOR_RANGE rangeVelocity;
+		rangeVelocity.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 2);
+
+		CD3DX12_ROOT_PARAMETER gSSShadowTemporalPassRootParameters[4];
+		gSSShadowTemporalPassRootParameters[0].InitAsConstantBufferView(1);
+		gSSShadowTemporalPassRootParameters[1].InitAsDescriptorTable(1, &rangeInput, D3D12_SHADER_VISIBILITY_ALL);
+		gSSShadowTemporalPassRootParameters[2].InitAsDescriptorTable(1, &rangeHistory, D3D12_SHADER_VISIBILITY_ALL);
+		gSSShadowTemporalPassRootParameters[3].InitAsDescriptorTable(1, &rangeVelocity, D3D12_SHADER_VISIBILITY_ALL);
+
+		// A root signature is an array of root parameters.
+		CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(4, gSSShadowTemporalPassRootParameters,
+			0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+
+		CD3DX12_STATIC_SAMPLER_DESC StaticSamplers[2];
+		StaticSamplers[0].Init(0, D3D12_FILTER_COMPARISON_MIN_MAG_MIP_LINEAR,
+			D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
+			D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
+			D3D12_TEXTURE_ADDRESS_MODE_CLAMP
+		);
+		StaticSamplers[1].Init(1, D3D12_FILTER_COMPARISON_MIN_MAG_MIP_LINEAR,
+			D3D12_TEXTURE_ADDRESS_MODE_BORDER,
+			D3D12_TEXTURE_ADDRESS_MODE_BORDER,
+			D3D12_TEXTURE_ADDRESS_MODE_BORDER,
+			0.f, 16u, D3D12_COMPARISON_FUNC_LESS_EQUAL);
+		rootSigDesc.NumStaticSamplers = 2;
+		rootSigDesc.pStaticSamplers = StaticSamplers;
+
+		// create a root signature with a single slot which points to a descriptor range consisting of a single constant buffer
+		ComPtr<ID3DBlob> serializedRootSig = nullptr;
+		ComPtr<ID3DBlob> errorBlob = nullptr;
+		HRESULT hr = D3D12SerializeRootSignature(&rootSigDesc, D3D_ROOT_SIGNATURE_VERSION_1,
+			serializedRootSig.GetAddressOf(), errorBlob.GetAddressOf());
+
+		if (errorBlob != nullptr)
+		{
+			::OutputDebugStringA((char*)errorBlob->GetBufferPointer());
+		}
+		ThrowIfFailed(hr);
+
+		ThrowIfFailed(md3dDevice->CreateRootSignature(
+			0,
+			serializedRootSig->GetBufferPointer(),
+			serializedRootSig->GetBufferSize(),
+			IID_PPV_ARGS(mRootSignatures["SSShadowTemporalPass"].GetAddressOf())));
+	}
+
+	// Light pass root signature
 	{
 		//Output
 		CD3DX12_DESCRIPTOR_RANGE rangeUav;
@@ -1953,7 +2262,7 @@ void GDxRenderer::BuildRootSignature()
 			IID_PPV_ARGS(mRootSignatures["LightPass"].GetAddressOf())));
 	}
 
-	// Taa pass signature
+	// Taa pass root signature
 	{
 		//TAA inputs
 		CD3DX12_DESCRIPTOR_RANGE rangeLight;
@@ -2009,7 +2318,7 @@ void GDxRenderer::BuildRootSignature()
 			IID_PPV_ARGS(mRootSignatures["TaaPass"].GetAddressOf())));
 	}
 
-	// Motion blur pass signature
+	// Motion blur pass root signature
 	{
 		//Motion blur inputs
 		CD3DX12_DESCRIPTOR_RANGE rangeLight;
@@ -2059,7 +2368,7 @@ void GDxRenderer::BuildRootSignature()
 			IID_PPV_ARGS(mRootSignatures["MotionBlurPass"].GetAddressOf())));
 	}
 
-	// Post process signature
+	// Post process root signature
 	{
 		//G-Buffer inputs
 		CD3DX12_DESCRIPTOR_RANGE ppInputRange;
@@ -2104,7 +2413,7 @@ void GDxRenderer::BuildRootSignature()
 			IID_PPV_ARGS(mRootSignatures["PostProcess"].GetAddressOf())));
 	}
 
-	// SDF debug signature
+	// SDF debug root signature
 	{
 		CD3DX12_DESCRIPTOR_RANGE range;
 		range.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, MAX_SCENE_OBJECT_NUM, 0, 1);
@@ -2327,10 +2636,13 @@ void GDxRenderer::BuildDescriptorHeaps()
 		+ 1 //stencil buffer
 		+ 4 //g-buffer
 		+ 2 //tile/cluster pass srv and uav
+		+ ShadowCascadeNum //cascaded shadow map
 		+ 1 //screen space shadow
+		+ 3 //screen space shadow temporal filter
 		+ 1 //light pass
 		+ 3 //taa
 		+ 1 //motion blur
+		+ 1 //blue noise
 		+ (2 + mPrefilterLevels);//IBL
 	srvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 	srvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
@@ -2462,9 +2774,36 @@ void GDxRenderer::BuildDescriptorHeaps()
 		mUavs["TileClusterPass"] = std::move(tileClusterPassUav);
 	}
 
+	// Build DSV and SRV for cascaded shadow map pass.
+	{
+		mCascadedShadowMapSrvIndex = mTileClusterSrvIndex + mUavs["TileClusterPass"]->GetSize();
+		mShadowMapDsvIndex = mDepthDsvIndex + 1;
+
+		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+		srvDesc.Texture2D.MipLevels = 1;
+		srvDesc.Texture2D.MostDetailedMip = 0;
+		srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
+		srvDesc.Format = DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS; //DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+
+		D3D12_DEPTH_STENCIL_VIEW_DESC dsv_desc;
+		dsv_desc.Flags = D3D12_DSV_FLAG_NONE;
+		dsv_desc.Format = DXGI_FORMAT_D32_FLOAT_S8X24_UINT; //DXGI_FORMAT_D24_UNORM_S8_UINT;
+		dsv_desc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
+		dsv_desc.Texture2D.MipSlice = 0;
+
+		for (int i = 0; i < ShadowCascadeNum; i++)
+		{
+			mCascadedShadowMap.push_back(std::make_unique<GDxCascadedShadowMap>(md3dDevice.Get(), ShadowMapResolution));
+			md3dDevice->CreateShaderResourceView(mCascadedShadowMap[i]->GetShadowmapResource(), &srvDesc, GetCpuSrv(mCascadedShadowMapSrvIndex + i));
+			md3dDevice->CreateDepthStencilView(mCascadedShadowMap[i]->GetShadowmapResource(), &dsv_desc, GetDsv(mShadowMapDsvIndex + i));
+		}
+	}
+
 	// Build RTV and SRV for screen space shadow pass.
 	{
-		mScreenSpaceShadowPassSrvIndex = mTileClusterSrvIndex + mUavs["TileClusterPass"]->GetSize();
+		mScreenSpaceShadowPassSrvIndex = mCascadedShadowMapSrvIndex + ShadowCascadeNum;
 
 		std::vector<DXGI_FORMAT> rtvFormats =
 		{
@@ -2489,9 +2828,40 @@ void GDxRenderer::BuildDescriptorHeaps()
 		mRtvHeaps["ScreenSpaceShadowPass"] = std::move(screenSpaceShadowPassRtvHeap);
 	}
 
+	// Build RTV heap and SRV for screen space shadow temporal filter pass.
+	{
+		mSSShadowTemporalSrvIndex = mScreenSpaceShadowPassSrvIndex + (UINT)mRtvHeaps["ScreenSpaceShadowPass"]->mRtv.size();
+
+		std::vector<DXGI_FORMAT> rtvFormats =
+		{
+			DXGI_FORMAT_R32_FLOAT,// History 1
+			DXGI_FORMAT_R32_FLOAT,// History 2
+			DXGI_FORMAT_R32_FLOAT// Output
+		};
+		std::vector<std::vector<FLOAT>> rtvClearColor =
+		{
+			{ 1,1,1,1 },
+			{ 1,1,1,1 },
+			{ 1,1,1,1 }
+		};
+		std::vector<GRtvProperties> propVec;
+		for (auto i = 0u; i < rtvFormats.size(); i++)
+		{
+			GRtvProperties prop;
+			prop.mRtvFormat = rtvFormats[i];
+			prop.mClearColor[0] = rtvClearColor[i][0];
+			prop.mClearColor[1] = rtvClearColor[i][1];
+			prop.mClearColor[2] = rtvClearColor[i][2];
+			prop.mClearColor[3] = rtvClearColor[i][3];
+			propVec.push_back(prop);
+		}
+		auto SSShadowTemporalPassRtvHeap = std::make_unique<GDxRtvHeap>(md3dDevice.Get(), mClientWidth, mClientHeight, GetCpuSrv(mSSShadowTemporalSrvIndex), GetGpuSrv(mSSShadowTemporalSrvIndex), propVec);
+		mRtvHeaps["SSShadowTemporalPass"] = std::move(SSShadowTemporalPassRtvHeap);
+	}
+
 	// Build RTV and SRV for light pass.
 	{
-		mLightPassSrvIndex = mScreenSpaceShadowPassSrvIndex + (UINT)mRtvHeaps["ScreenSpaceShadowPass"]->mRtv.size();
+		mLightPassSrvIndex = mSSShadowTemporalSrvIndex + (UINT)mRtvHeaps["SSShadowTemporalPass"]->mRtv.size();
 
 		std::vector<DXGI_FORMAT> rtvFormats =
 		{
@@ -2574,9 +2944,28 @@ void GDxRenderer::BuildDescriptorHeaps()
 		mRtvHeaps["MotionBlurPass"] = std::move(motionBlurPassRtvHeap);
 	}
 
+	// Build SRV for blue noise.
+	{
+		mBlueNoiseSrvIndex = mMotionBlurSrvIndex + mRtvHeaps["TaaPass"]->mRtvHeap.HeapDesc.NumDescriptors;
+
+		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+		srvDesc.Texture2D.MostDetailedMip = 0;
+		srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
+
+		GDxTexture* tex = dynamic_cast<GDxTexture*>(pTextures[L"Resource\\Textures\\BlueNoise.png"]);
+		if (tex == nullptr)
+			ThrowDxException(L"Dynamic cast from GRiTexture to GDxTexture failed.");
+
+		srvDesc.Format = tex->Resource->GetDesc().Format;
+		srvDesc.Texture2D.MipLevels = tex->Resource->GetDesc().MipLevels;
+		md3dDevice->CreateShaderResourceView(tex->Resource.Get(), &srvDesc, GetCpuSrv(mBlueNoiseSrvIndex));
+	}
+
 	// Build cubemap SRV and RTVs for irradiance pre-integration.
 	{
-		mIblIndex = mMotionBlurSrvIndex + mRtvHeaps["TaaPass"]->mRtvHeap.HeapDesc.NumDescriptors;
+		mIblIndex = mBlueNoiseSrvIndex + 1;
 
 		GRtvProperties prop;
 		//prop.mRtvFormat = DXGI_FORMAT_R32G32B32A32_FLOAT;
@@ -2768,6 +3157,48 @@ void GDxRenderer::BuildPSOs()
 		ThrowIfFailed(md3dDevice->CreateComputePipelineState(&computePsoDesc, IID_PPV_ARGS(&mPSOs["TileClusterPass"])));
 	}
 
+	// PSO for shadow map pass.
+	{
+		D3D12_GRAPHICS_PIPELINE_STATE_DESC ShadowMapPsoDesc;
+
+		D3D12_DEPTH_STENCIL_DESC ShadowMapDSD;
+		ShadowMapDSD.DepthEnable = true;
+		ShadowMapDSD.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
+#if USE_REVERSE_Z
+		ShadowMapDSD.DepthFunc = D3D12_COMPARISON_FUNC_GREATER;
+#else
+		ShadowMapDSD.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
+#endif
+		ShadowMapDSD.StencilEnable = false;
+
+		ZeroMemory(&ShadowMapPsoDesc, sizeof(D3D12_GRAPHICS_PIPELINE_STATE_DESC));
+		ShadowMapPsoDesc.InputLayout.pInputElementDescs = GDxInputLayout::DefaultLayout;
+		ShadowMapPsoDesc.InputLayout.NumElements = _countof(GDxInputLayout::DefaultLayout);
+		ShadowMapPsoDesc.pRootSignature = mRootSignatures["ShadowMap"].Get();
+		ShadowMapPsoDesc.VS = GDxShaderManager::LoadShader(L"Shaders\\ShadowMapVS.cso");
+		ShadowMapPsoDesc.PS = GDxShaderManager::LoadShader(L"Shaders\\ShadowMapPS.cso");
+		ShadowMapPsoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+#if USE_REVERSE_Z
+		ShadowMapPsoDesc.RasterizerState.DepthBias = -100;
+		ShadowMapPsoDesc.RasterizerState.DepthBiasClamp = 0.0f;
+		ShadowMapPsoDesc.RasterizerState.SlopeScaledDepthBias = -1.0f;
+#else
+		ShadowMapPsoDesc.RasterizerState.DepthBias = 100;
+		ShadowMapPsoDesc.RasterizerState.DepthBiasClamp = 0.0f;
+		ShadowMapPsoDesc.RasterizerState.SlopeScaledDepthBias = 1.0f;
+#endif
+		ShadowMapPsoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+		ShadowMapPsoDesc.DepthStencilState = ShadowMapDSD;
+		ShadowMapPsoDesc.SampleMask = UINT_MAX;
+		ShadowMapPsoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+		ShadowMapPsoDesc.NumRenderTargets = 0;
+		ShadowMapPsoDesc.RTVFormats[0] = DXGI_FORMAT_UNKNOWN;
+		ShadowMapPsoDesc.SampleDesc.Count = 1;//m4xMsaaState ? 4 : 1;
+		ShadowMapPsoDesc.SampleDesc.Quality = 0;//m4xMsaaState ? (m4xMsaaQuality - 1) : 0;
+		ShadowMapPsoDesc.DSVFormat = mDepthStencilFormat;
+		ThrowIfFailed(md3dDevice->CreateGraphicsPipelineState(&ShadowMapPsoDesc, IID_PPV_ARGS(&mPSOs["ShadowMap"])));
+	}
+
 	// PSO for screen space shadow pass.
 	{
 		D3D12_GRAPHICS_PIPELINE_STATE_DESC ScreenSpaceShadowPsoDesc;
@@ -2799,6 +3230,34 @@ void GDxRenderer::BuildPSOs()
 		ScreenSpaceShadowPsoDesc.SampleDesc.Quality = 0;//m4xMsaaState ? (m4xMsaaQuality - 1) : 0;
 		ScreenSpaceShadowPsoDesc.DSVFormat = mDepthStencilFormat;
 		ThrowIfFailed(md3dDevice->CreateGraphicsPipelineState(&ScreenSpaceShadowPsoDesc, IID_PPV_ARGS(&mPSOs["ScreenSpaceShadowPass"])));
+	}
+
+	// PSO for screen space shadow temporal filter pass.
+	{
+		D3D12_DEPTH_STENCIL_DESC SSShadowTemporalPassDSD;
+		SSShadowTemporalPassDSD.DepthEnable = true;
+		SSShadowTemporalPassDSD.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
+		SSShadowTemporalPassDSD.DepthFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+		SSShadowTemporalPassDSD.StencilEnable = false;
+
+		D3D12_GRAPHICS_PIPELINE_STATE_DESC descSSShadowTemporalPSO;
+		ZeroMemory(&descSSShadowTemporalPSO, sizeof(descSSShadowTemporalPSO));
+
+		descSSShadowTemporalPSO.VS = GDxShaderManager::LoadShader(L"Shaders\\FullScreenVS.cso");
+		descSSShadowTemporalPSO.PS = GDxShaderManager::LoadShader(L"Shaders\\SSShadowTemporalPS.cso");
+		descSSShadowTemporalPSO.pRootSignature = mRootSignatures["SSShadowTemporalPass"].Get();
+		descSSShadowTemporalPSO.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+		descSSShadowTemporalPSO.DepthStencilState = SSShadowTemporalPassDSD;
+		descSSShadowTemporalPSO.InputLayout.pInputElementDescs = GDxInputLayout::DefaultLayout;
+		descSSShadowTemporalPSO.InputLayout.NumElements = _countof(GDxInputLayout::DefaultLayout);
+		descSSShadowTemporalPSO.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+		descSSShadowTemporalPSO.NumRenderTargets = 2;
+		descSSShadowTemporalPSO.RTVFormats[0] = mRtvHeaps["SSShadowTemporalPass"]->mRtv[2]->mProperties.mRtvFormat;//temporal output
+		descSSShadowTemporalPSO.RTVFormats[1] = mRtvHeaps["SSShadowTemporalPass"]->mRtv[0]->mProperties.mRtvFormat;//history
+		descSSShadowTemporalPSO.SampleMask = UINT_MAX;
+		descSSShadowTemporalPSO.SampleDesc.Count = 1;
+		descSSShadowTemporalPSO.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+		ThrowIfFailed(md3dDevice->CreateGraphicsPipelineState(&descSSShadowTemporalPSO, IID_PPV_ARGS(&mPSOs["SSShadowTemporalPass"])));
 	}
 
 	// PSO for light pass.
@@ -3697,7 +4156,7 @@ void GDxRenderer::BuildMeshSDF()
 			mesh.second->Name == L"Grid" ||
 			mesh.second->Name == L"Quad" ||
 			mesh.second->Name == L"Cerberus"||
-			mesh.second->Name != L"Stool"
+			mesh.second->Name != L"Stool123"
 			)
 			continue;
 
@@ -3752,7 +4211,7 @@ void GDxRenderer::BuildMeshSDF()
 			if (range > maxExtent)
 				maxExtent = range;
 		}
-		auto sdfExtent = maxExtent * 1.4f * 2.0f;// 1.4f * dxMesh->bounds.Extents[dxMesh->bounds.MaximumExtent()] * 2.0f;
+		auto sdfExtent = maxExtent * 1.4f * 2.0f;
 		auto sdfUnit = sdfExtent / (float)sdfRes;
 		auto initMinDisFront = 1.414f * sdfExtent;
 		auto initMaxDisBack = -1.414f * sdfExtent;
@@ -3828,8 +4287,6 @@ void GDxRenderer::BuildMeshSDF()
 
 		ResetCommandList();
 
-		//Microsoft::WRL::ComPtr<ID3D12Resource> sdfTexture = nullptr;
-		//Microsoft::WRL::ComPtr<ID3D12Resource> sdfTextureUploadBuffer = nullptr;
 		D3D12_RESOURCE_DESC texDesc;
 		ZeroMemory(&texDesc, sizeof(D3D12_RESOURCE_DESC));
 		texDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE3D;
@@ -3889,25 +4346,8 @@ void GDxRenderer::BuildMeshSDF()
 		ExecuteCommandList();
 	}
 
-	/*
-	int soSdfIndex = 0;
-	for (auto so : pSceneObjectLayer[(int)RenderLayer::Deferred])
-	{
-		if (so->GetMesh()->GetSdf()->size() > 0)
-		{
-			mSceneObjectSdfDescriptors[soSdfIndex].SdfIndex = so->GetMesh()->mSdfIndex;
-			XMMATRIX trans = GDx::GGiToDxMatrix(so->GetTransform());
-			DirectX::XMStoreFloat4x4(&mSceneObjectSdfDescriptors[soSdfIndex].Transform, trans);
-			soSdfIndex++;
-		}
-	}
-	mSceneObjectSdfNum = soSdfIndex;
-	*/
-
 	auto meshSdfBuffer = mMeshSdfDescriptorBuffer.get();
 	meshSdfBuffer->CopyData(0, mMeshSdfDescriptors[0]);
-	//auto soSdfBuffer = mSceneObjectSdfDescriptorBuffer.get();
-	//soSdfBuffer->CopyData(0, mSceneObjectSdfDescriptors[0]);
 	
 	/*
 	for (auto so : pSceneObjectLayer[(int)RenderLayer::Deferred])

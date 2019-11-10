@@ -4,18 +4,38 @@
 <Project class_id="0" tracking_level="0" version="0">
 	<mSkyCubemapUniqueName>Content\Textures\Cubemap\Lake.dds</mSkyCubemapUniqueName>
 	<mTextureInfo class_id="1" tracking_level="0" version="0">
-		<count>72</count>
+		<count>70</count>
 		<item_version>0</item_version>
 		<item class_id="2" tracking_level="0" version="0">
-			<UniqueFileName>Content\Textures\Test2\Grimy_Metal_Orm.png</UniqueFileName>
+			<UniqueFileName>Content\Models\Rifle_1\Rifle_1_Albedo.png</UniqueFileName>
+			<bSrgb>1</bSrgb>
+		</item>
+		<item>
+			<UniqueFileName>Resource\Textures\GE_Default_Orm.png</UniqueFileName>
 			<bSrgb>0</bSrgb>
 		</item>
 		<item>
-			<UniqueFileName>Content\Models\Chair\Chair_Albedo.tga</UniqueFileName>
+			<UniqueFileName>Content\Models\Helmet\Helmet_Albedo.png</UniqueFileName>
+			<bSrgb>1</bSrgb>
+		</item>
+		<item>
+			<UniqueFileName>Content\Textures\Cubemap\Lake.dds</UniqueFileName>
+			<bSrgb>1</bSrgb>
+		</item>
+		<item>
+			<UniqueFileName>Content\Models\Rifle_1\Rifle_1_Normal.png</UniqueFileName>
 			<bSrgb>0</bSrgb>
 		</item>
 		<item>
-			<UniqueFileName>Content\Models\Chair\Chair_Normal.tga</UniqueFileName>
+			<UniqueFileName>Content\Models\Helmet\Helmet_Normal.png</UniqueFileName>
+			<bSrgb>0</bSrgb>
+		</item>
+		<item>
+			<UniqueFileName>Content\Models\Rifle_2\Rifle_2_Orm.png</UniqueFileName>
+			<bSrgb>0</bSrgb>
+		</item>
+		<item>
+			<UniqueFileName>Content\Textures\Cerberus_Normal.png</UniqueFileName>
 			<bSrgb>0</bSrgb>
 		</item>
 		<item>
@@ -35,30 +55,6 @@
 			<bSrgb>0</bSrgb>
 		</item>
 		<item>
-			<UniqueFileName>Content\Textures\Cubemap\Lake.dds</UniqueFileName>
-			<bSrgb>1</bSrgb>
-		</item>
-		<item>
-			<UniqueFileName>Content\Models\Rifle_1\Rifle_1_Normal.png</UniqueFileName>
-			<bSrgb>0</bSrgb>
-		</item>
-		<item>
-			<UniqueFileName>Content\Models\Helmet\Helmet_Normal.png</UniqueFileName>
-			<bSrgb>0</bSrgb>
-		</item>
-		<item>
-			<UniqueFileName>Content\Models\Chair\Chair_Orm.tga</UniqueFileName>
-			<bSrgb>0</bSrgb>
-		</item>
-		<item>
-			<UniqueFileName>Content\Models\Rifle_1\Rifle_1_Albedo.png</UniqueFileName>
-			<bSrgb>1</bSrgb>
-		</item>
-		<item>
-			<UniqueFileName>Content\Models\Helmet\Helmet_Albedo.png</UniqueFileName>
-			<bSrgb>1</bSrgb>
-		</item>
-		<item>
 			<UniqueFileName>Content\Textures\Test2\HardWoodBrown_Normal.png</UniqueFileName>
 			<bSrgb>0</bSrgb>
 		</item>
@@ -68,14 +64,6 @@
 		</item>
 		<item>
 			<UniqueFileName>Content\Models\Rifle_2\Rifle_2_Normal.jpg</UniqueFileName>
-			<bSrgb>0</bSrgb>
-		</item>
-		<item>
-			<UniqueFileName>Content\Models\Rifle_2\Rifle_2_Orm.png</UniqueFileName>
-			<bSrgb>0</bSrgb>
-		</item>
-		<item>
-			<UniqueFileName>Content\Textures\Cerberus_Normal.png</UniqueFileName>
 			<bSrgb>0</bSrgb>
 		</item>
 		<item>
@@ -133,6 +121,10 @@
 		<item>
 			<UniqueFileName>Content\Textures\Greasy_Pan_Normal.png</UniqueFileName>
 			<bSrgb>0</bSrgb>
+		</item>
+		<item>
+			<UniqueFileName>Resource\Textures\GE_DefaultTexture_Albedo.png</UniqueFileName>
+			<bSrgb>1</bSrgb>
 		</item>
 		<item>
 			<UniqueFileName>Content\Textures\Greasy_Pan_Orm.png</UniqueFileName>
@@ -211,6 +203,10 @@
 			<bSrgb>0</bSrgb>
 		</item>
 		<item>
+			<UniqueFileName>Content\Textures\Test2\Grimy_Metal_Orm.png</UniqueFileName>
+			<bSrgb>0</bSrgb>
+		</item>
+		<item>
 			<UniqueFileName>Content\Textures\Test2\HardWoodBrown_Albedo.png</UniqueFileName>
 			<bSrgb>1</bSrgb>
 		</item>
@@ -271,14 +267,6 @@
 			<bSrgb>0</bSrgb>
 		</item>
 		<item>
-			<UniqueFileName>Resource\Textures\GE_Default_Orm.png</UniqueFileName>
-			<bSrgb>0</bSrgb>
-		</item>
-		<item>
-			<UniqueFileName>Resource\Textures\GE_DefaultTexture_Albedo.png</UniqueFileName>
-			<bSrgb>1</bSrgb>
-		</item>
-		<item>
 			<UniqueFileName>Resource\Textures\GE_DefaultTexture_Normal.png</UniqueFileName>
 			<bSrgb>0</bSrgb>
 		</item>
@@ -291,12 +279,16 @@
 			<bSrgb>0</bSrgb>
 		</item>
 		<item>
+			<UniqueFileName>Resource\Textures\BlueNoise.png</UniqueFileName>
+			<bSrgb>0</bSrgb>
+		</item>
+		<item>
 			<UniqueFileName>Content\Textures\Cubemap\Lake.dds</UniqueFileName>
 			<bSrgb>1</bSrgb>
 		</item>
 	</mTextureInfo>
 	<mSceneObjectInfo class_id="3" tracking_level="0" version="0">
-		<count>2</count>
+		<count>3</count>
 		<item_version>0</item_version>
 		<item class_id="4" tracking_level="0" version="0">
 			<UniqueName>NewSceneObject_4</UniqueName>
@@ -312,20 +304,20 @@
 			<Location>
 				<count>3</count>
 				<item>0.000000000e+00</item>
-				<item>5.550981998e+00</item>
+				<item>5.390153885e+01</item>
 				<item>0.000000000e+00</item>
 			</Location>
 			<Rotation>
 				<count>3</count>
 				<item>0.000000000e+00</item>
-				<item>0.000000000e+00</item>
+				<item>-0.000000000e+00</item>
 				<item>0.000000000e+00</item>
 			</Rotation>
 			<Scale>
 				<count>3</count>
-				<item>1.000000000e+00</item>
-				<item>1.000000000e+00</item>
-				<item>1.000000000e+00</item>
+				<item>3.000000000e+00</item>
+				<item>3.000000000e+00</item>
+				<item>3.000000000e+00</item>
 			</Scale>
 		</item>
 		<item>
@@ -353,9 +345,35 @@
 			</Rotation>
 			<Scale>
 				<count>3</count>
-				<item>1.000000000e+01</item>
-				<item>1.000000000e+01</item>
-				<item>1.000000000e+01</item>
+				<item>2.000000000e+01</item>
+				<item>2.000000000e+01</item>
+				<item>2.000000000e+01</item>
+			</Scale>
+		</item>
+		<item>
+			<UniqueName>NewSceneObject_1</UniqueName>
+			<OverrideMaterialUniqueName>
+				<count>0</count>
+				<item_version>0</item_version>
+			</OverrideMaterialUniqueName>
+			<MeshUniqueName>Grid</MeshUniqueName>
+			<Location>
+				<count>3</count>
+				<item>0.000000000e+00</item>
+				<item>0.000000000e+00</item>
+				<item>0.000000000e+00</item>
+			</Location>
+			<Rotation>
+				<count>3</count>
+				<item>-9.000000000e+01</item>
+				<item>-0.000000000e+00</item>
+				<item>0.000000000e+00</item>
+			</Rotation>
+			<Scale>
+				<count>3</count>
+				<item>9.999353886e-01</item>
+				<item>1.000000000e+00</item>
+				<item>1.000000000e+00</item>
 			</Scale>
 		</item>
 	</mSceneObjectInfo>

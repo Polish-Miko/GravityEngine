@@ -86,7 +86,7 @@ VertexOutput main(VertexInput input)
 	output.tangent = normalize(mul(input.tangent, (float3x3)gInvTransWorld));
 	//output.worldPos = mul(float4(input.pos, 1.0f), gWorld).xyz;
 	output.linearZ = LinearZ(output.pos);
-	output.shadowPos = mul(float4(input.pos, 1.0f), gShadowTransform);
+	output.shadowPos = mul(float4(input.pos, 1.0f), gShadowTransform[gFrameCount % SHADOW_CASCADE_NUM]);
 	//output.ssaoPos = mul(worldPos, gViewProjTex);
 	return output;
 }

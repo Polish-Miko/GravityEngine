@@ -13,7 +13,7 @@
         xmlns:wfi ="clr-namespace:System.Windows.Forms.Integration;assembly=WindowsFormsIntegration"
         xmlns:local="clr-namespace:GEditor"
         mc:Ignorable="d"
-        Title="GEditor" Height="886.667" Width="1422" Background="#FF2D2D2D" WindowStyle="SingleBorderWindow">
+        Title="GEditor" Height="1088" Width="1778" Background="#FF2D2D2D" WindowStyle="SingleBorderWindow">
 
     <Window.Resources>
         <Style x:Key="TreeViewItemExpandedStyle" TargetType="{x:Type TreeViewItem}">
@@ -37,7 +37,8 @@
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition/>
                             </Grid.RowDefinitions>
-                            <ToggleButton x:Name="Expander" IsEnabled="False" Visibility="Hidden" ClickMode="Press" IsChecked="{Binding IsExpanded, RelativeSource={RelativeSource TemplatedParent}}"/><!--Style="{StaticResource ExpandCollapseToggleStyle}"-->
+                            <ToggleButton x:Name="Expander" IsEnabled="False" Visibility="Hidden" ClickMode="Press" IsChecked="{Binding IsExpanded, RelativeSource={RelativeSource TemplatedParent}}"/>
+                            <!--Style="{StaticResource ExpandCollapseToggleStyle}"-->
                             <Border x:Name="Bd" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Background="{TemplateBinding Background}" Grid.Column="1" Padding="{TemplateBinding Padding}" SnapsToDevicePixels="true">
                                 <ContentPresenter x:Name="PART_Header" ContentSource="Header" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
                             </Border>
@@ -82,7 +83,7 @@
             </Style.Triggers>
         </Style>
     </Window.Resources>
-    
+
     <Grid Background="#FF252525">
         <Grid.RowDefinitions>
             <RowDefinition Height="28"/>

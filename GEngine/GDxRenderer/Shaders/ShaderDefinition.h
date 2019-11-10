@@ -81,6 +81,34 @@ static const float DepthSlicing_16[17] = {
 #define MAX_GRID_POINT_LIGHT_NUM 80
 #define MAX_GRID_SPOTLIGHT_NUM 20
 
+
+//----------------------------------------------------------------------------------------------------------
+// Shadow
+//----------------------------------------------------------------------------------------------------------
+#define SHADOW_CASCADE_NUM 2
+
+#define LIGHT_Z_UPPER_BOUND 10000.0f
+#define LIGHT_Z_LOWER_BOUND 1.0f
+#define LIGHT_Z_UPPER_BOUND_NORM 1.0f
+#define LIGHT_Z_LOWER_BOUND_NORM 0.0f
+
+#if USE_REVERSE_Z
+
+#define LIGHT_FAR_Z LIGHT_Z_LOWER_BOUND
+#define LIGHT_NEAR_Z LIGHT_Z_UPPER_BOUND
+#define LIGHT_FAR_Z_NORM LIGHT_Z_LOWER_BOUND_NORM
+#define LIGHT_NEAR_Z_NORM LIGHT_Z_UPPER_BOUND_NORM
+
+#else
+
+#define LIGHT_FAR_Z LIGHT_Z_UPPER_BOUND
+#define LIGHT_NEAR_Z LIGHT_Z_LOWER_BOUND
+#define LIGHT_FAR_Z_NORM LIGHT_Z_UPPER_BOUND_NORM
+#define LIGHT_NEAR_Z_NORM LIGHT_Z_LOWER_BOUND_NORM
+
+#endif
+
+#define USE_PCSS_TEMPORAL 0
  
 
 

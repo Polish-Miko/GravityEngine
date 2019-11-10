@@ -67,6 +67,8 @@ public:
 	std::vector<float> GetPrevPosition();
 	void InitPrevPosition();
 
+	GGiFloat3 GetCornerPos(float lookDistance, bool left, bool up);
+
 private:
 	
 	GRiRendererFactory* pRendererFactory;

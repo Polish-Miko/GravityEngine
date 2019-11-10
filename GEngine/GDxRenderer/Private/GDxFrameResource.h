@@ -3,6 +3,7 @@
 #include "GDxPreInclude.h"
 #include "GDxMathHelper.h"
 #include "GDxUploadBuffer.h"
+#include "../Shaders/ShaderDefinition.h"
 
 // should be the same with the definition in Lighting.hlsli
 #define MAX_DIRECTIONAL_LIGHT_NUM 4
@@ -32,7 +33,7 @@ struct PassConstants
 	DirectX::XMFLOAT4X4 InvViewProj = GDxMathHelper::Identity4x4();//Jittered
 	DirectX::XMFLOAT4X4 PrevViewProj = GDxMathHelper::Identity4x4();//Unjittered
 	DirectX::XMFLOAT4X4 ViewProjTex = GDxMathHelper::Identity4x4();
-	DirectX::XMFLOAT4X4 ShadowTransform = GDxMathHelper::Identity4x4();
+	DirectX::XMFLOAT4X4 LightTransform = GDxMathHelper::Identity4x4();
 	DirectX::XMFLOAT3 EyePosW = { 0.0f, 0.0f, 0.0f };
 	float cbPerObjectPad1 = 0.0f;
 	DirectX::XMFLOAT2 RenderTargetSize = { 0.0f, 0.0f };
@@ -47,6 +48,12 @@ struct PassConstants
 	
 	DirectX::XMFLOAT4 AmbientLight = { 0.0f, 0.0f, 0.0f, 1.0f };
 	DirectX::XMFLOAT4 MainDirectionalLightDir = { 0.0f, -1.0f, 0.0f, 0.0f };
+
+	DirectX::XMFLOAT4X4 ShadowView[SHADOW_CASCADE_NUM];
+	DirectX::XMFLOAT4X4 ShadowProj[SHADOW_CASCADE_NUM];
+	DirectX::XMFLOAT4X4 ShadowViewProj[SHADOW_CASCADE_NUM];
+	DirectX::XMFLOAT4X4 ShadowTransform[SHADOW_CASCADE_NUM];
+	DirectX::XMFLOAT4 UniformRandom;
 };
 
 struct LightConstants

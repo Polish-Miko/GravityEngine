@@ -19,6 +19,7 @@
 #include "GDxUav.h"
 #include "../Shaders/ShaderDefinition.h"
 #include "GDxReadbackBuffer.h"
+#include "GDxCascadedShadowMap.h"
 
 // Link necessary d3d12 libraries.
 #pragma comment(lib,"d3dcompiler.lib")
@@ -257,18 +258,39 @@ protected:
 	UINT mVelocityBufferSrvIndex = 0;
 	UINT mGBufferSrvIndex = 0;
 	UINT mTileClusterSrvIndex = 0;
+	UINT mCascadedShadowMapSrvIndex = 0;
 	UINT mScreenSpaceShadowPassSrvIndex = 0;
+	UINT mSSShadowTemporalSrvIndex = 0;
 	UINT mLightPassSrvIndex = 0;
 	UINT mSkyPassSrvIndex = 0;
 	UINT mTaaPassSrvIndex = 0;
 	UINT mMotionBlurSrvIndex = 0;
 	UINT mIblIndex = 0;
+	UINT mBlueNoiseSrvIndex = 0;
+
+	UINT mDepthDsvIndex = 0;
+	UINT mShadowMapDsvIndex = 0;
 
 	int numVisible = 0;
 	int numFrustumCulled = 0;
 	int numOcclusionCulled = 0;
 
+	int ShadowCascadeNum = SHADOW_CASCADE_NUM;
+	std::vector<float> ShadowCascadeDistance = { Z_LOWER_BOUND, Z_LOWER_BOUND + 1000.0F, Z_LOWER_BOUND + 3000.0f };
+	float ShadowMapCameraDis = (LIGHT_Z_UPPER_BOUND - LIGHT_Z_LOWER_BOUND) / 2.0f;
+	UINT64 ShadowMapResolution = 2048;
+	XMMATRIX mShadowView[SHADOW_CASCADE_NUM];
+	XMMATRIX mShadowProj[SHADOW_CASCADE_NUM];
+	XMMATRIX mShadowViewProj[SHADOW_CASCADE_NUM];
+	XMMATRIX mShadowTransform[SHADOW_CASCADE_NUM];
+
+	D3D12_VIEWPORT ShadowViewport;
+	D3D12_RECT ShadowScissorRect;
+
+	GGiFloat3 MainDirectionalLightDir = GGiFloat3(0.57735f, -0.57735f, -0.57735f);
+
 	UINT mTaaHistoryIndex = 0;
+	UINT mShadowTemporalHistoryIndex = 0;
 
 	CD3DX12_GPU_DESCRIPTOR_HANDLE mNullSrv;
 
@@ -295,7 +317,7 @@ protected:
 	XMFLOAT3 mLightPosW;
 	XMFLOAT4X4 mLightView = GDxMathHelper::Identity4x4();
 	XMFLOAT4X4 mLightProj = GDxMathHelper::Identity4x4();
-	XMFLOAT4X4 mShadowTransform = GDxMathHelper::Identity4x4();
+	XMFLOAT4X4 mLightTransform = GDxMathHelper::Identity4x4();
 
 	float mLightRotationAngle = 0.0f;
 	XMFLOAT3 mBaseLightDirections[3] = {
@@ -310,6 +332,8 @@ protected:
 	std::unique_ptr<GGiThreadPool> mRendererThreadPool = nullptr;
 
 	//std::shared_ptr<GRiKdTree> mAcceleratorTree = nullptr;
+
+	std::vector<std::unique_ptr<GDxCascadedShadowMap>> mCascadedShadowMap;
 
 private:
 	

@@ -357,4 +357,36 @@ void GRiCamera::InitPrevPosition()
 	mPrevPosition[2] = mPosition[2];
 }
 
+GGiFloat3 GRiCamera::GetCornerPos(float lookDistance, bool left, bool up)
+{
+	GGiFloat3 lookVec = GGiFloat3(mLook[0], mLook[1], mLook[2]);
+	GGiFloat3 rightVec = GGiFloat3(mRight[0], mRight[1], mRight[2]);
+	GGiFloat3 upVec = GGiFloat3(mUp[0], mUp[1], mUp[2]);
+	GGiFloat3 posVec = GGiFloat3(mPosition[0], mPosition[1], mPosition[2]);
+	float heightDis = lookDistance * tanf(mFovY);
+	float widthDis = heightDis * mAspect;
+	if (left)
+	{
+		if (up)
+		{
+			return (posVec + lookVec * lookDistance - rightVec * widthDis + upVec * heightDis);
+		}
+		else
+		{
+			return (posVec + lookVec * lookDistance - rightVec * widthDis - upVec * heightDis);
+		}
+	}
+	else
+	{
+		if (up)
+		{
+			return (posVec + lookVec * lookDistance + rightVec * widthDis + upVec * heightDis);
+		}
+		else
+		{
+			return (posVec + lookVec * lookDistance + rightVec * widthDis - upVec * heightDis);
+		}
+	}
+}
+
 
