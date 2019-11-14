@@ -29,7 +29,7 @@ cbuffer cbPass : register(b1)
 	float gDeltaTime;
 	uint gFrameCount;
 	float2 gJitter;
-	uint gPad0;
+	uint gPad;
 	float4 gAmbientLight;
 	float4 gMainDirectionalLightDir;
 	float4x4 gShadowView[SHADOW_CASCADE_NUM];
@@ -37,6 +37,8 @@ cbuffer cbPass : register(b1)
 	float4x4 gShadowViewProj[SHADOW_CASCADE_NUM];
 	float4x4 gShadowTransform[SHADOW_CASCADE_NUM];
 	float4 gUniformRandom;
+	float4x4 gSdfTileTransform;
+	float4 gSdfTileSpaceSize;
 };
 
 #endif 

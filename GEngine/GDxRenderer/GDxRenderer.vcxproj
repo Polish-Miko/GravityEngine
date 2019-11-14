@@ -206,6 +206,7 @@
     <ClInclude Include="Public\GDxTextureLoader.h" />
     <ClInclude Include="Public\GDxTexture.h" />
     <ClInclude Include="Public\GDxRenderer.h" />
+    <None Include="Shaders\SdfDescriptors.hlsli" />
     <None Include="Shaders\ShaderDefinition.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
@@ -360,6 +361,12 @@
     </FxCompile>
     <FxCompile Include="Shaders\SdfDebugPS.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
+    </FxCompile>
+    <FxCompile Include="Shaders\SdfTileCS.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Compute</ShaderType>
+    </FxCompile>
+    <FxCompile Include="Shaders\ShadowMapPrefilterCS.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Compute</ShaderType>
     </FxCompile>
     <FxCompile Include="Shaders\ShadowMapPS.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>

@@ -44,8 +44,8 @@ struct PassConstants
 	float DeltaTime = 0.0f;
 	UINT FrameCount = 0u;
 	DirectX::XMFLOAT2 Jitter = { 0.0f,0.0f };
-	UINT     Pad0;
-	
+	UINT     gPad;
+
 	DirectX::XMFLOAT4 AmbientLight = { 0.0f, 0.0f, 0.0f, 1.0f };
 	DirectX::XMFLOAT4 MainDirectionalLightDir = { 0.0f, -1.0f, 0.0f, 0.0f };
 
@@ -54,6 +54,9 @@ struct PassConstants
 	DirectX::XMFLOAT4X4 ShadowViewProj[SHADOW_CASCADE_NUM];
 	DirectX::XMFLOAT4X4 ShadowTransform[SHADOW_CASCADE_NUM];
 	DirectX::XMFLOAT4 UniformRandom;
+
+	DirectX::XMFLOAT4X4 SdfTileTransform;
+	DirectX::XMFLOAT4 gSdfTileSpaceSize;
 };
 
 struct LightConstants
@@ -108,10 +111,13 @@ struct MaterialData
 
 struct SceneObjectSdfDescriptor
 {
+	DirectX::XMFLOAT4 objWorldSpaceCenter;
+	DirectX::XMFLOAT4 objLightSpaceCenter;
 	DirectX::XMFLOAT4X4 objWorld;
 	DirectX::XMFLOAT4X4 objInvWorld;
 	DirectX::XMFLOAT4X4 objInvWorld_IT;
 	int SdfIndex;
+	float worldRadius;
 };
 
 struct Vertex

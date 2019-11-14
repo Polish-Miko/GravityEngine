@@ -1,16 +1,18 @@
 
 #include "ShaderDefinition.h"
 #include "MainPassCB.hlsli"
+#include "SdfDescriptors.hlsli"
 
 #define MAX_SCENE_OBJECT_NUM 2048
 
-#define MAX_STEP 200
-#define MAX_DISTANCE 2000.0f
+#define MAX_STEP 64
+#define MAX_DISTANCE 3000.0f
 #define ACCUM_DENSITY 0.1f
 #define STEP_LENGTH 10.0f
-#define MIN_STEP_LENGTH 5.0f
+#define MIN_STEP_LENGTH (1.0f / (4 * MAX_STEP))
 
-#define CONE_COTANGENT 8.0f
+#define CONE_COTANGENT 10.0f
+#define CONE_TANGENT (1 / CONE_COTANGENT)
 
 #define DEBUG_CASCADE_RANGE 0
 #define DEBUG_SHADOWMAP 0
@@ -24,6 +26,13 @@
 #define PCF_TEMPORAL_FRAME_COUNT 1
 #define PCF_SAMPLING_UV_RADIUS 0.025f
 
+#define RAY_START_OFFSET 3.0f
+
+#define MIN_SPHERE_RADIUS 0.4f
+#define MAX_SPHERE_RADIUS 100.0f
+
+#define USE_HARD_SHADOW 1
+
 static const float PI = 3.14159265359f;
 
 struct VertexToPixel
@@ -32,42 +41,24 @@ struct VertexToPixel
 	float2 uv           : TEXCOORD0;
 };
 
-struct MeshSdfDescriptor
+struct SdfList
 {
-	float HalfExtent;
-	float Radius;
-	int Resolution;
+	uint NumSdf;
+	uint SdfObjIndices[MAX_GRID_SDF_NUM];
 };
-
-struct SceneObjectSdfDescriptor
-{
-	float4x4 objWorld;
-	float4x4 objInvWorld;
-	float4x4 objInvWorld_IT;
-	int SdfIndex;
-};
-
-StructuredBuffer<MeshSdfDescriptor> gMeshSdfDescriptors : register(t0);
-StructuredBuffer<SceneObjectSdfDescriptor> gSceneObjectSdfDescriptors : register(t1);
 
 Texture2D gDepthBuffer					: register(t2);
 
 Texture2D gBlueNoise					: register(t3);
 
-Texture2D gShadowMap[SHADOW_CASCADE_NUM]	: register(t4);
+StructuredBuffer<SdfList> gSdfList : register(t4);
+
+Texture2D gShadowMap[SHADOW_CASCADE_NUM]	: register(t5);
 
 Texture3D gSdfTextures[MAX_SCENE_OBJECT_NUM] : register(t0, space1);
 
 SamplerState			basicSampler	: register(s0);
 SamplerComparisonState	shadowSampler	: register(s1);
-
-cbuffer cbSDF : register(b0)
-{
-	uint gSceneObjectNum;
-	//uint gPad0;
-	//uint gPad1;
-	//uint gPad2;
-};
 
 //-------------------------------------------------------------------------------------------------
 // Util.
@@ -140,6 +131,56 @@ float2 DepthGradient(float2 uv, float z)
 	dz_duv /= det;
 
 	return dz_duv;
+}
+
+/*
+* Clips a ray to an AABB.  Does not handle rays parallel to any of the planes.
+*
+* @param RayOrigin - The origin of the ray in world space.
+* @param RayEnd - The end of the ray in world space.
+* @param BoxMin - The minimum extrema of the box.
+* @param BoxMax - The maximum extrema of the box.
+* @return - Returns the closest intersection along the ray in x, and furthest in y.
+*			If the ray did not intersect the box, then the furthest intersection <= the closest intersection.
+*			The intersections will always be in the range [0,1], which corresponds to [RayOrigin, RayEnd] in worldspace.
+*			To find the world space position of either intersection, simply plug it back into the ray equation:
+*			WorldPos = RayOrigin + (RayEnd - RayOrigin) * Intersection;
+*/
+float2 LineBoxIntersect(float3 RayOrigin, float3 RayEnd, float3 BoxMin, float3 BoxMax)
+{
+	float3 InvRayDir = 1.0f / (RayEnd - RayOrigin);
+
+	//find the ray intersection with each of the 3 planes defined by the minimum extrema.
+	float3 FirstPlaneIntersections = (BoxMin - RayOrigin) * InvRayDir;
+	//find the ray intersection with each of the 3 planes defined by the maximum extrema.
+	float3 SecondPlaneIntersections = (BoxMax - RayOrigin) * InvRayDir;
+	//get the closest of these intersections along the ray
+	float3 ClosestPlaneIntersections = min(FirstPlaneIntersections, SecondPlaneIntersections);
+	//get the furthest of these intersections along the ray
+	float3 FurthestPlaneIntersections = max(FirstPlaneIntersections, SecondPlaneIntersections);
+
+	float2 BoxIntersections;
+	//find the furthest near intersection
+	BoxIntersections.x = max(ClosestPlaneIntersections.x, max(ClosestPlaneIntersections.y, ClosestPlaneIntersections.z));
+	//find the closest far intersection
+	BoxIntersections.y = min(FurthestPlaneIntersections.x, min(FurthestPlaneIntersections.y, FurthestPlaneIntersections.z));
+	//clamp the intersections to be between RayOrigin and RayEnd on the ray
+	return saturate(BoxIntersections);
+}
+
+float SampleMeshDistanceField(int sdfInd, float3 uv)
+{
+	float dist = gSdfTextures[sdfInd].SampleLevel(basicSampler, uv, 0).r;
+
+	return dist;
+}
+
+float SampleMeshDistanceField(int sdfInd, float SdfScale, float3 uv)
+{
+	float dist = gSdfTextures[sdfInd].SampleLevel(basicSampler, uv, 0).r;
+	dist = (dist - 0.5f) * SdfScale;
+
+	return dist;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -239,12 +280,15 @@ float PCSS(float3 shadowPos, int shadowMapIndex, float2 dz_duv)
 float main(VertexToPixel pIn) : SV_TARGET
 {
 	float shadow = 1.0f;
+	bool cascaded = false;
 
+	float sampledDepth = gDepthBuffer.SampleLevel(basicSampler, pIn.uv, 0).r;
+	float3 worldPos = ReconstructWorldPos(pIn.uv, sampledDepth);
+
+	//-----------------------------------------CSM/PCSS------------------------------------------------
 	[unroll]
 	for (int cascadeIndex = 0; cascadeIndex < SHADOW_CASCADE_NUM; cascadeIndex++)
 	{
-		float sampledDepth = gDepthBuffer.SampleLevel(basicSampler, pIn.uv, 0).r;
-		float3 worldPos = ReconstructWorldPos(pIn.uv, sampledDepth);
 		float4 shadowPos = mul(float4(worldPos, 1.0f), gShadowTransform[cascadeIndex]);
 		shadowPos /= shadowPos.w;
 		float2 dz_duv = DepthGradient(shadowPos.xy, shadowPos.z);
@@ -257,95 +301,139 @@ float main(VertexToPixel pIn) : SV_TARGET
 
 #if !DEBUG_CASCADE_RANGE
 
+#if !USE_HARD_SHADOW
 		shadow = PCSS(shadowPos.xyz, cascadeIndex, dz_duv);
+#else
+		float z = gShadowMap[cascadeIndex].SampleLevel(basicSampler, shadowPos.xy, 0).r;
+
+#if USE_REVERSE_Z
+		if (z > shadowPos.z)
+#else
+		if (z < shadowPos.z)
+#endif
+		{
+			shadow = 0.0f;
+		}
+#endif
 
 #else
 		shadow = (float)cascadeIndex / SHADOW_CASCADE_NUM;
 #endif
 
+		cascaded = true;
 		break;
 	}
 
-#if DEBUG_SHADOWMAP
-	shadow = gShadowMap[0].SampleLevel(basicSampler, pIn.uv, 0).r;
+	//-----------------------------------------SDF Shadow----------------------------------------------
+
+	[branch]
+	if (!cascaded)
+	{
+		float3 lightDir = -normalize(gMainDirectionalLightDir.xyz);
+		float3 opaqueWorldPos = worldPos;
+		float3 rayStart = opaqueWorldPos + lightDir * RAY_START_OFFSET;
+		float3 rayEnd = opaqueWorldPos + lightDir * MAX_DISTANCE;
+
+		float2 tilePos = mul(float4(opaqueWorldPos, 1.0f), gSdfTileTransform).xy;
+		int2 tileID = int2(floor(tilePos.x * SDF_GRID_NUM), floor((1.0f - tilePos.y) * SDF_GRID_NUM));
+		int tileIndex = tileID.y * SDF_GRID_NUM + tileID.x;
+
+		if (tileID.x < 0 || tileID.x >= SDF_GRID_NUM ||
+			tileID.y < 0 || tileID.y >= SDF_GRID_NUM
+			)
+			return 1.0f;
+
+		int objectNum = gSdfList[tileIndex].NumSdf;
+
+		float minConeVisibility = 1.0f;
+
+		[loop]
+		for (int i = 0; i < objectNum; i++)
+		{
+			uint objIndex = gSdfList[tileIndex].SdfObjIndices[i];
+			int sdfInd = gSceneObjectSdfDescriptors[objIndex].SdfIndex;
+
+			float3 volumeRayStart = mul(float4(rayStart, 1.0f), gSceneObjectSdfDescriptors[objIndex].objInvWorld).xyz;
+			float3 volumeRayEnd = mul(float4(rayEnd, 1.0f), gSceneObjectSdfDescriptors[objIndex].objInvWorld).xyz;
+			float3 volumeRayDirection = volumeRayEnd - volumeRayStart;
+			float volumeRayLength = length(volumeRayDirection);
+			volumeRayDirection /= volumeRayLength;
+
+			float halfExtent = gMeshSdfDescriptors[sdfInd].HalfExtent;
+			float rcpHalfExtent = rcp(halfExtent);
+#if USE_FIXED_POINT_SDF_TEXTURE
+			float SdfScale = halfExtent * 2.0f * SDF_DISTANCE_RANGE_SCALE;
 #endif
 
-	return shadow;
+			float3 localPositionExtent = float3(halfExtent, halfExtent, halfExtent);
+			float3 outOfBoxRange = float3(SDF_OUT_OF_BOX_RANGE, SDF_OUT_OF_BOX_RANGE, SDF_OUT_OF_BOX_RANGE);
+			float2 intersectionTimes = LineBoxIntersect(volumeRayStart, volumeRayEnd, -localPositionExtent - outOfBoxRange, localPositionExtent + outOfBoxRange);
 
-	//return gShadowMap[0].Sample(basicSampler, pIn.uv).r;
-	//return 1.0f;
-
-	/*
-	float depthBuffer = gDepthBuffer.Sample(basicSampler, pIn.uv).r;
-	float3 origin = ReconstructWorldPos(pIn.uv, depthBuffer);
-	float3 dir = -normalize(gMainDirectionalLightDir.xyz) * STEP_LENGTH;
-
-	for (int i = 0; i < gSceneObjectNum; i++)
-	{
-		int sdfInd = gSceneObjectSdfDescriptors[i].SdfIndex;
-
-		float3 objOrigin = mul(float4(origin, 1.0f), gSceneObjectSdfDescriptors[i].objInvWorld).xyz;
-		float3 currPos = objOrigin;
-
-		float3 objDir = mul(dir, (float3x3)(gSceneObjectSdfDescriptors[i].objInvWorld_IT));
-		float stepLength = length(objDir);
-		objDir = normalize(objDir);
-
-		float totalDis = 0.0f;
-
-		// March.
-		float rcpHalfExtent = rcp(gMeshSdfDescriptors[sdfInd].HalfExtent);
-		for (int step = 0; step < MAX_STEP && totalDis < MAX_DISTANCE; step++)
-		{
-			currPos = objOrigin + objDir * totalDis;
-
-			float3 pos = (currPos * rcpHalfExtent) * 0.5f + 0.5f;
-
-			if (pos.x < 0 || pos.x > 1 ||
-				pos.y < 0 || pos.y > 1 ||
-				pos.z < 0 || pos.z > 1)
+			[branch]
+			if (intersectionTimes.x < intersectionTimes.y)
 			{
-				totalDis += stepLength;
-				continue;
+				float sampleRayTime = intersectionTimes.x * volumeRayLength;
+
+				uint stepIndex = 0;
+
+				[loop]
+				for (; stepIndex < MAX_STEP; stepIndex++)
+				{
+					float3 sampleVolumePosition = volumeRayStart + volumeRayDirection * sampleRayTime;
+					float3 clampedSamplePosition = clamp(sampleVolumePosition, -localPositionExtent, localPositionExtent);
+					float distanceToClamped = length(clampedSamplePosition - sampleVolumePosition);
+					float3 volumeUV = (clampedSamplePosition * rcpHalfExtent) * 0.5f + 0.5f;
+					float distanceField;
+#if USE_FIXED_POINT_SDF_TEXTURE
+					distanceField = SampleMeshDistanceField(sdfInd, SdfScale, volumeUV);
+#else
+					distanceField = SampleMeshDistanceField(sdfInd, volumeUV);
+#endif
+					distanceField += distanceToClamped;
+
+					// Don't allow occlusion within an object's self shadow distance
+					//float selfShadowVisibility = 1 - saturate(sampleRayTime * selfShadowScale);
+
+					//float sphereRadius = clamp(TanLightAngle * sampleRayTime, VolumeMinSphereRadius, VolumeMaxSphereRadius);
+					//float stepVisibility = max(saturate(distanceField / sphereRadius), selfShadowVisibility);
+					float sphereRadius = CONE_TANGENT * sampleRayTime;
+					float stepVisibility = saturate(distanceField / sphereRadius);
+
+					minConeVisibility = min(minConeVisibility, stepVisibility);
+
+					float stepDistance = max(abs(distanceField), MIN_STEP_LENGTH);
+					sampleRayTime += stepDistance;
+
+					// Terminate the trace if we are fully occluded or went past the end of the ray
+					if (minConeVisibility < .01f ||
+						sampleRayTime > intersectionTimes.y * volumeRayLength)
+					{
+						break;
+					}
+				}
+
+				// Force to shadowed as we approach max steps
+				minConeVisibility = min(minConeVisibility, (1 - stepIndex / (float)MAX_STEP));
 			}
 
-			float dist = gSdfTextures[sdfInd].Sample(basicSampler, pos).r;
-
-			dist = clamp(dist, MIN_STEP_LENGTH, dist + 1);
-			totalDis += dist;
-			shadow = min(shadow, saturate(CONE_COTANGENT * dist / totalDis));
-		}
-
-		float prevDist = 1e10;
-
-		float rcpHalfExtent = rcp(gMeshSdfDescriptors[sdfInd].HalfExtent);
-		for (int step = 0; step < MAX_STEP && totalDis < MAX_DISTANCE; step++)
-		{
-			currPos = objOrigin + objDir * totalDis;
-
-			float3 pos = (currPos * rcpHalfExtent) * 0.5f + 0.5f;
-
-			if (pos.x < 0 || pos.x > 1 ||
-				pos.y < 0 || pos.y > 1 ||
-				pos.z < 0 || pos.z > 1)
+			if (minConeVisibility < .01f)
 			{
-				totalDis += stepLength;
-				continue;
+				minConeVisibility = 0.0f;
+				break;
 			}
-
-			float dist = gSdfTextures[sdfInd].Sample(basicSampler, pos).r;
-
-			float y = dist * dist / (2.0 * prevDist);
-			float d = sqrt(dist * dist - y * y);
-
-			totalDis += clamp(dist, MIN_STEP_LENGTH, dist + 1);
-
-			shadow = min(shadow, 10.0 * d / max(0.0, totalDis - y));
 		}
+
+		shadow = minConeVisibility;
 	}
+
+	//shadow = gSdfList[tileIndex].NumSdf / 2.0f;
+	//shadow = (float)tileIndex / (SDF_GRID_NUM * SDF_GRID_NUM);
+
+#if DEBUG_SHADOWMAP
+	shadow = gShadowMap[1].SampleLevel(basicSampler, pIn.uv, 0).r;
+#endif
 	
 	return shadow;
 
-	*/
 }
 

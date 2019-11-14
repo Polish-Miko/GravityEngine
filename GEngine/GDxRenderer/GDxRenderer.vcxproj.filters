@@ -259,6 +259,8 @@
     <FxCompile Include="Shaders\ShadowMapPS.hlsl" />
     <FxCompile Include="Shaders\ShadowMapVS.hlsl" />
     <FxCompile Include="Shaders\SSShadowTemporalPS.hlsl" />
+    <FxCompile Include="Shaders\SdfTileCS.hlsl" />
+    <FxCompile Include="Shaders\ShadowMapPrefilterCS.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Shaders\Lighting.hlsli" />
@@ -271,5 +273,6 @@
     <None Include="Shaders\ShaderDefinition.h">
       <Filter>Header Files</Filter>
     </None>
+    <None Include="Shaders\SdfDescriptors.hlsli" />
   </ItemGroup>
 </Project>

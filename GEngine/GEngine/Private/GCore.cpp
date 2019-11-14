@@ -707,6 +707,20 @@ void GCore::LoadMeshes()
 					}
 				}
 			}
+
+			mMeshes[info.MeshUniqueName]->SetSdfResolution(info.SdfResolution);
+
+			auto SdfSize = info.Sdf.size();
+			std::vector<float> sdf;
+			if (SdfSize > 1)
+			{
+				sdf.clear();
+				for (auto iter = info.Sdf.begin(); iter != info.Sdf.end(); iter++)
+				{
+					sdf.push_back(*iter);
+				}
+				mMeshes[info.MeshUniqueName]->InitializeSdf(sdf);
+			}
 		}
 	}
 }
@@ -867,7 +881,7 @@ void GCore::LoadSceneObjects()
 	}
 
 	// Load test objects.
-	/*
+
 	int sizeX = 32, sizeY = 32;
 
 	for (int x = -sizeX / 2; x < sizeX / 2; x++)
@@ -876,19 +890,20 @@ void GCore::LoadSceneObjects()
 		{
 			std::unique_ptr<GRiSceneObject> testSO(pRendererFactory->CreateSceneObject());
 			testSO->UniqueName = L"testObject_" + std::to_wstring(x + sizeX / 2) + L"_" + std::to_wstring(y + sizeY / 2);
-			testSO->SetScale(0.2f, 2.0f, 0.2f);
-			testSO->SetLocation(x * 40.0f, -200.f, y * 40.0f);
+			testSO->SetScale(1.0f, 1.0f, 1.0f);
+			testSO->SetLocation(x * 300.0f, 0.0f, y * 300.0f);
 			testSO->UpdateTransform();
 			testSO->ResetPrevTransform();
-			testSO->SetTexTransform(pRendererFactory->CreateFloat4x4());
+			testSO->SetTexTransform(GGiFloat4x4::Identity());
 			testSO->SetObjIndex(mSceneObjectIndex++);
-			testSO->SetMaterial(mMaterials[L"Default"].get());
-			testSO->SetMesh(mMeshes[L"Box"].get());
+			//testSO->SetMaterial(mMaterials[L"Default"].get());
+			testSO->SetMesh(mMeshes[L"Content\\Models\\Cube.fbx"].get());
 			mSceneObjectLayer[(int)RenderLayer::Deferred].push_back(testSO.get());
 			mSceneObjects[testSO->UniqueName] = std::move(testSO);
 		}
 	}
 
+	/*
 	std::unique_ptr<GRiSceneObject> testSO(pRendererFactory->CreateSceneObject());
 	testSO->UniqueName = L"testObject";
 	testSO->SetScale(40.0f, 0.1f, 40.0f);

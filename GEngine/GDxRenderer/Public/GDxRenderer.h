@@ -61,8 +61,15 @@ struct LightList
 	unsigned int NumSpotlights;
 };
 
+struct SdfList
+{
+	unsigned int NumSdf;
+	unsigned int SdfObjIndices[MAX_GRID_SDF_NUM];
+};
+
 struct MeshSdfDescriptor
 {
+	DirectX::XMFLOAT3 Center;
 	float HalfExtent;
 	float Radius;
 	int Resolution;
@@ -258,7 +265,9 @@ protected:
 	UINT mVelocityBufferSrvIndex = 0;
 	UINT mGBufferSrvIndex = 0;
 	UINT mTileClusterSrvIndex = 0;
+	UINT mSdfTileSrvIndex = 0;
 	UINT mCascadedShadowMapSrvIndex = 0;
+	UINT mPrefilteredShadowMapIndex = 0;
 	UINT mScreenSpaceShadowPassSrvIndex = 0;
 	UINT mSSShadowTemporalSrvIndex = 0;
 	UINT mLightPassSrvIndex = 0;
@@ -278,7 +287,7 @@ protected:
 	int ShadowCascadeNum = SHADOW_CASCADE_NUM;
 	std::vector<float> ShadowCascadeDistance = { Z_LOWER_BOUND, Z_LOWER_BOUND + 1000.0F, Z_LOWER_BOUND + 3000.0f };
 	float ShadowMapCameraDis = (LIGHT_Z_UPPER_BOUND - LIGHT_Z_LOWER_BOUND) / 2.0f;
-	UINT64 ShadowMapResolution = 2048;
+	UINT64 ShadowMapResolution = SHADOW_MAP_RESOLUTION;
 	XMMATRIX mShadowView[SHADOW_CASCADE_NUM];
 	XMMATRIX mShadowProj[SHADOW_CASCADE_NUM];
 	XMMATRIX mShadowViewProj[SHADOW_CASCADE_NUM];
@@ -286,6 +295,10 @@ protected:
 
 	D3D12_VIEWPORT ShadowViewport;
 	D3D12_RECT ShadowScissorRect;
+
+	XMMATRIX mSdfTileSpaceTransform;
+	XMMATRIX mSdfTileSpaceView;
+	float mSdfTileSpaceWidth, mSdfTileSpaceHeight;
 
 	GGiFloat3 MainDirectionalLightDir = GGiFloat3(0.57735f, -0.57735f, -0.57735f);
 

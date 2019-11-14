@@ -70,6 +70,9 @@ struct GProjectMeshInfo
 	std::wstring MeshUniqueName = L"none";
 	//std::map<std::wstring, std::wstring> MaterialUniqueName;
 	std::list<GStrPair> MaterialUniqueName;
+	int SdfResolution;
+	std::list<float> Sdf;
+	bool Save = false;
 
 private:
 
@@ -80,6 +83,8 @@ private:
 	{
 		ar & BOOST_SERIALIZATION_NVP(MeshUniqueName);
 		ar & BOOST_SERIALIZATION_NVP(MaterialUniqueName);
+		ar & BOOST_SERIALIZATION_NVP(SdfResolution);
+		ar & BOOST_SERIALIZATION_NVP(Sdf);
 	}
 };
 
@@ -164,6 +169,26 @@ public:
 
 				//mInfo.MaterialUniqueName[submesh.first] = submesh.second.GetMaterial()->UniqueName;
 			}
+
+			auto pSdf = (*it).second->GetSdf();
+			if (pSdf != nullptr)
+			{
+				auto pSdfData = pSdf->data();
+				auto SdfSize = (int)pSdf->size();
+				mInfo.Sdf.clear();
+				for (int i = 0; i < SdfSize; i++)
+				{
+					mInfo.Sdf.push_back(pSdfData[i]);
+				}
+			}
+			else
+			{
+				mInfo.Sdf.clear();
+				mInfo.Sdf.push_back(-1);
+			}
+			mInfo.SdfResolution = (*it).second->GetSdfResolution();
+			mInfo.Save = true;
+
 			mMeshInfo.push_back(mInfo);
 		}
 
@@ -201,16 +226,18 @@ public:
 					}
 					catch (boost::archive::archive_exception const& e)
 					{
-						e.what();
-						MessageBox(nullptr, L"Fail to load project file.", L"Other Exception", MB_OK);
+						std::string eMessage(e.what());
+						auto wErrorMessage = L"Fail to load project file.\n" + GGiEngineUtil::StringToWString(eMessage);
+						MessageBox(nullptr, wErrorMessage.c_str(), L"Other Exception", MB_OK);
 						ifs.close();
 						return;
 					}
 				}
 				catch (std::exception& e)
 				{
-					e.what();
-					MessageBox(nullptr, L"Fail to create archive. Project file may be empty or out of date.", L"Other Exception", MB_OK);
+					std::string eMessage(e.what());
+					auto wErrorMessage = L"Fail to create archive. Project file may be empty or out of date.\n" + GGiEngineUtil::StringToWString(eMessage);
+					MessageBox(nullptr, wErrorMessage.c_str(), L"Other Exception", MB_OK);
 					ifs.close();
 					return;
 				}

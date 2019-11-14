@@ -87,7 +87,9 @@ static const float DepthSlicing_16[17] = {
 //----------------------------------------------------------------------------------------------------------
 #define SHADOW_CASCADE_NUM 2
 
-#define LIGHT_Z_UPPER_BOUND 10000.0f
+#define SHADOW_MAP_RESOLUTION 2048
+
+#define LIGHT_Z_UPPER_BOUND 50000.0f
 #define LIGHT_Z_LOWER_BOUND 1.0f
 #define LIGHT_Z_UPPER_BOUND_NORM 1.0f
 #define LIGHT_Z_LOWER_BOUND_NORM 0.0f
@@ -109,6 +111,21 @@ static const float DepthSlicing_16[17] = {
 #endif
 
 #define USE_PCSS_TEMPORAL 0
+
+#define SDF_GRID_NUM 64
+
+#define SDF_TILE_THREAD_NUM_X 32
+#define SDF_TILE_THREAD_NUM_Y 32
+
+#define MAX_GRID_SDF_NUM 50
+
+#define SDF_SHADOW_DISTANCE 15000.0f
+
+#define SDF_DISTANCE_RANGE_SCALE 2.0f
+
+#define USE_FIXED_POINT_SDF_TEXTURE 1
+
+#define SDF_OUT_OF_BOX_RANGE 100.0f
  
 
 

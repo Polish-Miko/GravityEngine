@@ -216,6 +216,8 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 	mCommandList->ClearDepthStencilView(DepthStencilView(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
 #endif
 
+	GGiCpuProfiler::GetInstance().StartCpuProfile("Cpu Draw Call");
+
 	// G-Buffer Pass
 	{
 		GDxGpuProfiler::GetGpuProfiler().StartGpuProfile("G-Buffer Pass");
@@ -371,6 +373,45 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 #endif
 	}
 
+	// SDF Tile Pass
+	{
+		GDxGpuProfiler::GetGpuProfiler().StartGpuProfile("SDF Tile Pass");
+
+		mCommandList->RSSetViewports(1, &(mUavs["SdfTilePass"]->mViewport));
+		mCommandList->RSSetScissorRects(1, &(mUavs["SdfTilePass"]->mScissorRect));
+
+		mCommandList->SetComputeRootSignature(mRootSignatures["SdfTilePass"].Get());
+
+		mCommandList->SetPipelineState(mPSOs["SdfTilePass"].Get());
+
+		// Indicate a state transition on the resource usage.
+		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mUavs["SdfTilePass"]->GetResource(),
+			D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_UNORDERED_ACCESS));
+
+		mCommandList->SetComputeRoot32BitConstant(0, mSceneObjectSdfNum, 0);
+
+		auto meshSdfDesBuffer = mMeshSdfDescriptorBuffer->Resource();
+		mCommandList->SetComputeRootShaderResourceView(1, meshSdfDesBuffer->GetGPUVirtualAddress());
+
+		auto soSdfDesBuffer = mCurrFrameResource->SceneObjectSdfDescriptorBuffer->Resource();
+		mCommandList->SetComputeRootShaderResourceView(2, soSdfDesBuffer->GetGPUVirtualAddress());
+
+		mCommandList->SetComputeRootDescriptorTable(3, mUavs["SdfTilePass"]->GetGpuUav());
+
+		auto passCB = mCurrFrameResource->PassCB->Resource();
+		mCommandList->SetComputeRootConstantBufferView(4, passCB->GetGPUVirtualAddress());
+
+		UINT numGroupsX = (UINT)ceilf((float)SDF_GRID_NUM / SDF_TILE_THREAD_NUM_X - 0.001f);
+		UINT numGroupsY = (UINT)ceilf((float)SDF_GRID_NUM / SDF_TILE_THREAD_NUM_Y - 0.001f);
+		UINT numGroupsZ = 1;
+		mCommandList->Dispatch(numGroupsX, numGroupsY, numGroupsZ);
+
+		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mUavs["SdfTilePass"]->GetResource(),
+			D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_GENERIC_READ));
+
+		GDxGpuProfiler::GetGpuProfiler().EndGpuProfile("SDF Tile Pass");
+	}
+
 	// Shadow Map Pass
 	{
 		GDxGpuProfiler::GetGpuProfiler().StartGpuProfile("Shadow Map Pass");
@@ -456,6 +497,8 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 		mCommandList->SetGraphicsRootDescriptorTable(6, GetGpuSrv(mCascadedShadowMapSrvIndex));
 
 		mCommandList->SetGraphicsRootDescriptorTable(7, GetGpuSrv(mBlueNoiseSrvIndex));
+
+		mCommandList->SetGraphicsRootDescriptorTable(8, mUavs["SdfTilePass"]->GetGpuSrv());
 
 		mCommandList->OMSetRenderTargets(1, &mRtvHeaps["ScreenSpaceShadowPass"]->mRtvHeap.handleCPU(0), false, nullptr);
 
@@ -862,6 +905,8 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 
 	}
 
+	GGiCpuProfiler::GetInstance().EndCpuProfile("Cpu Draw Call");
+
 	// Indicate a state transition on the resource usage.
 	mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(),
 		D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
@@ -928,8 +973,8 @@ void GDxRenderer::Update(const GGiGameTimer* gt)
 
 	UpdateObjectCBs(gt);
 	UpdateMaterialBuffer(gt);
-	UpdateSdfDescriptorBuffer(gt);
 	UpdateShadowTransform(gt);
+	UpdateSdfDescriptorBuffer(gt);
 	UpdateMainPassCB(gt);
 	UpdateSkyPassCB(gt);
 	UpdateLightCB(gt);
@@ -1352,13 +1397,42 @@ void GDxRenderer::UpdateSdfDescriptorBuffer(const GGiGameTimer* gt)
 		if (so->GetMesh()->GetSdf() != nullptr && so->GetMesh()->GetSdf()->size() > 0)
 		{
 			so->UpdateTransform();
-			mSceneObjectSdfDescriptors[soSdfIndex].SdfIndex = so->GetMesh()->mSdfIndex;
+
+			auto centerOffsetMat = DirectX::XMMatrixTranslation(
+				so->GetMesh()->bounds.Center[0],
+				so->GetMesh()->bounds.Center[1],
+				so->GetMesh()->bounds.Center[2]
+			);
+
 			auto trans = GDx::GGiToDxMatrix(so->GetTransform());
+			trans = DirectX::XMMatrixMultiply(centerOffsetMat, trans);
+
+			auto worldCenter = XMVectorSet(so->GetMesh()->bounds.Center[0],
+				so->GetMesh()->bounds.Center[1],
+				so->GetMesh()->bounds.Center[2],
+				1.0f);
+			auto world = GDx::GGiToDxMatrix(so->GetTransform());
+			worldCenter = XMVector4Transform(worldCenter, world);
+			auto lightCenter = XMVector4Transform(worldCenter, mSdfTileSpaceView);
+
+			int extAxis = so->GetMesh()->bounds.MaximumExtent();
+			float boundX = so->GetScale()[0] * (so->GetMesh()->bounds.Extents[extAxis] * 1.4f + SDF_OUT_OF_BOX_RANGE);
+			float boundY = so->GetScale()[1] * (so->GetMesh()->bounds.Extents[extAxis] * 1.4f + SDF_OUT_OF_BOX_RANGE);
+			float boundZ = so->GetScale()[2] * (so->GetMesh()->bounds.Extents[extAxis] * 1.4f + SDF_OUT_OF_BOX_RANGE);
+			float worldRadius = sqrt(boundX * boundX + boundY * boundY + boundZ * boundZ);
+
+			mSceneObjectSdfDescriptors[soSdfIndex].SdfIndex = so->GetMesh()->mSdfIndex;
+
+			XMStoreFloat4(&mSceneObjectSdfDescriptors[soSdfIndex].objWorldSpaceCenter, worldCenter);
+			XMStoreFloat4(&mSceneObjectSdfDescriptors[soSdfIndex].objLightSpaceCenter, lightCenter);
+
 			DirectX::XMStoreFloat4x4(&mSceneObjectSdfDescriptors[soSdfIndex].objWorld, XMMatrixTranspose(trans));
 			auto invTrans = DirectX::XMMatrixInverse(&XMMatrixDeterminant(trans), trans);
 			DirectX::XMStoreFloat4x4(&mSceneObjectSdfDescriptors[soSdfIndex].objInvWorld, XMMatrixTranspose(invTrans));
 			auto invTrans_IT = XMMatrixTranspose(trans);
 			DirectX::XMStoreFloat4x4(&mSceneObjectSdfDescriptors[soSdfIndex].objInvWorld_IT, XMMatrixTranspose(invTrans_IT));
+
+			mSceneObjectSdfDescriptors[soSdfIndex].worldRadius = worldRadius;
 
 			currDescBuffer->CopyData(soSdfIndex, mSceneObjectSdfDescriptors[soSdfIndex]);
 
@@ -1370,114 +1444,214 @@ void GDxRenderer::UpdateSdfDescriptorBuffer(const GGiGameTimer* gt)
 
 void GDxRenderer::UpdateShadowTransform(const GGiGameTimer* gt)
 {
-	int cascadeInd = mFrameCount % ShadowCascadeNum;
-
-	// Calculate Frustum Corner Position.
-	GGiFloat3 cornerPos[8];
-	cornerPos[0] = pCamera->GetCornerPos(ShadowCascadeDistance[cascadeInd], true, true);
-	cornerPos[1] = pCamera->GetCornerPos(ShadowCascadeDistance[cascadeInd], false, true);
-	cornerPos[2] = pCamera->GetCornerPos(ShadowCascadeDistance[cascadeInd], true, false);
-	cornerPos[3] = pCamera->GetCornerPos(ShadowCascadeDistance[cascadeInd], false, false);
-	cornerPos[4] = pCamera->GetCornerPos(ShadowCascadeDistance[cascadeInd + 1], true, true);
-	cornerPos[5] = pCamera->GetCornerPos(ShadowCascadeDistance[cascadeInd + 1], false, true);
-	cornerPos[6] = pCamera->GetCornerPos(ShadowCascadeDistance[cascadeInd + 1], true, false);
-	cornerPos[7] = pCamera->GetCornerPos(ShadowCascadeDistance[cascadeInd + 1], false, false);
-
-	// Calculate Light Transform Matrix.
-	auto cameraPos = pCamera->GetPosition();
-	auto cameraLook = pCamera->GetLook();
-	auto cameraPosVec = GGiFloat3(cameraPos[0], cameraPos[1], cameraPos[2]);
-	auto cameraLookVec = GGiFloat3(cameraLook[0], cameraLook[1], cameraLook[2]);
-	auto lightLoc = cameraPosVec;//MainDirectionalLightDir * ShadowMapCameraDis + cameraPosVec;
-
-	/*
-	auto lightT = DirectX::XMMatrixTranslation(lightLoc[0], lightLoc[1], lightLoc[2]);
-
-	//auto lightR = DirectX::XMMatrixRotationRollPitchYaw(Rotation[0] * GGiEngineUtil::PI / 180.0f, Rotation[1] * GGiEngineUtil::PI / 180.0f, Rotation[2] * GGiEngineUtil::PI / 180.0f);
-	auto upDir = GGiFloat3(0.0f, 1.0f, 0.0f);
-	auto rightDir = GGiFloat3::Normalize(GGiFloat3::Cross(upDir, MainDirectionalLightDir));
-	//XMMatrixSet(Right.x, Right.y, Right.z, 0.0f, Fwd.x, Fwd.y, Fwd.z, 0.0f, Up.x, Up.y, Up.z, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f);
-	auto lightR = XMMatrixSet(rightDir.x, rightDir.y, rightDir.z, 0, MainDirectionalLightDir.x, MainDirectionalLightDir.y, MainDirectionalLightDir.z, 0, 0.0f, 1.0f, 0.0f, 0.0f, 0, 0, 0, 1);
-
-	auto lightS = DirectX::XMMatrixScaling(1.0f, 1.0f, 1.0f);
-
-	auto lightTransMat = DirectX::XMMatrixMultiply(DirectX::XMMatrixMultiply(lightS, lightR), lightT);
-	auto invLightTransMat = XMMatrixInverse(&XMMatrixDeterminant(lightTransMat), lightTransMat);
-	*/
-	auto lightTargetPosVec = lightLoc + MainDirectionalLightDir * 100.0f;
-	auto eyePos= XMVectorSet(lightLoc.x, lightLoc.y, lightLoc.z, 1.0f);
-	auto focusPos = XMVectorSet(lightTargetPosVec.x, lightTargetPosVec.y, lightTargetPosVec.z, 1.0f);
-	XMMATRIX invLightTransMat = XMMatrixLookAtLH(eyePos, focusPos, XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f));
-	auto lightTransMat = XMMatrixInverse(&XMMatrixDeterminant(invLightTransMat), invLightTransMat);
-
-	// Transform frustum corners to light space to get light space AABB.
-	float xmin, xmax, ymin, ymax, zmin, zmax;
-	for (int i = 0; i < 8; i++)
 	{
-		auto worldSpacePos = XMVectorSet(cornerPos[i].x, cornerPos[i].y, cornerPos[i].z, 1.0f);
-		auto lightSpacePos = XMVector4Transform(worldSpacePos, invLightTransMat);
-		XMFLOAT4 lightSpacePosVec;
-		XMStoreFloat4(&lightSpacePosVec, lightSpacePos);
-		if (i == 0)
+		int cascadeInd = mFrameCount % ShadowCascadeNum;
+
+		// Calculate Frustum Corner Position.
+		GGiFloat3 cornerPos[8];
+		cornerPos[0] = pCamera->GetCornerPos(ShadowCascadeDistance[cascadeInd], true, true);
+		cornerPos[1] = pCamera->GetCornerPos(ShadowCascadeDistance[cascadeInd], false, true);
+		cornerPos[2] = pCamera->GetCornerPos(ShadowCascadeDistance[cascadeInd], true, false);
+		cornerPos[3] = pCamera->GetCornerPos(ShadowCascadeDistance[cascadeInd], false, false);
+		cornerPos[4] = pCamera->GetCornerPos(ShadowCascadeDistance[cascadeInd + 1], true, true);
+		cornerPos[5] = pCamera->GetCornerPos(ShadowCascadeDistance[cascadeInd + 1], false, true);
+		cornerPos[6] = pCamera->GetCornerPos(ShadowCascadeDistance[cascadeInd + 1], true, false);
+		cornerPos[7] = pCamera->GetCornerPos(ShadowCascadeDistance[cascadeInd + 1], false, false);
+
+		// Calculate Light Transform Matrix.
+		auto cameraPos = pCamera->GetPosition();
+		auto cameraLook = pCamera->GetLook();
+		auto cameraPosVec = GGiFloat3(cameraPos[0], cameraPos[1], cameraPos[2]);
+		auto cameraLookVec = GGiFloat3(cameraLook[0], cameraLook[1], cameraLook[2]);
+		auto lightLoc = cameraPosVec;//MainDirectionalLightDir * ShadowMapCameraDis + cameraPosVec;
+
+		/*
+		auto lightT = DirectX::XMMatrixTranslation(lightLoc[0], lightLoc[1], lightLoc[2]);
+
+		//auto lightR = DirectX::XMMatrixRotationRollPitchYaw(Rotation[0] * GGiEngineUtil::PI / 180.0f, Rotation[1] * GGiEngineUtil::PI / 180.0f, Rotation[2] * GGiEngineUtil::PI / 180.0f);
+		auto upDir = GGiFloat3(0.0f, 1.0f, 0.0f);
+		auto rightDir = GGiFloat3::Normalize(GGiFloat3::Cross(upDir, MainDirectionalLightDir));
+		//XMMatrixSet(Right.x, Right.y, Right.z, 0.0f, Fwd.x, Fwd.y, Fwd.z, 0.0f, Up.x, Up.y, Up.z, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f);
+		auto lightR = XMMatrixSet(rightDir.x, rightDir.y, rightDir.z, 0, MainDirectionalLightDir.x, MainDirectionalLightDir.y, MainDirectionalLightDir.z, 0, 0.0f, 1.0f, 0.0f, 0.0f, 0, 0, 0, 1);
+
+		auto lightS = DirectX::XMMatrixScaling(1.0f, 1.0f, 1.0f);
+
+		auto lightTransMat = DirectX::XMMatrixMultiply(DirectX::XMMatrixMultiply(lightS, lightR), lightT);
+		auto invLightTransMat = XMMatrixInverse(&XMMatrixDeterminant(lightTransMat), lightTransMat);
+		*/
+		auto lightTargetPosVec = lightLoc + MainDirectionalLightDir * 100.0f;
+		auto eyePos = XMVectorSet(lightLoc.x, lightLoc.y, lightLoc.z, 1.0f);
+		auto focusPos = XMVectorSet(lightTargetPosVec.x, lightTargetPosVec.y, lightTargetPosVec.z, 1.0f);
+		XMMATRIX invLightTransMat = XMMatrixLookAtLH(eyePos, focusPos, XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f));
+		auto lightTransMat = XMMatrixInverse(&XMMatrixDeterminant(invLightTransMat), invLightTransMat);
+
+		// Transform frustum corners to light space to get light space AABB.
+		float xmin, xmax, ymin, ymax, zmin, zmax;
+		for (int i = 0; i < 8; i++)
 		{
-			xmin = lightSpacePosVec.x;
-			xmax = lightSpacePosVec.x;
-			ymin = lightSpacePosVec.y;
-			ymax = lightSpacePosVec.y;
-			zmin = lightSpacePosVec.z;
-			zmax = lightSpacePosVec.z;
-		}
-		else
-		{
-			if (lightSpacePosVec.x < xmin)
+			auto worldSpacePos = XMVectorSet(cornerPos[i].x, cornerPos[i].y, cornerPos[i].z, 1.0f);
+			auto lightSpacePos = XMVector4Transform(worldSpacePos, invLightTransMat);
+			XMFLOAT4 lightSpacePosVec;
+			XMStoreFloat4(&lightSpacePosVec, lightSpacePos);
+			if (i == 0)
+			{
 				xmin = lightSpacePosVec.x;
-			if (lightSpacePosVec.x > xmax)
 				xmax = lightSpacePosVec.x;
-			if (lightSpacePosVec.y < ymin)
 				ymin = lightSpacePosVec.y;
-			if (lightSpacePosVec.y > ymax)
 				ymax = lightSpacePosVec.y;
-			if (lightSpacePosVec.z < zmin)
 				zmin = lightSpacePosVec.z;
-			if (lightSpacePosVec.z > zmax)
 				zmax = lightSpacePosVec.z;
+			}
+			else
+			{
+				if (lightSpacePosVec.x < xmin)
+					xmin = lightSpacePosVec.x;
+				if (lightSpacePosVec.x > xmax)
+					xmax = lightSpacePosVec.x;
+				if (lightSpacePosVec.y < ymin)
+					ymin = lightSpacePosVec.y;
+				if (lightSpacePosVec.y > ymax)
+					ymax = lightSpacePosVec.y;
+				if (lightSpacePosVec.z < zmin)
+					zmin = lightSpacePosVec.z;
+				if (lightSpacePosVec.z > zmax)
+					zmax = lightSpacePosVec.z;
+			}
 		}
-	}
 
-	// Calculate shadow camera position.
-	auto lightSpaceCenterPos = XMVectorSet((xmax + xmin) / 2.0f, (ymax + ymin) / 2.0f, 0.0f, 1.0f);
-	auto worldSpaceCenterPos = XMVector4Transform(lightSpaceCenterPos, lightTransMat);
-	auto targetPosVec = GGiFloat3(worldSpaceCenterPos.m128_f32[0], worldSpaceCenterPos.m128_f32[1], worldSpaceCenterPos.m128_f32[2]);
-	auto lightPosVec = targetPosVec + MainDirectionalLightDir * (-ShadowMapCameraDis);
+		// Calculate shadow camera position.
+		auto lightSpaceCenterPos = XMVectorSet((xmax + xmin) / 2.0f, (ymax + ymin) / 2.0f, 0.0f, 1.0f);
+		auto worldSpaceCenterPos = XMVector4Transform(lightSpaceCenterPos, lightTransMat);
+		auto targetPosVec = GGiFloat3(worldSpaceCenterPos.m128_f32[0], worldSpaceCenterPos.m128_f32[1], worldSpaceCenterPos.m128_f32[2]);
+		auto lightPosVec = targetPosVec + MainDirectionalLightDir * (-ShadowMapCameraDis);
 
-	XMVECTOR lightPos = XMVectorSet(lightPosVec.x, lightPosVec.y, lightPosVec.z, 1.0f);
-	XMVECTOR targetPos = XMVectorSet(targetPosVec.x, targetPosVec.y, targetPosVec.z, 1.0f);
-	XMVECTOR lightUp = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+		XMVECTOR lightPos = XMVectorSet(lightPosVec.x, lightPosVec.y, lightPosVec.z, 1.0f);
+		XMVECTOR targetPos = XMVectorSet(targetPosVec.x, targetPosVec.y, targetPosVec.z, 1.0f);
+		XMVECTOR lightUp = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
 
-	float shadowWidth = xmax - xmin;
-	float shadowHeight = ymax - ymin;
+		float shadowWidth = xmax - xmin;
+		float shadowHeight = ymax - ymin;
 
-	// Calculate shadow view and projection matrix.
-	XMMATRIX lightView = XMMatrixLookAtLH(lightPos, targetPos, lightUp);
+		// Calculate shadow view and projection matrix.
+		XMMATRIX lightView = XMMatrixLookAtLH(lightPos, targetPos, lightUp);
 #if USE_REVERSE_Z
-	XMMATRIX lightProj = XMMatrixOrthographicLH(shadowWidth, shadowHeight, LIGHT_NEAR_Z, LIGHT_FAR_Z);
+		XMMATRIX lightProj = XMMatrixOrthographicLH(shadowWidth, shadowHeight, LIGHT_NEAR_Z, LIGHT_FAR_Z);
 #else
-	XMMATRIX lightProj = XMMatrixOrthographicLH(shadowWidth, shadowHeight, 0.0f, 2.0f * ShadowMapCameraDis);
+		XMMATRIX lightProj = XMMatrixOrthographicLH(shadowWidth, shadowHeight, 0.0f, 2.0f * ShadowMapCameraDis);
 #endif
 
-	// Transform NDC space [-1,+1]^2 to texture space [0,1]^2
-	XMMATRIX T(
-		0.5f, 0.0f, 0.0f, 0.0f,
-		0.0f, -0.5f, 0.0f, 0.0f,
-		0.0f, 0.0f, 1.0f, 0.0f,
-		0.5f, 0.5f, 0.0f, 1.0f);
+		// Transform NDC space [-1,+1]^2 to texture space [0,1]^2
+		XMMATRIX T(
+			0.5f, 0.0f, 0.0f, 0.0f,
+			0.0f, -0.5f, 0.0f, 0.0f,
+			0.0f, 0.0f, 1.0f, 0.0f,
+			0.5f, 0.5f, 0.0f, 1.0f);
 
-	XMMATRIX VP = lightView * lightProj;
-	XMMATRIX S = VP * T;
-	mShadowView[cascadeInd] = lightView;
-	mShadowProj[cascadeInd] = lightProj;
-	mShadowViewProj[cascadeInd] = VP;
-	mShadowTransform[cascadeInd] = S;
+		XMMATRIX VP = lightView * lightProj;
+		XMMATRIX S = VP * T;
+		mShadowView[cascadeInd] = lightView;
+		mShadowProj[cascadeInd] = lightProj;
+		mShadowViewProj[cascadeInd] = VP;
+		mShadowTransform[cascadeInd] = S;
+	}
+
+	//----------------------------------------------------------------------------------------------
+	// Update SDF Tile Space Transform Matrix.
+	//----------------------------------------------------------------------------------------------
+
+	{
+		// Calculate Frustum Corner Position.
+		GGiFloat3 cornerPos[8];
+		cornerPos[0] = pCamera->GetCornerPos(Z_LOWER_BOUND, true, true);
+		cornerPos[1] = pCamera->GetCornerPos(Z_LOWER_BOUND, false, true);
+		cornerPos[2] = pCamera->GetCornerPos(Z_LOWER_BOUND, true, false);
+		cornerPos[3] = pCamera->GetCornerPos(Z_LOWER_BOUND, false, false);
+		cornerPos[4] = pCamera->GetCornerPos(SDF_SHADOW_DISTANCE, true, true);
+		cornerPos[5] = pCamera->GetCornerPos(SDF_SHADOW_DISTANCE, false, true);
+		cornerPos[6] = pCamera->GetCornerPos(SDF_SHADOW_DISTANCE, true, false);
+		cornerPos[7] = pCamera->GetCornerPos(SDF_SHADOW_DISTANCE, false, false);
+
+		// Calculate Light Transform Matrix.
+		auto cameraPos = pCamera->GetPosition();
+		auto cameraLook = pCamera->GetLook();
+		auto cameraPosVec = GGiFloat3(cameraPos[0], cameraPos[1], cameraPos[2]);
+		auto cameraLookVec = GGiFloat3(cameraLook[0], cameraLook[1], cameraLook[2]);
+		auto lightLoc = cameraPosVec;
+
+		auto lightTargetPosVec = lightLoc + MainDirectionalLightDir * 100.0f;
+		auto eyePos = XMVectorSet(lightLoc.x, lightLoc.y, lightLoc.z, 1.0f);
+		auto focusPos = XMVectorSet(lightTargetPosVec.x, lightTargetPosVec.y, lightTargetPosVec.z, 1.0f);
+		XMMATRIX invLightTransMat = XMMatrixLookAtLH(eyePos, focusPos, XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f));
+		auto lightTransMat = XMMatrixInverse(&XMMatrixDeterminant(invLightTransMat), invLightTransMat);
+
+		// Transform frustum corners to light space to get light space AABB.
+		float xmin, xmax, ymin, ymax, zmin, zmax;
+		for (int i = 0; i < 8; i++)
+		{
+			auto worldSpacePos = XMVectorSet(cornerPos[i].x, cornerPos[i].y, cornerPos[i].z, 1.0f);
+			auto lightSpacePos = XMVector4Transform(worldSpacePos, invLightTransMat);
+			XMFLOAT4 lightSpacePosVec;
+			XMStoreFloat4(&lightSpacePosVec, lightSpacePos);
+			if (i == 0)
+			{
+				xmin = lightSpacePosVec.x;
+				xmax = lightSpacePosVec.x;
+				ymin = lightSpacePosVec.y;
+				ymax = lightSpacePosVec.y;
+				zmin = lightSpacePosVec.z;
+				zmax = lightSpacePosVec.z;
+			}
+			else
+			{
+				if (lightSpacePosVec.x < xmin)
+					xmin = lightSpacePosVec.x;
+				if (lightSpacePosVec.x > xmax)
+					xmax = lightSpacePosVec.x;
+				if (lightSpacePosVec.y < ymin)
+					ymin = lightSpacePosVec.y;
+				if (lightSpacePosVec.y > ymax)
+					ymax = lightSpacePosVec.y;
+				if (lightSpacePosVec.z < zmin)
+					zmin = lightSpacePosVec.z;
+				if (lightSpacePosVec.z > zmax)
+					zmax = lightSpacePosVec.z;
+			}
+		}
+
+		// Calculate shadow camera position.
+		auto lightSpaceCenterPos = XMVectorSet((xmax + xmin) / 2.0f, (ymax + ymin) / 2.0f, 0.0f, 1.0f);
+		auto worldSpaceCenterPos = XMVector4Transform(lightSpaceCenterPos, lightTransMat);
+		auto targetPosVec = GGiFloat3(worldSpaceCenterPos.m128_f32[0], worldSpaceCenterPos.m128_f32[1], worldSpaceCenterPos.m128_f32[2]);
+		auto lightPosVec = targetPosVec + MainDirectionalLightDir * (-ShadowMapCameraDis);
+
+		XMVECTOR lightPos = XMVectorSet(lightPosVec.x, lightPosVec.y, lightPosVec.z, 1.0f);
+		XMVECTOR targetPos = XMVectorSet(targetPosVec.x, targetPosVec.y, targetPosVec.z, 1.0f);
+		XMVECTOR lightUp = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+
+		mSdfTileSpaceWidth = xmax - xmin;
+		mSdfTileSpaceHeight = ymax - ymin;
+
+		// Calculate shadow view and projection matrix.
+		XMMATRIX lightView = XMMatrixLookAtLH(lightPos, targetPos, lightUp);
+#if USE_REVERSE_Z
+		XMMATRIX lightProj = XMMatrixOrthographicLH(mSdfTileSpaceWidth, mSdfTileSpaceHeight, LIGHT_NEAR_Z, LIGHT_FAR_Z);
+#else
+		XMMATRIX lightProj = XMMatrixOrthographicLH(mSdfTileSpaceWidth, mSdfTileSpaceHeight, 0.0f, 2.0f * ShadowMapCameraDis);
+#endif
+
+		// Transform NDC space [-1,+1]^2 to texture space [0,1]^2
+		XMMATRIX T(
+			0.5f, 0.0f, 0.0f, 0.0f,
+			0.0f, -0.5f, 0.0f, 0.0f,
+			0.0f, 0.0f, 1.0f, 0.0f,
+			0.5f, 0.5f, 0.0f, 1.0f);
+
+		XMMATRIX VP = lightView * lightProj;
+		XMMATRIX S = VP * T;
+
+		mSdfTileSpaceView = lightView;
+		mSdfTileSpaceTransform = S;
+	}
 }
 
 void GDxRenderer::UpdateMainPassCB(const GGiGameTimer* gt)
@@ -1563,6 +1737,13 @@ void GDxRenderer::UpdateMainPassCB(const GGiGameTimer* gt)
 		(float)(rand() / double(RAND_MAX)), 
 		(float)(rand() / double(RAND_MAX)), 
 		(float)(rand() / double(RAND_MAX)));
+
+	XMStoreFloat4x4(&mMainPassCB.SdfTileTransform, XMMatrixTranspose(mSdfTileSpaceTransform));
+	mMainPassCB.gSdfTileSpaceSize = XMFLOAT4(mSdfTileSpaceWidth,
+		mSdfTileSpaceHeight,
+		1.0f / mSdfTileSpaceWidth,
+		1.0f / mSdfTileSpaceHeight
+		);
 
 	auto currPassCB = mCurrFrameResource->PassCB.get();
 	currPassCB->CopyData(0, mMainPassCB);
@@ -2049,6 +2230,52 @@ void GDxRenderer::BuildRootSignature()
 			IID_PPV_ARGS(mRootSignatures["TileClusterPass"].GetAddressOf())));
 	}
 
+	// Sdf tile pass root signature
+	{
+		//Output
+		CD3DX12_DESCRIPTOR_RANGE rangeUav;
+		rangeUav.Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, (UINT)1, 0);
+
+		CD3DX12_ROOT_PARAMETER gSdfTilePassRootParameters[5];
+		gSdfTilePassRootParameters[0].InitAsConstants(1, 0);
+		gSdfTilePassRootParameters[1].InitAsShaderResourceView(0, 0);
+		gSdfTilePassRootParameters[2].InitAsShaderResourceView(1, 0);
+		gSdfTilePassRootParameters[3].InitAsDescriptorTable(1, &rangeUav, D3D12_SHADER_VISIBILITY_ALL);
+		gSdfTilePassRootParameters[4].InitAsConstantBufferView(1);
+
+		// A root signature is an array of root parameters.
+		CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(5, gSdfTilePassRootParameters,
+			0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+
+		CD3DX12_STATIC_SAMPLER_DESC StaticSamplers[2];
+		StaticSamplers[0].Init(0, D3D12_FILTER_ANISOTROPIC);
+		StaticSamplers[1].Init(1, D3D12_FILTER_COMPARISON_MIN_MAG_MIP_LINEAR,
+			D3D12_TEXTURE_ADDRESS_MODE_BORDER,
+			D3D12_TEXTURE_ADDRESS_MODE_BORDER,
+			D3D12_TEXTURE_ADDRESS_MODE_BORDER,
+			0.f, 16u, D3D12_COMPARISON_FUNC_LESS_EQUAL);
+		rootSigDesc.NumStaticSamplers = 2;
+		rootSigDesc.pStaticSamplers = StaticSamplers;
+
+		// create a root signature with a single slot which points to a descriptor range consisting of a single constant buffer
+		ComPtr<ID3DBlob> serializedRootSig = nullptr;
+		ComPtr<ID3DBlob> errorBlob = nullptr;
+		HRESULT hr = D3D12SerializeRootSignature(&rootSigDesc, D3D_ROOT_SIGNATURE_VERSION_1,
+			serializedRootSig.GetAddressOf(), errorBlob.GetAddressOf());
+
+		if (errorBlob != nullptr)
+		{
+			::OutputDebugStringA((char*)errorBlob->GetBufferPointer());
+		}
+		ThrowIfFailed(hr);
+
+		ThrowIfFailed(md3dDevice->CreateRootSignature(
+			0,
+			serializedRootSig->GetBufferPointer(),
+			serializedRootSig->GetBufferSize(),
+			IID_PPV_ARGS(mRootSignatures["SdfTilePass"].GetAddressOf())));
+	}
+
 	// Shadow map root signature
 	{
 		CD3DX12_ROOT_PARAMETER gShadowMapRootParameters[2];
@@ -2099,10 +2326,13 @@ void GDxRenderer::BuildRootSignature()
 		CD3DX12_DESCRIPTOR_RANGE rangeBlueNoise;
 		rangeBlueNoise.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, (UINT)1, 3);
 
-		CD3DX12_DESCRIPTOR_RANGE rangeShadowMap;
-		rangeShadowMap.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, (UINT)ShadowCascadeNum, 4);
+		CD3DX12_DESCRIPTOR_RANGE rangeTile;
+		rangeTile.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, (UINT)1, 4);
 
-		CD3DX12_ROOT_PARAMETER gScreenSpaceShadowRootParameters[8];
+		CD3DX12_DESCRIPTOR_RANGE rangeShadowMap;
+		rangeShadowMap.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, (UINT)ShadowCascadeNum, 5);
+
+		CD3DX12_ROOT_PARAMETER gScreenSpaceShadowRootParameters[9];
 		gScreenSpaceShadowRootParameters[0].InitAsConstants(1, 0);
 		gScreenSpaceShadowRootParameters[1].InitAsShaderResourceView(0, 0);
 		gScreenSpaceShadowRootParameters[2].InitAsShaderResourceView(1, 0);
@@ -2111,9 +2341,10 @@ void GDxRenderer::BuildRootSignature()
 		gScreenSpaceShadowRootParameters[5].InitAsConstantBufferView(1);
 		gScreenSpaceShadowRootParameters[6].InitAsDescriptorTable(1, &rangeShadowMap, D3D12_SHADER_VISIBILITY_ALL);
 		gScreenSpaceShadowRootParameters[7].InitAsDescriptorTable(1, &rangeBlueNoise, D3D12_SHADER_VISIBILITY_ALL);
+		gScreenSpaceShadowRootParameters[8].InitAsDescriptorTable(1, &rangeTile, D3D12_SHADER_VISIBILITY_ALL);
 
 		// A root signature is an array of root parameters.
-		CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(8, gScreenSpaceShadowRootParameters,
+		CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(9, gScreenSpaceShadowRootParameters,
 			0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
 		CD3DX12_STATIC_SAMPLER_DESC StaticSamplers[2];
@@ -2636,7 +2867,9 @@ void GDxRenderer::BuildDescriptorHeaps()
 		+ 1 //stencil buffer
 		+ 4 //g-buffer
 		+ 2 //tile/cluster pass srv and uav
+		+ 2 //sdf tile pass srv and uav
 		+ ShadowCascadeNum //cascaded shadow map
+		+ ShadowCascadeNum * 2 * 2 //cascaded shadow map prefilter X and Y srv and UAV
 		+ 1 //screen space shadow
 		+ 3 //screen space shadow temporal filter
 		+ 1 //light pass
@@ -2774,9 +3007,26 @@ void GDxRenderer::BuildDescriptorHeaps()
 		mUavs["TileClusterPass"] = std::move(tileClusterPassUav);
 	}
 
+	// Build UAV and SRV for SDF tile pass.
+	{
+		mSdfTileSrvIndex = mTileClusterSrvIndex + mUavs["TileClusterPass"]->GetSize();
+
+		GDxUavProperties prop;
+		prop.mUavFormat = DXGI_FORMAT_R32G32B32A32_FLOAT;
+		prop.mClearColor[0] = 0;
+		prop.mClearColor[1] = 0;
+		prop.mClearColor[2] = 0;
+		prop.mClearColor[3] = 1;
+
+		UINT64 elementNum = SDF_GRID_NUM * SDF_GRID_NUM;
+
+		auto tileClusterPassUav = std::make_unique<GDxUav>(md3dDevice.Get(), mClientWidth, mClientHeight, GetCpuSrv(mSdfTileSrvIndex), GetGpuSrv(mSdfTileSrvIndex), prop, false, false, false, sizeof(SdfList), elementNum);
+		mUavs["SdfTilePass"] = std::move(tileClusterPassUav);
+	}
+
 	// Build DSV and SRV for cascaded shadow map pass.
 	{
-		mCascadedShadowMapSrvIndex = mTileClusterSrvIndex + mUavs["TileClusterPass"]->GetSize();
+		mCascadedShadowMapSrvIndex = mSdfTileSrvIndex + mUavs["SdfTilePass"]->GetSize();
 		mShadowMapDsvIndex = mDepthDsvIndex + 1;
 
 		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
@@ -2801,9 +3051,31 @@ void GDxRenderer::BuildDescriptorHeaps()
 		}
 	}
 
+	// Build UAV and SRV for shadow map prefilter pass.
+	{
+		mPrefilteredShadowMapIndex = mCascadedShadowMapSrvIndex + ShadowCascadeNum;
+
+		GDxUavProperties prop;
+		prop.mUavFormat = DXGI_FORMAT_R32_FLOAT;
+		prop.mClearColor[0] = 1;
+		prop.mClearColor[1] = 0;
+		prop.mClearColor[2] = 0;
+		prop.mClearColor[3] = 1;
+
+		for (int i = 0; i < ShadowCascadeNum; i++)
+		{
+			int index = mPrefilteredShadowMapIndex + i * 2;
+			auto xUav = std::make_unique<GDxUav>(md3dDevice.Get(), ShadowMapResolution, ShadowMapResolution, GetCpuSrv(index), GetGpuSrv(index), prop, false, false, true);
+			mUavs["ShadowMapPrefilter_" + to_string(i) + "_X"] = std::move(xUav);
+			index++;
+			auto yUav = std::make_unique<GDxUav>(md3dDevice.Get(), ShadowMapResolution, ShadowMapResolution, GetCpuSrv(index), GetGpuSrv(index), prop, false, false, true);
+			mUavs["ShadowMapPrefilter_" + to_string(i) + "_Y"] = std::move(yUav);
+		}
+	}
+
 	// Build RTV and SRV for screen space shadow pass.
 	{
-		mScreenSpaceShadowPassSrvIndex = mCascadedShadowMapSrvIndex + ShadowCascadeNum;
+		mScreenSpaceShadowPassSrvIndex = mPrefilteredShadowMapIndex + 2 * 2 * ShadowCascadeNum;
 
 		std::vector<DXGI_FORMAT> rtvFormats =
 		{
@@ -3155,6 +3427,15 @@ void GDxRenderer::BuildPSOs()
 #endif
 		computePsoDesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
 		ThrowIfFailed(md3dDevice->CreateComputePipelineState(&computePsoDesc, IID_PPV_ARGS(&mPSOs["TileClusterPass"])));
+	}
+
+	// PSO for SDF tile pass.
+	{
+		D3D12_COMPUTE_PIPELINE_STATE_DESC computePsoDesc = {};
+		computePsoDesc.pRootSignature = mRootSignatures["SdfTilePass"].Get();
+		computePsoDesc.CS = GDxShaderManager::LoadShader(L"Shaders\\SdfTileCS.cso");
+		computePsoDesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
+		ThrowIfFailed(md3dDevice->CreateComputePipelineState(&computePsoDesc, IID_PPV_ARGS(&mPSOs["SdfTilePass"])));
 	}
 
 	// PSO for shadow map pass.
@@ -4146,144 +4427,210 @@ void GDxRenderer::BuildMeshSDF()
 
 	int sdfIndex = 0;
 
-	mMeshSdfDescriptorBuffer = std::make_unique<GDxUploadBuffer<MeshSdfDescriptor>>(md3dDevice.Get(), MAX_MESH_NUM, true);
+	mMeshSdfDescriptorBuffer = std::make_unique<GDxUploadBuffer<MeshSdfDescriptor>>(md3dDevice.Get(), MAX_MESH_NUM, false);
 
 	for (auto mesh : pMeshes)
 	{
+		/*
 		if (mesh.second->Name == L"Box" ||
 			mesh.second->Name == L"Sphere" ||
 			mesh.second->Name == L"Cylinder" ||
 			mesh.second->Name == L"Grid" ||
 			mesh.second->Name == L"Quad" ||
-			mesh.second->Name == L"Cerberus"||
-			mesh.second->Name != L"Stool123"
+			mesh.second->Name == L"Cerberus"
 			)
 			continue;
+		*/
+		bool find = false;
+		std::map<std::wstring, int> SdfGenerateList =
+		{
+			{L"Stool", 64},
+			{L"Cube", 64}
+		};
+
+		int resolutionToGenerate = 0;
+		for (auto iter = SdfGenerateList.begin(); iter != SdfGenerateList.end(); iter++)
+		{
+			if (mesh.second->Name == (*iter).first)
+			{
+				find = true;
+				resolutionToGenerate = (*iter).second;
+			}
+		}
 
 		GDxMesh* dxMesh = dynamic_cast<GDxMesh*>(mesh.second);
 		if (dxMesh == nullptr)
 			ThrowGGiException("cast failed from GRiMesh* to GDxMesh*.");
-		shared_ptr<GDxStaticVIBuffer> dxViBuffer = dynamic_pointer_cast<GDxStaticVIBuffer>(dxMesh->mVIBuffer);
-		if (dxViBuffer == nullptr)
-			ThrowGGiException("cast failed from shared_ptr<GDxStaticVIBuffer> to shared_ptr<GDxStaticVIBuffer>.");
 
-		auto vertices = (GRiVertex*)dxViBuffer->VertexBufferCPU->GetBufferPointer();
-		auto indices = (std::uint32_t*)dxViBuffer->IndexBufferCPU->GetBufferPointer();
-		UINT triCount = dxMesh->mVIBuffer->IndexCount / 3;
+		int sdfRes;
+		float sdfExtent;
+		auto loadedSdf = mesh.second->GetSdf();
+		auto loadedRes = mesh.second->GetSdfResolution();
 
-		// Collect primitives.
-		for (auto &submesh : dxMesh->Submeshes)
+		// if we can't find sdf from serialized scene file.
+		if ((loadedSdf == nullptr) || // if we can't find sdf from serialized scene file.
+			(loadedSdf->size() != (loadedRes * loadedRes * loadedRes)) || // if the sdf doesn't matche the loaded resolution.
+			loadedRes != resolutionToGenerate // if we need to generate sdf in another resolution.
+			)
 		{
-			auto startIndexLocation = submesh.second.StartIndexLocation;
-			auto baseVertexLocation = submesh.second.BaseVertexLocation;
+			// if we don't need to generate sdf for this mesh, skip it.
+			if (!find)
+				continue;
 
-			for (size_t i = 0; i < (submesh.second.IndexCount / 3); i++)
+			std::vector<float> sdf;
+			sdf.clear();
+
+			// generate mesh SDF.
+			shared_ptr<GDxStaticVIBuffer> dxViBuffer = dynamic_pointer_cast<GDxStaticVIBuffer>(dxMesh->mVIBuffer);
+			if (dxViBuffer == nullptr)
+				ThrowGGiException("cast failed from shared_ptr<GDxStaticVIBuffer> to shared_ptr<GDxStaticVIBuffer>.");
+
+			auto vertices = (GRiVertex*)dxViBuffer->VertexBufferCPU->GetBufferPointer();
+			auto indices = (std::uint32_t*)dxViBuffer->IndexBufferCPU->GetBufferPointer();
+			UINT triCount = dxMesh->mVIBuffer->IndexCount / 3;
+
+			// Collect primitives.
+			for (auto &submesh : dxMesh->Submeshes)
 			{
-				// Indices for this triangle.
-				UINT i0 = indices[startIndexLocation + i * 3 + 0] + baseVertexLocation;
+				auto startIndexLocation = submesh.second.StartIndexLocation;
+				auto baseVertexLocation = submesh.second.BaseVertexLocation;
 
-				auto prim = std::make_shared<GRiKdPrimitive>(&vertices[i0], &vertices[i0 + 1], &vertices[i0 + 2]);
+				for (size_t i = 0; i < (submesh.second.IndexCount / 3); i++)
+				{
+					// Indices for this triangle.
+					UINT i0 = indices[startIndexLocation + i * 3 + 0] + baseVertexLocation;
 
-				prims.push_back(prim);
+					auto prim = std::make_shared<GRiKdPrimitive>(&vertices[i0], &vertices[i0 + 1], &vertices[i0 + 2]);
+
+					prims.push_back(prim);
+				}
 			}
+
+			int isectCost = 80;
+			int travCost = 1;
+			float emptyBonus = 0.5f;
+			int maxPrims = 1;
+			int maxDepth = -1;
+
+			auto pAcceleratorTree = std::make_shared<GRiKdTree>(std::move(prims), isectCost, travCost, emptyBonus,
+				maxPrims, maxDepth);
+
+			dxMesh->SetSdfResolution(resolutionToGenerate);
+			sdfRes = dxMesh->GetSdfResolution();
+			sdf = std::vector<float>(sdfRes * sdfRes * sdfRes);
+
+			/*
+			float maxExtent = 0.0f;
+			for (int dim = 0; dim < 3; dim++)
+			{
+				float range = abs(dxMesh->bounds.Center[dim] + dxMesh->bounds.Extents[dim]);
+				if (range > maxExtent)
+					maxExtent = range;
+				range = abs(dxMesh->bounds.Center[dim] - dxMesh->bounds.Extents[dim]);
+				if (range > maxExtent)
+					maxExtent = range;
+			}
+			auto sdfExtent = maxExtent * 1.4f * 2.0f;
+			*/
+			sdfExtent = dxMesh->bounds.Extents[dxMesh->bounds.MaximumExtent()] * 1.4f * 2.0f;
+			auto sdfCenter = GGiFloat3(dxMesh->bounds.Center[0], dxMesh->bounds.Center[1], dxMesh->bounds.Center[2]);
+			auto sdfUnit = sdfExtent / (float)sdfRes;
+			auto initMinDisFront = 1.414f * sdfExtent;
+			auto initMaxDisBack = -1.414f * sdfExtent;
+
+			for (int z = 0; z < sdfRes; z++)
+			{
+				for (int y = 0; y < sdfRes; y++)
+				{
+					for (int x = 0; x < sdfRes; x++)
+					{
+						mRendererThreadPool->Enqueue([&, x, y, z]
+							{
+								int index = z * sdfRes * sdfRes + y * sdfRes + x;
+								sdf[index] = 0.0f;
+
+								GGiFloat3 rayOrigin(
+									((float)x - sdfRes / 2 + 0.5f) * sdfUnit + sdfCenter.x,
+									((float)y - sdfRes / 2 + 0.5f) * sdfUnit + sdfCenter.y,
+									((float)z - sdfRes / 2 + 0.5f) * sdfUnit + sdfCenter.z
+								);
+
+								static int rayNum = 128;
+								static float fibParam = 2 * GGiEngineUtil::PI * 0.618f;
+								float fibInter = 0.0f;
+								GRiRay ray;
+								float minDist = initMinDisFront;
+								float outDis = 999.0f;
+								int numFront = 0;
+								int numBack = 0;
+								bool bBackFace;
+
+								ray.Origin[0] = rayOrigin.x;
+								ray.Origin[1] = rayOrigin.y;
+								ray.Origin[2] = rayOrigin.z;
+
+								// Fibonacci lattices.
+								for (int n = 0; n < rayNum; n++)
+								{
+									ray.Direction[1] = (float)(2 * n + 1) / (float)rayNum - 1;
+									fibInter = sqrt(1.0f - ray.Direction[1] * ray.Direction[1]);
+									ray.Direction[0] = fibInter * cos(fibParam * n);
+									ray.Direction[2] = fibInter * sin(fibParam * n);
+
+									ray.tMax = 99999.0f;
+
+									if (pAcceleratorTree->IntersectDis(ray, &outDis, bBackFace))
+									{
+										if (bBackFace)
+										{
+											numBack++;
+										}
+										else
+										{
+											numFront++;
+										}
+										if (outDis < minDist)
+											minDist = outDis;
+									}
+								}
+
+								sdf[index] = minDist;
+								if (numBack > numFront)
+									sdf[index] *= -1;
+							}
+						);
+					}
+				}
+			}
+
+			mRendererThreadPool->Flush();
+
+			dxMesh->InitializeSdf(sdf);
 		}
-
-		int isectCost = 80;
-		int travCost = 1;
-		float emptyBonus = 0.5f;
-		int maxPrims = 1;
-		int maxDepth = -1;
-
-		auto pAcceleratorTree = std::make_shared<GRiKdTree>(std::move(prims), isectCost, travCost, emptyBonus,
-			maxPrims, maxDepth);
-
-		dxMesh->SetSdfResolution(64);
-		auto sdfRes = dxMesh->GetSdfResolution();
-		auto sdf = std::vector<float>(sdfRes * sdfRes * sdfRes);
-
-		float maxExtent = 0.0f;
-		for (int dim = 0; dim < 3; dim++)
+		else
 		{
-			float range = abs(dxMesh->bounds.Center[dim] + dxMesh->bounds.Extents[dim]);
-			if (range > maxExtent)
-				maxExtent = range;
-			range = abs(dxMesh->bounds.Center[dim] - dxMesh->bounds.Extents[dim]);
-			if (range > maxExtent)
-				maxExtent = range;
+			// if we load sdf from serialized file successfully.
+			sdfExtent = dxMesh->bounds.Extents[dxMesh->bounds.MaximumExtent()] * 1.4f * 2.0f;
+			sdfRes = loadedRes;
 		}
-		auto sdfExtent = maxExtent * 1.4f * 2.0f;
-		auto sdfUnit = sdfExtent / (float)sdfRes;
-		auto initMinDisFront = 1.414f * sdfExtent;
-		auto initMaxDisBack = -1.414f * sdfExtent;
 
+#if USE_FIXED_POINT_SDF_TEXTURE
+		auto pSDF = dxMesh->GetSdf();
+		int index = 0;
+		float SdfScale = sdfExtent * SDF_DISTANCE_RANGE_SCALE;
+		UINT8* fixedPointSDF = new UINT8[sdfRes * sdfRes * sdfRes];
 		for (int z = 0; z < sdfRes; z++)
 		{
 			for (int y = 0; y < sdfRes; y++)
 			{
 				for (int x = 0; x < sdfRes; x++)
 				{
-					mRendererThreadPool->Enqueue([&, x, y, z]
-						{
-							int index = z * sdfRes * sdfRes + y * sdfRes + x;
-							sdf[index] = 0.0f;
-
-							GGiFloat3 rayOrigin(
-								((float)x - sdfRes / 2 + 0.5f) * sdfUnit,
-								((float)y - sdfRes / 2 + 0.5f) * sdfUnit,
-								((float)z - sdfRes / 2 + 0.5f) * sdfUnit
-							);
-
-							static int rayNum = 128;
-							static float fibParam = 2 * GGiEngineUtil::PI * 0.618f;
-							float fibInter = 0.0f;
-							GRiRay ray;
-							float minDist = initMinDisFront;
-							float outDis = 999.0f;
-							int numFront = 0;
-							int numBack = 0;
-							bool bBackFace;
-
-							ray.Origin[0] = rayOrigin.x;
-							ray.Origin[1] = rayOrigin.y;
-							ray.Origin[2] = rayOrigin.z;
-
-							// Fibonacci lattices.
-							for (int n = 0; n < rayNum; n++)
-							{
-								ray.Direction[1] = (float)(2 * n + 1) / (float)rayNum - 1;
-								fibInter = sqrt(1.0f - ray.Direction[1] * ray.Direction[1]);
-								ray.Direction[0] = fibInter * cos(fibParam * n);
-								ray.Direction[2] = fibInter * sin(fibParam * n);
-
-								ray.tMax = 99999.0f;
-
-								if (pAcceleratorTree->IntersectDis(ray, &outDis, bBackFace))
-								{
-									if (bBackFace)
-									{
-										numBack++;
-									}
-									else
-									{
-										numFront++;
-									}
-									if (outDis < minDist)
-										minDist = outDis;
-								}
-							}
-
-							sdf[index] = minDist;
-							if (numBack > numFront)
-								sdf[index] *= -1;
-						}
-					);
+					index = z * sdfRes * sdfRes + y * sdfRes + x;
+					fixedPointSDF[index] = (UINT8)(((*pSDF)[index] / SdfScale + 0.5f) * 256);
 				}
 			}
 		}
-
-		mRendererThreadPool->Flush();
-
-		dxMesh->InitializeSdf(sdf);
+#endif
 
 		ResetCommandList();
 
@@ -4300,7 +4647,11 @@ void GDxRenderer::BuildMeshSDF()
 		texDesc.Width = (UINT)(sdfRes);
 		texDesc.Height = (UINT)(sdfRes);
 		texDesc.DepthOrArraySize = (UINT)(sdfRes);
+#if USE_FIXED_POINT_SDF_TEXTURE
+		texDesc.Format = DXGI_FORMAT::DXGI_FORMAT_R8_UNORM;
+#else
 		texDesc.Format = DXGI_FORMAT::DXGI_FORMAT_R32_FLOAT;
+#endif
 
 		ThrowIfFailed(md3dDevice->CreateCommittedResource(
 			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
@@ -4321,8 +4672,13 @@ void GDxRenderer::BuildMeshSDF()
 			IID_PPV_ARGS(&mSdfTextureUploadBuffer[sdfIndex])));
 
 		D3D12_SUBRESOURCE_DATA textureData = {};
-		textureData.pData = sdf.data();
+#if USE_FIXED_POINT_SDF_TEXTURE
+		textureData.pData = fixedPointSDF;
+		textureData.RowPitch = static_cast<LONG_PTR>((sdfRes));
+#else
+		textureData.pData = dxMesh->GetSdf()->data();
 		textureData.RowPitch = static_cast<LONG_PTR>((4 * sdfRes));
+#endif
 		textureData.SlicePitch = textureData.RowPitch * sdfRes;
 
 		UpdateSubresources(mCommandList.Get(), mSdfTextures[sdfIndex].Get(), mSdfTextureUploadBuffer[sdfIndex].Get(), 0, 0, 1, &textureData);
@@ -4331,15 +4687,20 @@ void GDxRenderer::BuildMeshSDF()
 
 		D3D12_SHADER_RESOURCE_VIEW_DESC sdfSrvDesc = {};
 		sdfSrvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+#if USE_FIXED_POINT_SDF_TEXTURE
+		sdfSrvDesc.Format = DXGI_FORMAT_R8_UNORM;
+#else
 		sdfSrvDesc.Format = DXGI_FORMAT_R32_FLOAT;
+#endif
 		sdfSrvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE3D;
 		sdfSrvDesc.Texture3D.MipLevels = 1;
 		md3dDevice->CreateShaderResourceView(mSdfTextures[sdfIndex].Get(), &sdfSrvDesc, hDescriptor);
 		hDescriptor.Offset(mCbvSrvUavDescriptorSize);
 
 		dxMesh->mSdfIndex = sdfIndex;
+		mMeshSdfDescriptors[sdfIndex].Center = DirectX::XMFLOAT3(dxMesh->bounds.Center[0], dxMesh->bounds.Center[1], dxMesh->bounds.Center[2]);
 		mMeshSdfDescriptors[sdfIndex].HalfExtent = 0.5f * sdfExtent;
-		mMeshSdfDescriptors[sdfIndex].Radius = 0.707f * sdfExtent;
+		mMeshSdfDescriptors[sdfIndex].Radius = 0.866f * sdfExtent;
 		mMeshSdfDescriptors[sdfIndex].Resolution = sdfRes;
 		sdfIndex++;
 
@@ -4347,7 +4708,10 @@ void GDxRenderer::BuildMeshSDF()
 	}
 
 	auto meshSdfBuffer = mMeshSdfDescriptorBuffer.get();
-	meshSdfBuffer->CopyData(0, mMeshSdfDescriptors[0]);
+	for (int i = 0; i < sdfIndex; i++)
+	{
+		meshSdfBuffer->CopyData(i, mMeshSdfDescriptors[i]);
+	}
 	
 	/*
 	for (auto so : pSceneObjectLayer[(int)RenderLayer::Deferred])
