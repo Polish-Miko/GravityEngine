@@ -23,6 +23,8 @@
 //#define TILE_SIZE_X 16
 //#define TILE_SIZE_Y 16
 
+#define DEBUG_CASCADE_RANGE 0
+
 #define TEST 0
 
 StructuredBuffer<LightList> gLightList : register(t0);
@@ -187,7 +189,11 @@ float4 main(VertexToPixel pIn) : SV_TARGET
 	// Directional light.
 	for (i = 0; i < dirLightCount; i++)
 	{
+#if DEBUG_CASCADE_RANGE
+		float shadowAmount = 1.0f;
+#else
 		float shadowAmount = gShadowTexture.Sample(basicSampler, pIn.uv).r;
+#endif
 		float lightIntensity = dirLight[i].Intensity;
 		float3 toLight = normalize(-dirLight[i].Direction);
 		float3 lightColor = dirLight[i].DiffuseColor.rgb;
@@ -204,6 +210,16 @@ float4 main(VertexToPixel pIn) : SV_TARGET
 	finalColor = finalColor + AmbientPBR(normalize(normal), worldPos,
 		cameraPosition, roughness, metal, albedo,
 		irradiance, prefilter, brdf, shadowAmount);
+
+#if DEBUG_CASCADE_RANGE
+	float testShadow = gShadowTexture.Sample(basicSampler, pIn.uv).r;
+	if (testShadow < 0.1f)
+		finalColor *= float3(1.0f, 0.25f, 0.25f);
+	if (testShadow > 0.4f && testShadow < 0.9f)
+		finalColor *= float3(0.25f, 1.0f, 0.25f);
+	if (testShadow > 0.9f)
+		finalColor *= float3(0.25f, 0.25f, 1.0f);
+#endif
 
 #if TEST
 	float test = gShadowTexture.Sample(basicSampler, pIn.uv).r;

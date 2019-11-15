@@ -8,11 +8,20 @@
 #define BLUR_RADIUS 3
 
 static const float weights[4] = {
-	0.006f,
+	0.0055f,
 	0.061f,
 	0.242f,
 	0.383f
 };
+
+/*
+static const float weights[4] = {
+	0.1f,
+	0.1f,
+	0.2f,
+	0.2f
+};
+*/
 
 cbuffer cbShadowMapPrefilter : register(b0)
 {
@@ -25,11 +34,11 @@ cbuffer cbShadowMapPrefilter : register(b0)
 Texture2D gInput            : register(t0);
 RWTexture2D<float> gOutput	: register(u0);
 
-#define N 256
-#define CacheSize (N + 2 * BLUR_RADIUS)
+#define CacheSize (SHADOW_MAP_PREFILTER_GROUP_SIZE + 2 * BLUR_RADIUS)
+
 groupshared float gCache[CacheSize];
 
-[numthreads(N, 1, 1)]
+[numthreads(SHADOW_MAP_PREFILTER_GROUP_SIZE, 1, 1)]
 void main(
 	int3 groupThreadID : SV_GroupThreadID,
 	int3 dispatchThreadID : SV_DispatchThreadID
@@ -49,18 +58,18 @@ void main(
 		{
 			// Clamp out of bound samples that occur at image borders.
 			int x = max(dispatchThreadID.x - BLUR_RADIUS, 0);
-			gCache[groupThreadID.x] = gInput[int2(x, dispatchThreadID.y)];
+			gCache[groupThreadID.x] = gInput[int2(x, dispatchThreadID.y)].r;
 		}
 
-		if (groupThreadID.x >= N - BLUR_RADIUS)
+		if (groupThreadID.x >= SHADOW_MAP_PREFILTER_GROUP_SIZE - BLUR_RADIUS)
 		{
 			// Clamp out of bound samples that occur at image borders.
 			int x = min(dispatchThreadID.x + BLUR_RADIUS, gInput.Length.x - 1);
-			gCache[groupThreadID.x + 2 * BLUR_RADIUS] = gInput[int2(x, dispatchThreadID.y)];
+			gCache[groupThreadID.x + 2 * BLUR_RADIUS] = gInput[int2(x, dispatchThreadID.y)].r;
 		}
 
 		// Clamp out of bound samples that occur at image borders.
-		gCache[groupThreadID.x + BLUR_RADIUS] = gInput[min(dispatchThreadID.xy, gInput.Length.xy - 1)];
+		gCache[groupThreadID.x + BLUR_RADIUS] = gInput[min(dispatchThreadID.xy, gInput.Length.xy - 1)].r;
 
 		// Wait for all threads to finish.
 		GroupMemoryBarrierWithGroupSync();
@@ -85,15 +94,16 @@ void main(
 		if (groupThreadID.x < BLUR_RADIUS)
 		{
 			int y = max(dispatchThreadID.x - BLUR_RADIUS, 0);
-			gCache[groupThreadID.x] = gInput[int2(dispatchThreadID.y, y)];
-		}
-		if (groupThreadID.x >= N - BLUR_RADIUS)
-		{
-			int y = min(dispatchThreadID.x + BLUR_RADIUS, gInput.Length.y - 1);
-			gCache[groupThreadID.x + 2 * BLUR_RADIUS] = gInput[int2(dispatchThreadID.y, y)];
+			gCache[groupThreadID.x] = gInput[int2(dispatchThreadID.y, y)].r;
 		}
 
-		gCache[groupThreadID.x + BLUR_RADIUS] = gInput[min(dispatchThreadID.yx, gInput.Length.xy - 1)];
+		if (groupThreadID.x >= SHADOW_MAP_PREFILTER_GROUP_SIZE - BLUR_RADIUS)
+		{
+			int y = min(dispatchThreadID.x + BLUR_RADIUS, gInput.Length.y - 1);
+			gCache[groupThreadID.x + 2 * BLUR_RADIUS] = gInput[int2(dispatchThreadID.y, y)].r;
+		}
+
+		gCache[groupThreadID.x + BLUR_RADIUS] = gInput[min(dispatchThreadID.yx, gInput.Length.xy - 1)].r;
 
 		GroupMemoryBarrierWithGroupSync();
 

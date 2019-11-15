@@ -882,6 +882,7 @@ void GCore::LoadSceneObjects()
 
 	// Load test objects.
 
+	/*
 	int sizeX = 32, sizeY = 32;
 
 	for (int x = -sizeX / 2; x < sizeX / 2; x++)
@@ -902,6 +903,7 @@ void GCore::LoadSceneObjects()
 			mSceneObjects[testSO->UniqueName] = std::move(testSO);
 		}
 	}
+	*/
 
 	/*
 	std::unique_ptr<GRiSceneObject> testSO(pRendererFactory->CreateSceneObject());

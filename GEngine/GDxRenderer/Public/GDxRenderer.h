@@ -267,7 +267,10 @@ protected:
 	UINT mTileClusterSrvIndex = 0;
 	UINT mSdfTileSrvIndex = 0;
 	UINT mCascadedShadowMapSrvIndex = 0;
-	UINT mPrefilteredShadowMapIndex = 0;
+	UINT mXPrefilteredShadowMapUavIndex = 0;
+	UINT mYPrefilteredShadowMapUavIndex = 0;
+	UINT mXPrefilteredShadowMapSrvIndex = 0;
+	UINT mYPrefilteredShadowMapSrvIndex = 0;
 	UINT mScreenSpaceShadowPassSrvIndex = 0;
 	UINT mSSShadowTemporalSrvIndex = 0;
 	UINT mLightPassSrvIndex = 0;

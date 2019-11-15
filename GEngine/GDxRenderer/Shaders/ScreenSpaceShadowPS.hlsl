@@ -16,22 +16,27 @@
 
 #define DEBUG_CASCADE_RANGE 0
 #define DEBUG_SHADOWMAP 0
+#define DEBUG_BLOCKER_SEARCH 0
 
-#define PCSS_SOFTNESS 1.5f
+#define PCSS_SOFTNESS 2.5f
 
 #define BLOCK_SEARCH_SAMPLE_NUM 8
 #define BLOCK_SEARCH_SAMPLING_UV_RADIUS 0.003f
 
 #define PCF_SAMPLE_NUM 32
 #define PCF_TEMPORAL_FRAME_COUNT 1
-#define PCF_SAMPLING_UV_RADIUS 0.025f
+#define PCF_SAMPLING_UV_RADIUS 0.08f
 
 #define RAY_START_OFFSET 3.0f
 
 #define MIN_SPHERE_RADIUS 0.4f
 #define MAX_SPHERE_RADIUS 100.0f
 
-#define USE_HARD_SHADOW 1
+#define USE_HARD_SHADOW 0
+
+#define MARCH_CAPSULE 0
+#define MARCH_CAPSULE_CONE_COTANGENT 5.0f
+#define MARCH_CAPSULE_CONE_TANGENT (1 / MARCH_CAPSULE_CONE_COTANGENT)
 
 static const float PI = 3.14159265359f;
 
@@ -131,6 +136,19 @@ float2 DepthGradient(float2 uv, float z)
 	dz_duv /= det;
 
 	return dz_duv;
+}
+
+float sdfCapsule(float3 p, float3 a, float3 b, float r)
+{
+	float3 pa = p - a, ba = b - a;
+	float h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0);
+	return length(pa - ba * h) - r;
+}
+
+float sdfVerticalCapsule(float3 p, float h, float r)
+{
+	p.y -= clamp(p.y, 0.0, h);
+	return length(p) - r;
 }
 
 /*
@@ -260,6 +278,15 @@ float PCSS(float3 shadowPos, int shadowMapIndex, float2 dz_duv)
 	// blocker search.
 	float blockerDistance = BlockerSearch(shadowPos, shadowMapIndex, dz_duv);
 
+#if DEBUG_BLOCKER_SEARCH
+
+	if (blockerDistance == -1.0f)
+		blockerDistance = 0.0f;
+
+	return blockerDistance;
+
+#endif
+
 	if (blockerDistance == -1.0f)
 		return 1.0f;
 
@@ -326,6 +353,7 @@ float main(VertexToPixel pIn) : SV_TARGET
 
 	//-----------------------------------------SDF Shadow----------------------------------------------
 
+#if !DEBUG_CASCADE_RANGE
 	[branch]
 	if (!cascaded)
 	{
@@ -425,12 +453,73 @@ float main(VertexToPixel pIn) : SV_TARGET
 
 		shadow = minConeVisibility;
 	}
+#endif
 
 	//shadow = gSdfList[tileIndex].NumSdf / 2.0f;
 	//shadow = (float)tileIndex / (SDF_GRID_NUM * SDF_GRID_NUM);
 
+#if MARCH_CAPSULE
+	float3 lightDir = -normalize(gMainDirectionalLightDir.xyz);
+	float3 opaqueWorldPos = worldPos;
+	float3 rayStart = opaqueWorldPos + lightDir * RAY_START_OFFSET;
+	float3 rayEnd = opaqueWorldPos + lightDir * MAX_DISTANCE;
+
+	float minConeVisibility = 1.0f;
+
+	{
+		float3 volumeRayStart = rayStart.xyz;
+		float3 volumeRayEnd = rayEnd.xyz;
+		float3 volumeRayDirection = volumeRayEnd - volumeRayStart;
+		float volumeRayLength = length(volumeRayDirection);
+		volumeRayDirection /= volumeRayLength;
+
+		float3 localPositionExtent = float3(200.0f, 200.0f, 200.0f);
+		float2 intersectionTimes = LineBoxIntersect(volumeRayStart, volumeRayEnd, -localPositionExtent, localPositionExtent);
+
+		float capsuleRadius = 30.0f;
+		float capsuleHeight = 50.0f;
+
+		[branch]
+		if (intersectionTimes.x < intersectionTimes.y)
+		{
+			float sampleRayTime = intersectionTimes.x * volumeRayLength;
+
+			uint stepIndex = 0;
+
+			[loop]
+			for (; stepIndex < MAX_STEP; stepIndex++)
+			{
+				float3 sampleVolumePosition = volumeRayStart + volumeRayDirection * sampleRayTime;
+				float distanceField = sdfVerticalCapsule(sampleVolumePosition, capsuleHeight, capsuleRadius);
+
+				float sphereRadius = MARCH_CAPSULE_CONE_TANGENT * sampleRayTime;
+				float stepVisibility = saturate(distanceField / sphereRadius);
+
+				minConeVisibility = min(minConeVisibility, stepVisibility);
+
+				float stepDistance = max(abs(distanceField), MIN_STEP_LENGTH);
+				sampleRayTime += stepDistance;
+
+				if (minConeVisibility < .01f ||
+					sampleRayTime > intersectionTimes.y * volumeRayLength)
+				{
+					break;
+				}
+			}
+
+			// Force to shadowed as we approach max steps
+			minConeVisibility = min(minConeVisibility, (1 - stepIndex / (float)MAX_STEP));
+		}
+
+		if (minConeVisibility < .01f)
+			minConeVisibility = 0.0f;
+	}
+
+	shadow = minConeVisibility;
+#endif
+
 #if DEBUG_SHADOWMAP
-	shadow = gShadowMap[1].SampleLevel(basicSampler, pIn.uv, 0).r;
+	shadow = gShadowMap[0].SampleLevel(basicSampler, pIn.uv, 0).r;
 #endif
 	
 	return shadow;

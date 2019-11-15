@@ -12,11 +12,19 @@ public:
 
 	ID3D12Resource* GetShadowmapResource();
 
+	ID3D12Resource* GetXPrefilteredResource();
+
+	ID3D12Resource* GetYPrefilteredResource();
+
 private:
 
-	UINT64 Resolution = 1024;
+	UINT64 Resolution = 2048;
 
 	Microsoft::WRL::ComPtr<ID3D12Resource> mShadowmapResource;
+
+	Microsoft::WRL::ComPtr<ID3D12Resource> mXPrefilteredShadowmapResource;
+
+	Microsoft::WRL::ComPtr<ID3D12Resource> mYPrefilteredShadowmapResource;
 
 };
 

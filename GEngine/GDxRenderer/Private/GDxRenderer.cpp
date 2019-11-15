@@ -462,6 +462,57 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 		GDxGpuProfiler::GetGpuProfiler().EndGpuProfile("Shadow Map Pass");
 	}
 
+#if USE_SHADOW_MAP_PREFILTER
+	// Shadow Map Prefilter Pass
+	{
+		GDxGpuProfiler::GetGpuProfiler().StartGpuProfile("Shadow Map Prefilter Pass");
+
+		mCommandList->RSSetViewports(1, &ShadowViewport);
+		mCommandList->RSSetScissorRects(1, &ShadowScissorRect);
+
+		mCommandList->SetComputeRootSignature(mRootSignatures["ShadowMapPrefilter"].Get());
+
+		mCommandList->SetPipelineState(mPSOs["ShadowMapPrefilter"].Get());
+
+		int shadowMapIndex = mFrameCount % SHADOW_CASCADE_NUM;
+
+		// Blur in X direction.
+		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mCascadedShadowMap[shadowMapIndex]->GetXPrefilteredResource(),
+			D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_UNORDERED_ACCESS));
+
+		mCommandList->SetComputeRoot32BitConstant(0, 0xFFFFFFFF, 0);
+
+		mCommandList->SetComputeRootDescriptorTable(1, GetGpuSrv(mCascadedShadowMapSrvIndex + shadowMapIndex));
+
+		mCommandList->SetComputeRootDescriptorTable(2, GetGpuSrv(mXPrefilteredShadowMapUavIndex + shadowMapIndex));
+
+		UINT numGroupsX = (UINT)ceilf((float)ShadowMapResolution / SHADOW_MAP_PREFILTER_GROUP_SIZE - 0.001f);
+		UINT numGroupsY = ShadowMapResolution;
+		UINT numGroupsZ = 1;
+		mCommandList->Dispatch(numGroupsX, numGroupsY, numGroupsZ);
+
+		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mCascadedShadowMap[shadowMapIndex]->GetXPrefilteredResource(),
+			D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_GENERIC_READ));
+
+		// Blur in Y direction.
+		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mCascadedShadowMap[shadowMapIndex]->GetYPrefilteredResource(),
+			D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_UNORDERED_ACCESS));
+
+		mCommandList->SetComputeRoot32BitConstant(0, 0, 0);
+
+		mCommandList->SetComputeRootDescriptorTable(1, GetGpuSrv(mXPrefilteredShadowMapSrvIndex + shadowMapIndex));
+
+		mCommandList->SetComputeRootDescriptorTable(2, GetGpuSrv(mYPrefilteredShadowMapUavIndex + shadowMapIndex));
+
+		mCommandList->Dispatch(numGroupsX, numGroupsY, numGroupsZ);
+
+		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mCascadedShadowMap[shadowMapIndex]->GetYPrefilteredResource(),
+			D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_GENERIC_READ));
+
+		GDxGpuProfiler::GetGpuProfiler().EndGpuProfile("Shadow Map Prefilter Pass");
+	}
+#endif
+
 	// Screen Space Shadow Pass
 	{
 		GDxGpuProfiler::GetGpuProfiler().StartGpuProfile("Screen Space Shadow Pass");
@@ -494,7 +545,11 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 		auto passCB = mCurrFrameResource->PassCB->Resource();
 		mCommandList->SetGraphicsRootConstantBufferView(5, passCB->GetGPUVirtualAddress());
 
+#if USE_SHADOW_MAP_PREFILTER
+		mCommandList->SetGraphicsRootDescriptorTable(6, GetGpuSrv(mYPrefilteredShadowMapSrvIndex));
+#else
 		mCommandList->SetGraphicsRootDescriptorTable(6, GetGpuSrv(mCascadedShadowMapSrvIndex));
+#endif
 
 		mCommandList->SetGraphicsRootDescriptorTable(7, GetGpuSrv(mBlueNoiseSrvIndex));
 
@@ -2315,6 +2370,52 @@ void GDxRenderer::BuildRootSignature()
 			IID_PPV_ARGS(mRootSignatures["ShadowMap"].GetAddressOf())));
 	}
 
+	// Shadow map prefilter root signature
+	{
+		CD3DX12_DESCRIPTOR_RANGE rangeShadowMap;
+		rangeShadowMap.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, (UINT)1, 0);
+
+		CD3DX12_DESCRIPTOR_RANGE rangeUav;
+		rangeUav.Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, (UINT)1, 0);
+
+		CD3DX12_ROOT_PARAMETER gShadowMapPrefilterRootParameters[3];
+		gShadowMapPrefilterRootParameters[0].InitAsConstants(1, 0);
+		gShadowMapPrefilterRootParameters[1].InitAsDescriptorTable(1, &rangeShadowMap, D3D12_SHADER_VISIBILITY_ALL);
+		gShadowMapPrefilterRootParameters[2].InitAsDescriptorTable(1, &rangeUav, D3D12_SHADER_VISIBILITY_ALL);
+
+		// A root signature is an array of root parameters.
+		CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(3, gShadowMapPrefilterRootParameters,
+			0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+
+		CD3DX12_STATIC_SAMPLER_DESC StaticSamplers[2];
+		StaticSamplers[0].Init(0, D3D12_FILTER_ANISOTROPIC);
+		StaticSamplers[1].Init(1, D3D12_FILTER_COMPARISON_MIN_MAG_MIP_LINEAR,
+			D3D12_TEXTURE_ADDRESS_MODE_BORDER,
+			D3D12_TEXTURE_ADDRESS_MODE_BORDER,
+			D3D12_TEXTURE_ADDRESS_MODE_BORDER,
+			0.f, 16u, D3D12_COMPARISON_FUNC_LESS_EQUAL);
+		rootSigDesc.NumStaticSamplers = 2;
+		rootSigDesc.pStaticSamplers = StaticSamplers;
+
+		// create a root signature with a single slot which points to a descriptor range consisting of a single constant buffer
+		ComPtr<ID3DBlob> serializedRootSig = nullptr;
+		ComPtr<ID3DBlob> errorBlob = nullptr;
+		HRESULT hr = D3D12SerializeRootSignature(&rootSigDesc, D3D_ROOT_SIGNATURE_VERSION_1,
+			serializedRootSig.GetAddressOf(), errorBlob.GetAddressOf());
+
+		if (errorBlob != nullptr)
+		{
+			::OutputDebugStringA((char*)errorBlob->GetBufferPointer());
+		}
+		ThrowIfFailed(hr);
+
+		ThrowIfFailed(md3dDevice->CreateRootSignature(
+			0,
+			serializedRootSig->GetBufferPointer(),
+			serializedRootSig->GetBufferSize(),
+			IID_PPV_ARGS(mRootSignatures["ShadowMapPrefilter"].GetAddressOf())));
+	}
+
 	// Screen space shadow pass root signature
 	{
 		CD3DX12_DESCRIPTOR_RANGE range;
@@ -2869,7 +2970,7 @@ void GDxRenderer::BuildDescriptorHeaps()
 		+ 2 //tile/cluster pass srv and uav
 		+ 2 //sdf tile pass srv and uav
 		+ ShadowCascadeNum //cascaded shadow map
-		+ ShadowCascadeNum * 2 * 2 //cascaded shadow map prefilter X and Y srv and UAV
+		+ ShadowCascadeNum * 2 * 2 //cascaded shadow map prefilter X and Y srv and uav
 		+ 1 //screen space shadow
 		+ 3 //screen space shadow temporal filter
 		+ 1 //light pass
@@ -3053,29 +3154,40 @@ void GDxRenderer::BuildDescriptorHeaps()
 
 	// Build UAV and SRV for shadow map prefilter pass.
 	{
-		mPrefilteredShadowMapIndex = mCascadedShadowMapSrvIndex + ShadowCascadeNum;
+		mXPrefilteredShadowMapUavIndex = mCascadedShadowMapSrvIndex + ShadowCascadeNum;
+		mYPrefilteredShadowMapUavIndex = mXPrefilteredShadowMapUavIndex + ShadowCascadeNum;
+		mXPrefilteredShadowMapSrvIndex = mYPrefilteredShadowMapUavIndex + ShadowCascadeNum;
+		mYPrefilteredShadowMapSrvIndex = mXPrefilteredShadowMapSrvIndex + ShadowCascadeNum;
 
-		GDxUavProperties prop;
-		prop.mUavFormat = DXGI_FORMAT_R32_FLOAT;
-		prop.mClearColor[0] = 1;
-		prop.mClearColor[1] = 0;
-		prop.mClearColor[2] = 0;
-		prop.mClearColor[3] = 1;
+		// Create UAV.
+		D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
+
+		uavDesc.Format = DXGI_FORMAT_R32_FLOAT;
+		uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
+		uavDesc.Texture2D.MipSlice = 0;
+
+		// Create SRV.
+		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc;
+
+		ZeroMemory(&srvDesc, sizeof(srvDesc));
+		srvDesc.Texture2D.MostDetailedMip = 0;
+		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+		srvDesc.Format = DXGI_FORMAT_R32_FLOAT;
+		srvDesc.Texture2D.MipLevels = 1;
 
 		for (int i = 0; i < ShadowCascadeNum; i++)
 		{
-			int index = mPrefilteredShadowMapIndex + i * 2;
-			auto xUav = std::make_unique<GDxUav>(md3dDevice.Get(), ShadowMapResolution, ShadowMapResolution, GetCpuSrv(index), GetGpuSrv(index), prop, false, false, true);
-			mUavs["ShadowMapPrefilter_" + to_string(i) + "_X"] = std::move(xUav);
-			index++;
-			auto yUav = std::make_unique<GDxUav>(md3dDevice.Get(), ShadowMapResolution, ShadowMapResolution, GetCpuSrv(index), GetGpuSrv(index), prop, false, false, true);
-			mUavs["ShadowMapPrefilter_" + to_string(i) + "_Y"] = std::move(yUav);
+			md3dDevice->CreateUnorderedAccessView(mCascadedShadowMap[i]->GetXPrefilteredResource(), nullptr, &uavDesc, GetCpuSrv(mXPrefilteredShadowMapUavIndex + i));
+			md3dDevice->CreateUnorderedAccessView(mCascadedShadowMap[i]->GetYPrefilteredResource(), nullptr, &uavDesc, GetCpuSrv(mYPrefilteredShadowMapUavIndex + i));
+			md3dDevice->CreateShaderResourceView(mCascadedShadowMap[i]->GetXPrefilteredResource(), &srvDesc, GetCpuSrv(mXPrefilteredShadowMapSrvIndex + i));
+			md3dDevice->CreateShaderResourceView(mCascadedShadowMap[i]->GetYPrefilteredResource(), &srvDesc, GetCpuSrv(mYPrefilteredShadowMapSrvIndex + i));
 		}
 	}
 
 	// Build RTV and SRV for screen space shadow pass.
 	{
-		mScreenSpaceShadowPassSrvIndex = mPrefilteredShadowMapIndex + 2 * 2 * ShadowCascadeNum;
+		mScreenSpaceShadowPassSrvIndex = mYPrefilteredShadowMapSrvIndex + ShadowCascadeNum;
 
 		std::vector<DXGI_FORMAT> rtvFormats =
 		{
@@ -3478,6 +3590,15 @@ void GDxRenderer::BuildPSOs()
 		ShadowMapPsoDesc.SampleDesc.Quality = 0;//m4xMsaaState ? (m4xMsaaQuality - 1) : 0;
 		ShadowMapPsoDesc.DSVFormat = mDepthStencilFormat;
 		ThrowIfFailed(md3dDevice->CreateGraphicsPipelineState(&ShadowMapPsoDesc, IID_PPV_ARGS(&mPSOs["ShadowMap"])));
+	}
+
+	// PSO for shadow map prefilter pass.
+	{
+		D3D12_COMPUTE_PIPELINE_STATE_DESC computePsoDesc = {};
+		computePsoDesc.pRootSignature = mRootSignatures["ShadowMapPrefilter"].Get();
+		computePsoDesc.CS = GDxShaderManager::LoadShader(L"Shaders\\ShadowMapPrefilterCS.cso");
+		computePsoDesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
+		ThrowIfFailed(md3dDevice->CreateComputePipelineState(&computePsoDesc, IID_PPV_ARGS(&mPSOs["ShadowMapPrefilter"])));
 	}
 
 	// PSO for screen space shadow pass.

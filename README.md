@@ -31,17 +31,25 @@ Temporal Anti-Aliasing (before and after)
 
 ![TAA_After](https://github.com/MrySwk/GravityEngine/blob/master/screenshot/TAA_After.jpg)
 
-Signed Distance Field
+Cascaded Shadow Map
 
-![SDF_2](https://github.com/MrySwk/GravityEngine/blob/master/screenshot/SDF_Debug_1.png)
+![SDF](https://github.com/MrySwk/GravityEngine/blob/master/screenshot/CascadedShadowMap.png)
 
-![SDF_2](https://github.com/MrySwk/GravityEngine/blob/master/screenshot/SDF_Debug_2.png)
+Percentage Closer Soft Shadow
+
+![SDF](https://github.com/MrySwk/GravityEngine/blob/master/screenshot/PCSS.png)
+
+Capsule Soft Shadow
+
+![SDF](https://github.com/MrySwk/GravityEngine/blob/master/screenshot/CapsuleShadow.png)
+
+Signed Distance Field Baking
+
+![SDF](https://github.com/MrySwk/GravityEngine/blob/master/screenshot/SDF_Debug_2.png)
 
 SDF Ray-Traced Shadow
 
-![SDF_Shadow_1](https://github.com/MrySwk/GravityEngine/blob/master/screenshot/SDF_Shadow_1.png)
-
-![SDF_Shadow_2](https://github.com/MrySwk/GravityEngine/blob/master/screenshot/SDF_Shadow_2.gif)
+![SDF_Shadow](https://github.com/MrySwk/GravityEngine/blob/master/screenshot/SDF_Shadow_2.gif)
 
 ## Dependencies
 
@@ -72,6 +80,7 @@ to
   - [x] Manipulation Gizmo
 - [x] Temporal AA
 - [x] Masked Occlusion Culling
-- [ ] Shadowing
+- [x] CSM/PCSS
+- [x] Signed Distance Field Ray-Traced Shadow
 - [ ] AO
 - [ ] SSR
