@@ -283,6 +283,14 @@ protected:
 	UINT mDepthDsvIndex = 0;
 	UINT mShadowMapDsvIndex = 0;
 
+	UINT mMotionBlurVdBufferSrvIndexOffset = 0;
+	UINT mMotionBlurOutputSrvIndexOffset = 0;
+	UINT mMotionBlurFirstTileMaxSrvIndexOffset = 0;
+	UINT mMotionBlurSecondTileMaxSrvIndexOffset = 0;
+	UINT mMotionBlurThirdTileMaxSrvIndexOffset = 0;
+	UINT mMotionBlurFourthTileMaxSrvIndexOffset = 0;
+	UINT mMotionBlurNeighborMaxSrvIndexOffset = 0;
+
 	int numVisible = 0;
 	int numFrustumCulled = 0;
 	int numOcclusionCulled = 0;

@@ -46,6 +46,7 @@ private:
 
 	std::shared_ptr<std::vector<float>> GetSdf();
 	void InitializeSdf(std::vector<float>& sdf);
+	void ClearSdf();
 
 	int mSdfIndex = 0;
 

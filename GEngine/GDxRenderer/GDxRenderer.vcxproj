@@ -211,6 +211,7 @@
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="Private\GDxUploadBuffer.h" />
+    <None Include="Shaders\StaticSamplers.hlsli" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Private\GDxCascadedShadowMap.cpp" />
@@ -325,8 +326,26 @@
     <FxCompile Include="Shaders\LightPassPS.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
     </FxCompile>
+    <FxCompile Include="Shaders\MotionBlurFirstTileMaxPS.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
+    </FxCompile>
+    <FxCompile Include="Shaders\MotionBlurFourthTileMaxPS.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
+    </FxCompile>
+    <FxCompile Include="Shaders\MotionBlurNeighborMaxPS.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
+    </FxCompile>
     <FxCompile Include="Shaders\MotionBlurPassPS.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
+    </FxCompile>
+    <FxCompile Include="Shaders\MotionBlurSecondThirdTileMaxPS.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
+    </FxCompile>
+    <FxCompile Include="Shaders\MotionBlurVdPackingPS.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
+    </FxCompile>
+    <FxCompile Include="Shaders\NeighborMax.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Compute</ShaderType>
     </FxCompile>
     <FxCompile Include="Shaders\PostProcessPS.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
@@ -408,6 +427,7 @@
     <None Include="Shaders\MainPassCB.hlsli" />
     <None Include="Shaders\Material.hlsli" />
     <None Include="Shaders\ObjectCB.hlsli" />
+    <None Include="Shaders\ShaderUtil.hlsli" />
     <None Include="Shaders\SkyPassCB.hlsli" />
   </ItemGroup>
   <ItemGroup>

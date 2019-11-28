@@ -261,6 +261,12 @@
     <FxCompile Include="Shaders\SSShadowTemporalPS.hlsl" />
     <FxCompile Include="Shaders\SdfTileCS.hlsl" />
     <FxCompile Include="Shaders\ShadowMapPrefilterCS.hlsl" />
+    <FxCompile Include="Shaders\NeighborMax.hlsl" />
+    <FxCompile Include="Shaders\MotionBlurVdPackingPS.hlsl" />
+    <FxCompile Include="Shaders\MotionBlurSecondThirdTileMaxPS.hlsl" />
+    <FxCompile Include="Shaders\MotionBlurFirstTileMaxPS.hlsl" />
+    <FxCompile Include="Shaders\MotionBlurFourthTileMaxPS.hlsl" />
+    <FxCompile Include="Shaders\MotionBlurNeighborMaxPS.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Shaders\Lighting.hlsli" />
@@ -274,5 +280,7 @@
       <Filter>Header Files</Filter>
     </None>
     <None Include="Shaders\SdfDescriptors.hlsli" />
+    <None Include="Shaders\ShaderUtil.hlsli" />
+    <None Include="Shaders\StaticSamplers.hlsli" />
   </ItemGroup>
 </Project>

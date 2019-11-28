@@ -130,8 +130,22 @@ static const float DepthSlicing_16[17] = {
 #define USE_FIXED_POINT_SDF_TEXTURE 1
 
 #define SDF_OUT_OF_BOX_RANGE 100.0f
- 
 
+
+//----------------------------------------------------------------------------------------------------------
+// Motion Blur.
+//----------------------------------------------------------------------------------------------------------
+
+#define MOTION_BLUR_SHUTTER_ANGLE 720
+#define MOTION_BLUR_SAMPLE_COUNT 16
+#define MOTION_BLUR_MAX_RADIUS_SCALE 20.0f
+
+// Derivated parameters.
+#define MOTION_BLUR_MAX_RADIUS (int)(MOTION_BLUR_MAX_RADIUS_SCALE * gRenderTargetSize.y / 100)
+#define MOTION_BLUR_RCP_MAX_RADIUS  (1.0f / MOTION_BLUR_MAX_RADIUS)
+#define MOTION_BLUR_VELOCITY_SCALE (MOTION_BLUR_SHUTTER_ANGLE / 360.0f)
+#define MOTION_BLUR_TILE_SIZE (((MOTION_BLUR_MAX_RADIUS - 1) / 8 + 1) * 8)
+#define MOTION_BLUR_TILE_MAX_OFFSET_XY ((MOTION_BLUR_TILE_SIZE / 8.0f - 1.0f) * -0.5f)
 
 
 #endif 

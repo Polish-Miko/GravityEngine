@@ -60,6 +60,11 @@ void GRiMesh::InitializeSdf(std::vector<float>& sdf)
 	SignedDistanceField = std::make_shared<std::vector<float>>(sdf);
 }
 
+void GRiMesh::ClearSdf()
+{
+	SignedDistanceField = nullptr;
+}
+
 
 
 

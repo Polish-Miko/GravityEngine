@@ -11,12 +11,15 @@
 #define STEP_LENGTH 10.0f
 #define MIN_STEP_LENGTH (1.0f / (4 * MAX_STEP))
 
+#define RAY_START_OFFSET 3.0f
+
 #define CONE_COTANGENT 10.0f
 #define CONE_TANGENT (1 / CONE_COTANGENT)
 
 #define DEBUG_CASCADE_RANGE 0
 #define DEBUG_SHADOWMAP 0
 #define DEBUG_BLOCKER_SEARCH 0
+#define DEBUG_TILE_CULLING 0
 
 #define PCSS_SOFTNESS 2.5f
 
@@ -26,8 +29,6 @@
 #define PCF_SAMPLE_NUM 32
 #define PCF_TEMPORAL_FRAME_COUNT 1
 #define PCF_SAMPLING_UV_RADIUS 0.08f
-
-#define RAY_START_OFFSET 3.0f
 
 #define MIN_SPHERE_RADIUS 0.4f
 #define MAX_SPHERE_RADIUS 100.0f
@@ -313,6 +314,8 @@ float main(VertexToPixel pIn) : SV_TARGET
 	float3 worldPos = ReconstructWorldPos(pIn.uv, sampledDepth);
 
 	//-----------------------------------------CSM/PCSS------------------------------------------------
+
+#if !DEBUG_TILE_CULLING
 	[unroll]
 	for (int cascadeIndex = 0; cascadeIndex < SHADOW_CASCADE_NUM; cascadeIndex++)
 	{
@@ -350,6 +353,7 @@ float main(VertexToPixel pIn) : SV_TARGET
 		cascaded = true;
 		break;
 	}
+#endif
 
 	//-----------------------------------------SDF Shadow----------------------------------------------
 
@@ -452,11 +456,13 @@ float main(VertexToPixel pIn) : SV_TARGET
 		}
 
 		shadow = minConeVisibility;
+
+#if DEBUG_TILE_CULLING
+		shadow = gSdfList[tileIndex].NumSdf / 2.0f;
+		//shadow = (float)tileIndex / (SDF_GRID_NUM * SDF_GRID_NUM);
+#endif
 	}
 #endif
-
-	//shadow = gSdfList[tileIndex].NumSdf / 2.0f;
-	//shadow = (float)tileIndex / (SDF_GRID_NUM * SDF_GRID_NUM);
 
 #if MARCH_CAPSULE
 	float3 lightDir = -normalize(gMainDirectionalLightDir.xyz);

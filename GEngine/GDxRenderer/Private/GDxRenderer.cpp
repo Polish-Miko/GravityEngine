@@ -809,45 +809,405 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 		GDxGpuProfiler::GetGpuProfiler().EndGpuProfile("TAA Pass");
 	}
 
-	// Motion Blur Pass
+	// Motion Blur
 	{
-		GDxGpuProfiler::GetGpuProfiler().StartGpuProfile("Motion Blur Pass");
+		GDxGpuProfiler::GetGpuProfiler().StartGpuProfile("Motion Blur");
 
-		mCommandList->RSSetViewports(1, &(mRtvHeaps["MotionBlurPass"]->mRtv[0]->mViewport));
-		mCommandList->RSSetScissorRects(1, &(mRtvHeaps["MotionBlurPass"]->mRtv[0]->mScissorRect));
+		// Velocity Depth Packing Pass
+		{
+			//GDxGpuProfiler::GetGpuProfiler().StartGpuProfile("Velocity Depth Packing Pass");
 
-		mCommandList->SetGraphicsRootSignature(mRootSignatures["MotionBlurPass"].Get());
+			mCommandList->RSSetViewports(1, &(mRtvHeaps["MotionBlur"]->mRtv[mMotionBlurVdBufferSrvIndexOffset]->mViewport));
+			mCommandList->RSSetScissorRects(1, &(mRtvHeaps["MotionBlur"]->mRtv[mMotionBlurVdBufferSrvIndexOffset]->mScissorRect));
 
-		mCommandList->SetPipelineState(mPSOs["MotionBlurPass"].Get());
+			mCommandList->SetGraphicsRootSignature(mRootSignatures["MotionBlurVdPacking"].Get());
 
-		auto passCB = mCurrFrameResource->PassCB->Resource();
-		mCommandList->SetGraphicsRootConstantBufferView(0, passCB->GetGPUVirtualAddress());
+			mCommandList->SetPipelineState(mPSOs["MotionBlurVdPacking"].Get());
 
-		mCommandList->SetGraphicsRootDescriptorTable(1, mRtvHeaps["TaaPass"]->GetSrvGpu(2));
+			auto passCB = mCurrFrameResource->PassCB->Resource();
+			mCommandList->SetGraphicsRootConstantBufferView(0, passCB->GetGPUVirtualAddress());
 
-		mCommandList->SetGraphicsRootDescriptorTable(2, mRtvHeaps["GBuffer"]->GetSrvGpu(mVelocityBufferSrvIndex - mGBufferSrvIndex));
+			mCommandList->SetGraphicsRootDescriptorTable(1, mRtvHeaps["GBuffer"]->GetSrvGpu(mVelocityBufferSrvIndex - mGBufferSrvIndex));
 
-		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["MotionBlurPass"]->mRtv[0]->mResource.Get(),
-			D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_RENDER_TARGET));
+			mCommandList->SetGraphicsRootDescriptorTable(2, GetGpuSrv(mDepthBufferSrvIndex));
 
-		// Clear RT.
-		DirectX::XMVECTORF32 motionBlurClearColor = { mRtvHeaps["MotionBlurPass"]->mRtv[0]->mProperties.mClearColor[0],
-		mRtvHeaps["MotionBlurPass"]->mRtv[0]->mProperties.mClearColor[1],
-		mRtvHeaps["MotionBlurPass"]->mRtv[0]->mProperties.mClearColor[2],
-		mRtvHeaps["MotionBlurPass"]->mRtv[0]->mProperties.mClearColor[3]
-		};
+			mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["MotionBlur"]->mRtv[mMotionBlurVdBufferSrvIndexOffset]->mResource.Get(),
+				D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_RENDER_TARGET));
 
-		mCommandList->ClearRenderTargetView(mRtvHeaps["MotionBlurPass"]->mRtvHeap.handleCPU(0), motionBlurClearColor, 0, nullptr);
+			// Clear RT.
+			DirectX::XMVECTORF32 motionBlurClearColor = { mRtvHeaps["MotionBlur"]->mRtv[mMotionBlurVdBufferSrvIndexOffset]->mProperties.mClearColor[0],
+			mRtvHeaps["MotionBlur"]->mRtv[mMotionBlurVdBufferSrvIndexOffset]->mProperties.mClearColor[1],
+			mRtvHeaps["MotionBlur"]->mRtv[mMotionBlurVdBufferSrvIndexOffset]->mProperties.mClearColor[2],
+			mRtvHeaps["MotionBlur"]->mRtv[mMotionBlurVdBufferSrvIndexOffset]->mProperties.mClearColor[3]
+			};
 
-		mCommandList->OMSetRenderTargets(1, &(mRtvHeaps["MotionBlurPass"]->mRtvHeap.handleCPU(0)), false, nullptr);
+			mCommandList->ClearRenderTargetView(mRtvHeaps["MotionBlur"]->mRtvHeap.handleCPU(mMotionBlurVdBufferSrvIndexOffset), motionBlurClearColor, 0, nullptr);
 
-		// For each render item...
-		DrawSceneObjects(mCommandList.Get(), RenderLayer::ScreenQuad, false, false);
+			mCommandList->OMSetRenderTargets(1, &(mRtvHeaps["MotionBlur"]->mRtvHeap.handleCPU(mMotionBlurVdBufferSrvIndexOffset)), false, nullptr);
 
-		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["MotionBlurPass"]->mRtv[0]->mResource.Get(),
-			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ));
+			// For each render item...
+			DrawSceneObjects(mCommandList.Get(), RenderLayer::ScreenQuad, false, false);
 
-		GDxGpuProfiler::GetGpuProfiler().EndGpuProfile("Motion Blur Pass");
+			mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["MotionBlur"]->mRtv[mMotionBlurVdBufferSrvIndexOffset]->mResource.Get(),
+				D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ));
+
+			//GDxGpuProfiler::GetGpuProfiler().EndGpuProfile("Velocity Depth Packing Pass");
+		}
+
+		// First Tile Max Pass
+		{
+			//GDxGpuProfiler::GetGpuProfiler().StartGpuProfile("First Tile Max Pass");
+
+			mCommandList->RSSetViewports(1, &(mRtvHeaps["MotionBlur"]->mRtv[mMotionBlurFirstTileMaxSrvIndexOffset]->mViewport));
+			mCommandList->RSSetScissorRects(1, &(mRtvHeaps["MotionBlur"]->mRtv[mMotionBlurFirstTileMaxSrvIndexOffset]->mScissorRect));
+
+			mCommandList->SetGraphicsRootSignature(mRootSignatures["MotionBlurTileMax"].Get());
+
+			mCommandList->SetPipelineState(mPSOs["MotionBlurFirstTileMax"].Get());
+
+			float inputFloat[4] =
+			{
+				1.0f / mClientWidth,
+				1.0f / mClientHeight,
+				0.0f,
+				0.0f
+			};
+			int inputInt = 0;
+
+			char inputParams[4 * 5];
+			memcpy(inputParams, &inputFloat[0], 4);
+			memcpy(inputParams + 4, &inputFloat[1], 4);
+			memcpy(inputParams + 8, &inputFloat[2], 4);
+			memcpy(inputParams + 12, &inputFloat[3], 4);
+			memcpy(inputParams + 16, &inputInt, 4);
+
+			mCommandList->SetGraphicsRoot32BitConstants(0, 5, inputParams, 0);
+
+			auto passCB = mCurrFrameResource->PassCB->Resource();
+			mCommandList->SetGraphicsRootConstantBufferView(1, passCB->GetGPUVirtualAddress());
+
+			mCommandList->SetGraphicsRootDescriptorTable(2, mRtvHeaps["MotionBlur"]->GetSrvGpu(mMotionBlurVdBufferSrvIndexOffset));
+
+			mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["MotionBlur"]->mRtv[mMotionBlurFirstTileMaxSrvIndexOffset]->mResource.Get(),
+				D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_RENDER_TARGET));
+
+			// Clear RT.
+			DirectX::XMVECTORF32 motionBlurClearColor = { mRtvHeaps["MotionBlur"]->mRtv[mMotionBlurFirstTileMaxSrvIndexOffset]->mProperties.mClearColor[0],
+			mRtvHeaps["MotionBlur"]->mRtv[mMotionBlurFirstTileMaxSrvIndexOffset]->mProperties.mClearColor[1],
+			mRtvHeaps["MotionBlur"]->mRtv[mMotionBlurFirstTileMaxSrvIndexOffset]->mProperties.mClearColor[2],
+			mRtvHeaps["MotionBlur"]->mRtv[mMotionBlurFirstTileMaxSrvIndexOffset]->mProperties.mClearColor[3]
+			};
+
+			mCommandList->ClearRenderTargetView(mRtvHeaps["MotionBlur"]->mRtvHeap.handleCPU(mMotionBlurFirstTileMaxSrvIndexOffset), motionBlurClearColor, 0, nullptr);
+
+			mCommandList->OMSetRenderTargets(1, &(mRtvHeaps["MotionBlur"]->mRtvHeap.handleCPU(mMotionBlurFirstTileMaxSrvIndexOffset)), false, nullptr);
+
+			// For each render item...
+			DrawSceneObjects(mCommandList.Get(), RenderLayer::ScreenQuad, false, false);
+
+			mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["MotionBlur"]->mRtv[mMotionBlurFirstTileMaxSrvIndexOffset]->mResource.Get(),
+				D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ));
+
+			//GDxGpuProfiler::GetGpuProfiler().EndGpuProfile("First Tile Max Pass");
+		}
+
+		// Second Tile Max Pass
+		{
+			//GDxGpuProfiler::GetGpuProfiler().StartGpuProfile("Second Tile Max Pass");
+
+			mCommandList->RSSetViewports(1, &(mRtvHeaps["MotionBlur"]->mRtv[mMotionBlurSecondTileMaxSrvIndexOffset]->mViewport));
+			mCommandList->RSSetScissorRects(1, &(mRtvHeaps["MotionBlur"]->mRtv[mMotionBlurSecondTileMaxSrvIndexOffset]->mScissorRect));
+
+			mCommandList->SetGraphicsRootSignature(mRootSignatures["MotionBlurTileMax"].Get());
+
+			mCommandList->SetPipelineState(mPSOs["MotionBlurSecondThirdTileMax"].Get());
+
+			float inputFloat[4] =
+			{
+				2.0f / mClientWidth,
+				2.0f / mClientHeight,
+				0.0f,
+				0.0f
+			};
+			int inputInt = 0;
+
+			char inputParams[4 * 5];
+			memcpy(inputParams, &inputFloat[0], 4);
+			memcpy(inputParams + 4, &inputFloat[1], 4);
+			memcpy(inputParams + 8, &inputFloat[2], 4);
+			memcpy(inputParams + 12, &inputFloat[3], 4);
+			memcpy(inputParams + 16, &inputInt, 4);
+
+			mCommandList->SetGraphicsRoot32BitConstants(0, 5, inputParams, 0);
+
+			auto passCB = mCurrFrameResource->PassCB->Resource();
+			mCommandList->SetGraphicsRootConstantBufferView(1, passCB->GetGPUVirtualAddress());
+
+			mCommandList->SetGraphicsRootDescriptorTable(2, mRtvHeaps["MotionBlur"]->GetSrvGpu(mMotionBlurFirstTileMaxSrvIndexOffset));
+
+			mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["MotionBlur"]->mRtv[mMotionBlurSecondTileMaxSrvIndexOffset]->mResource.Get(),
+				D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_RENDER_TARGET));
+
+			// Clear RT.
+			DirectX::XMVECTORF32 motionBlurClearColor = { mRtvHeaps["MotionBlur"]->mRtv[mMotionBlurSecondTileMaxSrvIndexOffset]->mProperties.mClearColor[0],
+			mRtvHeaps["MotionBlur"]->mRtv[mMotionBlurSecondTileMaxSrvIndexOffset]->mProperties.mClearColor[1],
+			mRtvHeaps["MotionBlur"]->mRtv[mMotionBlurSecondTileMaxSrvIndexOffset]->mProperties.mClearColor[2],
+			mRtvHeaps["MotionBlur"]->mRtv[mMotionBlurSecondTileMaxSrvIndexOffset]->mProperties.mClearColor[3]
+			};
+
+			mCommandList->ClearRenderTargetView(mRtvHeaps["MotionBlur"]->mRtvHeap.handleCPU(mMotionBlurSecondTileMaxSrvIndexOffset), motionBlurClearColor, 0, nullptr);
+
+			mCommandList->OMSetRenderTargets(1, &(mRtvHeaps["MotionBlur"]->mRtvHeap.handleCPU(mMotionBlurSecondTileMaxSrvIndexOffset)), false, nullptr);
+
+			// For each render item...
+			DrawSceneObjects(mCommandList.Get(), RenderLayer::ScreenQuad, false, false);
+
+			mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["MotionBlur"]->mRtv[mMotionBlurSecondTileMaxSrvIndexOffset]->mResource.Get(),
+				D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ));
+
+			//GDxGpuProfiler::GetGpuProfiler().EndGpuProfile("Second Tile Max Pass");
+		}
+
+		// Third Tile Max Pass
+		{
+			//GDxGpuProfiler::GetGpuProfiler().StartGpuProfile("Third Tile Max Pass");
+
+			mCommandList->RSSetViewports(1, &(mRtvHeaps["MotionBlur"]->mRtv[mMotionBlurThirdTileMaxSrvIndexOffset]->mViewport));
+			mCommandList->RSSetScissorRects(1, &(mRtvHeaps["MotionBlur"]->mRtv[mMotionBlurThirdTileMaxSrvIndexOffset]->mScissorRect));
+
+			mCommandList->SetGraphicsRootSignature(mRootSignatures["MotionBlurTileMax"].Get());
+
+			mCommandList->SetPipelineState(mPSOs["MotionBlurSecondThirdTileMax"].Get());
+
+			float inputFloat[4] =
+			{
+				4.0f / mClientWidth,
+				4.0f / mClientHeight,
+				0.0f,
+				0.0f
+			};
+			int inputInt = 0;
+
+			char inputParams[4 * 5];
+			memcpy(inputParams, &inputFloat[0], 4);
+			memcpy(inputParams + 4, &inputFloat[1], 4);
+			memcpy(inputParams + 8, &inputFloat[2], 4);
+			memcpy(inputParams + 12, &inputFloat[3], 4);
+			memcpy(inputParams + 16, &inputInt, 4);
+
+			mCommandList->SetGraphicsRoot32BitConstants(0, 5, inputParams, 0);
+
+			auto passCB = mCurrFrameResource->PassCB->Resource();
+			mCommandList->SetGraphicsRootConstantBufferView(1, passCB->GetGPUVirtualAddress());
+
+			mCommandList->SetGraphicsRootDescriptorTable(2, mRtvHeaps["MotionBlur"]->GetSrvGpu(mMotionBlurSecondTileMaxSrvIndexOffset));
+
+			mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["MotionBlur"]->mRtv[mMotionBlurThirdTileMaxSrvIndexOffset]->mResource.Get(),
+				D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_RENDER_TARGET));
+
+			// Clear RT.
+			DirectX::XMVECTORF32 motionBlurClearColor = { mRtvHeaps["MotionBlur"]->mRtv[mMotionBlurThirdTileMaxSrvIndexOffset]->mProperties.mClearColor[0],
+			mRtvHeaps["MotionBlur"]->mRtv[mMotionBlurThirdTileMaxSrvIndexOffset]->mProperties.mClearColor[1],
+			mRtvHeaps["MotionBlur"]->mRtv[mMotionBlurThirdTileMaxSrvIndexOffset]->mProperties.mClearColor[2],
+			mRtvHeaps["MotionBlur"]->mRtv[mMotionBlurThirdTileMaxSrvIndexOffset]->mProperties.mClearColor[3]
+			};
+
+			mCommandList->ClearRenderTargetView(mRtvHeaps["MotionBlur"]->mRtvHeap.handleCPU(mMotionBlurThirdTileMaxSrvIndexOffset), motionBlurClearColor, 0, nullptr);
+
+			mCommandList->OMSetRenderTargets(1, &(mRtvHeaps["MotionBlur"]->mRtvHeap.handleCPU(mMotionBlurThirdTileMaxSrvIndexOffset)), false, nullptr);
+
+			// For each render item...
+			DrawSceneObjects(mCommandList.Get(), RenderLayer::ScreenQuad, false, false);
+
+			mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["MotionBlur"]->mRtv[mMotionBlurThirdTileMaxSrvIndexOffset]->mResource.Get(),
+				D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ));
+
+			//GDxGpuProfiler::GetGpuProfiler().EndGpuProfile("Third Tile Max Pass");
+		}
+
+		// Fourth Tile Max Pass
+		{
+			//GDxGpuProfiler::GetGpuProfiler().StartGpuProfile("Fourth Tile Max Pass");
+
+			mCommandList->RSSetViewports(1, &(mRtvHeaps["MotionBlur"]->mRtv[mMotionBlurFourthTileMaxSrvIndexOffset]->mViewport));
+			mCommandList->RSSetScissorRects(1, &(mRtvHeaps["MotionBlur"]->mRtv[mMotionBlurFourthTileMaxSrvIndexOffset]->mScissorRect));
+
+			mCommandList->SetGraphicsRootSignature(mRootSignatures["MotionBlurTileMax"].Get());
+
+			mCommandList->SetPipelineState(mPSOs["MotionBlurFourthTileMax"].Get());
+
+			auto maxBlurRadius = (int)(MOTION_BLUR_MAX_RADIUS_SCALE * mClientHeight / 100);
+			auto tileSize = (((maxBlurRadius - 1) / 8 + 1) * 8);
+			auto tileMaxOffset = (tileSize / 8.0f - 1.0f) * -0.5f;
+
+			float inputFloat[4] =
+			{
+				8.0f / mClientWidth,
+				8.0f / mClientHeight,
+				tileMaxOffset,
+				tileMaxOffset
+			};
+			int inputInt = (int)(tileSize / 8.0f);
+
+			char inputParams[4 * 5];
+			memcpy(inputParams, &inputFloat[0], 4);
+			memcpy(inputParams + 4, &inputFloat[1], 4);
+			memcpy(inputParams + 8, &inputFloat[2], 4);
+			memcpy(inputParams + 12, &inputFloat[3], 4);
+			memcpy(inputParams + 16, &inputInt, 4);
+
+			mCommandList->SetGraphicsRoot32BitConstants(0, 5, inputParams, 0);
+
+			auto passCB = mCurrFrameResource->PassCB->Resource();
+			mCommandList->SetGraphicsRootConstantBufferView(1, passCB->GetGPUVirtualAddress());
+
+			mCommandList->SetGraphicsRootDescriptorTable(2, mRtvHeaps["MotionBlur"]->GetSrvGpu(mMotionBlurThirdTileMaxSrvIndexOffset));
+
+			mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["MotionBlur"]->mRtv[mMotionBlurFourthTileMaxSrvIndexOffset]->mResource.Get(),
+				D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_RENDER_TARGET));
+
+			// Clear RT.
+			DirectX::XMVECTORF32 motionBlurClearColor = { mRtvHeaps["MotionBlur"]->mRtv[mMotionBlurFourthTileMaxSrvIndexOffset]->mProperties.mClearColor[0],
+			mRtvHeaps["MotionBlur"]->mRtv[mMotionBlurFourthTileMaxSrvIndexOffset]->mProperties.mClearColor[1],
+			mRtvHeaps["MotionBlur"]->mRtv[mMotionBlurFourthTileMaxSrvIndexOffset]->mProperties.mClearColor[2],
+			mRtvHeaps["MotionBlur"]->mRtv[mMotionBlurFourthTileMaxSrvIndexOffset]->mProperties.mClearColor[3]
+			};
+
+			mCommandList->ClearRenderTargetView(mRtvHeaps["MotionBlur"]->mRtvHeap.handleCPU(mMotionBlurFourthTileMaxSrvIndexOffset), motionBlurClearColor, 0, nullptr);
+
+			mCommandList->OMSetRenderTargets(1, &(mRtvHeaps["MotionBlur"]->mRtvHeap.handleCPU(mMotionBlurFourthTileMaxSrvIndexOffset)), false, nullptr);
+
+			// For each render item...
+			DrawSceneObjects(mCommandList.Get(), RenderLayer::ScreenQuad, false, false);
+
+			mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["MotionBlur"]->mRtv[mMotionBlurFourthTileMaxSrvIndexOffset]->mResource.Get(),
+				D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ));
+
+			//GDxGpuProfiler::GetGpuProfiler().EndGpuProfile("Fourth Tile Max Pass");
+		}
+
+		// Neighbor Max Pass
+		{
+			//GDxGpuProfiler::GetGpuProfiler().StartGpuProfile("Neighbor Max Pass");
+
+			mCommandList->RSSetViewports(1, &(mRtvHeaps["MotionBlur"]->mRtv[mMotionBlurNeighborMaxSrvIndexOffset]->mViewport));
+			mCommandList->RSSetScissorRects(1, &(mRtvHeaps["MotionBlur"]->mRtv[mMotionBlurNeighborMaxSrvIndexOffset]->mScissorRect));
+
+			mCommandList->SetGraphicsRootSignature(mRootSignatures["MotionBlurTileMax"].Get());
+
+			mCommandList->SetPipelineState(mPSOs["MotionBlurNeighborMax"].Get());
+
+			auto maxBlurRadius = (int)(MOTION_BLUR_MAX_RADIUS_SCALE * mClientHeight / 100);
+			auto tileSize = (((maxBlurRadius - 1) / 8 + 1) * 8);
+
+			float inputFloat[4] =
+			{
+				tileSize / mClientWidth,
+				tileSize / mClientHeight,
+				0.0f,
+				0.0f
+			};
+			int inputInt = 0;
+
+			char inputParams[4 * 5];
+			memcpy(inputParams, &inputFloat[0], 4);
+			memcpy(inputParams + 4, &inputFloat[1], 4);
+			memcpy(inputParams + 8, &inputFloat[2], 4);
+			memcpy(inputParams + 12, &inputFloat[3], 4);
+			memcpy(inputParams + 16, &inputInt, 4);
+
+			mCommandList->SetGraphicsRoot32BitConstants(0, 5, inputParams, 0);
+
+			auto passCB = mCurrFrameResource->PassCB->Resource();
+			mCommandList->SetGraphicsRootConstantBufferView(1, passCB->GetGPUVirtualAddress());
+
+			mCommandList->SetGraphicsRootDescriptorTable(2, mRtvHeaps["MotionBlur"]->GetSrvGpu(mMotionBlurFourthTileMaxSrvIndexOffset));
+
+			mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["MotionBlur"]->mRtv[mMotionBlurNeighborMaxSrvIndexOffset]->mResource.Get(),
+				D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_RENDER_TARGET));
+
+			// Clear RT.
+			DirectX::XMVECTORF32 motionBlurClearColor = { mRtvHeaps["MotionBlur"]->mRtv[mMotionBlurNeighborMaxSrvIndexOffset]->mProperties.mClearColor[0],
+			mRtvHeaps["MotionBlur"]->mRtv[mMotionBlurNeighborMaxSrvIndexOffset]->mProperties.mClearColor[1],
+			mRtvHeaps["MotionBlur"]->mRtv[mMotionBlurNeighborMaxSrvIndexOffset]->mProperties.mClearColor[2],
+			mRtvHeaps["MotionBlur"]->mRtv[mMotionBlurNeighborMaxSrvIndexOffset]->mProperties.mClearColor[3]
+			};
+
+			mCommandList->ClearRenderTargetView(mRtvHeaps["MotionBlur"]->mRtvHeap.handleCPU(mMotionBlurNeighborMaxSrvIndexOffset), motionBlurClearColor, 0, nullptr);
+
+			mCommandList->OMSetRenderTargets(1, &(mRtvHeaps["MotionBlur"]->mRtvHeap.handleCPU(mMotionBlurNeighborMaxSrvIndexOffset)), false, nullptr);
+
+			// For each render item...
+			DrawSceneObjects(mCommandList.Get(), RenderLayer::ScreenQuad, false, false);
+
+			mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["MotionBlur"]->mRtv[mMotionBlurNeighborMaxSrvIndexOffset]->mResource.Get(),
+				D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ));
+
+			//GDxGpuProfiler::GetGpuProfiler().EndGpuProfile("Neighbor Max Pass");
+		}
+
+		// Motion Blur Pass
+		{
+			//GDxGpuProfiler::GetGpuProfiler().StartGpuProfile("Motion Blur Pass");
+
+			mCommandList->RSSetViewports(1, &(mRtvHeaps["MotionBlur"]->mRtv[mMotionBlurOutputSrvIndexOffset]->mViewport));
+			mCommandList->RSSetScissorRects(1, &(mRtvHeaps["MotionBlur"]->mRtv[mMotionBlurOutputSrvIndexOffset]->mScissorRect));
+
+			mCommandList->SetGraphicsRootSignature(mRootSignatures["MotionBlurPass"].Get());
+
+			mCommandList->SetPipelineState(mPSOs["MotionBlurPass"].Get());
+
+			auto maxBlurRadius = (int)(MOTION_BLUR_MAX_RADIUS_SCALE * mClientHeight / 100);
+			auto tileSize = (((maxBlurRadius - 1) / 8 + 1) * 8);
+
+			float inputFloat[2] =
+			{
+				tileSize / mClientWidth,
+				tileSize / mClientHeight,
+			};
+			int inputInt = MOTION_BLUR_SAMPLE_COUNT / 2;
+
+			char inputParams[4 * 3];
+			memcpy(inputParams, &inputFloat[0], 4);
+			memcpy(inputParams + 4, &inputFloat[1], 4);
+			memcpy(inputParams + 8, &inputInt, 4);
+
+			mCommandList->SetGraphicsRoot32BitConstants(0, 3, inputParams, 0);
+
+			auto passCB = mCurrFrameResource->PassCB->Resource();
+			mCommandList->SetGraphicsRootConstantBufferView(1, passCB->GetGPUVirtualAddress());
+
+			mCommandList->SetGraphicsRootDescriptorTable(2, mRtvHeaps["TaaPass"]->GetSrvGpu(2));
+
+			//mCommandList->SetGraphicsRootDescriptorTable(2, mRtvHeaps["GBuffer"]->GetSrvGpu(mVelocityBufferSrvIndex - mGBufferSrvIndex));
+			mCommandList->SetGraphicsRootDescriptorTable(3, mRtvHeaps["MotionBlur"]->GetSrvGpu(mMotionBlurVdBufferSrvIndexOffset));
+
+			mCommandList->SetGraphicsRootDescriptorTable(4, mRtvHeaps["MotionBlur"]->GetSrvGpu(mMotionBlurNeighborMaxSrvIndexOffset));
+
+			mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["MotionBlur"]->mRtv[mMotionBlurOutputSrvIndexOffset]->mResource.Get(),
+				D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_RENDER_TARGET));
+
+			// Clear RT.
+			DirectX::XMVECTORF32 motionBlurClearColor = { mRtvHeaps["MotionBlur"]->mRtv[mMotionBlurOutputSrvIndexOffset]->mProperties.mClearColor[0],
+			mRtvHeaps["MotionBlur"]->mRtv[mMotionBlurOutputSrvIndexOffset]->mProperties.mClearColor[1],
+			mRtvHeaps["MotionBlur"]->mRtv[mMotionBlurOutputSrvIndexOffset]->mProperties.mClearColor[2],
+			mRtvHeaps["MotionBlur"]->mRtv[mMotionBlurOutputSrvIndexOffset]->mProperties.mClearColor[3]
+			};
+
+			mCommandList->ClearRenderTargetView(mRtvHeaps["MotionBlur"]->mRtvHeap.handleCPU(mMotionBlurOutputSrvIndexOffset), motionBlurClearColor, 0, nullptr);
+
+			mCommandList->OMSetRenderTargets(1, &(mRtvHeaps["MotionBlur"]->mRtvHeap.handleCPU(mMotionBlurOutputSrvIndexOffset)), false, nullptr);
+
+			// For each render item...
+			DrawSceneObjects(mCommandList.Get(), RenderLayer::ScreenQuad, false, false);
+
+			mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["MotionBlur"]->mRtv[mMotionBlurOutputSrvIndexOffset]->mResource.Get(),
+				D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ));
+
+			//GDxGpuProfiler::GetGpuProfiler().EndGpuProfile("Motion Blur Pass");
+		}
+
+		GDxGpuProfiler::GetGpuProfiler().EndGpuProfile("Motion Blur");
 	}
 
 	// Post Process Pass
@@ -861,7 +1221,7 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 
 		mCommandList->SetPipelineState(mPSOs["PostProcess"].Get());
 
-		mCommandList->SetGraphicsRootDescriptorTable(0, mRtvHeaps["MotionBlurPass"]->GetSrvGpu(0));
+		mCommandList->SetGraphicsRootDescriptorTable(0, mRtvHeaps["MotionBlur"]->GetSrvGpu(mMotionBlurOutputSrvIndexOffset));
 		//mCommandList->SetGraphicsRootDescriptorTable(1, mRtvHeaps["SkyPass"]->GetSrvGpuStart());
 
 		// Specify the buffers we are going to render to.
@@ -1195,13 +1555,11 @@ void GDxRenderer::OnResize()
 
 void GDxRenderer::ScriptUpdate(const GGiGameTimer* gt)
 {
-	/*
 	if (pSceneObjects.find(L"MoveSphere") != pSceneObjects.end())
 	{
 		std::vector<float> loc = pSceneObjects[L"MoveSphere"]->GetLocation();
-		pSceneObjects[L"MoveSphere"]->SetLocation(70 * DirectX::XMScalarSin(gt->TotalTime()), loc[1], loc[2]);
+		pSceneObjects[L"MoveSphere"]->SetLocation(300.0f * DirectX::XMScalarSin(gt->TotalTime() * 2 * GGiEngineUtil::PI), loc[1], loc[2]);
 	}
-	*/
 
 	//auto test1 = GGiFloat4x4::Identity();
 	//auto test2 = GGiFloat4x4::Identity();
@@ -2096,6 +2454,8 @@ void GDxRenderer::SetImgui(GRiImgui* imguiPtr)
 
 void GDxRenderer::BuildRootSignature()
 {
+	auto staticSamplers = GetStaticSamplers();
+
 	// GBuffer root signature
 	{
 		//G-Buffer inputs
@@ -2650,36 +3010,102 @@ void GDxRenderer::BuildRootSignature()
 			IID_PPV_ARGS(mRootSignatures["TaaPass"].GetAddressOf())));
 	}
 
+	// Motion blur velocity depth packing pass root signature
+	{
+		//Motion blur inputs
+		CD3DX12_DESCRIPTOR_RANGE rangeVelocity;
+		rangeVelocity.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
+
+		CD3DX12_DESCRIPTOR_RANGE rangeDepth;
+		rangeDepth.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1);
+
+		CD3DX12_ROOT_PARAMETER rootParameters[3];
+		rootParameters[0].InitAsConstantBufferView(1);
+		rootParameters[1].InitAsDescriptorTable(1, &rangeVelocity, D3D12_SHADER_VISIBILITY_ALL);
+		rootParameters[2].InitAsDescriptorTable(1, &rangeDepth, D3D12_SHADER_VISIBILITY_ALL);
+
+		// A root signature is an array of root parameters.
+		CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(3, rootParameters,
+			(UINT)staticSamplers.size(), staticSamplers.data(),
+			D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+
+		// create a root signature with a single slot which points to a descriptor range consisting of a single constant buffer
+		ComPtr<ID3DBlob> serializedRootSig = nullptr;
+		ComPtr<ID3DBlob> errorBlob = nullptr;
+		HRESULT hr = D3D12SerializeRootSignature(&rootSigDesc, D3D_ROOT_SIGNATURE_VERSION_1,
+			serializedRootSig.GetAddressOf(), errorBlob.GetAddressOf());
+
+		if (errorBlob != nullptr)
+		{
+			::OutputDebugStringA((char*)errorBlob->GetBufferPointer());
+		}
+		ThrowIfFailed(hr);
+
+		ThrowIfFailed(md3dDevice->CreateRootSignature(
+			0,
+			serializedRootSig->GetBufferPointer(),
+			serializedRootSig->GetBufferSize(),
+			IID_PPV_ARGS(mRootSignatures["MotionBlurVdPacking"].GetAddressOf())));
+	}
+
+	// Motion blur tile max root signature
+	{
+		//Motion blur inputs
+		CD3DX12_DESCRIPTOR_RANGE rangeInputTexture;
+		rangeInputTexture.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
+
+		CD3DX12_ROOT_PARAMETER rootParameters[3];
+		rootParameters[0].InitAsConstants(5, 0);
+		rootParameters[1].InitAsConstantBufferView(1);
+		rootParameters[2].InitAsDescriptorTable(1, &rangeInputTexture, D3D12_SHADER_VISIBILITY_ALL);
+
+		// A root signature is an array of root parameters.
+		CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(3, rootParameters,
+			(UINT)staticSamplers.size(), staticSamplers.data(),
+			D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+
+		// create a root signature with a single slot which points to a descriptor range consisting of a single constant buffer
+		ComPtr<ID3DBlob> serializedRootSig = nullptr;
+		ComPtr<ID3DBlob> errorBlob = nullptr;
+		HRESULT hr = D3D12SerializeRootSignature(&rootSigDesc, D3D_ROOT_SIGNATURE_VERSION_1,
+			serializedRootSig.GetAddressOf(), errorBlob.GetAddressOf());
+
+		if (errorBlob != nullptr)
+		{
+			::OutputDebugStringA((char*)errorBlob->GetBufferPointer());
+		}
+		ThrowIfFailed(hr);
+
+		ThrowIfFailed(md3dDevice->CreateRootSignature(
+			0,
+			serializedRootSig->GetBufferPointer(),
+			serializedRootSig->GetBufferSize(),
+			IID_PPV_ARGS(mRootSignatures["MotionBlurTileMax"].GetAddressOf())));
+	}
+
 	// Motion blur pass root signature
 	{
 		//Motion blur inputs
-		CD3DX12_DESCRIPTOR_RANGE rangeLight;
-		rangeLight.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
-		CD3DX12_DESCRIPTOR_RANGE rangeVelocity;
-		rangeVelocity.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1);
+		CD3DX12_DESCRIPTOR_RANGE rangeInput;
+		rangeInput.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
 
-		CD3DX12_ROOT_PARAMETER gTaaPassRootParameters[3];
-		gTaaPassRootParameters[0].InitAsConstantBufferView(1);
-		gTaaPassRootParameters[1].InitAsDescriptorTable(1, &rangeLight, D3D12_SHADER_VISIBILITY_ALL);
-		gTaaPassRootParameters[2].InitAsDescriptorTable(1, &rangeVelocity, D3D12_SHADER_VISIBILITY_ALL);
+		CD3DX12_DESCRIPTOR_RANGE rangeVelocityDepth;
+		rangeVelocityDepth.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1);
+
+		CD3DX12_DESCRIPTOR_RANGE rangeNeighborMax;
+		rangeNeighborMax.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 2);
+
+		CD3DX12_ROOT_PARAMETER rootParameters[5];
+		rootParameters[0].InitAsConstants(3, 0);
+		rootParameters[1].InitAsConstantBufferView(1);
+		rootParameters[2].InitAsDescriptorTable(1, &rangeInput, D3D12_SHADER_VISIBILITY_ALL);
+		rootParameters[3].InitAsDescriptorTable(1, &rangeVelocityDepth, D3D12_SHADER_VISIBILITY_ALL);
+		rootParameters[4].InitAsDescriptorTable(1, &rangeNeighborMax, D3D12_SHADER_VISIBILITY_ALL);
 
 		// A root signature is an array of root parameters.
-		CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(3, gTaaPassRootParameters,
-			0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
-
-		CD3DX12_STATIC_SAMPLER_DESC StaticSamplers[2];
-		StaticSamplers[0].Init(0, D3D12_FILTER_COMPARISON_MIN_MAG_MIP_LINEAR,
-			D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
-			D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
-			D3D12_TEXTURE_ADDRESS_MODE_CLAMP
-		);
-		StaticSamplers[1].Init(1, D3D12_FILTER_COMPARISON_MIN_MAG_MIP_LINEAR,
-			D3D12_TEXTURE_ADDRESS_MODE_BORDER,
-			D3D12_TEXTURE_ADDRESS_MODE_BORDER,
-			D3D12_TEXTURE_ADDRESS_MODE_BORDER,
-			0.f, 16u, D3D12_COMPARISON_FUNC_LESS_EQUAL);
-		rootSigDesc.NumStaticSamplers = 2;
-		rootSigDesc.pStaticSamplers = StaticSamplers;
+		CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(5, rootParameters,
+			(UINT)staticSamplers.size(), staticSamplers.data(),
+			D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
 		// create a root signature with a single slot which points to a descriptor range consisting of a single constant buffer
 		ComPtr<ID3DBlob> serializedRootSig = nullptr;
@@ -2975,7 +3401,7 @@ void GDxRenderer::BuildDescriptorHeaps()
 		+ 3 //screen space shadow temporal filter
 		+ 1 //light pass
 		+ 3 //taa
-		+ 1 //motion blur
+		+ 7 //motion blur
 		+ 1 //blue noise
 		+ (2 + mPrefilterLevels);//IBL
 	srvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
@@ -3305,14 +3731,50 @@ void GDxRenderer::BuildDescriptorHeaps()
 	{
 		mMotionBlurSrvIndex = mTaaPassSrvIndex + mRtvHeaps["TaaPass"]->mRtvHeap.HeapDesc.NumDescriptors;
 
+		mMotionBlurVdBufferSrvIndexOffset = 0;
+		mMotionBlurFirstTileMaxSrvIndexOffset = 1;
+		mMotionBlurSecondTileMaxSrvIndexOffset = 2;
+		mMotionBlurThirdTileMaxSrvIndexOffset = 3;
+		mMotionBlurFourthTileMaxSrvIndexOffset = 4;
+		mMotionBlurNeighborMaxSrvIndexOffset = 5;
+		mMotionBlurOutputSrvIndexOffset = 6;
+
+		auto maxBlurRadius = (int)(MOTION_BLUR_MAX_RADIUS_SCALE * mClientHeight / 100);
+		auto tileSize = (((maxBlurRadius - 1) / 8 + 1) * 8);
+
 		std::vector<DXGI_FORMAT> rtvFormats =
 		{
+			DXGI_FORMAT_R10G10B10A2_UNORM,// Velocity Depth Buffer
+			DXGI_FORMAT_R16G16_FLOAT,// First Tile Max
+			DXGI_FORMAT_R16G16_FLOAT,// Second Tile Max
+			DXGI_FORMAT_R16G16_FLOAT,// Third Tile Max
+			DXGI_FORMAT_R16G16_FLOAT,// Fourth Tile Max
+			DXGI_FORMAT_R16G16_FLOAT,// Neighbor Max
 			DXGI_FORMAT_R32G32B32A32_FLOAT// Motion Blur Output
 		};
+
 		std::vector<std::vector<FLOAT>> rtvClearColor =
 		{
-			{ 0,0,0,1 }
+			{ 0.5f, 0.5f, 1.0f, 1.0f },
+			{ 0.0f, 0.0f, 0.0f, 1.0f },
+			{ 0.0f, 0.0f, 0.0f, 1.0f },
+			{ 0.0f, 0.0f, 0.0f, 1.0f },
+			{ 0.0f, 0.0f, 0.0f, 1.0f },
+			{ 0.0f, 0.0f, 0.0f, 1.0f },
+			{ 0.0f, 0.0f, 0.0f, 1.0f }
 		};
+
+		std::vector<float> rtvResolutionScale =
+		{
+			1.0f,
+			0.5f,
+			0.25f,
+			0.125f,
+			1.0f / tileSize,
+			1.0f / tileSize,
+			1.0f
+		};
+
 		std::vector<GRtvProperties> propVec;
 		for (auto i = 0u; i < rtvFormats.size(); i++)
 		{
@@ -3322,15 +3784,18 @@ void GDxRenderer::BuildDescriptorHeaps()
 			prop.mClearColor[1] = rtvClearColor[i][1];
 			prop.mClearColor[2] = rtvClearColor[i][2];
 			prop.mClearColor[3] = rtvClearColor[i][3];
+			prop.mWidthPercentage = rtvResolutionScale[i];
+			prop.mHeightPercentage = rtvResolutionScale[i];
 			propVec.push_back(prop);
 		}
+
 		auto motionBlurPassRtvHeap = std::make_unique<GDxRtvHeap>(md3dDevice.Get(), mClientWidth, mClientHeight, GetCpuSrv(mMotionBlurSrvIndex), GetGpuSrv(mMotionBlurSrvIndex), propVec);
-		mRtvHeaps["MotionBlurPass"] = std::move(motionBlurPassRtvHeap);
+		mRtvHeaps["MotionBlur"] = std::move(motionBlurPassRtvHeap);
 	}
 
 	// Build SRV for blue noise.
 	{
-		mBlueNoiseSrvIndex = mMotionBlurSrvIndex + mRtvHeaps["TaaPass"]->mRtvHeap.HeapDesc.NumDescriptors;
+		mBlueNoiseSrvIndex = mMotionBlurSrvIndex + mRtvHeaps["MotionBlur"]->mRtvHeap.HeapDesc.NumDescriptors;
 
 		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
 		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
@@ -3739,6 +4204,141 @@ void GDxRenderer::BuildPSOs()
 		ThrowIfFailed(md3dDevice->CreateGraphicsPipelineState(&descTaaPSO, IID_PPV_ARGS(&mPSOs["TaaPass"])));
 	}
 
+	// PSO for motion blur velocity depth packing pass.
+	{
+		D3D12_DEPTH_STENCIL_DESC passDSD;
+		passDSD.DepthEnable = true;
+		passDSD.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
+		passDSD.DepthFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+		passDSD.StencilEnable = false;
+
+		D3D12_GRAPHICS_PIPELINE_STATE_DESC descPSO;
+		ZeroMemory(&descPSO, sizeof(descPSO));
+
+		descPSO.VS = GDxShaderManager::LoadShader(L"Shaders\\FullScreenVS.cso");
+		descPSO.PS = GDxShaderManager::LoadShader(L"Shaders\\MotionBlurVdPackingPS.cso");
+		descPSO.pRootSignature = mRootSignatures["MotionBlurVdPacking"].Get();
+		descPSO.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+		descPSO.DepthStencilState = passDSD;
+		descPSO.InputLayout.pInputElementDescs = GDxInputLayout::DefaultLayout;
+		descPSO.InputLayout.NumElements = _countof(GDxInputLayout::DefaultLayout);
+		descPSO.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+		descPSO.NumRenderTargets = 1;
+		descPSO.RTVFormats[0] = mRtvHeaps["MotionBlur"]->mRtv[mMotionBlurVdBufferSrvIndexOffset]->mProperties.mRtvFormat;
+		descPSO.SampleMask = UINT_MAX;
+		descPSO.SampleDesc.Count = 1;
+		descPSO.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+		ThrowIfFailed(md3dDevice->CreateGraphicsPipelineState(&descPSO, IID_PPV_ARGS(&mPSOs["MotionBlurVdPacking"])));
+	}
+
+	// PSO for motion blur first tile max pass.
+	{
+		D3D12_DEPTH_STENCIL_DESC passDSD;
+		passDSD.DepthEnable = true;
+		passDSD.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
+		passDSD.DepthFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+		passDSD.StencilEnable = false;
+
+		D3D12_GRAPHICS_PIPELINE_STATE_DESC descPSO;
+		ZeroMemory(&descPSO, sizeof(descPSO));
+
+		descPSO.VS = GDxShaderManager::LoadShader(L"Shaders\\FullScreenVS.cso");
+		descPSO.PS = GDxShaderManager::LoadShader(L"Shaders\\MotionBlurFirstTileMaxPS.cso");
+		descPSO.pRootSignature = mRootSignatures["MotionBlurTileMax"].Get();
+		descPSO.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+		descPSO.DepthStencilState = passDSD;
+		descPSO.InputLayout.pInputElementDescs = GDxInputLayout::DefaultLayout;
+		descPSO.InputLayout.NumElements = _countof(GDxInputLayout::DefaultLayout);
+		descPSO.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+		descPSO.NumRenderTargets = 1;
+		descPSO.RTVFormats[0] = mRtvHeaps["MotionBlur"]->mRtv[mMotionBlurFirstTileMaxSrvIndexOffset]->mProperties.mRtvFormat;
+		descPSO.SampleMask = UINT_MAX;
+		descPSO.SampleDesc.Count = 1;
+		descPSO.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+		ThrowIfFailed(md3dDevice->CreateGraphicsPipelineState(&descPSO, IID_PPV_ARGS(&mPSOs["MotionBlurFirstTileMax"])));
+	}
+
+	// PSO for motion blur second third tile max pass.
+	{
+		D3D12_DEPTH_STENCIL_DESC passDSD;
+		passDSD.DepthEnable = true;
+		passDSD.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
+		passDSD.DepthFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+		passDSD.StencilEnable = false;
+
+		D3D12_GRAPHICS_PIPELINE_STATE_DESC descPSO;
+		ZeroMemory(&descPSO, sizeof(descPSO));
+
+		descPSO.VS = GDxShaderManager::LoadShader(L"Shaders\\FullScreenVS.cso");
+		descPSO.PS = GDxShaderManager::LoadShader(L"Shaders\\MotionBlurSecondThirdTileMaxPS.cso");
+		descPSO.pRootSignature = mRootSignatures["MotionBlurTileMax"].Get();
+		descPSO.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+		descPSO.DepthStencilState = passDSD;
+		descPSO.InputLayout.pInputElementDescs = GDxInputLayout::DefaultLayout;
+		descPSO.InputLayout.NumElements = _countof(GDxInputLayout::DefaultLayout);
+		descPSO.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+		descPSO.NumRenderTargets = 1;
+		descPSO.RTVFormats[0] = mRtvHeaps["MotionBlur"]->mRtv[mMotionBlurSecondTileMaxSrvIndexOffset]->mProperties.mRtvFormat;
+		descPSO.SampleMask = UINT_MAX;
+		descPSO.SampleDesc.Count = 1;
+		descPSO.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+		ThrowIfFailed(md3dDevice->CreateGraphicsPipelineState(&descPSO, IID_PPV_ARGS(&mPSOs["MotionBlurSecondThirdTileMax"])));
+	}
+
+	// PSO for motion blur fourth tile max pass.
+	{
+		D3D12_DEPTH_STENCIL_DESC passDSD;
+		passDSD.DepthEnable = true;
+		passDSD.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
+		passDSD.DepthFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+		passDSD.StencilEnable = false;
+
+		D3D12_GRAPHICS_PIPELINE_STATE_DESC descPSO;
+		ZeroMemory(&descPSO, sizeof(descPSO));
+
+		descPSO.VS = GDxShaderManager::LoadShader(L"Shaders\\FullScreenVS.cso");
+		descPSO.PS = GDxShaderManager::LoadShader(L"Shaders\\MotionBlurFourthTileMaxPS.cso");
+		descPSO.pRootSignature = mRootSignatures["MotionBlurTileMax"].Get();
+		descPSO.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+		descPSO.DepthStencilState = passDSD;
+		descPSO.InputLayout.pInputElementDescs = GDxInputLayout::DefaultLayout;
+		descPSO.InputLayout.NumElements = _countof(GDxInputLayout::DefaultLayout);
+		descPSO.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+		descPSO.NumRenderTargets = 1;
+		descPSO.RTVFormats[0] = mRtvHeaps["MotionBlur"]->mRtv[mMotionBlurFourthTileMaxSrvIndexOffset]->mProperties.mRtvFormat;
+		descPSO.SampleMask = UINT_MAX;
+		descPSO.SampleDesc.Count = 1;
+		descPSO.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+		ThrowIfFailed(md3dDevice->CreateGraphicsPipelineState(&descPSO, IID_PPV_ARGS(&mPSOs["MotionBlurFourthTileMax"])));
+	}
+
+	// PSO for motion blur neighbor max pass.
+	{
+		D3D12_DEPTH_STENCIL_DESC passDSD;
+		passDSD.DepthEnable = true;
+		passDSD.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
+		passDSD.DepthFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+		passDSD.StencilEnable = false;
+
+		D3D12_GRAPHICS_PIPELINE_STATE_DESC descPSO;
+		ZeroMemory(&descPSO, sizeof(descPSO));
+
+		descPSO.VS = GDxShaderManager::LoadShader(L"Shaders\\FullScreenVS.cso");
+		descPSO.PS = GDxShaderManager::LoadShader(L"Shaders\\MotionBlurNeighborMaxPS.cso");
+		descPSO.pRootSignature = mRootSignatures["MotionBlurTileMax"].Get();
+		descPSO.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+		descPSO.DepthStencilState = passDSD;
+		descPSO.InputLayout.pInputElementDescs = GDxInputLayout::DefaultLayout;
+		descPSO.InputLayout.NumElements = _countof(GDxInputLayout::DefaultLayout);
+		descPSO.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+		descPSO.NumRenderTargets = 1;
+		descPSO.RTVFormats[0] = mRtvHeaps["MotionBlur"]->mRtv[mMotionBlurNeighborMaxSrvIndexOffset]->mProperties.mRtvFormat;
+		descPSO.SampleMask = UINT_MAX;
+		descPSO.SampleDesc.Count = 1;
+		descPSO.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+		ThrowIfFailed(md3dDevice->CreateGraphicsPipelineState(&descPSO, IID_PPV_ARGS(&mPSOs["MotionBlurNeighborMax"])));
+	}
+
 	// PSO for motion blur pass.
 	{
 		D3D12_DEPTH_STENCIL_DESC motionBlurPassDSD;
@@ -3770,7 +4370,7 @@ void GDxRenderer::BuildPSOs()
 		descMotionBlurPSO.InputLayout.NumElements = _countof(GDxInputLayout::DefaultLayout);
 		descMotionBlurPSO.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
 		descMotionBlurPSO.NumRenderTargets = 1;
-		descMotionBlurPSO.RTVFormats[0] = mRtvHeaps["MotionBlurPass"]->mRtv[0]->mProperties.mRtvFormat;//motion blur output
+		descMotionBlurPSO.RTVFormats[0] = mRtvHeaps["MotionBlur"]->mRtv[mMotionBlurOutputSrvIndexOffset]->mProperties.mRtvFormat;//motion blur output
 		descMotionBlurPSO.SampleMask = UINT_MAX;
 		descMotionBlurPSO.SampleDesc.Count = 1;
 		descMotionBlurPSO.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
@@ -4552,21 +5152,23 @@ void GDxRenderer::BuildMeshSDF()
 
 	for (auto mesh : pMeshes)
 	{
-		/*
-		if (mesh.second->Name == L"Box" ||
-			mesh.second->Name == L"Sphere" ||
-			mesh.second->Name == L"Cylinder" ||
-			mesh.second->Name == L"Grid" ||
-			mesh.second->Name == L"Quad" ||
-			mesh.second->Name == L"Cerberus"
-			)
-			continue;
-		*/
+
+		GDxMesh* dxMesh = dynamic_cast<GDxMesh*>(mesh.second);
+		if (dxMesh == nullptr)
+			ThrowGGiException("cast failed from GRiMesh* to GDxMesh*.");
+
 		bool find = false;
 		std::map<std::wstring, int> SdfGenerateList =
 		{
 			{L"Stool", 64},
 			{L"Cube", 64}
+		};
+
+		bool discard = false;
+		std::vector<std::wstring> SdfDiscardList =
+		{
+			L"Stool",
+			L"Cube"
 		};
 
 		int resolutionToGenerate = 0;
@@ -4579,9 +5181,19 @@ void GDxRenderer::BuildMeshSDF()
 			}
 		}
 
-		GDxMesh* dxMesh = dynamic_cast<GDxMesh*>(mesh.second);
-		if (dxMesh == nullptr)
-			ThrowGGiException("cast failed from GRiMesh* to GDxMesh*.");
+		for (auto iter2 = SdfDiscardList.begin(); iter2 != SdfDiscardList.end(); iter2++)
+		{
+			if (mesh.second->Name == (*iter2))
+			{
+				discard = true;
+			}
+		}
+
+		if (discard)
+		{
+			mesh.second->ClearSdf();
+			continue;
+		}
 
 		int sdfRes;
 		float sdfExtent;
