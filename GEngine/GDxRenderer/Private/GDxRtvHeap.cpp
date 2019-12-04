@@ -85,8 +85,8 @@ void GDxRtvHeap::BuildResources()
 	{
 		rtv->mResource = nullptr;
 
-		texDesc.Width = (UINT)(rtv->mProperties.mWidthPercentage * mClientWidth);
-		texDesc.Height = (UINT)(rtv->mProperties.mHeightPercentage * mClientHeight);
+		texDesc.Width = (UINT)(max(rtv->mProperties.mWidthPercentage * mClientWidth, 1.0f));
+		texDesc.Height = (UINT)(max(rtv->mProperties.mHeightPercentage * mClientHeight, 1.0f));
 		texDesc.Format = rtv->mProperties.mRtvFormat;
 		float normalClearColor[4];
 		normalClearColor[0] = rtv->mProperties.mClearColor[0];

@@ -242,7 +242,6 @@
     <FxCompile Include="Shaders\AmbientPassPS.hlsl" />
     <FxCompile Include="Shaders\FullScreenVS.hlsl" />
     <FxCompile Include="Shaders\DirectLightPassPS.hlsl" />
-    <FxCompile Include="Shaders\PostProcessPS.hlsl" />
     <FxCompile Include="Shaders\PrefilterCubemapPS.hlsl" />
     <FxCompile Include="Shaders\IrradianceCubemapPS.hlsl" />
     <FxCompile Include="Shaders\SkyPS.hlsl" />
@@ -267,6 +266,11 @@
     <FxCompile Include="Shaders\MotionBlurFirstTileMaxPS.hlsl" />
     <FxCompile Include="Shaders\MotionBlurFourthTileMaxPS.hlsl" />
     <FxCompile Include="Shaders\MotionBlurNeighborMaxPS.hlsl" />
+    <FxCompile Include="Shaders\BloomPrefilterPS.hlsl" />
+    <FxCompile Include="Shaders\BloomCombinePS.hlsl" />
+    <FxCompile Include="Shaders\BloomDownsamplePS.hlsl" />
+    <FxCompile Include="Shaders\BloomUpsamplePS.hlsl" />
+    <FxCompile Include="Shaders\OutputPS.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Shaders\Lighting.hlsli" />

@@ -30,7 +30,7 @@ public:
 
 		if (bScaledByViewport)
 		{
-			SetViewportAndScissorRect((UINT)(ClientWidth * mProperties.mWidthPercentage), (UINT)(ClientHeight * mProperties.mHeightPercentage));
+			SetViewportAndScissorRect((UINT)(max(ClientWidth * mProperties.mWidthPercentage, 1.0f)), (UINT)(max(ClientHeight * mProperties.mHeightPercentage, 1.0f)));
 		}
 		else
 		{
@@ -46,7 +46,7 @@ public:
 		{
 			mClientWidth = ClientWidth;
 			mClientHeight = ClientHeight;
-			SetViewportAndScissorRect((UINT)(ClientWidth * mProperties.mWidthPercentage), (UINT)(ClientHeight * mProperties.mHeightPercentage));
+			SetViewportAndScissorRect((UINT)(max(ClientWidth * mProperties.mWidthPercentage, 1.0f)), (UINT)(max(ClientHeight * mProperties.mHeightPercentage, 1.0f)));
 		}
 	}
 

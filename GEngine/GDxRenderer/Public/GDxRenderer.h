@@ -277,6 +277,7 @@ protected:
 	UINT mSkyPassSrvIndex = 0;
 	UINT mTaaPassSrvIndex = 0;
 	UINT mMotionBlurSrvIndex = 0;
+	UINT mBloomSrvIndex = 0;
 	UINT mIblIndex = 0;
 	UINT mBlueNoiseSrvIndex = 0;
 
@@ -290,6 +291,15 @@ protected:
 	UINT mMotionBlurThirdTileMaxSrvIndexOffset = 0;
 	UINT mMotionBlurFourthTileMaxSrvIndexOffset = 0;
 	UINT mMotionBlurNeighborMaxSrvIndexOffset = 0;
+
+	UINT mBloomDownSrvIndexOffset = 0;
+	UINT mBloomUpSrvIndexOffset = 0;
+	UINT mBloomOutputSrvIndexOffset = 0;
+	const int BloomChainLength = 12;
+	int BloomIterations = 0;
+	int BloomWidth = 0;
+	int BloomHeight = 0;
+	float BloomSampleScale = 0.0f;
 
 	int numVisible = 0;
 	int numFrustumCulled = 0;
