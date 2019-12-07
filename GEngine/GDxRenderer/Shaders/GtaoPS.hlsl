@@ -114,7 +114,7 @@ half IntegrateArc_CosWeight(half2 h, half n)
 	return 0.25 * (Arc.x + Arc.y);
 }
 
-half4 GTAO(half2 uv, int NumCircle, int NumSlice, inout half Depth)
+half4 GTAO(half2 uv, int NumCircle, int NumSlice)
 {
 	half3 vPos = GetPosition(uv);
 	half3 viewNormal = GetNormal(uv);
@@ -186,17 +186,15 @@ half4 GTAO(half2 uv, int NumCircle, int NumSlice, inout half Depth)
 
 	BentNormal = normalize(normalize(BentNormal) - viewDir * 0.5);
 	Occlusion = saturate(pow(Occlusion / (half)NumCircle, GTAO_POWER));
-	Depth = vPos.b;
 
 	return half4(BentNormal, Occlusion);
 }
 
-half3 main(VertexToPixel i) : SV_Target
+half2 main(VertexToPixel i) : SV_Target
 {
 	half2 uv = i.uv;
 
-	half SSAODepth = 0;
-	half4 GT_Details = GTAO(uv, GTAO_CIRCLE_NUM, GTAO_SLICE_NUM, SSAODepth);
+	half4 GT_Details = GTAO(uv, GTAO_CIRCLE_NUM, GTAO_SLICE_NUM);
 
 	half3 BentNormal = mul(GT_Details.rgb, (half3x3)gInvView);
 	half3 WorldNormal = gNormalTexture.Sample(linearClampSampler, uv).rgb;
@@ -211,6 +209,6 @@ half3 main(VertexToPixel i) : SV_Target
 	GTRO = GTRO * GTRO;
 	half GTAO = lerp(1.0f, GT_Details.a, GTAO_INTENSITY);
 
-	return half3(GTAO, GTRO, SSAODepth);
+	return half2(GTAO, GTRO);
 }
 

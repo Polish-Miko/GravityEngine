@@ -272,6 +272,10 @@
     <FxCompile Include="Shaders\BloomUpsamplePS.hlsl" />
     <FxCompile Include="Shaders\OutputPS.hlsl" />
     <FxCompile Include="Shaders\GtaoPS.hlsl" />
+    <FxCompile Include="Shaders\GtaoUpsamplePS.hlsl" />
+    <FxCompile Include="Shaders\GtaoBilateralXPS.hlsl" />
+    <FxCompile Include="Shaders\GtaoBilateralYPS.hlsl" />
+    <FxCompile Include="Shaders\GtaoTemporalPS.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Shaders\Lighting.hlsli" />

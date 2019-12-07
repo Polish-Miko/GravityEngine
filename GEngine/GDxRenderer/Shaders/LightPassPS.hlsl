@@ -226,7 +226,7 @@ float4 main(VertexToPixel pIn) : SV_TARGET
 #if TEST
 	float test = gOcclusionTexture.Sample(basicSampler, pIn.uv).r;
 	finalColor = float3(test, test, test);
-	finalColor = gOcclusionTexture.Sample(basicSampler, pIn.uv).rgb;
+	finalColor = gOcclusionTexture.Sample(basicSampler, pIn.uv).rrr;
 #endif
 
 	return float4(finalColor, 1.0f);

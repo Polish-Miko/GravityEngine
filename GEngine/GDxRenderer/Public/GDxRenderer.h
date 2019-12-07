@@ -343,6 +343,7 @@ protected:
 
 	UINT mTaaHistoryIndex = 0;
 	UINT mShadowTemporalHistoryIndex = 0;
+	UINT mGtaoTemporalHistoryIndex = 0;
 
 	CD3DX12_GPU_DESCRIPTOR_HANDLE mNullSrv;
 
