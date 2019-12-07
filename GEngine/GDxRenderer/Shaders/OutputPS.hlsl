@@ -1,5 +1,5 @@
 
-#define USE_TONE_MAPPING 1
+#define USE_TONE_MAPPING 0
 
 #define USE_ACES_TONE_MAPPING 1
 #define USE_UNCHARTED_TONE_MAPPING 0
@@ -10,11 +10,7 @@ struct VertexToPixel
 	float2 uv           : TEXCOORD0;
 };
 
-//Light Render Results
-//Texture2D gDirectLight			: register(t0);
-//Texture2D gAmbientLight			: register(t1);
 Texture2D gPpInput					: register(t0);
-//Texture2D gSkyPass				: register(t1);
 
 SamplerState			basicSampler	: register(s0);
 SamplerComparisonState	shadowSampler	: register(s1);

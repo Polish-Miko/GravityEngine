@@ -273,6 +273,7 @@ protected:
 	UINT mYPrefilteredShadowMapSrvIndex = 0;
 	UINT mScreenSpaceShadowPassSrvIndex = 0;
 	UINT mSSShadowTemporalSrvIndex = 0;
+	UINT mGtaoSrvIndex = 0;
 	UINT mLightPassSrvIndex = 0;
 	UINT mSkyPassSrvIndex = 0;
 	UINT mTaaPassSrvIndex = 0;
@@ -283,6 +284,11 @@ protected:
 
 	UINT mDepthDsvIndex = 0;
 	UINT mShadowMapDsvIndex = 0;
+
+	UINT mGBufferAlbedoSrvIndexOffert = 0;
+	UINT mGBufferNormalSrvIndexOffert = 0;
+	UINT mGBufferOrmSrvIndexOffert = 0;
+	UINT mGBufferVelocitySrvIndexOffert = 0;
 
 	UINT mMotionBlurVdBufferSrvIndexOffset = 0;
 	UINT mMotionBlurOutputSrvIndexOffset = 0;
@@ -300,6 +306,18 @@ protected:
 	int BloomWidth = 0;
 	int BloomHeight = 0;
 	float BloomSampleScale = 0.0f;
+
+	UINT mGtaoRawSrvIndexOffset = 0;
+	UINT mGtaoUpsampleSrvIndexOffset = 0;
+	UINT mGtaoBlurXSrvIndexOffset = 0;
+	UINT mGtaoBlurYSrvIndexOffset = 0;
+	UINT mGtaoHistory1SrvIndexOffset = 0;
+	UINT mGtaoHistory2SrvIndexOffset = 0;
+	UINT mGtaoOutputSrvIndexOffset = 0;
+
+	float mGtaoTemporalRotations[6] = { 60, 300, 180, 240, 120, 0 };
+	float mGtaoSpatialOffsets[4] = { 0, 0.5f, 0.25f, 0.75f };
+	int mGtaoSampleStep = 0;
 
 	int numVisible = 0;
 	int numFrustumCulled = 0;

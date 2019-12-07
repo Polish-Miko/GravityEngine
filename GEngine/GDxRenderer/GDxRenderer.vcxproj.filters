@@ -271,6 +271,7 @@
     <FxCompile Include="Shaders\BloomDownsamplePS.hlsl" />
     <FxCompile Include="Shaders\BloomUpsamplePS.hlsl" />
     <FxCompile Include="Shaders\OutputPS.hlsl" />
+    <FxCompile Include="Shaders\GtaoPS.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Shaders\Lighting.hlsli" />

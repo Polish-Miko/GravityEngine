@@ -2,6 +2,8 @@
 #include "StaticSamplers.hlsli"
 #include "ShaderDefinition.h"
 
+#define USE_BLOOM 0
+
 cbuffer cbBloom : register(b0)
 {
 	float _BloomTexelSizeX;
@@ -67,6 +69,9 @@ float4 Combine(float4 bloom, float2 uv)
 // Velocity texture setup
 float4 main(VertexToPixel i) : SV_Target
 {
+
+#if USE_BLOOM
+
 #if BLOOM_USE_TENT_UPSAMPLE
 	float4 bloom = UpsampleTent(gBloomChain, i.uv, float2(_BloomTexelSizeX, _BloomTexelSizeY), _SampleScale);
 	return Combine(bloom * BLOOM_INTENSITY, i.uv);
@@ -74,5 +79,13 @@ float4 main(VertexToPixel i) : SV_Target
 	float4 bloom = UpsampleBox(gBloomChain, i.uv, float2(_BloomTexelSizeX, _BloomTexelSizeY), _SampleScale);
 	return Combine(bloom * BLOOM_INTENSITY, i.uv);
 #endif
+
+#else
+
+	float3 color = gBloomInput.Sample(linearClampSampler, i.uv).rgb;
+	return float4(color, 1.0f);
+
+#endif
+
 }
 

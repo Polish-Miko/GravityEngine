@@ -23,6 +23,8 @@ public:
 
 	static const float PI;
 	static const float Infinity;
+	static const float DegToRad;
+	static const float RadToDeg;
 
 	static std::wstring StringToWString(const std::string& str)
 	{

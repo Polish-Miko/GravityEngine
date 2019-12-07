@@ -3,6 +3,8 @@
 #include "ShaderDefinition.h"
 #include "MainPassCB.hlsli"
 
+#define USE_MOTION_BLUR 0
+
 #define TWO_PI          6.28318530718
 
 cbuffer cbMotionBlur : register(b0)
@@ -63,6 +65,8 @@ float3 SampleVelocity(float2 uv)
 
 float4 main(VertexToPixel i) : SV_TARGET
 {
+
+#if USE_MOTION_BLUR
 
 	// Color sample at the center point
 	const float4 c_p = gInputTexture.Sample(linearClampSampler, i.uv);
@@ -146,6 +150,13 @@ float4 main(VertexToPixel i) : SV_TARGET
 	acc += float4(c_p.rgb, 1.0) * (1.2 / (l_v_bg * sc * 2.0));
 
 	return float4(acc.rgb / acc.a, c_p.a);
+
+#else
+
+	float3 color = gInputTexture.Sample(linearClampSampler, i.uv).rgb;
+	return float4(color, 1.0f);
+
+#endif
 
 }
 

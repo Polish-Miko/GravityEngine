@@ -25,7 +25,7 @@
 
 #define DEBUG_CASCADE_RANGE 0
 
-#define TEST 0
+#define TEST 1
 
 StructuredBuffer<LightList> gLightList : register(t0);
 
@@ -39,11 +39,13 @@ Texture2D gDepthBuffer				: register(t5);
 
 Texture2D gShadowTexture			: register(t6);
 
+Texture2D gOcclusionTexture			: register(t7);
+
 #define PREFILTER_MIP_LEVEL 5
 
-TextureCube skyIrradianceTexture	: register(t7);
-Texture2D	brdfLUTTexture			: register(t8);
-TextureCube skyPrefilterTexture[PREFILTER_MIP_LEVEL]	: register(t9);
+TextureCube skyIrradianceTexture	: register(t8);
+Texture2D	brdfLUTTexture			: register(t9);
+TextureCube skyPrefilterTexture[PREFILTER_MIP_LEVEL]	: register(t10);
 
 struct VertexToPixel
 {
@@ -222,8 +224,9 @@ float4 main(VertexToPixel pIn) : SV_TARGET
 #endif
 
 #if TEST
-	float test = gShadowTexture.Sample(basicSampler, pIn.uv).r;
+	float test = gOcclusionTexture.Sample(basicSampler, pIn.uv).r;
 	finalColor = float3(test, test, test);
+	finalColor = gOcclusionTexture.Sample(basicSampler, pIn.uv).rgb;
 #endif
 
 	return float4(finalColor, 1.0f);
