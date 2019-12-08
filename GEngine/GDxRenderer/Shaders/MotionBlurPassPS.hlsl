@@ -3,7 +3,7 @@
 #include "ShaderDefinition.h"
 #include "MainPassCB.hlsli"
 
-#define USE_MOTION_BLUR 0
+#define USE_MOTION_BLUR 1
 
 #define TWO_PI          6.28318530718
 

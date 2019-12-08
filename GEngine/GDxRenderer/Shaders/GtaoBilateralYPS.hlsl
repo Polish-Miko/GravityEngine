@@ -4,7 +4,7 @@
 #include "ShaderDefinition.h"
 #include "MainPassCB.hlsli"
 
-#define BLUR_RADIUS 12
+#define BLUR_RADIUS 6
 #define SHARPNESS 0.2f
 
 struct VertexToPixel
@@ -83,7 +83,7 @@ inline float3 BilateralBlur(float2 uv0, float2 deltaUV)
 half2 main(VertexToPixel i) : SV_Target
 {
 	half2 uv = i.uv;
-	half3 AOR = BilateralBlur(uv, half2(0, gInvRenderTargetSize.y));
+	half3 AOR = BilateralBlur(uv, half2(0, gInvRenderTargetSize.y / GTAO_RESOLUTION_SCALE));
 	return AOR.rg;
 }
 

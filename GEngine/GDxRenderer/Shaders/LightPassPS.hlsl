@@ -4,6 +4,8 @@
 #include "MainPassCB.hlsli"
 
 
+#define DEBUG 0
+
 #define USE_CBDR 1
 
 #if USE_CBDR
@@ -24,8 +26,6 @@
 //#define TILE_SIZE_Y 16
 
 #define DEBUG_CASCADE_RANGE 0
-
-#define TEST 1
 
 StructuredBuffer<LightList> gLightList : register(t0);
 
@@ -143,6 +143,7 @@ float4 main(VertexToPixel pIn) : SV_TARGET
 	float2 metalRoughness = gOrmTexture.Sample(basicSampler, pIn.uv).gb;
 	float roughness = metalRoughness.r;
 	float metal = metalRoughness.g;
+	float2 AoRo = gOcclusionTexture.Sample(basicSampler, pIn.uv).rg;
 	float3 worldPos = ReconstructWorldPos(pIn.uv, depthBuffer);
 
 	//clamp roughness
@@ -211,7 +212,7 @@ float4 main(VertexToPixel pIn) : SV_TARGET
 
 	finalColor = finalColor + AmbientPBR(normalize(normal), worldPos,
 		cameraPosition, roughness, metal, albedo,
-		irradiance, prefilter, brdf, shadowAmount);
+		irradiance, prefilter, brdf, shadowAmount, AoRo);
 
 #if DEBUG_CASCADE_RANGE
 	float testShadow = gShadowTexture.Sample(basicSampler, pIn.uv).r;
@@ -223,9 +224,7 @@ float4 main(VertexToPixel pIn) : SV_TARGET
 		finalColor *= float3(0.25f, 0.25f, 1.0f);
 #endif
 
-#if TEST
-	float test = gOcclusionTexture.Sample(basicSampler, pIn.uv).r;
-	finalColor = float3(test, test, test);
+#if DEBUG
 	finalColor = gOcclusionTexture.Sample(basicSampler, pIn.uv).rrr;
 #endif
 

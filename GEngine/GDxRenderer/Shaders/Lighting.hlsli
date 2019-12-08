@@ -157,10 +157,10 @@ float3 AmbientPBR(float3 kD, float metalness, float3 diffuse, float ao, float3 s
 
 float3 AmbientPBR(float3 normal, float3 worldPos,
 	float3 camPos, float roughness, float metalness,
-	float3 albedo, float3 irradiance, float3 prefilteredColor, float2 brdf, float shadowAmount)
+	float3 albedo, float3 irradiance, float3 prefilteredColor,
+	float2 brdf, float shadowAmount, float2 AoRo)
 {
 	float3 f0 = lerp(F0_NON_METAL.rrr, albedo.rgb, metalness);
-	float ao = 1.0f;
 	float3 toCam = normalize(camPos - worldPos);
 
 	float3 kS = FresnelSchlickRoughness(toCam, normal, f0, roughness);
@@ -170,7 +170,7 @@ float3 AmbientPBR(float3 normal, float3 worldPos,
 	float3 specular = prefilteredColor * (kS * brdf.x + float3(brdf.y, brdf.y, brdf.y));
 	float3 diffuse = irradiance * albedo;
 
-	float3 ambient = (kD * diffuse + specular) * ao;
+	float3 ambient = kD * diffuse * AoRo.r + specular * AoRo.g;
 
 	return ambient;
 }

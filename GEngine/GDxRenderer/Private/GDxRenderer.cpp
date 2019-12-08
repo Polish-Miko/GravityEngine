@@ -414,7 +414,9 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 
 	// GTAO Raw Pass
 	{
-		GDxGpuProfiler::GetGpuProfiler().StartGpuProfile("GTAO Raw Pass");
+		GDxGpuProfiler::GetGpuProfiler().StartGpuProfile("GTAO");
+
+		//GDxGpuProfiler::GetGpuProfiler().StartGpuProfile("GTAO Raw Pass");
 
 		mCommandList->RSSetViewports(1, &(mRtvHeaps["GTAO"]->mRtv[mGtaoRawSrvIndexOffset]->mViewport));
 		mCommandList->RSSetScissorRects(1, &(mRtvHeaps["GTAO"]->mRtv[mGtaoRawSrvIndexOffset]->mScissorRect));
@@ -458,6 +460,8 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 
 		mCommandList->SetGraphicsRootDescriptorTable(4, mRtvHeaps["GBuffer"]->GetSrvGpu(mGBufferOrmSrvIndexOffert));
 
+		mCommandList->SetGraphicsRootDescriptorTable(5, mRtvHeaps["GBuffer"]->GetSrvGpu(mGBufferAlbedoSrvIndexOffert));
+
 		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["GTAO"]->mRtv[mGtaoRawSrvIndexOffset]->mResource.Get(),
 			D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_RENDER_TARGET));
 
@@ -478,19 +482,19 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["GTAO"]->mRtv[mGtaoRawSrvIndexOffset]->mResource.Get(),
 			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ));
 
-		GDxGpuProfiler::GetGpuProfiler().EndGpuProfile("GTAO Raw Pass");
+		//GDxGpuProfiler::GetGpuProfiler().EndGpuProfile("GTAO Raw Pass");
 	}
 
-	// GTAO Upsample Pass
+	// GTAO Temporal Pass
 	{
-		GDxGpuProfiler::GetGpuProfiler().StartGpuProfile("GTAO Upsample Pass");
+		//GDxGpuProfiler::GetGpuProfiler().StartGpuProfile("GTAO Temporal Pass");
 
-		mCommandList->RSSetViewports(1, &(mRtvHeaps["GTAO"]->mRtv[mGtaoUpsampleSrvIndexOffset]->mViewport));
-		mCommandList->RSSetScissorRects(1, &(mRtvHeaps["GTAO"]->mRtv[mGtaoUpsampleSrvIndexOffset]->mScissorRect));
+		mCommandList->RSSetViewports(1, &(mRtvHeaps["GTAO"]->mRtv[mGtaoTemporalSrvIndexOffset]->mViewport));
+		mCommandList->RSSetScissorRects(1, &(mRtvHeaps["GTAO"]->mRtv[mGtaoTemporalSrvIndexOffset]->mScissorRect));
 
 		mCommandList->SetGraphicsRootSignature(mRootSignatures["GtaoFilter"].Get());
 
-		mCommandList->SetPipelineState(mPSOs["GtaoUpsample"].Get());
+		mCommandList->SetPipelineState(mPSOs["GtaoTemporal"].Get());
 
 		auto passCB = mCurrFrameResource->PassCB->Resource();
 		mCommandList->SetGraphicsRootConstantBufferView(0, passCB->GetGPUVirtualAddress());
@@ -501,32 +505,54 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 
 		mCommandList->SetGraphicsRootDescriptorTable(3, mRtvHeaps["GBuffer"]->GetSrvGpu(mGBufferVelocitySrvIndexOffert));
 
-		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["GTAO"]->mRtv[mGtaoUpsampleSrvIndexOffset]->mResource.Get(),
+		mCommandList->SetGraphicsRootDescriptorTable(4, mRtvHeaps["GTAO"]->GetSrvGpu(mGtaoHistory1SrvIndexOffset + mGtaoTemporalHistoryIndex));
+		mGtaoTemporalHistoryIndex = (mGtaoTemporalHistoryIndex + 1) % 2;
+
+		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["GTAO"]->mRtv[mGtaoTemporalSrvIndexOffset]->mResource.Get(),
+			D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_RENDER_TARGET));
+
+		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["GTAO"]->mRtv[mGtaoHistory1SrvIndexOffset + mGtaoTemporalHistoryIndex]->mResource.Get(),
 			D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_RENDER_TARGET));
 
 		// Clear RT.
-		DirectX::XMVECTORF32 clearColor = { mRtvHeaps["GTAO"]->mRtv[mGtaoUpsampleSrvIndexOffset]->mProperties.mClearColor[0],
-		mRtvHeaps["GTAO"]->mRtv[mGtaoUpsampleSrvIndexOffset]->mProperties.mClearColor[1],
-		mRtvHeaps["GTAO"]->mRtv[mGtaoUpsampleSrvIndexOffset]->mProperties.mClearColor[2],
-		mRtvHeaps["GTAO"]->mRtv[mGtaoUpsampleSrvIndexOffset]->mProperties.mClearColor[3]
+		DirectX::XMVECTORF32 clearColor = { mRtvHeaps["GTAO"]->mRtv[mGtaoTemporalSrvIndexOffset]->mProperties.mClearColor[0],
+		mRtvHeaps["GTAO"]->mRtv[mGtaoTemporalSrvIndexOffset]->mProperties.mClearColor[1],
+		mRtvHeaps["GTAO"]->mRtv[mGtaoTemporalSrvIndexOffset]->mProperties.mClearColor[2],
+		mRtvHeaps["GTAO"]->mRtv[mGtaoTemporalSrvIndexOffset]->mProperties.mClearColor[3]
 		};
 
-		mCommandList->ClearRenderTargetView(mRtvHeaps["GTAO"]->mRtvHeap.handleCPU(mGtaoUpsampleSrvIndexOffset), clearColor, 0, nullptr);
+		mCommandList->ClearRenderTargetView(mRtvHeaps["GTAO"]->mRtvHeap.handleCPU(mGtaoTemporalSrvIndexOffset), clearColor, 0, nullptr);
 
-		mCommandList->OMSetRenderTargets(1, &(mRtvHeaps["GTAO"]->mRtvHeap.handleCPU(mGtaoUpsampleSrvIndexOffset)), false, nullptr);
+		DirectX::XMVECTORF32 hisClearColor = { mRtvHeaps["GTAO"]->mRtv[mGtaoHistory1SrvIndexOffset + mGtaoTemporalHistoryIndex]->mProperties.mClearColor[0],
+		mRtvHeaps["GTAO"]->mRtv[mGtaoHistory1SrvIndexOffset + mGtaoTemporalHistoryIndex]->mProperties.mClearColor[1],
+		mRtvHeaps["GTAO"]->mRtv[mGtaoHistory1SrvIndexOffset + mGtaoTemporalHistoryIndex]->mProperties.mClearColor[2],
+		mRtvHeaps["GTAO"]->mRtv[mGtaoHistory1SrvIndexOffset + mGtaoTemporalHistoryIndex]->mProperties.mClearColor[3]
+		};
+
+		mCommandList->ClearRenderTargetView(mRtvHeaps["GTAO"]->mRtvHeap.handleCPU(mGtaoHistory1SrvIndexOffset + mGtaoTemporalHistoryIndex), hisClearColor, 0, nullptr);
+
+		D3D12_CPU_DESCRIPTOR_HANDLE temporalRtvs[2] =
+		{
+			mRtvHeaps["GTAO"]->mRtvHeap.handleCPU(mGtaoTemporalSrvIndexOffset),
+			mRtvHeaps["GTAO"]->mRtvHeap.handleCPU(mGtaoHistory1SrvIndexOffset + mGtaoTemporalHistoryIndex)
+		};
+		mCommandList->OMSetRenderTargets(2, temporalRtvs, false, nullptr);
 
 		// For each render item...
 		DrawSceneObjects(mCommandList.Get(), RenderLayer::ScreenQuad, false, false);
 
-		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["GTAO"]->mRtv[mGtaoUpsampleSrvIndexOffset]->mResource.Get(),
+		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["GTAO"]->mRtv[mGtaoTemporalSrvIndexOffset]->mResource.Get(),
 			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ));
 
-		GDxGpuProfiler::GetGpuProfiler().EndGpuProfile("GTAO Upsample Pass");
+		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["GTAO"]->mRtv[mGtaoHistory1SrvIndexOffset + mGtaoTemporalHistoryIndex]->mResource.Get(),
+			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ));
+
+		//GDxGpuProfiler::GetGpuProfiler().EndGpuProfile("GTAO Temporal Pass");
 	}
 
 	// GTAO Bilateral X Pass
 	{
-		GDxGpuProfiler::GetGpuProfiler().StartGpuProfile("GTAO Bilateral X Pass");
+		//GDxGpuProfiler::GetGpuProfiler().StartGpuProfile("GTAO Bilateral X Pass");
 
 		mCommandList->RSSetViewports(1, &(mRtvHeaps["GTAO"]->mRtv[mGtaoBlurXSrvIndexOffset]->mViewport));
 		mCommandList->RSSetScissorRects(1, &(mRtvHeaps["GTAO"]->mRtv[mGtaoBlurXSrvIndexOffset]->mScissorRect));
@@ -538,7 +564,7 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 		auto passCB = mCurrFrameResource->PassCB->Resource();
 		mCommandList->SetGraphicsRootConstantBufferView(0, passCB->GetGPUVirtualAddress());
 
-		mCommandList->SetGraphicsRootDescriptorTable(1, mRtvHeaps["GTAO"]->GetSrvGpu(mGtaoUpsampleSrvIndexOffset));
+		mCommandList->SetGraphicsRootDescriptorTable(1, mRtvHeaps["GTAO"]->GetSrvGpu(mGtaoTemporalSrvIndexOffset));
 
 		mCommandList->SetGraphicsRootDescriptorTable(2, GetGpuSrv(mDepthBufferSrvIndex));
 
@@ -564,12 +590,12 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["GTAO"]->mRtv[mGtaoBlurXSrvIndexOffset]->mResource.Get(),
 			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ));
 
-		GDxGpuProfiler::GetGpuProfiler().EndGpuProfile("GTAO Bilateral X Pass");
+		//GDxGpuProfiler::GetGpuProfiler().EndGpuProfile("GTAO Bilateral X Pass");
 	}
 
 	// GTAO Bilateral Y Pass
 	{
-		GDxGpuProfiler::GetGpuProfiler().StartGpuProfile("GTAO Bilateral Y Pass");
+		//GDxGpuProfiler::GetGpuProfiler().StartGpuProfile("GTAO Bilateral Y Pass");
 
 		mCommandList->RSSetViewports(1, &(mRtvHeaps["GTAO"]->mRtv[mGtaoBlurYSrvIndexOffset]->mViewport));
 		mCommandList->RSSetScissorRects(1, &(mRtvHeaps["GTAO"]->mRtv[mGtaoBlurYSrvIndexOffset]->mScissorRect));
@@ -607,19 +633,24 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["GTAO"]->mRtv[mGtaoBlurYSrvIndexOffset]->mResource.Get(),
 			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ));
 
-		GDxGpuProfiler::GetGpuProfiler().EndGpuProfile("GTAO Bilateral Y Pass");
+		//GDxGpuProfiler::GetGpuProfiler().EndGpuProfile("GTAO Bilateral Y Pass");
+
+#if !GTAO_USE_UPSAMPLE
+		GDxGpuProfiler::GetGpuProfiler().EndGpuProfile("GTAO");
+#endif
 	}
 
-	// GTAO Temporal Pass
+#if GTAO_USE_UPSAMPLE
+	// GTAO Upsample Pass
 	{
-		GDxGpuProfiler::GetGpuProfiler().StartGpuProfile("GTAO Temporal Pass");
+		//GDxGpuProfiler::GetGpuProfiler().StartGpuProfile("GTAO Upsample Pass");
 
-		mCommandList->RSSetViewports(1, &(mRtvHeaps["GTAO"]->mRtv[mGtaoOutputSrvIndexOffset]->mViewport));
-		mCommandList->RSSetScissorRects(1, &(mRtvHeaps["GTAO"]->mRtv[mGtaoOutputSrvIndexOffset]->mScissorRect));
+		mCommandList->RSSetViewports(1, &(mRtvHeaps["GTAO"]->mRtv[mGtaoUpsampleSrvIndexOffset]->mViewport));
+		mCommandList->RSSetScissorRects(1, &(mRtvHeaps["GTAO"]->mRtv[mGtaoUpsampleSrvIndexOffset]->mScissorRect));
 
 		mCommandList->SetGraphicsRootSignature(mRootSignatures["GtaoFilter"].Get());
 
-		mCommandList->SetPipelineState(mPSOs["GtaoTemporal"].Get());
+		mCommandList->SetPipelineState(mPSOs["GtaoUpsample"].Get());
 
 		auto passCB = mCurrFrameResource->PassCB->Resource();
 		mCommandList->SetGraphicsRootConstantBufferView(0, passCB->GetGPUVirtualAddress());
@@ -630,50 +661,31 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 
 		mCommandList->SetGraphicsRootDescriptorTable(3, mRtvHeaps["GBuffer"]->GetSrvGpu(mGBufferVelocitySrvIndexOffert));
 
-		mCommandList->SetGraphicsRootDescriptorTable(4, mRtvHeaps["GTAO"]->GetSrvGpu(mGtaoHistory1SrvIndexOffset + mGtaoTemporalHistoryIndex));
-		mGtaoTemporalHistoryIndex = (mGtaoTemporalHistoryIndex + 1) % 2;
-
-		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["GTAO"]->mRtv[mGtaoOutputSrvIndexOffset]->mResource.Get(),
-			D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_RENDER_TARGET));
-
-		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["GTAO"]->mRtv[mGtaoHistory1SrvIndexOffset + mGtaoTemporalHistoryIndex]->mResource.Get(),
+		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["GTAO"]->mRtv[mGtaoUpsampleSrvIndexOffset]->mResource.Get(),
 			D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_RENDER_TARGET));
 
 		// Clear RT.
-		DirectX::XMVECTORF32 clearColor = { mRtvHeaps["GTAO"]->mRtv[mGtaoOutputSrvIndexOffset]->mProperties.mClearColor[0],
-		mRtvHeaps["GTAO"]->mRtv[mGtaoOutputSrvIndexOffset]->mProperties.mClearColor[1],
-		mRtvHeaps["GTAO"]->mRtv[mGtaoOutputSrvIndexOffset]->mProperties.mClearColor[2],
-		mRtvHeaps["GTAO"]->mRtv[mGtaoOutputSrvIndexOffset]->mProperties.mClearColor[3]
+		DirectX::XMVECTORF32 clearColor = { mRtvHeaps["GTAO"]->mRtv[mGtaoUpsampleSrvIndexOffset]->mProperties.mClearColor[0],
+		mRtvHeaps["GTAO"]->mRtv[mGtaoUpsampleSrvIndexOffset]->mProperties.mClearColor[1],
+		mRtvHeaps["GTAO"]->mRtv[mGtaoUpsampleSrvIndexOffset]->mProperties.mClearColor[2],
+		mRtvHeaps["GTAO"]->mRtv[mGtaoUpsampleSrvIndexOffset]->mProperties.mClearColor[3]
 		};
 
-		mCommandList->ClearRenderTargetView(mRtvHeaps["GTAO"]->mRtvHeap.handleCPU(mGtaoOutputSrvIndexOffset), clearColor, 0, nullptr);
+		mCommandList->ClearRenderTargetView(mRtvHeaps["GTAO"]->mRtvHeap.handleCPU(mGtaoUpsampleSrvIndexOffset), clearColor, 0, nullptr);
 
-		DirectX::XMVECTORF32 hisClearColor = { mRtvHeaps["GTAO"]->mRtv[mGtaoHistory1SrvIndexOffset + mGtaoTemporalHistoryIndex]->mProperties.mClearColor[0],
-		mRtvHeaps["GTAO"]->mRtv[mGtaoHistory1SrvIndexOffset + mGtaoTemporalHistoryIndex]->mProperties.mClearColor[1],
-		mRtvHeaps["GTAO"]->mRtv[mGtaoHistory1SrvIndexOffset + mGtaoTemporalHistoryIndex]->mProperties.mClearColor[2],
-		mRtvHeaps["GTAO"]->mRtv[mGtaoHistory1SrvIndexOffset + mGtaoTemporalHistoryIndex]->mProperties.mClearColor[3]
-		};
-
-		mCommandList->ClearRenderTargetView(mRtvHeaps["GTAO"]->mRtvHeap.handleCPU(mGtaoHistory1SrvIndexOffset + mGtaoTemporalHistoryIndex), hisClearColor, 0, nullptr);
-
-		D3D12_CPU_DESCRIPTOR_HANDLE temporalRtvs[2] =
-		{
-			mRtvHeaps["GTAO"]->mRtvHeap.handleCPU(mGtaoOutputSrvIndexOffset),
-			mRtvHeaps["GTAO"]->mRtvHeap.handleCPU(mGtaoHistory1SrvIndexOffset + mGtaoTemporalHistoryIndex)
-		};
-		mCommandList->OMSetRenderTargets(2, temporalRtvs, false, nullptr);
+		mCommandList->OMSetRenderTargets(1, &(mRtvHeaps["GTAO"]->mRtvHeap.handleCPU(mGtaoUpsampleSrvIndexOffset)), false, nullptr);
 
 		// For each render item...
 		DrawSceneObjects(mCommandList.Get(), RenderLayer::ScreenQuad, false, false);
 
-		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["GTAO"]->mRtv[mGtaoOutputSrvIndexOffset]->mResource.Get(),
+		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["GTAO"]->mRtv[mGtaoUpsampleSrvIndexOffset]->mResource.Get(),
 			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ));
 
-		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["GTAO"]->mRtv[mGtaoHistory1SrvIndexOffset + mGtaoTemporalHistoryIndex]->mResource.Get(),
-			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ));
+		//GDxGpuProfiler::GetGpuProfiler().EndGpuProfile("GTAO Upsample Pass");
 
-		GDxGpuProfiler::GetGpuProfiler().EndGpuProfile("GTAO Temporal Pass");
+		GDxGpuProfiler::GetGpuProfiler().EndGpuProfile("GTAO");
 	}
+#endif
 
 	// Shadow Map Pass
 	{
@@ -940,7 +952,11 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 
 		mCommandList->SetGraphicsRootDescriptorTable(6, GetGpuSrv(mIblIndex));
 
-		mCommandList->SetGraphicsRootDescriptorTable(7, mRtvHeaps["GTAO"]->GetSrvGpu(mGtaoOutputSrvIndexOffset));
+#if GTAO_USE_UPSAMPLE
+		mCommandList->SetGraphicsRootDescriptorTable(7, mRtvHeaps["GTAO"]->GetSrvGpu(mGtaoUpsampleSrvIndexOffset));
+#else
+		mCommandList->SetGraphicsRootDescriptorTable(7, mRtvHeaps["GTAO"]->GetSrvGpu(mGtaoBlurYSrvIndexOffset));
+#endif
 
 		mCommandList->OMSetRenderTargets(1, &mRtvHeaps["LightPass"]->mRtvHeap.handleCPU(0), false, nullptr);
 
@@ -3204,15 +3220,19 @@ void GDxRenderer::BuildRootSignature()
 		CD3DX12_DESCRIPTOR_RANGE rangeOrm;
 		rangeOrm.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 2);
 
-		CD3DX12_ROOT_PARAMETER rootParameters[5];
+		CD3DX12_DESCRIPTOR_RANGE rangeAlbedo;
+		rangeAlbedo.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 3);
+
+		CD3DX12_ROOT_PARAMETER rootParameters[6];
 		rootParameters[0].InitAsConstants(7, 0);
 		rootParameters[1].InitAsConstantBufferView(1);
 		rootParameters[2].InitAsDescriptorTable(1, &rangeDepth, D3D12_SHADER_VISIBILITY_ALL);
 		rootParameters[3].InitAsDescriptorTable(1, &rangeNormal, D3D12_SHADER_VISIBILITY_ALL);
 		rootParameters[4].InitAsDescriptorTable(1, &rangeOrm, D3D12_SHADER_VISIBILITY_ALL);
+		rootParameters[5].InitAsDescriptorTable(1, &rangeAlbedo, D3D12_SHADER_VISIBILITY_ALL);
 
 		// A root signature is an array of root parameters.
-		CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(5, rootParameters,
+		CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(6, rootParameters,
 			(UINT)staticSamplers.size(), staticSamplers.data(),
 			D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
@@ -4311,22 +4331,22 @@ void GDxRenderer::BuildDescriptorHeaps()
 		mGtaoSrvIndex = mSSShadowTemporalSrvIndex + (UINT)mRtvHeaps["SSShadowTemporalPass"]->mRtv.size();
 
 		mGtaoRawSrvIndexOffset = 0;
-		mGtaoUpsampleSrvIndexOffset = 1;
-		mGtaoBlurXSrvIndexOffset = 2;
-		mGtaoBlurYSrvIndexOffset = 3;
-		mGtaoHistory1SrvIndexOffset = 4;
-		mGtaoHistory2SrvIndexOffset = 5;
-		mGtaoOutputSrvIndexOffset = 6;
+		mGtaoHistory1SrvIndexOffset = 1;
+		mGtaoHistory2SrvIndexOffset = 2;
+		mGtaoTemporalSrvIndexOffset = 3;
+		mGtaoBlurXSrvIndexOffset = 4;
+		mGtaoBlurYSrvIndexOffset = 5;
+		mGtaoUpsampleSrvIndexOffset = 6;
 
 		std::vector<DXGI_FORMAT> rtvFormats =
 		{
 			DXGI_FORMAT_R8G8_UNORM,// GTAO Raw
-			DXGI_FORMAT_R8G8_UNORM,// Upsample
-			DXGI_FORMAT_R8G8_UNORM,// Blur X
-			DXGI_FORMAT_R8G8_UNORM,// Blur Y
 			DXGI_FORMAT_R8G8_UNORM,// History 1
 			DXGI_FORMAT_R8G8_UNORM,// History 2
-			DXGI_FORMAT_R8G8_UNORM// Output
+			DXGI_FORMAT_R8G8_UNORM,// Temporal
+			DXGI_FORMAT_R8G8_UNORM,// Blur X
+			DXGI_FORMAT_R8G8_UNORM,// Blur Y
+			DXGI_FORMAT_R8G8_UNORM// Upsample
 		};
 
 		std::vector<std::vector<FLOAT>> rtvClearColor =
@@ -4343,12 +4363,12 @@ void GDxRenderer::BuildDescriptorHeaps()
 		std::vector<float> rtvResolutionScale =
 		{
 			GTAO_RESOLUTION_SCALE,
-			1.0f,
-			1.0f,
-			1.0f,
-			1.0f,
-			1.0f,
-			1.0f,
+			GTAO_RESOLUTION_SCALE,
+			GTAO_RESOLUTION_SCALE,
+			GTAO_RESOLUTION_SCALE,
+			GTAO_RESOLUTION_SCALE,
+			GTAO_RESOLUTION_SCALE,
+			1.0f
 		};
 
 		std::vector<GRtvProperties> propVec;
@@ -4902,7 +4922,7 @@ void GDxRenderer::BuildPSOs()
 		descPSO.InputLayout.NumElements = _countof(GDxInputLayout::DefaultLayout);
 		descPSO.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
 		descPSO.NumRenderTargets = 2;
-		descPSO.RTVFormats[0] = mRtvHeaps["GTAO"]->mRtv[mGtaoOutputSrvIndexOffset]->mProperties.mRtvFormat;
+		descPSO.RTVFormats[0] = mRtvHeaps["GTAO"]->mRtv[mGtaoTemporalSrvIndexOffset]->mProperties.mRtvFormat;
 		descPSO.RTVFormats[1] = mRtvHeaps["GTAO"]->mRtv[mGtaoHistory1SrvIndexOffset]->mProperties.mRtvFormat;
 		descPSO.SampleMask = UINT_MAX;
 		descPSO.SampleDesc.Count = 1;
@@ -4934,7 +4954,7 @@ void GDxRenderer::BuildPSOs()
 #if USE_REVERSE_Z
 		ShadowMapPsoDesc.RasterizerState.DepthBias = -100;
 		ShadowMapPsoDesc.RasterizerState.DepthBiasClamp = 0.0f;
-		ShadowMapPsoDesc.RasterizerState.SlopeScaledDepthBias = -1.0f;
+		ShadowMapPsoDesc.RasterizerState.SlopeScaledDepthBias = -0.0f;
 #else
 		ShadowMapPsoDesc.RasterizerState.DepthBias = 100;
 		ShadowMapPsoDesc.RasterizerState.DepthBiasClamp = 0.0f;

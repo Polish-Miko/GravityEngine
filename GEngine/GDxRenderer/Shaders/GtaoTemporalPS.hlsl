@@ -5,9 +5,9 @@
 #include "MainPassCB.hlsli"
 
 
-#define TEMPORAL_WEIGHT 0.99f
-#define TEMPORAL_CLAMP_SCALE 1.25f
-#define EXPOSURE 1.0f
+#define TEMPORAL_WEIGHT 0.95f
+#define TEMPORAL_CLAMP_SCALE 0.75f
+#define EXPOSURE 10.0f
 
 struct VertexToPixel
 {
@@ -109,7 +109,7 @@ PixelOutput main(VertexToPixel i)
 		EXPOSURE,
 		TEMPORAL_CLAMP_SCALE,
 		UV,
-		gRenderTargetSize.xy,
+		gRenderTargetSize.xy * GTAO_RESOLUTION_SCALE,
 		variance,
 		minColor,
 		maxColor,
@@ -121,7 +121,7 @@ PixelOutput main(VertexToPixel i)
 	prevColor = clamp(prevColor, minColor, maxColor);
 
 	// Combine.
-	float temporalBlendWeight = saturate(TEMPORAL_WEIGHT * (1 - length(Velocity) * 2));
+	float temporalBlendWeight = saturate(TEMPORAL_WEIGHT * (1 - length(Velocity) * 8.0f));
 	half2 color = lerp(currColor, prevColor, temporalBlendWeight);
 
 	PixelOutput output;

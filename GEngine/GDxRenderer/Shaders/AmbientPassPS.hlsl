@@ -9,10 +9,11 @@ Texture2D gNormalTexture			: register(t1);
 Texture2D gWorldPosTexture			: register(t2);
 Texture2D gVelocityTexture			: register(t3);
 Texture2D gOrmTexture				: register(t4);
+Texture2D gOcclusionTexture			: register(t5);
 
-TextureCube skyIrradianceTexture	: register(t5);
-Texture2D	brdfLUTTexture			: register(t6);
-TextureCube skyPrefilterTexture[PREFILTER_MIP_LEVEL]	: register(t7);
+TextureCube skyIrradianceTexture	: register(t6);
+Texture2D	brdfLUTTexture			: register(t7);
+TextureCube skyPrefilterTexture[PREFILTER_MIP_LEVEL]	: register(t8);
 
 struct VertexToPixel
 {
@@ -55,6 +56,7 @@ float4 main(VertexToPixel pIn) : SV_TARGET
 	float3 worldPos = gWorldPosTexture.Sample(basicSampler, pIn.uv).rgb;
 	float roughness = gOrmTexture.Sample(basicSampler, pIn.uv).g;
 	float metal = gOrmTexture.Sample(basicSampler, pIn.uv).b;
+	float2 AoRo = gOcclusionTexture.Sample(basicSampler, pIn.uv).rg;
 	float shadowAmount = 1.f;
 
 	//clamp roughness
@@ -67,7 +69,7 @@ float4 main(VertexToPixel pIn) : SV_TARGET
 
 	float3 finalColor = AmbientPBR(normalize(normal), worldPos,
 		cameraPosition, roughness, metal, albedo,
-		irradiance, prefilter, brdf, shadowAmount);
+		irradiance, prefilter, brdf, shadowAmount, AoRo);
 
 	return float4(finalColor, 1.0f);
 }

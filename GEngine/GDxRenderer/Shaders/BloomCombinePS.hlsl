@@ -2,7 +2,7 @@
 #include "StaticSamplers.hlsli"
 #include "ShaderDefinition.h"
 
-#define USE_BLOOM 0
+#define USE_BLOOM 1
 
 cbuffer cbBloom : register(b0)
 {

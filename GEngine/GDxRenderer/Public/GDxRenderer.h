@@ -313,7 +313,7 @@ protected:
 	UINT mGtaoBlurYSrvIndexOffset = 0;
 	UINT mGtaoHistory1SrvIndexOffset = 0;
 	UINT mGtaoHistory2SrvIndexOffset = 0;
-	UINT mGtaoOutputSrvIndexOffset = 0;
+	UINT mGtaoTemporalSrvIndexOffset = 0;
 
 	float mGtaoTemporalRotations[6] = { 60, 300, 180, 240, 120, 0 };
 	float mGtaoSpatialOffsets[4] = { 0, 0.5f, 0.25f, 0.75f };

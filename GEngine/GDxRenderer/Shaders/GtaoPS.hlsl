@@ -4,14 +4,16 @@
 #include "ShaderDefinition.h"
 #include "MainPassCB.hlsli"
 
-#define GTAO_RADIUS 250.0f
+#define GTAO_RADIUS 800.0f
 #define GTAO_THICKNESS 1.0f
 
 #define GTAO_CIRCLE_NUM 2
 #define GTAO_SLICE_NUM 2
-#define GTAO_POWER 2.5f
+#define GTAO_POWER 3.0f
 #define GTAO_INTENSITY 1.0f
 #define GTRO_INTENSITY 0.4f
+
+#define USE_MULTI_BOUNCE 1
 
 #define USE_COSINE_WEIGHT 1
 
@@ -39,6 +41,8 @@ struct VertexToPixel
 Texture2D gDepthTexture				: register(t0);
 Texture2D gNormalTexture			: register(t1);
 Texture2D gOrmTexture				: register(t2);
+Texture2D gAlbedoTexture			: register(t3);
+
 
 inline half3 GetPosition(half2 uv)
 {
@@ -83,11 +87,12 @@ inline half ReflectionOcclusion(half3 BentNormal, half3 ReflectionVector, half R
 	return lerp(0, ReflectionOcclusion, saturate((UnoccludedAngle - 0.1) / 0.2));
 }
 
-inline half3 MultiBounce(half AO, half3 Albedo)
+inline half MultiBounce(half AO, half3 Albedo)
 {
-	half3 A = 2 * Albedo - 0.33;
-	half3 B = -4.8 * Albedo + 0.64;
-	half3 C = 2.75 * Albedo + 0.69;
+	half albedoSingle = (Albedo.r + Albedo.g + Albedo.b) / 3.0f;
+	half A = 2 * albedoSingle - 0.33;
+	half B = -4.8 * albedoSingle + 0.64;
+	half C = 2.75 * albedoSingle + 0.69;
 	return max(AO, ((AO * A + B) * AO + C) * AO);
 }
 
@@ -208,6 +213,11 @@ half2 main(VertexToPixel i) : SV_Target
 	half GTRO = ReflectionOcclusion(BentNormal, ReflectionDir, Roughness, lerp(1.0f, GT_Details.a, GTRO_INTENSITY));
 	GTRO = GTRO * GTRO;
 	half GTAO = lerp(1.0f, GT_Details.a, GTAO_INTENSITY);
+
+#if USE_MULTI_BOUNCE
+	half3 Albedo = gAlbedoTexture.Sample(linearClampSampler, uv).rgb;
+	GTAO = MultiBounce(GTAO, Albedo);
+#endif
 
 	return half2(GTAO, GTRO);
 }
