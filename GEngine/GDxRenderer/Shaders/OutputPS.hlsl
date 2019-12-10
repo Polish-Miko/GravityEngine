@@ -1,5 +1,5 @@
 
-#define USE_TONE_MAPPING 1
+#define DEBUG 1
 
 #define USE_ACES_TONE_MAPPING 1
 #define USE_UNCHARTED_TONE_MAPPING 0
@@ -42,7 +42,9 @@ float4 main(VertexToPixel pIn) : SV_TARGET
 
 	float3 pp = gPpInput.Sample(basicSampler, pIn.uv).rgb;
 
-#if USE_TONE_MAPPING
+#if DEBUG
+	return float4(pp, 1.0f);
+#endif
 
 #if USE_ACES_TONE_MAPPING
 
@@ -73,10 +75,6 @@ float4 main(VertexToPixel pIn) : SV_TARGET
 	float3 gammaCorrect = pow(saturate(toneMap), 1 / 2.2);
 	return float4(gammaCorrect, 1.0f);
 
-#endif
-
-#else
-	return float4(pp, 1.0f);
 #endif
 
 }

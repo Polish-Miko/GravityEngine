@@ -276,6 +276,8 @@
     <FxCompile Include="Shaders\GtaoBilateralXPS.hlsl" />
     <FxCompile Include="Shaders\GtaoBilateralYPS.hlsl" />
     <FxCompile Include="Shaders\GtaoTemporalPS.hlsl" />
+    <FxCompile Include="Shaders\SsrHizPS.hlsl" />
+    <FxCompile Include="Shaders\SsrTracePS.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Shaders\Lighting.hlsli" />

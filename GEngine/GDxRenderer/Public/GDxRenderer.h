@@ -172,6 +172,9 @@ protected:
 	void DrawSceneObjects(ID3D12GraphicsCommandList* cmdList, const RenderLayer layer, bool bSetObjCb, bool bSetSubmeshCb, bool bCheckCullState = false);
 	void DrawSceneObject(ID3D12GraphicsCommandList* cmdList, GRiSceneObject* sObject, bool bSetObjCb, bool bSetSubmeshCb, bool bCheckCullState = false);
 
+	float GetHaltonValue(int index, int radix);
+	DirectX::XMFLOAT2 GenerateRandomHaltonOffset();
+
 protected:
 
 	bool InitDirect3D();
@@ -277,6 +280,7 @@ protected:
 	UINT mLightPassSrvIndex = 0;
 	UINT mSkyPassSrvIndex = 0;
 	UINT mTaaPassSrvIndex = 0;
+	UINT mSsrSrvIndex = 0;
 	UINT mMotionBlurSrvIndex = 0;
 	UINT mBloomSrvIndex = 0;
 	UINT mIblIndex = 0;
@@ -315,6 +319,15 @@ protected:
 	UINT mGtaoHistory2SrvIndexOffset = 0;
 	UINT mGtaoTemporalSrvIndexOffset = 0;
 
+	UINT mSsrHizSrvIndexOffset = 0;
+	UINT mSsrTileImportanceSrvIndexOffset = 0;
+	UINT mSsrTileImportanceHistorySrvIndexOffset = 0;
+	UINT mSsrTileImportanceTemporalSrvIndexOffset = 0;
+	UINT mSsrTraceSrvIndexOffset = 0;
+	UINT mSsrResolveSrvIndexOffset = 0;
+	UINT mSsrHistorySrvIndexOffset = 0;
+	UINT mSsrTemporalSrvIndexOffset = 0;
+
 	float mGtaoTemporalRotations[6] = { 60, 300, 180, 240, 120, 0 };
 	float mGtaoSpatialOffsets[4] = { 0, 0.5f, 0.25f, 0.75f };
 	int mGtaoSampleStep = 0;
@@ -322,6 +335,9 @@ protected:
 	int numVisible = 0;
 	int numFrustumCulled = 0;
 	int numOcclusionCulled = 0;
+
+	int mHaltonSampleIndex = 0;
+	static const int mHaltonSampleCount = 64;
 
 	int ShadowCascadeNum = SHADOW_CASCADE_NUM;
 	std::vector<float> ShadowCascadeDistance = { Z_LOWER_BOUND, Z_LOWER_BOUND + 1000.0F, Z_LOWER_BOUND + 3000.0f };

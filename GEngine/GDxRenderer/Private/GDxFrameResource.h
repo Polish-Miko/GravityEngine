@@ -28,6 +28,8 @@ struct PassConstants
 	DirectX::XMFLOAT4X4 InvView = GDxMathHelper::Identity4x4();
 	DirectX::XMFLOAT4X4 Proj = GDxMathHelper::Identity4x4();//Jittered
 	DirectX::XMFLOAT4X4 InvProj = GDxMathHelper::Identity4x4();//Jittered
+	DirectX::XMFLOAT4X4 UnjitteredProj = GDxMathHelper::Identity4x4();//Unjittered
+	DirectX::XMFLOAT4X4 UnjitteredInvProj = GDxMathHelper::Identity4x4();//Unjittered
 	DirectX::XMFLOAT4X4 ViewProj = GDxMathHelper::Identity4x4();//Jittered
 	DirectX::XMFLOAT4X4 UnjitteredViewProj = GDxMathHelper::Identity4x4();//Unjittered
 	DirectX::XMFLOAT4X4 InvViewProj = GDxMathHelper::Identity4x4();//Jittered
@@ -57,6 +59,8 @@ struct PassConstants
 
 	DirectX::XMFLOAT4X4 SdfTileTransform;
 	DirectX::XMFLOAT4 gSdfTileSpaceSize;
+
+	DirectX::XMFLOAT2 HaltonUniform2D = { 0.0f,0.0f };
 };
 
 struct LightConstants

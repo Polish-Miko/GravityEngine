@@ -2,7 +2,7 @@
 #include "StaticSamplers.hlsli"
 #include "ShaderDefinition.h"
 
-#define USE_BLOOM 1
+#define DEBUG 1
 
 cbuffer cbBloom : register(b0)
 {
@@ -70,7 +70,12 @@ float4 Combine(float4 bloom, float2 uv)
 float4 main(VertexToPixel i) : SV_Target
 {
 
-#if USE_BLOOM
+#if DEBUG
+
+	float3 color = gBloomInput.Sample(linearClampSampler, i.uv).rgb;
+	return float4(color, 1.0f);
+
+#endif
 
 #if BLOOM_USE_TENT_UPSAMPLE
 	float4 bloom = UpsampleTent(gBloomChain, i.uv, float2(_BloomTexelSizeX, _BloomTexelSizeY), _SampleScale);
@@ -78,13 +83,6 @@ float4 main(VertexToPixel i) : SV_Target
 #else
 	float4 bloom = UpsampleBox(gBloomChain, i.uv, float2(_BloomTexelSizeX, _BloomTexelSizeY), _SampleScale);
 	return Combine(bloom * BLOOM_INTENSITY, i.uv);
-#endif
-
-#else
-
-	float3 color = gBloomInput.Sample(linearClampSampler, i.uv).rgb;
-	return float4(color, 1.0f);
-
 #endif
 
 }

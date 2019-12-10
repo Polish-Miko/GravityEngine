@@ -297,7 +297,7 @@
 				<item_version>0</item_version>
 				<item class_id="6" tracking_level="0" version="0">
 					<str1>Grid</str1>
-					<str2>Content\Material\DarkTiles.gmat</str2>
+					<str2>Content\Material\GoldScuffed.gmat</str2>
 				</item>
 			</OverrideMaterialUniqueName>
 			<MeshUniqueName>Grid</MeshUniqueName>
@@ -382,7 +382,7 @@
 		</item>
 	</mSceneObjectInfo>
 	<mMeshInfo class_id="7" tracking_level="0" version="0">
-		<count>15</count>
+		<count>16</count>
 		<item_version>0</item_version>
 		<item class_id="8" tracking_level="0" version="0">
 			<MeshUniqueName>Box</MeshUniqueName>
@@ -630,6 +630,23 @@
 				<item>
 					<str1>lambert1</str1>
 					<str2>Content\Material\MetalGrid.gmat</str2>
+				</item>
+			</MaterialUniqueName>
+			<SdfResolution>32</SdfResolution>
+			<Sdf>
+				<count>1</count>
+				<item_version>0</item_version>
+				<item>-1.000000000e+00</item>
+			</Sdf>
+		</item>
+		<item>
+			<MeshUniqueName>Content\Models\UserSphere.fbx</MeshUniqueName>
+			<MaterialUniqueName>
+				<count>1</count>
+				<item_version>0</item_version>
+				<item>
+					<str1>lambert1</str1>
+					<str2>Default</str2>
 				</item>
 			</MaterialUniqueName>
 			<SdfResolution>32</SdfResolution>
