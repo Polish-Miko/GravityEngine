@@ -207,6 +207,16 @@ void __stdcall SetSceneObjectOverrideMaterial(wchar_t* soName, wchar_t* submeshN
 	GCore::GetCore().SetSceneObjectOverrideMaterial(soName, submeshName, materialName);
 }
 
+void __stdcall SetTestValue(int index, float value)
+{
+	return GCore::GetCore().SetTestValue(index, value);
+}
+
+void __stdcall SetTestBool(bool value)
+{
+	GCore::GetCore().SetTestBool(value);
+}
+
 
 
 

@@ -53,6 +53,12 @@ struct VertexToPixel
 	float2 uv           : TEXCOORD0;
 };
 
+struct PixelOutput
+{
+	float4	color				: SV_TARGET0;
+	float4	ambientSpecular		: SV_TARGET1;
+};
+
 SamplerState			basicSampler	: register(s0);
 SamplerComparisonState	shadowSampler	: register(s1);
 
@@ -96,14 +102,19 @@ float3 ReconstructWorldPos(float2 uv, float depth)
 	return mul(viewPos, gInvView).xyz;
 }
 
-float4 main(VertexToPixel pIn) : SV_TARGET
+PixelOutput main(VertexToPixel pIn)
 {
 	float depthBuffer = gDepthBuffer.Sample(basicSampler, pIn.uv).r;
 	float depth = ViewDepth(depthBuffer);
 	float linearDepth = (depth - NEAR_Z) / (FAR_Z - NEAR_Z);
 
 	if (linearDepth <= 0.0f)
-		return float4(0.0f, 0.0f, 0.0f, 1.0f);
+	{
+		PixelOutput o;
+		o.color = float4(0.0f, 0.0f, 0.0f, 1.0f);
+		o.ambientSpecular = float4(0.0f, 0.0f, 0.0f, 1.0f);
+		return o;
+	}
 
 	uint gridId = 0;
 #if USE_TBDR
@@ -130,10 +141,20 @@ float4 main(VertexToPixel pIn) : SV_TARGET
 
 #if VISUALIZE_GRID_LIGHT_NUM
 	float lightNum = float(numPointLight + numSpotlight) / 30.0f;
-	return float4(lightNum, lightNum, lightNum, 1.0f);
+	{
+		PixelOutput o;
+		o.color = float4(lightNum, lightNum, lightNum, 1.0f);
+		o.ambientSpecular = float4(lightNum, lightNum, lightNum, 1.0f);
+		return o;
+	}
 #elif VISUALIZE_CLUSTER_DISTRIBUTION
 	float clusterColor = float(clusterZ) / CLUSTER_NUM_Z;
-	return float4(clusterColor, clusterColor, clusterColor, 1.0f);
+	{
+		PixelOutput o;
+		o.color = float4(clusterColor, clusterColor, clusterColor, 1.0f);
+		o.ambientSpecular = float4(clusterColor, clusterColor, clusterColor, 1.0f);
+		return o;
+	}
 #else
 	float3 finalColor = 0.f;
 
@@ -210,9 +231,16 @@ float4 main(VertexToPixel pIn) : SV_TARGET
 	float2 brdf = BrdfLUT(normal, viewDir, roughness);
 	float3 irradiance = skyIrradianceTexture.Sample(basicSampler, normal).rgb;
 
-	finalColor = finalColor + AmbientPBR(normalize(normal), worldPos,
+	float3 ambientDiffuse = float3(0.0f, 0.0f, 0.0f);
+	float3 ambientSpecular = float3(0.0f, 0.0f, 0.0f);
+
+	AmbientPBR(normalize(normal), worldPos,
 		cameraPosition, roughness, metal, albedo,
-		irradiance, prefilter, brdf, shadowAmount, AoRo);
+		irradiance, prefilter, brdf, shadowAmount, AoRo,
+		ambientDiffuse, ambientSpecular);
+
+	finalColor = finalColor + ambientDiffuse;
+
 
 #if DEBUG_CASCADE_RANGE
 	float testShadow = gShadowTexture.Sample(basicSampler, pIn.uv).r;
@@ -228,7 +256,11 @@ float4 main(VertexToPixel pIn) : SV_TARGET
 	finalColor = gOcclusionTexture.Sample(basicSampler, pIn.uv).rrr;
 #endif
 
-	return float4(finalColor, 1.0f);
+	PixelOutput o;
+	o.color = float4(finalColor + ambientSpecular, 1.0f);
+	o.ambientSpecular = float4(ambientSpecular, 1.0f);
+
+	return o;
 #endif
 }
 

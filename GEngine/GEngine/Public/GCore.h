@@ -111,6 +111,10 @@ public:
 
 	void SetSceneObjectOverrideMaterial(wchar_t* soName, wchar_t* submeshName, wchar_t* materialName);
 
+	void SetTestValue(int index, float value);
+
+	void SetTestBool(bool value);
+
 #pragma endregion
 
 private:

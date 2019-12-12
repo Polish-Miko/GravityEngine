@@ -4,7 +4,7 @@
 #include "ShaderDefinition.h"
 #include "MainPassCB.hlsli"
 
-#define DEBUG 1
+#define DEBUG 0
 
 #define USE_MOTION_BLUR 1
 
@@ -73,7 +73,8 @@ float4 main(VertexToPixel i) : SV_TARGET
 
 	float depth = gInputTexture.Sample(pointClampSampler, i.uv).r;
 	float3 color = saturate(Linear01Depth(depth).rrr * 10.0f);
-	return float4(gInputTexture.Sample(linearClampSampler, i.uv).rgb, 1.0f);
+	float4 sampled = gInputTexture.Sample(linearClampSampler, i.uv);
+	return float4(sampled.rgb, 1.0f);
 
 #endif
 

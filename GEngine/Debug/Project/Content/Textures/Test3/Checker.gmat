@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<!DOCTYPE boost_serialization>
+<boost_serialization signature="serialization::archive" version="17">
+<Material class_id="0" tracking_level="0" version="0">
+	<UniqueName>Content\Textures\Test3\Checker.gmat</UniqueName>
+	<Name>Checker</Name>
+	<MaterialScale>
+		<count>2</count>
+		<item>3.000000000e+00</item>
+		<item>3.000000000e+00</item>
+	</MaterialScale>
+	<TextureNames class_id="1" tracking_level="0" version="0">
+		<count>3</count>
+		<item_version>0</item_version>
+		<item>Content\Textures\Test3\Checker_Albedo.png</item>
+		<item>Resource\Textures\GE_DefaultTexture_Normal.png</item>
+		<item>Resource\Textures\GE_DefaultTexture_Orm.png</item>
+	</TextureNames>
+	<ScalarParams>
+		<count>0</count>
+		<item_version>0</item_version>
+	</ScalarParams>
+	<VectorParams>
+		<count>0</count>
+		<item_version>0</item_version>
+	</VectorParams>
+</Material>
+</boost_serialization>
+

@@ -67,9 +67,12 @@ float4 main(VertexToPixel pIn) : SV_TARGET
 	float2 brdf = BrdfLUT(normal, viewDir, roughness);
 	float3 irradiance = skyIrradianceTexture.Sample(basicSampler, normal).rgb;
 
+	/*
 	float3 finalColor = AmbientPBR(normalize(normal), worldPos,
 		cameraPosition, roughness, metal, albedo,
 		irradiance, prefilter, brdf, shadowAmount, AoRo);
+	*/
+	float3 finalColor = float3(0.0f, 0.0f, 0.0f);
 
 	return float4(finalColor, 1.0f);
 }

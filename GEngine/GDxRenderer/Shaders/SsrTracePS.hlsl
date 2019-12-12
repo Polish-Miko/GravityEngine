@@ -6,10 +6,12 @@
 
 
 #define NUM_STEPS 60
-#define BRDF_BIAS 0.0f
+#define BRDF_BIAS 0.7f
 
 #define HIZ_START_LEVEL 0
 #define HIZ_STOP_LEVEL 0
+
+#define THICKNESS 50.0f
 
 struct VertexToPixel
 {
@@ -17,12 +19,10 @@ struct VertexToPixel
 	float2 uv           : TEXCOORD0;
 };
 
-cbuffer constBuffer : register(b0)
+struct PixelOutput
 {
-	float _UvToViewScaleX;
-	float _UvToViewScaleY;
-	float _UvToViewOffsetX;
-	float _UvToViewOffsetY;
+	half4	RayHit						: SV_TARGET0;
+	half	Mask						: SV_TARGET1;
 };
 
 // Input textures.
@@ -60,13 +60,6 @@ float3 GetViewPos(float3 screenPos)
 	return viewPos.xyz / viewPos.w;
 }
 
-inline float3 GetViewPosNew(half2 uv, half2 jitteredUV)
-{
-	half depth = gDepthTexture.SampleLevel(linearClampSampler, jitteredUV, 0).r;
-	half viewDepth = ViewDepth(depth);
-	return half3((float2(uv.x, 1.0f - uv.y) * half2(_UvToViewScaleX, _UvToViewScaleY) + half2(_UvToViewOffsetX, _UvToViewOffsetY)) * viewDepth, viewDepth);
-}
-
 float4 TangentToWorld(float3 N, float4 H)
 {
 	float3 UpVector = abs(N.z) < 0.999 ? float3(0.0, 0.0, 1.0) : float3(1.0, 0.0, 0.0);
@@ -99,231 +92,171 @@ float4 ImportanceSampleGGX(float2 Xi, float Roughness)
 	return float4(H, pdf);
 }
 
-float4 RayMarch(Texture2D depthTex, float4x4 projectionMatrix, float3 viewDir, int NumSteps, float3 viewPos, float3 screenPos, float2 screenUV, float stepSize, float thickness)
+float3 intersectDepth_Plane(float3 rayOrigin, float3 rayDir, float marchSize)
 {
-	//float3 dirProject = _Project;
-	/*
-	float4 dirProject = float4
-		(
-			abs(unity_CameraProjection._m00 * 0.5),
-			abs(unity_CameraProjection._m11 * 0.5),
-			((_ProjectionParams.z * _ProjectionParams.y) / (_ProjectionParams.y - _ProjectionParams.z)) * 0.5,
-			0.0
-			);
-	*/
-
-	//float linearDepth = ViewDepth(depthTex.SampleLevel(linearClampSampler, screenUV.xy, 0.0f).r);
-
-	// transform ray direction from view space to ndc.
-	float4 rayProj = mul(float4(viewDir + viewPos, 1.0f), projectionMatrix);
-	rayProj /= rayProj.w;
-	rayProj.y = -rayProj.y;
-	float2 rayDirXY = (rayProj.xy - (screenUV * 2.0f - 1.0f)); // ndc to uv(*0.5f)
-	float lenXY = length(rayDirXY);
-	float rayDirZ = ViewDepth(rayProj.z) - ViewDepth(screenPos.z);
-	float3 rayDir = float3(rayDirXY, rayDirZ) / lenXY;
-
-	/*
-	float3 ray = viewPos / viewPos.z;
-	float3 rayDir = normalize(float3(viewDir.xy - ray * viewDir.z, viewDir.z / linearDepth) * dirProject);
-	rayDir.xy *= 0.5;
-	*/
-
-	float3 rayStart = float3(screenUV, ViewDepth(screenPos.z));
-
-	float3 samplePos = rayStart + rayDir * stepSize;
-
-	//float project = (_ProjectionParams.z * _ProjectionParams.y) / (_ProjectionParams.y - _ProjectionParams.z);
-
-	//float thickness = thickness;//1.0 / _ZBufferParams.x * (float)NumSteps * linearDepth;//project / linearDepth;
-
-	float mask = 0.0;
-
-	float oldDepth = samplePos.z;
-	float oldDelta = 0.0;
-	float3 oldSamplePos = samplePos;
-
-	[loop]
-	for (int i = 0; i < NumSteps; i++)
-	{
-		float depth = ViewDepth(depthTex.SampleLevel(linearClampSampler, samplePos.xy + gJitter, 0.0f).r);
-		float delta = samplePos.z - depth;
-		//float thickness = dirProject.z / depth;
-
-		if (0.0 < delta)
-		{
-			if (delta /*< thickness*/)
-			{
-				mask = 1.0;
-				break;
-				//samplePos = samplePos;
-			}
-			/*if(depth - oldDepth > thickness)
-			{
-				float blend = (oldDelta - delta) / max(oldDelta, delta) * 0.5 + 0.5;
-				samplePos = lerp(oldSamplePos, samplePos, blend);
-				mask = lerp(0.0, 1.0, blend);
-			}*/
-		}
-		else
-		{
-			oldDelta = -delta;
-			oldSamplePos = samplePos;
-		}
-		oldDepth = depth;
-		samplePos += rayDir * stepSize;
-	}
-
-	return float4(samplePos, mask);
+	return rayOrigin + rayDir * marchSize;
 }
 
-float GetMarchSize(float2 dir, float2 pixelSize)
+float2 cell(float2 ray, float2 cell_count) 
 {
-	return length(float2(min(abs(dir.x), pixelSize.x), min(abs(dir.y), pixelSize.y)));
+	return floor(ray.xy * cell_count);
 }
 
-half4 Hierarchical_Z_Trace
-(
-	int HiZ_Max_Level,
-	int NumSteps,
-	float thickness,
-	float2 RayCastTexelSize,
-	float3 rayStart,
-	float3 rayDir
-)
+float2 cell_count(float level, float2 ScreenSize)
 {
-	half SamplerSize = GetMarchSize(rayDir.xy, RayCastTexelSize);
-	half3 samplePos = rayStart + rayDir * SamplerSize * 5.0f;
-	int level = HIZ_START_LEVEL;
-	half mask = 0.0;
+	return ScreenSize / (level == 0 ? 1 : exp2(level));
+}
 
-	[loop]
-	for (int i = 0; i < NumSteps; i++)
+float3 intersect_cell_boundary(float3 rayOrigin, float3 rayDir, float2 cellIndex, float2 cellCount, float2 crossStep, float2 crossOffset)
+{
+	float2 cell_size = 1.0 / cellCount;
+	float2 planes = cellIndex / cellCount + cell_size * crossStep;
+
+	float2 solutions = (planes - rayOrigin.xy) / rayDir.xy;
+	float3 intersection_pos = rayOrigin + rayDir * min(solutions.x, solutions.y);
+
+	intersection_pos.xy += (solutions.x < solutions.y) ? float2(crossOffset.x, 0.0) : float2(0.0, crossOffset.y);
+
+	return intersection_pos;
+}
+
+bool crossed_cell_boundary(float2 cell_id_one, float2 cell_id_two)
+{
+	return (int)cell_id_one.x != (int)cell_id_two.x || (int)cell_id_one.y != (int)cell_id_two.y;
+}
+
+float minimum_depth_plane(float2 ray, float level, float2 cell_count)
+{
+	return gHiZTexture[max(level, 0)].Load(int3((ray * cell_count), 0)).r;
+}
+
+float4 Hierarchical_Z_Trace(int HiZ_Max_Level, int HiZ_Start_Level, int HiZ_Stop_Level, int NumSteps, float Thickness, float2 screenSize, float3 rayOrigin, float3 rayDir)
+{
+	HiZ_Max_Level = clamp(HiZ_Max_Level, 0.0, 7.0);
+	rayOrigin = half3(rayOrigin.x, rayOrigin.y, rayOrigin.z);
+	rayDir = half3(rayDir.x, rayDir.y, rayDir.z);
+
+	float level = HiZ_Start_Level;
+	float3 ray = rayOrigin + rayDir * 0.05f;
+
+	float2 cross_step = float2(rayDir.x >= 0.0 ? 1.0 : -1.0, rayDir.y >= 0.0 ? 1.0 : -1.0);
+	float2 cross_offset = cross_step * 0.00001f;
+	cross_step = saturate(cross_step);
+
+	float2 hi_z_size = cell_count(level, screenSize);
+	float2 ray_cell = cell(ray.xy, hi_z_size.xy);
+	ray = intersect_cell_boundary(ray, rayDir, ray_cell, hi_z_size, cross_step, cross_offset);
+
+	int iterations = 0;
+	float mask = 1.0f;
+	while (level >= HiZ_Stop_Level && iterations < NumSteps) 
 	{
-		float2 cellCount = RayCastTexelSize * exp2(level);
-		float newSamplerSize = GetMarchSize(rayDir.xy, cellCount);
-		half3 newSamplePos = samplePos + rayDir * newSamplerSize;
-		float sampleMinDepth = gHiZTexture[max(level, 0)].SampleLevel(linearClampSampler, newSamplePos.xy + gJitter, 0.0f).r;// ViewDepth(gHiZTexture[max(level, 0)].SampleLevel(linearClampSampler, newSamplePos.xy + gJitter, 0.0f).r);//
-	
-		[flatten]
-		if (sampleMinDepth < newSamplePos.z)
-		{
-			level = min(HiZ_Max_Level - 1, level + 1.0);
-			samplePos = newSamplePos;
-		}
-		else
-		{
-			level--;
-		}
+		float3 tmp_ray = ray;
+		float2 current_cell_count = cell_count(level, screenSize);
+		float2 old_cell_id = cell(ray.xy, current_cell_count);
 
-		[branch]
-		if (samplePos.x < 0.0f ||
-			samplePos.x > 1.0f ||
-			samplePos.y < 0.0f ||
-			samplePos.y > 1.0f
+		if (ray.x < 0.0f ||
+			ray.x > 1.0f ||
+			ray.y < 0.0f ||
+			ray.y > 1.0f
 			)
 		{
-			return half4(samplePos, mask);
+			mask = 0.0f;
+			return half4(ray.xy, ray.z, mask);
 		}
 
-		[branch]
-		if (level < HIZ_STOP_LEVEL)
+		float min_z = minimum_depth_plane(ray.xy, level, current_cell_count);
+
+		if (min_z < 1e-7)
 		{
-			float delta = samplePos.z - sampleMinDepth;
-			mask = i > 0.0/* && delta <= thickness*/;
-			return half4(samplePos, mask);
+			mask = 0.0f;
+			return half4(ray.xy, ray.z, mask);
 		}
+
+		if (rayDir.z < 0)
+		{
+			float min_minus_ray = min_z - ray.z;
+			tmp_ray = min_minus_ray < 0 ? ray + (rayDir / rayDir.z) * min_minus_ray : tmp_ray;
+			float2 new_cell_id = cell(tmp_ray.xy, current_cell_count);
+
+			if (crossed_cell_boundary(old_cell_id, new_cell_id))
+			{
+				tmp_ray = intersect_cell_boundary(ray, rayDir, old_cell_id, current_cell_count, cross_step, cross_offset);
+				level = min(HiZ_Max_Level, level + 2.0);
+			}
+			/* 
+			else 
+			{
+				if(level == 1.0 && abs(min_minus_ray) > 0.0001) 
+				{
+					tmp_ray = intersect_cell_boundary(ray, rayDir, old_cell_id, current_cell_count, cross_step, cross_offset);
+					level = 2.0;
+				}
+			}
+			*/
+		}
+		else if (ray.z > min_z)
+		{
+			tmp_ray = intersect_cell_boundary(ray, rayDir, old_cell_id, current_cell_count, cross_step, cross_offset);
+			level = min(HiZ_Max_Level, level + 2.0);
+		}
+
+		ray.xyz = tmp_ray.xyz;
+		level--;
+		iterations++;
+
+		mask = (ViewDepth(ray.z) - ViewDepth(min_z)) < Thickness && iterations > 0.0;
 	}
-	return half4(samplePos, mask);
+
+	return half4(ray.xy, ray.z, mask);
 }
 
-// Velocity texture setup
-half4 main(VertexToPixel i) : SV_Target
+PixelOutput main(VertexToPixel i)
 {
 	float2 uv = i.uv;
 	float2 jitteredUV = uv + gJitter;
-	//int2 pos = uv /* _RayCastSize.xy*/;
-
-	float3 worldNormal = gNormalTexture.SampleLevel(linearClampSampler, jitteredUV, 0.0f).rgb;
-	float3 viewNormal = normalize(mul(worldNormal, (half3x3)gView));
-	float roughness = gOrmTexture.SampleLevel(linearClampSampler, jitteredUV, 0.0f).g;
 
 	float depth = gDepthTexture.SampleLevel(linearClampSampler, jitteredUV, 0.0f).r;
-	float3 screenPos = GetScreenPos(uv, depth);
+	float roughness = gOrmTexture.SampleLevel(linearClampSampler, jitteredUV, 0.0f).g;
+	float3 worldNormal = gNormalTexture.SampleLevel(linearClampSampler, jitteredUV, 0.0f).rgb;
+	float3 viewNormal = normalize(mul(worldNormal, (half3x3)gView));
 
+	float3 screenPos = GetScreenPos(uv, depth);
 	float3 worldPos = ReconstructWorldPos(uv, depth);
+	float3 viewPos = GetViewPos(screenPos);
 	float3 viewDir = GetViewDir(worldPos);
 
-	float3 viewPos = GetViewPos(screenPos);//GetViewPosNew(uv, jitteredUV);
+	half2 Hash = gBlueNoiseTexture.SampleLevel(linearWrapSampler, (uv + gHaltonUniform2D.xy) * (gRenderTargetSize.xy * 0.5f) / float2(BLUE_NOISE_SIZE, BLUE_NOISE_SIZE), 0.0f).rg;
+	Hash.y = lerp(Hash.y, 0.0, BRDF_BIAS);
 
-	// Blue noise generated by https://github.com/bartwronski/BlueNoiseGenerator/;
-	float2 jitter = gBlueNoiseTexture.SampleLevel(linearWrapSampler, (uv + gHaltonUniform2D.xy) * (gRenderTargetSize.xy * 0.5f) / float2(BLUE_NOISE_SIZE, BLUE_NOISE_SIZE), 0.0f).rg;
-	
-	float2 Xi = jitter;
+	half4 H = 0.0;
+	if (roughness > 0.1f)
+	{
+		H = TangentToWorld(viewNormal, ImportanceSampleGGX(Hash, roughness));
+	}
+	else
+	{
+		H = half4(viewNormal, 1.0);
+	}
+	float3 ReflectionDir = reflect(normalize(viewPos), H.xyz);
 
-	Xi.y = lerp(Xi.y, 0.0, BRDF_BIAS);
-
-	float4 H = TangentToWorld(worldNormal, ImportanceSampleGGX(Xi, roughness));
-	float3 dir = reflect(viewDir, H.xyz);
-	//dir = reflect(viewDir, worldNormal);
-	dir = normalize(mul(dir, (float3x3)gView));
-	//dir = normalize(reflect(viewPos, viewNormal));
-	//return float4(dir, 1.0f);
-
-	/*
-	float4 rayProj = mul(float4(dir + viewPos, 1.0f), gProj);
-	rayProj /= rayProj.w;
-	rayProj.y = -rayProj.y;
-	float2 rayDirXY = normalize(rayProj.xy - (uv * 2.0f - 1.0f)) * 0.5f; // ndc to uv(*0.5f)
-	float rayDirZ = ViewDepth(rayProj.z) - ViewDepth(screenPos.z);
-	float3 rayDir = float3(rayDirXY, rayDirZ);
-	return float4(rayDirZ, rayDirZ, rayDirZ, 1.0f);
-	*/
-
-	/*
-	jitter += 0.5f;
-
-	float stepSize = (1.0 / (float)NUM_STEPS);
-	stepSize = stepSize * (jitter.x + jitter.y) + stepSize;
-
-	float2 rayTraceHit = 0.0;
-	float rayTraceZ = 0.0;
-	float rayPDF = 0.0;
-	float rayMask = 0.0;
-	float4 rayTrace = RayMarch(gDepthTexture, gProj, dir, NUM_STEPS, viewPos, screenPos, uv, stepSize, 1.0);
-
-	rayTraceHit = rayTrace.xy;
-	rayTraceZ = rayTrace.z;
-	rayPDF = H.w;
-	rayMask = rayTrace.w;
-
-	float4 outRayCast = float4(float3(rayTraceHit, rayTraceZ), rayPDF);
-	float outRayCastMask = rayMask;
-	*/
-
-	float3 ReflectionDir = reflect(normalize(viewPos), viewNormal);
+	//float3 ReflectionDir = reflect(normalize(viewPos), viewNormal);
 	float3 rayStart = float3(uv, depth);
 	float4 rayProj = mul(float4(viewPos + ReflectionDir, 1.0), gUnjitteredProj);
 	float3 rayDir = normalize((rayProj.xyz / rayProj.w) - screenPos);
 	rayDir.xy *= float2(0.5f, -0.5f);
-	//rayDir.z = ReflectionDir.z;
-	
-	/*
-	float3 rayStart = float3(uv, ViewDepth(gHiZTexture[0].SampleLevel(linearClampSampler, jitteredUV, 0.0f).r));//float3(uv, ViewDepth(screenPos.z));//
-	float4 rayProj = mul(float4(dir + viewPos, 1.0f), gUnjitteredProj);
-	rayProj /= rayProj.w;
-	rayProj.y = -rayProj.y;
-	float2 rayDirXY = (rayProj.xy - (uv * 2.0f - 1.0f)); // ndc to uv(*0.5f)
-	float lenXY = length(rayDirXY);
-	float rayDirZ = ViewDepth(rayProj.z) - ViewDepth(screenPos.z);
-	float3 rayDir = float3(rayDirXY, rayDirZ) / lenXY;
-	//return float4(rayDir.xy, 0.0f, 1.0f);
-	*/
 
-	float4 rayTrace = Hierarchical_Z_Trace(SSR_MAX_MIP_LEVEL, NUM_STEPS, 1000.0f, gInvRenderTargetSize.xy * 2.0f, rayStart, rayDir);
+	//float4 rayTrace = Hierarchical_Z_Trace(SSR_MAX_MIP_LEVEL, NUM_STEPS, 1000.0f, gInvRenderTargetSize.xy * 2.0f, rayStart, rayDir);
+	float4 rayTrace = Hierarchical_Z_Trace(SSR_MAX_MIP_LEVEL, 0, 0, NUM_STEPS, THICKNESS, gRenderTargetSize / 2.0f, rayStart, rayDir);
 	float4 outRayCast = rayTrace;
 	float rayMask = rayTrace.w;
 
+	PixelOutput o;
+	o.RayHit = half4(rayTrace.xyz, H.a);
+	o.Mask = rayTrace.a;
+	return o;
+
+	/*
 	float3 outColor = float3(1.0f, 0.0f, 0.0f);
 	if (rayMask > 0.5f)
 		outColor = gColorTexture.SampleLevel(linearClampSampler, outRayCast.xy + gJitter, 0.0f).rgb;
@@ -331,5 +264,6 @@ half4 main(VertexToPixel i) : SV_Target
 	//outColor = float3(jitter, 0.0f);
 
 	return float4(outColor, 1.0f);
+	*/
 }
 

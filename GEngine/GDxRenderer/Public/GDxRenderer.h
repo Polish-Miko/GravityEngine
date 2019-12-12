@@ -320,13 +320,19 @@ protected:
 	UINT mGtaoTemporalSrvIndexOffset = 0;
 
 	UINT mSsrHizSrvIndexOffset = 0;
+	UINT mSsrPrefilterSrvIndexOffset = 0;
 	UINT mSsrTileImportanceSrvIndexOffset = 0;
 	UINT mSsrTileImportanceHistorySrvIndexOffset = 0;
 	UINT mSsrTileImportanceTemporalSrvIndexOffset = 0;
 	UINT mSsrTraceSrvIndexOffset = 0;
+	UINT mSsrTraceMaskSrvIndexOffset = 0;
 	UINT mSsrResolveSrvIndexOffset = 0;
 	UINT mSsrHistorySrvIndexOffset = 0;
 	UINT mSsrTemporalSrvIndexOffset = 0;
+	UINT mSsrCombineSrvIndexOffset = 0;
+
+	UINT mLightingSrvIndexOffset = 0;
+	UINT mLightingAmbientSpecularSrvIndexOffset = 0;
 
 	float mGtaoTemporalRotations[6] = { 60, 300, 180, 240, 120, 0 };
 	float mGtaoSpatialOffsets[4] = { 0, 0.5f, 0.25f, 0.75f };
@@ -360,6 +366,7 @@ protected:
 	UINT mTaaHistoryIndex = 0;
 	UINT mShadowTemporalHistoryIndex = 0;
 	UINT mGtaoTemporalHistoryIndex = 0;
+	UINT mSsrTemporalHistoryIndex = 0;
 
 	CD3DX12_GPU_DESCRIPTOR_HANDLE mNullSrv;
 

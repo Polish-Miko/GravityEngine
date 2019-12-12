@@ -208,6 +208,16 @@ extern "C"
 	__declspec(dllexport) void __stdcall SetSceneObjectOverrideMaterial(wchar_t* soName, wchar_t* submeshName, wchar_t* materialName);
 }
 
+extern "C"
+{
+	__declspec(dllexport) void __stdcall SetTestValue(int index, float value);
+}
+
+extern "C"
+{
+	__declspec(dllexport) void __stdcall SetTestBool(bool value);
+}
+
 
 /*
 class EGCore

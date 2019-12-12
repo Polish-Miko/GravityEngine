@@ -155,10 +155,12 @@ float3 AmbientPBR(float3 kD, float metalness, float3 diffuse, float ao, float3 s
 	return (kD * diffuse + specular) * ao;
 }
 
-float3 AmbientPBR(float3 normal, float3 worldPos,
+void AmbientPBR(float3 normal, float3 worldPos,
 	float3 camPos, float roughness, float metalness,
 	float3 albedo, float3 irradiance, float3 prefilteredColor,
-	float2 brdf, float shadowAmount, float2 AoRo)
+	float2 brdf, float shadowAmount, float2 AoRo,
+	inout float3 ambientDiffuse, inout float3 ambientSpecular
+)
 {
 	float3 f0 = lerp(F0_NON_METAL.rrr, albedo.rgb, metalness);
 	float3 toCam = normalize(camPos - worldPos);
@@ -170,9 +172,12 @@ float3 AmbientPBR(float3 normal, float3 worldPos,
 	float3 specular = prefilteredColor * (kS * brdf.x + float3(brdf.y, brdf.y, brdf.y));
 	float3 diffuse = irradiance * albedo;
 
-	float3 ambient = kD * diffuse * AoRo.r + specular * AoRo.g;
+	//float3 ambient = kD * diffuse * AoRo.r + specular * AoRo.g;
 
-	return ambient;
+	//return ambient;
+
+	ambientDiffuse = kD * diffuse * AoRo.r;
+	ambientSpecular = specular * AoRo.g;
 }
 
 float3 DirectPBR(float lightIntensity, float3 lightColor, float3 toLight, float3 normal, float3 worldPos, float3 camPos, float roughness, float metalness, float3 albedo, float shadowAmount)

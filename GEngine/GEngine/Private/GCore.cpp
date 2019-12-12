@@ -1635,6 +1635,16 @@ void GCore::SetSceneObjectOverrideMaterial(wchar_t* soName, wchar_t* submeshName
 		mSceneObjects[strSceneObjectName]->SetOverrideMaterial(strSubmeshName, (*itmat).second.get());
 }
 
+void GCore::SetTestValue(int index, float value)
+{
+	mRenderer->TestValue[index] = value;
+}
+
+void GCore::SetTestBool(bool value)
+{
+	mRenderer->TestBool = value;
+}
+
 #pragma endregion
 
 

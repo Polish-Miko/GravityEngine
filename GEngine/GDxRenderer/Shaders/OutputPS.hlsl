@@ -1,5 +1,5 @@
 
-#define DEBUG 1
+#define DEBUG 0
 
 #define USE_ACES_TONE_MAPPING 1
 #define USE_UNCHARTED_TONE_MAPPING 0

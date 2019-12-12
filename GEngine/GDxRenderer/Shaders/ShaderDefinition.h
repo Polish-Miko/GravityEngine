@@ -113,6 +113,7 @@ static const float DepthSlicing_16[17] = {
 //----------------------------------------------------------------------------------------------------------
 
 #define SSR_MAX_MIP_LEVEL 9
+#define SSR_MAX_PREFILTER_LEVEL 7
 
 
 //----------------------------------------------------------------------------------------------------------
@@ -186,8 +187,8 @@ static const float DepthSlicing_16[17] = {
 // Bloom.
 //----------------------------------------------------------------------------------------------------------
 
-#define BLOOM_USE_13_TAP_FILTER 0
-#define BLOOM_USE_TENT_UPSAMPLE 0
+#define BLOOM_USE_13_TAP_FILTER 1
+#define BLOOM_USE_TENT_UPSAMPLE 1
 
 #define BLOOM_THRESHOLD 0.25f
 #define BLOOM_CLAMP 65000.0f

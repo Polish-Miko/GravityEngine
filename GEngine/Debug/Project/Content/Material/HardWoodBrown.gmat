@@ -6,8 +6,8 @@
 	<Name>HardWoodBrown</Name>
 	<MaterialScale>
 		<count>2</count>
-		<item>5.000000000e+00</item>
-		<item>5.000000000e+00</item>
+		<item>2.000000000e+00</item>
+		<item>2.000000000e+00</item>
 	</MaterialScale>
 	<TextureNames class_id="1" tracking_level="0" version="0">
 		<count>3</count>

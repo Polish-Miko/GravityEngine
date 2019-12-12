@@ -278,6 +278,10 @@
     <FxCompile Include="Shaders\GtaoTemporalPS.hlsl" />
     <FxCompile Include="Shaders\SsrHizPS.hlsl" />
     <FxCompile Include="Shaders\SsrTracePS.hlsl" />
+    <FxCompile Include="Shaders\SsrResolvePS.hlsl" />
+    <FxCompile Include="Shaders\SsrTemporalPS.hlsl" />
+    <FxCompile Include="Shaders\SsrCombinePS.hlsl" />
+    <FxCompile Include="Shaders\SsrPrefilterPS.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Shaders\Lighting.hlsli" />

@@ -135,5 +135,11 @@ namespace GEditor
         [DllImport(@"Build\GEngineDll.dll")]
         public static extern void SetSceneObjectOverrideMaterial([MarshalAs(UnmanagedType.LPWStr)] string soName, [MarshalAs(UnmanagedType.LPWStr)] string submeshName, [MarshalAs(UnmanagedType.LPWStr)] string materialName);
 
+        [DllImport(@"Build\GEngineDll.dll")]
+        public static extern void SetTestValue(int index, float value);
+
+        [DllImport(@"Build\GEngineDll.dll")]
+        public static extern void SetTestBool(bool value);
+
     }
 }

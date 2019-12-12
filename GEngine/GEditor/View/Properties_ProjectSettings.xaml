@@ -47,6 +47,22 @@
                     <Button Content="Set" Width="80" Margin="25,0,15,0" Click="LoadSkyCubemap"/>
                     <Button Content="Reset" Width="80" Margin="15,0,30,0" Click="ClearSkyCubemap"/>
                 </StackPanel>
+                <Label Content="Test Bool" Margin="5,0,0,0"/>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Margin="15,5,0,0">
+                    <CheckBox IsChecked="{Binding Path=TestBool, Mode=TwoWay}" HorizontalAlignment="Left"></CheckBox>
+                </StackPanel>
+                <Label Content="Test Value 1" Margin="5,0,0,0"/>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,5,0,0">
+                    <TextBox Text="{Binding Path=TestValue1, Mode=TwoWay}" Width="210" PreviewTextInput="TextBox_DigitalOnly" input:InputMethod.IsInputMethodEnabled="False"/>
+                </StackPanel>
+                <Label Content="Test Value 2" Margin="5,0,0,0"/>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,5,0,0">
+                    <TextBox Text="{Binding Path=TestValue2, Mode=TwoWay}" Width="210" PreviewTextInput="TextBox_DigitalOnly" input:InputMethod.IsInputMethodEnabled="False"/>
+                </StackPanel>
+                <Label Content="Test Value 3" Margin="5,0,0,0"/>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,5,0,0">
+                    <TextBox Text="{Binding Path=TestValue3, Mode=TwoWay}" Width="210" PreviewTextInput="TextBox_DigitalOnly" input:InputMethod.IsInputMethodEnabled="False"/>
+                </StackPanel>
             </StackPanel>
         </Expander>
 

@@ -68,6 +68,10 @@ public:
 
 	virtual std::vector<ProfileData> GetGpuProfiles() = 0;
 
+	float TestValue[3] = { 0.0f, 0.0f, 0.0f };
+
+	bool TestBool = false;
+
 protected:
 
 	HWND mhMainWnd = nullptr; // main window handle
