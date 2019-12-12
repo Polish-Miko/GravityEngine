@@ -1110,9 +1110,50 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 		GDxGpuProfiler::GetGpuProfiler().EndGpuProfile("TAA Pass");
 	}
 
+	// SSR Depth Unjitter Pass
+	{
+		GDxGpuProfiler::GetGpuProfiler().StartGpuProfile("Screen Space Reflection");
+
+		//GDxGpuProfiler::GetGpuProfiler().StartGpuProfile("SSR Depth Unjitter Pass");
+
+		mCommandList->RSSetViewports(1, &(mRtvHeaps["SSR"]->mRtv[mSsrUnjitteredDepthSrvIndexOffset]->mViewport));
+		mCommandList->RSSetScissorRects(1, &(mRtvHeaps["SSR"]->mRtv[mSsrUnjitteredDepthSrvIndexOffset]->mScissorRect));
+
+		mCommandList->SetGraphicsRootSignature(mRootSignatures["SsrDepthUnjitter"].Get());
+
+		mCommandList->SetPipelineState(mPSOs["SsrDepthUnjitter"].Get());
+
+		auto passCB = mCurrFrameResource->PassCB->Resource();
+		mCommandList->SetGraphicsRootConstantBufferView(0, passCB->GetGPUVirtualAddress());
+
+		mCommandList->SetGraphicsRootDescriptorTable(1, GetGpuSrv(mDepthBufferSrvIndex));
+
+		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["SSR"]->mRtv[mSsrUnjitteredDepthSrvIndexOffset]->mResource.Get(),
+			D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_RENDER_TARGET));
+
+		// Clear RT.
+		DirectX::XMVECTORF32 clearColor = { mRtvHeaps["SSR"]->mRtv[mSsrUnjitteredDepthSrvIndexOffset]->mProperties.mClearColor[0],
+		mRtvHeaps["SSR"]->mRtv[mSsrUnjitteredDepthSrvIndexOffset]->mProperties.mClearColor[1],
+		mRtvHeaps["SSR"]->mRtv[mSsrUnjitteredDepthSrvIndexOffset]->mProperties.mClearColor[2],
+		mRtvHeaps["SSR"]->mRtv[mSsrUnjitteredDepthSrvIndexOffset]->mProperties.mClearColor[3]
+		};
+
+		mCommandList->ClearRenderTargetView(mRtvHeaps["SSR"]->mRtvHeap.handleCPU(mSsrUnjitteredDepthSrvIndexOffset), clearColor, 0, nullptr);
+
+		mCommandList->OMSetRenderTargets(1, &(mRtvHeaps["SSR"]->mRtvHeap.handleCPU(mSsrUnjitteredDepthSrvIndexOffset)), false, nullptr);
+
+		// For each render item...
+		DrawSceneObjects(mCommandList.Get(), RenderLayer::ScreenQuad, false, false);
+
+		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["SSR"]->mRtv[mSsrUnjitteredDepthSrvIndexOffset]->mResource.Get(),
+			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ));
+
+		//GDxGpuProfiler::GetGpuProfiler().EndGpuProfile("SSR Depth Unjitter Pass");
+	}
+
 	// SSR HiZ Pass
 	{
-		GDxGpuProfiler::GetGpuProfiler().StartGpuProfile("SSR HiZ Pass");
+		//GDxGpuProfiler::GetGpuProfiler().StartGpuProfile("SSR HiZ Pass");
 
 		for (int i = 0; i < SSR_MAX_MIP_LEVEL; i++)
 		{
@@ -1124,7 +1165,7 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 			mCommandList->SetPipelineState(mPSOs["SsrHiz"].Get());
 
 			if (i == 0)
-				mCommandList->SetGraphicsRootDescriptorTable(0, GetGpuSrv(mDepthBufferSrvIndex));
+				mCommandList->SetGraphicsRootDescriptorTable(0, mRtvHeaps["SSR"]->GetSrvGpu(mSsrUnjitteredDepthSrvIndexOffset));
 			else
 				mCommandList->SetGraphicsRootDescriptorTable(0, mRtvHeaps["SSR"]->GetSrvGpu(mSsrHizSrvIndexOffset + i - 1));
 
@@ -1149,12 +1190,12 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 				D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ));
 		}
 
-		GDxGpuProfiler::GetGpuProfiler().EndGpuProfile("SSR HiZ Pass");
+		//GDxGpuProfiler::GetGpuProfiler().EndGpuProfile("SSR HiZ Pass");
 	}
 
 	// SSR Prefilter Pass
 	{
-		GDxGpuProfiler::GetGpuProfiler().StartGpuProfile("SSR Prefilter Pass");
+		//GDxGpuProfiler::GetGpuProfiler().StartGpuProfile("SSR Prefilter Pass");
 
 		for (int i = 0; i < SSR_MAX_PREFILTER_LEVEL; i++)
 		{
@@ -1191,12 +1232,12 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 				D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ));
 		}
 
-		GDxGpuProfiler::GetGpuProfiler().EndGpuProfile("SSR Prefilter Pass");
+		//GDxGpuProfiler::GetGpuProfiler().EndGpuProfile("SSR Prefilter Pass");
 	}
 
 	// SSR Trace Pass
 	{
-		GDxGpuProfiler::GetGpuProfiler().StartGpuProfile("SSR Trace Pass");
+		//GDxGpuProfiler::GetGpuProfiler().StartGpuProfile("SSR Trace Pass");
 
 		mCommandList->RSSetViewports(1, &(mRtvHeaps["SSR"]->mRtv[mSsrTraceSrvIndexOffset]->mViewport));
 		mCommandList->RSSetScissorRects(1, &(mRtvHeaps["SSR"]->mRtv[mSsrTraceSrvIndexOffset]->mScissorRect));
@@ -1277,12 +1318,12 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["SSR"]->mRtv[mSsrTraceMaskSrvIndexOffset]->mResource.Get(),
 			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ));
 
-		GDxGpuProfiler::GetGpuProfiler().EndGpuProfile("SSR Trace Pass");
+		//GDxGpuProfiler::GetGpuProfiler().EndGpuProfile("SSR Trace Pass");
 	}
 
 	// SSR Resolve Pass
 	{
-		GDxGpuProfiler::GetGpuProfiler().StartGpuProfile("SSR Resolve Pass");
+		//GDxGpuProfiler::GetGpuProfiler().StartGpuProfile("SSR Resolve Pass");
 
 		mCommandList->RSSetViewports(1, &(mRtvHeaps["SSR"]->mRtv[mSsrResolveSrvIndexOffset]->mViewport));
 		mCommandList->RSSetScissorRects(1, &(mRtvHeaps["SSR"]->mRtv[mSsrResolveSrvIndexOffset]->mScissorRect));
@@ -1332,12 +1373,12 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["SSR"]->mRtv[mSsrResolveSrvIndexOffset]->mResource.Get(),
 			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ));
 
-		GDxGpuProfiler::GetGpuProfiler().EndGpuProfile("SSR Resolve Pass");
+		//GDxGpuProfiler::GetGpuProfiler().EndGpuProfile("SSR Resolve Pass");
 	}
 
 	// SSR Temporal Pass
 	{
-		GDxGpuProfiler::GetGpuProfiler().StartGpuProfile("SSR Temporal Pass");
+		//GDxGpuProfiler::GetGpuProfiler().StartGpuProfile("SSR Temporal Pass");
 
 		mCommandList->RSSetViewports(1, &(mRtvHeaps["SSR"]->mRtv[mSsrTemporalSrvIndexOffset]->mViewport));
 		mCommandList->RSSetScissorRects(1, &(mRtvHeaps["SSR"]->mRtv[mSsrTemporalSrvIndexOffset]->mScissorRect));
@@ -1398,12 +1439,12 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["SSR"]->mRtv[mSsrHistorySrvIndexOffset + mSsrTemporalHistoryIndex]->mResource.Get(),
 			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ));
 
-		GDxGpuProfiler::GetGpuProfiler().EndGpuProfile("SSR Temporal Pass");
+		//GDxGpuProfiler::GetGpuProfiler().EndGpuProfile("SSR Temporal Pass");
 	}
 
 	// SSR Combine Pass
 	{
-		GDxGpuProfiler::GetGpuProfiler().StartGpuProfile("SSR Combine Pass");
+		//GDxGpuProfiler::GetGpuProfiler().StartGpuProfile("SSR Combine Pass");
 
 		mCommandList->RSSetViewports(1, &(mRtvHeaps["SSR"]->mRtv[mSsrCombineSrvIndexOffset]->mViewport));
 		mCommandList->RSSetScissorRects(1, &(mRtvHeaps["SSR"]->mRtv[mSsrCombineSrvIndexOffset]->mScissorRect));
@@ -1425,7 +1466,7 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 
 		mCommandList->SetGraphicsRootDescriptorTable(5, mRtvHeaps["GTAO"]->GetSrvGpu(mGtaoBlurYSrvIndexOffset));
 
-		mCommandList->SetGraphicsRootDescriptorTable(6, mRtvHeaps["LightPass"]->GetSrvGpu(mLightingSrvIndexOffset));
+		mCommandList->SetGraphicsRootDescriptorTable(6, mRtvHeaps["TaaPass"]->GetSrvGpu(2));
 
 		mCommandList->SetGraphicsRootDescriptorTable(7, mRtvHeaps["LightPass"]->GetSrvGpu(mLightingAmbientSpecularSrvIndexOffset));
 
@@ -1453,7 +1494,9 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 		mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mRtvHeaps["SSR"]->mRtv[mSsrCombineSrvIndexOffset]->mResource.Get(),
 			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ));
 
-		GDxGpuProfiler::GetGpuProfiler().EndGpuProfile("SSR Combine Pass");
+		//GDxGpuProfiler::GetGpuProfiler().EndGpuProfile("SSR Combine Pass");
+
+		GDxGpuProfiler::GetGpuProfiler().EndGpuProfile("Screen Space Reflection");
 	}
 
 	// Velocity Depth Packing Pass
@@ -1822,13 +1865,14 @@ void GDxRenderer::Draw(const GGiGameTimer* gt)
 		auto passCB = mCurrFrameResource->PassCB->Resource();
 		mCommandList->SetGraphicsRootConstantBufferView(1, passCB->GetGPUVirtualAddress());
 
-		//mCommandList->SetGraphicsRootDescriptorTable(2, mRtvHeaps["TaaPass"]->GetSrvGpu(2));
+		mCommandList->SetGraphicsRootDescriptorTable(2, mRtvHeaps["SSR"]->GetSrvGpu(mSsrCombineSrvIndexOffset));
+		/*
 		if(TestBool)
-			mCommandList->SetGraphicsRootDescriptorTable(2, mRtvHeaps["SSR"]->GetSrvGpu(mSsrCombineSrvIndexOffset));
-		else
 			mCommandList->SetGraphicsRootDescriptorTable(2, mRtvHeaps["TaaPass"]->GetSrvGpu(2));
+		else
+			mCommandList->SetGraphicsRootDescriptorTable(2, mRtvHeaps["SSR"]->GetSrvGpu(mSsrCombineSrvIndexOffset));
+		*/
 
-		//mCommandList->SetGraphicsRootDescriptorTable(2, mRtvHeaps["GBuffer"]->GetSrvGpu(mVelocityBufferSrvIndex - mGBufferSrvIndex));
 		mCommandList->SetGraphicsRootDescriptorTable(3, mRtvHeaps["MotionBlur"]->GetSrvGpu(mMotionBlurVdBufferSrvIndexOffset));
 
 		mCommandList->SetGraphicsRootDescriptorTable(4, mRtvHeaps["MotionBlur"]->GetSrvGpu(mMotionBlurNeighborMaxSrvIndexOffset));
@@ -4000,6 +4044,39 @@ void GDxRenderer::BuildRootSignature()
 			IID_PPV_ARGS(mRootSignatures["TaaPass"].GetAddressOf())));
 	}
 
+	// SSR depth unjitter root signature
+	{
+		CD3DX12_DESCRIPTOR_RANGE rangeDepth;
+		rangeDepth.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
+
+		CD3DX12_ROOT_PARAMETER rootParameters[2];
+		rootParameters[0].InitAsConstantBufferView(1);
+		rootParameters[1].InitAsDescriptorTable(1, &rangeDepth, D3D12_SHADER_VISIBILITY_ALL);
+
+		// A root signature is an array of root parameters.
+		CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(2, rootParameters,
+			(UINT)staticSamplers.size(), staticSamplers.data(),
+			D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+
+		// create a root signature with a single slot which points to a descriptor range consisting of a single constant buffer
+		ComPtr<ID3DBlob> serializedRootSig = nullptr;
+		ComPtr<ID3DBlob> errorBlob = nullptr;
+		HRESULT hr = D3D12SerializeRootSignature(&rootSigDesc, D3D_ROOT_SIGNATURE_VERSION_1,
+			serializedRootSig.GetAddressOf(), errorBlob.GetAddressOf());
+
+		if (errorBlob != nullptr)
+		{
+			::OutputDebugStringA((char*)errorBlob->GetBufferPointer());
+		}
+		ThrowIfFailed(hr);
+
+		ThrowIfFailed(md3dDevice->CreateRootSignature(
+			0,
+			serializedRootSig->GetBufferPointer(),
+			serializedRootSig->GetBufferSize(),
+			IID_PPV_ARGS(mRootSignatures["SsrDepthUnjitter"].GetAddressOf())));
+	}
+
 	// SSR hiz root signature
 	{
 		CD3DX12_DESCRIPTOR_RANGE rangeDepth;
@@ -4668,7 +4745,7 @@ void GDxRenderer::BuildDescriptorHeaps()
 		+ 7 //gtao
 		+ 2 //light pass
 		+ 3 //taa
-		+ SSR_MAX_MIP_LEVEL + SSR_MAX_PREFILTER_LEVEL + 11 //ssr
+		+ SSR_MAX_MIP_LEVEL + SSR_MAX_PREFILTER_LEVEL + 12 //ssr
 		+ 7 //motion blur
 		+ BloomChainLength * 2 + 1 //bloom
 		+ 1 //blue noise
@@ -5084,6 +5161,7 @@ void GDxRenderer::BuildDescriptorHeaps()
 		mSsrHistorySrvIndexOffset = SSR_MAX_MIP_LEVEL + SSR_MAX_PREFILTER_LEVEL + 7;
 		mSsrTemporalSrvIndexOffset = SSR_MAX_MIP_LEVEL + SSR_MAX_PREFILTER_LEVEL + 9;
 		mSsrCombineSrvIndexOffset = SSR_MAX_MIP_LEVEL + SSR_MAX_PREFILTER_LEVEL + 10;
+		mSsrUnjitteredDepthSrvIndexOffset = SSR_MAX_MIP_LEVEL + SSR_MAX_PREFILTER_LEVEL + 11;
 
 		std::vector<DXGI_FORMAT> rtvFormats =
 		{
@@ -5097,11 +5175,13 @@ void GDxRenderer::BuildDescriptorHeaps()
 			DXGI_FORMAT_R16G16B16A16_FLOAT,// History 1
 			DXGI_FORMAT_R16G16B16A16_FLOAT,// History 2
 			DXGI_FORMAT_R16G16B16A16_FLOAT,// Temporal
-			DXGI_FORMAT_R16G16B16A16_FLOAT// Combine
+			DXGI_FORMAT_R16G16B16A16_FLOAT,// Combine
+			DXGI_FORMAT_R32_FLOAT// Unjittered Depth
 		};
 
 		std::vector<std::vector<FLOAT>> rtvClearColor =
 		{
+			{ 0.0f, 0.0f, 0.0f, 1.0f },
 			{ 0.0f, 0.0f, 0.0f, 1.0f },
 			{ 0.0f, 0.0f, 0.0f, 1.0f },
 			{ 0.0f, 0.0f, 0.0f, 1.0f },
@@ -5127,6 +5207,7 @@ void GDxRenderer::BuildDescriptorHeaps()
 			1.0f,
 			1.0f,
 			1.0f,
+			1.0f,
 			1.0f
 		};
 
@@ -5142,7 +5223,7 @@ void GDxRenderer::BuildDescriptorHeaps()
 		res = 1.0f;
 		for (int i = 0; i < SSR_MAX_MIP_LEVEL; i++)
 		{
-			rtvFormats.insert(rtvFormats.begin() + i, DXGI_FORMAT_R16_UNORM);// HiZ
+			rtvFormats.insert(rtvFormats.begin() + i, DXGI_FORMAT_R32_FLOAT);// HiZ
 			rtvClearColor.insert(rtvClearColor.begin() + i, { 0.0f, 0.0f, 0.0f, 1.0f });
 			res /= 2.0f;
 			rtvResolutionScale.insert(rtvResolutionScale.begin() + i, res);
@@ -5837,6 +5918,33 @@ void GDxRenderer::BuildPSOs()
 		descTaaPSO.SampleDesc.Count = 1;
 		descTaaPSO.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 		ThrowIfFailed(md3dDevice->CreateGraphicsPipelineState(&descTaaPSO, IID_PPV_ARGS(&mPSOs["TaaPass"])));
+	}
+
+	// PSO for SSR depth unjitter pass.
+	{
+		D3D12_DEPTH_STENCIL_DESC passDSD;
+		passDSD.DepthEnable = true;
+		passDSD.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
+		passDSD.DepthFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+		passDSD.StencilEnable = false;
+
+		D3D12_GRAPHICS_PIPELINE_STATE_DESC descPSO;
+		ZeroMemory(&descPSO, sizeof(descPSO));
+
+		descPSO.VS = GDxShaderManager::LoadShader(L"Shaders\\FullScreenVS.cso");
+		descPSO.PS = GDxShaderManager::LoadShader(L"Shaders\\SsrDepthUnjitterPS.cso");
+		descPSO.pRootSignature = mRootSignatures["SsrDepthUnjitter"].Get();
+		descPSO.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+		descPSO.DepthStencilState = passDSD;
+		descPSO.InputLayout.pInputElementDescs = GDxInputLayout::DefaultLayout;
+		descPSO.InputLayout.NumElements = _countof(GDxInputLayout::DefaultLayout);
+		descPSO.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+		descPSO.NumRenderTargets = 1;
+		descPSO.RTVFormats[0] = mRtvHeaps["SSR"]->mRtv[mSsrUnjitteredDepthSrvIndexOffset]->mProperties.mRtvFormat;
+		descPSO.SampleMask = UINT_MAX;
+		descPSO.SampleDesc.Count = 1;
+		descPSO.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+		ThrowIfFailed(md3dDevice->CreateGraphicsPipelineState(&descPSO, IID_PPV_ARGS(&mPSOs["SsrDepthUnjitter"])));
 	}
 
 	// PSO for SSR hiz pass.

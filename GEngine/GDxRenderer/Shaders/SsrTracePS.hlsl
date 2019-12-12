@@ -5,8 +5,10 @@
 #include "MainPassCB.hlsli"
 
 
-#define NUM_STEPS 60
+#define NUM_STEPS 300
 #define BRDF_BIAS 0.7f
+
+#define RAY_BIAS 0.05f
 
 #define HIZ_START_LEVEL 0
 #define HIZ_STOP_LEVEL 0
@@ -62,7 +64,7 @@ float3 GetViewPos(float3 screenPos)
 
 float4 TangentToWorld(float3 N, float4 H)
 {
-	float3 UpVector = abs(N.z) < 0.999 ? float3(0.0, 0.0, 1.0) : float3(1.0, 0.0, 0.0);
+	float3 UpVector = abs(N.y) < 0.999 ? float3(0.0, 1.0, 0.0) : float3(1.0, 0.0, 0.0);
 	float3 T = normalize(cross(UpVector, N));
 	float3 B = cross(N, T);
 
@@ -137,13 +139,14 @@ float4 Hierarchical_Z_Trace(int HiZ_Max_Level, int HiZ_Start_Level, int HiZ_Stop
 	rayDir = half3(rayDir.x, rayDir.y, rayDir.z);
 
 	float level = HiZ_Start_Level;
-	float3 ray = rayOrigin + rayDir * 0.05f;
+	float3 ray = rayOrigin + rayDir * RAY_BIAS;
 
 	float2 cross_step = float2(rayDir.x >= 0.0 ? 1.0 : -1.0, rayDir.y >= 0.0 ? 1.0 : -1.0);
 	float2 cross_offset = cross_step * 0.00001f;
 	cross_step = saturate(cross_step);
 
-	float2 hi_z_size = cell_count(level, screenSize);
+	float2 hi_z_size = cell_count(level, screenSize); 
+	//ray.xy = floor(ray.xy * hi_z_size) / hi_z_size + 0.50f / hi_z_size;
 	float2 ray_cell = cell(ray.xy, hi_z_size.xy);
 	ray = intersect_cell_boundary(ray, rayDir, ray_cell, hi_z_size, cross_step, cross_offset);
 
@@ -227,6 +230,7 @@ PixelOutput main(VertexToPixel i)
 	float3 viewDir = GetViewDir(worldPos);
 
 	half2 Hash = gBlueNoiseTexture.SampleLevel(linearWrapSampler, (uv + gHaltonUniform2D.xy) * (gRenderTargetSize.xy * 0.5f) / float2(BLUE_NOISE_SIZE, BLUE_NOISE_SIZE), 0.0f).rg;
+	//Hash = gHaltonUniform2D.xy;
 	Hash.y = lerp(Hash.y, 0.0, BRDF_BIAS);
 
 	half4 H = 0.0;
@@ -247,13 +251,13 @@ PixelOutput main(VertexToPixel i)
 	rayDir.xy *= float2(0.5f, -0.5f);
 
 	//float4 rayTrace = Hierarchical_Z_Trace(SSR_MAX_MIP_LEVEL, NUM_STEPS, 1000.0f, gInvRenderTargetSize.xy * 2.0f, rayStart, rayDir);
-	float4 rayTrace = Hierarchical_Z_Trace(SSR_MAX_MIP_LEVEL, 0, 0, NUM_STEPS, THICKNESS, gRenderTargetSize / 2.0f, rayStart, rayDir);
+	float4 rayTrace = Hierarchical_Z_Trace(SSR_MAX_MIP_LEVEL, HIZ_START_LEVEL, HIZ_STOP_LEVEL, NUM_STEPS, THICKNESS, gRenderTargetSize / 2.0f, rayStart, rayDir);
 	float4 outRayCast = rayTrace;
 	float rayMask = rayTrace.w;
 
 	PixelOutput o;
 	o.RayHit = half4(rayTrace.xyz, H.a);
-	o.Mask = rayTrace.a;
+	o.Mask = rayTrace.a * rayTrace.a;
 	return o;
 
 	/*

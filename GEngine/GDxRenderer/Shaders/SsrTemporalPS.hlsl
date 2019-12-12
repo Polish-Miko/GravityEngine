@@ -5,11 +5,11 @@
 #include "MainPassCB.hlsli"
 
 
-#define USE_REFLECTION_VELOCITY 0
+#define USE_REFLECTION_VELOCITY 1
 
 #define TEMPORAL_WEIGHT 0.99f
-#define TEMPORAL_CLAMP_SCALE 1.25f
-#define EXPOSURE 10.0f
+#define TEMPORAL_CLAMP_SCALE 3.0f
+#define EXPOSURE 1.0f
 
 struct VertexToPixel
 {

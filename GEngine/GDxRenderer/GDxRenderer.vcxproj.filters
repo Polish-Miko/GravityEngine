@@ -282,6 +282,7 @@
     <FxCompile Include="Shaders\SsrTemporalPS.hlsl" />
     <FxCompile Include="Shaders\SsrCombinePS.hlsl" />
     <FxCompile Include="Shaders\SsrPrefilterPS.hlsl" />
+    <FxCompile Include="Shaders\SsrDepthUnjitterPS.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Shaders\Lighting.hlsli" />

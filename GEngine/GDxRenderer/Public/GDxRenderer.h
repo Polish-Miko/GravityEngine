@@ -319,6 +319,7 @@ protected:
 	UINT mGtaoHistory2SrvIndexOffset = 0;
 	UINT mGtaoTemporalSrvIndexOffset = 0;
 
+	UINT mSsrUnjitteredDepthSrvIndexOffset = 0;
 	UINT mSsrHizSrvIndexOffset = 0;
 	UINT mSsrPrefilterSrvIndexOffset = 0;
 	UINT mSsrTileImportanceSrvIndexOffset = 0;

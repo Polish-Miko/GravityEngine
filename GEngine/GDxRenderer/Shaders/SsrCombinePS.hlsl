@@ -58,7 +58,6 @@ half3 PreintegratedDGF_LUT(half3 albedo, half3 normal, half metalness, half roug
 	return (kS * brdf.x + float3(brdf.y, brdf.y, brdf.y));
 }
 
-// Velocity texture setup
 float4 main(VertexToPixel i) : SV_Target
 {
 	half2 uv = i.uv.xy;
@@ -80,12 +79,12 @@ float4 main(VertexToPixel i) : SV_Target
 	//ReflectionOcclusion = ReflectionOcclusion == 0.5 ? 1 : ReflectionOcclusion;
 	//half ReflectionOcclusion = 1;
 
-	half3 SceneColor = gSceneColor.SampleLevel(linearClampSampler, jitteredUV, 0.0f).rgb;
+	half3 SceneColor = gSceneColor.SampleLevel(linearClampSampler, uv, 0.0f).rgb;
 	half4 AmbientSpecularColor = gAmbientSpecular.SampleLevel(linearClampSampler, jitteredUV, 0.0f);
 
 	half4 SSRColor = gSsrColor.SampleLevel(linearClampSampler, uv, 0.0f);
-	half SSRMask = SSRColor.a * SSRColor.a;
-	//half SSRMask = lerp(SSRColor.a * SSRColor.a, 0.0f, smoothstep(0.3f, 0.5f, roughness));
+	//half SSRMask = SSRColor.a * SSRColor.a;
+	half SSRMask = lerp(SSRColor.a * SSRColor.a, 0.0f, smoothstep(0.6f, 1.2f, roughness));
 	half3 ReflectionColor = (AmbientSpecularColor.rgb * (-SSRMask) + SSRColor.rgb * PreintegratedGF * SSRMask) * ReflectionOcclusion;
 
 	return float4(SceneColor + ReflectionColor, 1.0f);

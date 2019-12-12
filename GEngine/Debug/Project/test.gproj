@@ -544,13 +544,13 @@
 			<Rotation>
 				<count>3</count>
 				<item>-9.000000000e+01</item>
-				<item>0.000000000e+00</item>
+				<item>-0.000000000e+00</item>
 				<item>9.000000000e+01</item>
 			</Rotation>
 			<Scale>
 				<count>3</count>
-				<item>9.998885345e+01</item>
-				<item>9.998885345e+01</item>
+				<item>9.995423126e+01</item>
+				<item>9.995423126e+01</item>
 				<item>1.000000000e+02</item>
 			</Scale>
 		</item>
