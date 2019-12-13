@@ -7,6 +7,8 @@
 This is my personal game engine project that
 uses DirectX 12 exclusively for rendering.
 
+![Preview](https://github.com/MrySwk/GravityEngine/blob/master/screenshot/Preview.png)
+
 
 ## Features
 
