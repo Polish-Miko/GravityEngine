@@ -6,7 +6,7 @@
 	<Name>DirtGround</Name>
 	<MaterialScale>
 		<count>2</count>
-		<item>1.000000000e+00</item>
+		<item>-1.000000000e+00</item>
 		<item>1.000000000e+00</item>
 	</MaterialScale>
 	<TextureNames class_id="1" tracking_level="0" version="0">

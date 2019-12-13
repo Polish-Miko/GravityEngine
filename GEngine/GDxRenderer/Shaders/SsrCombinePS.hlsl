@@ -4,6 +4,8 @@
 #include "ShaderDefinition.h"
 #include "MainPassCB.hlsli"
 
+#define USE_SSR 1
+
 struct VertexToPixel
 {
 	float4 position		: SV_POSITION;
@@ -87,6 +89,10 @@ float4 main(VertexToPixel i) : SV_Target
 	half SSRMask = lerp(SSRColor.a * SSRColor.a, 0.0f, smoothstep(0.6f, 1.2f, roughness));
 	half3 ReflectionColor = (AmbientSpecularColor.rgb * (-SSRMask) + SSRColor.rgb * PreintegratedGF * SSRMask) * ReflectionOcclusion;
 
+#if USE_SSR
 	return float4(SceneColor + ReflectionColor, 1.0f);
+#else
+	return float4(SceneColor, 1.0f);
+#endif
 }
 

@@ -363,13 +363,13 @@
 		<count>6</count>
 		<item_version>0</item_version>
 		<item class_id="4" tracking_level="0" version="0">
-			<UniqueName>NewSceneObject</UniqueName>
+			<UniqueName>Floor</UniqueName>
 			<OverrideMaterialUniqueName class_id="5" tracking_level="0" version="0">
 				<count>1</count>
 				<item_version>0</item_version>
 				<item class_id="6" tracking_level="0" version="0">
 					<str1>Grid</str1>
-					<str2>Content\Textures\Test3\BloodyFloor.gmat</str2>
+					<str2>Content\Textures\Test3\DirtGround.gmat</str2>
 				</item>
 			</OverrideMaterialUniqueName>
 			<MeshUniqueName>Grid</MeshUniqueName>
@@ -393,7 +393,7 @@
 			</Scale>
 		</item>
 		<item>
-			<UniqueName>NewSceneObject_1</UniqueName>
+			<UniqueName>MatBall_1</UniqueName>
 			<OverrideMaterialUniqueName>
 				<count>2</count>
 				<item_version>0</item_version>
@@ -427,7 +427,7 @@
 			</Scale>
 		</item>
 		<item>
-			<UniqueName>NewSceneObject_2</UniqueName>
+			<UniqueName>MatBall_2</UniqueName>
 			<OverrideMaterialUniqueName>
 				<count>2</count>
 				<item_version>0</item_version>
@@ -461,7 +461,7 @@
 			</Scale>
 		</item>
 		<item>
-			<UniqueName>NewSceneObject_3</UniqueName>
+			<UniqueName>MatBall_3</UniqueName>
 			<OverrideMaterialUniqueName>
 				<count>2</count>
 				<item_version>0</item_version>
@@ -495,7 +495,7 @@
 			</Scale>
 		</item>
 		<item>
-			<UniqueName>NewSceneObject_4</UniqueName>
+			<UniqueName>Wall_1</UniqueName>
 			<OverrideMaterialUniqueName>
 				<count>1</count>
 				<item_version>0</item_version>
@@ -519,13 +519,13 @@
 			</Rotation>
 			<Scale>
 				<count>3</count>
-				<item>9.997078705e+01</item>
+				<item>9.984681702e+01</item>
 				<item>1.000000000e+02</item>
 				<item>1.000000000e+02</item>
 			</Scale>
 		</item>
 		<item>
-			<UniqueName>NewSceneObject_5</UniqueName>
+			<UniqueName>Wall_2</UniqueName>
 			<OverrideMaterialUniqueName>
 				<count>1</count>
 				<item_version>0</item_version>
@@ -549,8 +549,8 @@
 			</Rotation>
 			<Scale>
 				<count>3</count>
-				<item>9.995423126e+01</item>
-				<item>9.995423126e+01</item>
+				<item>9.999358368e+01</item>
+				<item>9.999358368e+01</item>
 				<item>1.000000000e+02</item>
 			</Scale>
 		</item>

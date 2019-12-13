@@ -2,12 +2,13 @@
 
 ## Introduction
 
+![Icon](https://github.com/MrySwk/GravityEngine/blob/master/screenshot/GravityEngine.png)
 
 This is my personal game engine project that
 uses DirectX 12 exclusively for rendering.
 
 
-## Showcase
+## Features
 
 PBR
 
@@ -25,31 +26,59 @@ Clustered Deferred (1000 lights)
 
 ![Clustered](https://github.com/MrySwk/GravityEngine/blob/master/screenshot/Clustered.jpg)
 
-Temporal Anti-Aliasing (before and after)
+Temporal Anti-Aliasing
 
-![TAA_Before](https://github.com/MrySwk/GravityEngine/blob/master/screenshot/TAA_Before.jpg)
-
-![TAA_After](https://github.com/MrySwk/GravityEngine/blob/master/screenshot/TAA_After.jpg)
+![TAA](https://github.com/MrySwk/GravityEngine/blob/master/screenshot/TAA.png)
 
 Cascaded Shadow Map
 
-![SDF](https://github.com/MrySwk/GravityEngine/blob/master/screenshot/CascadedShadowMap.png)
+![CSM](https://github.com/MrySwk/GravityEngine/blob/master/screenshot/CascadedShadowMap.png)
 
 Percentage Closer Soft Shadow
 
-![SDF](https://github.com/MrySwk/GravityEngine/blob/master/screenshot/PCSS.png)
+![PCSS](https://github.com/MrySwk/GravityEngine/blob/master/screenshot/PCSS.png)
 
 Capsule Soft Shadow
 
-![SDF](https://github.com/MrySwk/GravityEngine/blob/master/screenshot/CapsuleShadow.png)
+![CapsuleShadow](https://github.com/MrySwk/GravityEngine/blob/master/screenshot/CapsuleShadow.png)
 
 Signed Distance Field Baking
 
-![SDF](https://github.com/MrySwk/GravityEngine/blob/master/screenshot/SDF_Debug_2.png)
+![SDF_Baking](https://github.com/MrySwk/GravityEngine/blob/master/screenshot/SDF_Debug_2.png)
 
 SDF Ray-Traced Shadow
 
-![SDF_Shadow](https://github.com/MrySwk/GravityEngine/blob/master/screenshot/SDF_Shadow_2.gif)
+![SDF_Shadow_1](https://github.com/MrySwk/GravityEngine/blob/master/screenshot/SDF_Shadow_1.png)
+
+![SDF_Shadow_2](https://github.com/MrySwk/GravityEngine/blob/master/screenshot/SDF_Shadow_2.jpg)
+
+Ground Truth Ambient Occlusion & Reflection Occlusion
+
+![AO_RO](https://github.com/MrySwk/GravityEngine/blob/master/screenshot/AO_RO.png)
+
+Stochastic Screen Space Reflection
+
+with
+- Importance GGX
+- Prefilter
+- HiZ Tracing
+- BRDF-weighted resolve
+
+![SSR](https://github.com/MrySwk/GravityEngine/blob/master/screenshot/SSR.png)
+
+Depth of Field
+
+![SSR](https://github.com/MrySwk/GravityEngine/blob/master/screenshot/DoF.png)
+
+Motion Blur
+
+![SSR](https://github.com/MrySwk/GravityEngine/blob/master/screenshot/MotionBlur.png)
+
+Bloom
+
+![SSR](https://github.com/MrySwk/GravityEngine/blob/master/screenshot/Bloom.png)
+
+ACES Tone Mapping & Uncharted 2 Tone Mapping
 
 ## Dependencies
 
@@ -73,14 +102,25 @@ to
 **4. DirectXTex**
 
 ## todo
-- [x] TBDR/CBDR
-- [x] PBR
-- [x] Scene Editing
+- [x] Editor
   - [x] Scene Serialization
   - [x] Manipulation Gizmo
-- [x] Temporal AA
-- [x] Masked Occlusion Culling
-- [x] CSM/PCSS
-- [x] Signed Distance Field Ray-Traced Shadow
-- [ ] AO
-- [ ] SSR
+- [ ] Renderer
+  - [x] TBDR/CBDR
+  - [x] PBR
+  - [x] Temporal AA
+  - [x] Occlusion Culling
+  - [x] CSM/PCSS
+  - [x] Signed Distance Field Ray-Traced Shadow
+  - [x] GTAO/GTSO
+  - [x] Stochastic SSR
+  - [X] Depth of Field
+  - [x] McGuire Motion Blur
+  - [x] Bloom
+  - [ ] TLOU-Styled Indirect Shadow
+  - [ ] DDGI
+  - [ ] Glossy GI
+  - [ ] Refactoring
+- [ ] Mono
+- [ ] Particle System
+- [ ] Animation System

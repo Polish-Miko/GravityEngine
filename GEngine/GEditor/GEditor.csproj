@@ -53,7 +53,7 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <PropertyGroup>
-    <ApplicationIcon>icon_engine.ico</ApplicationIcon>
+    <ApplicationIcon>Icon_GravityEngine.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
@@ -249,6 +249,9 @@
   </ItemGroup>
   <ItemGroup>
     <Resource Include="icon_engine.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Icon_GravityEngine.ico" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

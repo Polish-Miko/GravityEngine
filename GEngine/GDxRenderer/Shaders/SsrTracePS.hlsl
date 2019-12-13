@@ -187,7 +187,6 @@ float4 Hierarchical_Z_Trace(int HiZ_Max_Level, int HiZ_Start_Level, int HiZ_Stop
 				tmp_ray = intersect_cell_boundary(ray, rayDir, old_cell_id, current_cell_count, cross_step, cross_offset);
 				level = min(HiZ_Max_Level, level + 2.0);
 			}
-			/* 
 			else 
 			{
 				if(level == 1.0 && abs(min_minus_ray) > 0.0001) 
@@ -196,7 +195,6 @@ float4 Hierarchical_Z_Trace(int HiZ_Max_Level, int HiZ_Start_Level, int HiZ_Stop
 					level = 2.0;
 				}
 			}
-			*/
 		}
 		else if (ray.z > min_z)
 		{

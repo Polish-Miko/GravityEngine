@@ -282,6 +282,7 @@ protected:
 	UINT mTaaPassSrvIndex = 0;
 	UINT mSsrSrvIndex = 0;
 	UINT mMotionBlurSrvIndex = 0;
+	UINT mDofSrvIndex = 0;
 	UINT mBloomSrvIndex = 0;
 	UINT mIblIndex = 0;
 	UINT mBlueNoiseSrvIndex = 0;
@@ -332,6 +333,12 @@ protected:
 	UINT mSsrTemporalSrvIndexOffset = 0;
 	UINT mSsrCombineSrvIndexOffset = 0;
 
+	UINT mDofCocSrvIndexOffset = 0;
+	UINT mDofPrefilterSrvIndexOffset = 0;
+	UINT mDofBokehSrvIndexOffset = 0;
+	UINT mDofPostfilterSrvIndexOffset = 0;
+	UINT mDofCombineSrvIndexOffset = 0;
+
 	UINT mLightingSrvIndexOffset = 0;
 	UINT mLightingAmbientSpecularSrvIndexOffset = 0;
 
@@ -345,6 +352,12 @@ protected:
 
 	int mHaltonSampleIndex = 0;
 	static const int mHaltonSampleCount = 64;
+
+	const float mDofFilmHeight = 0.024f;
+	float mDofDistance = 0.0f;
+	float mDofCoeff = 0.0f;
+	float mDofMaxCoc = 0.0f;
+	float mDofRcpAspect = 0.0f;
 
 	int ShadowCascadeNum = SHADOW_CASCADE_NUM;
 	std::vector<float> ShadowCascadeDistance = { Z_LOWER_BOUND, Z_LOWER_BOUND + 1000.0F, Z_LOWER_BOUND + 3000.0f };

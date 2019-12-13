@@ -283,6 +283,11 @@
     <FxCompile Include="Shaders\SsrCombinePS.hlsl" />
     <FxCompile Include="Shaders\SsrPrefilterPS.hlsl" />
     <FxCompile Include="Shaders\SsrDepthUnjitterPS.hlsl" />
+    <FxCompile Include="Shaders\DofCocPS.hlsl" />
+    <FxCompile Include="Shaders\DofBokehPS.hlsl" />
+    <FxCompile Include="Shaders\DofCombinePS.hlsl" />
+    <FxCompile Include="Shaders\DofPostfilterPS.hlsl" />
+    <FxCompile Include="Shaders\DofPrefilterPS.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Shaders\Lighting.hlsli" />
